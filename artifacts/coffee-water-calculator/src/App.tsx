@@ -170,15 +170,19 @@ function App() {
                   placeholder="0"
                   className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                 />
-                <select
-                  value={row.formIdx}
-                  onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
-                  className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                >
-                  {salt.hydrationForms.map((f, fi) => (
-                    <option key={fi} value={fi}>{f.label}</option>
-                  ))}
-                </select>
+                {salt.hydrationForms.length > 1 ? (
+                  <select
+                    value={row.formIdx}
+                    onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
+                    className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                  >
+                    {salt.hydrationForms.map((f, fi) => (
+                      <option key={fi} value={fi}>{f.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="px-3 py-2 text-sm text-slate-500">{salt.hydrationForms[0].label}</span>
+                )}
                 <div className="text-sm font-mono text-emerald-300">
                   {mg > 0 ? mg.toFixed(2) : '—'}
                 </div>
@@ -212,13 +216,13 @@ function App() {
           </div>
         </div>
 
-        {/* Bottled Water */}
+        {/* Mineral Water */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Bottled Water Addition" />
+          <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Mineral Water Addition" />
           <div className="px-6 py-4">
             <div className="flex flex-wrap items-center gap-4 mb-4">
               <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-300">Bottled water volume:</label>
+                <label className="text-sm text-slate-300">Mineral water volume:</label>
                 <input
                   type="number"
                   value={bottledMl}
@@ -230,7 +234,7 @@ function App() {
               </div>
               {batchMl > 0 && (
                 <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-700/40">
-                  {fmt(Math.min(bottled, batchMl))} mL bottled
+                  {fmt(Math.min(bottled, batchMl))} mL mineral
                   <span className="text-slate-500 mx-1.5">+</span>
                   {fmt(tdsMl)} mL 0 TDS
                   <span className="text-slate-500 mx-1.5">=</span>
@@ -241,7 +245,7 @@ function App() {
             {overfill && (
               <div className="flex items-center gap-2 mb-4 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                Bottled water volume exceeds the final batch volume. The excess is ignored — the whole batch will be bottled water with no 0 TDS added.
+                Mineral water volume exceeds the final batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
               </div>
             )}
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
@@ -260,7 +264,7 @@ function App() {
             </div>
             <p className="text-xs text-slate-500 mt-3 flex items-center gap-1.5">
               <Info className="w-3.5 h-3.5" />
-              Enter mineral concentrations from the bottled water label in mg/L. The bottled water is part of the final batch — the remainder is 0 TDS water.
+              Enter mineral concentrations from the mineral water label in mg/L. The mineral water is part of the final batch — the remainder is 0 TDS water.
             </p>
           </div>
         </div>
@@ -271,6 +275,7 @@ function App() {
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
+              <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
             </div>
             <button
               onClick={() => setShowSettings(true)}
@@ -368,7 +373,7 @@ function HardnessCard({ label, value, saltValue, bottledValue }: {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="text-slate-400">Bottled:</span>
+          <span className="text-slate-400">Mineral:</span>
           <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
         </div>
       </div>
