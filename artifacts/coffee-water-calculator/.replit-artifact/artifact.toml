@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "Coffee Water Calculator"
+version = "1.0.0"
+id = "artifacts/coffee-water-calculator"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24177
+
+[services.development]
+run = "pnpm --filter @workspace/coffee-water-calculator run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/coffee-water-calculator", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/coffee-water-calculator/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24177"
+BASE_PATH = "/"
