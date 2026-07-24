@@ -124,15 +124,18 @@ function App() {
               <Calculator className="w-6 h-6 text-white" />
               <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
-            <div className="group/header flex items-center gap-2">
-              <OverallBadge level={overallLevel} />
+            <div className="group/badge flex items-center gap-1">
+              {indicatorOn && <OverallBadge level={overallLevel} />}
               <button
                 onClick={() => setIndicatorOn(prev => !prev)}
-                className="flex items-center gap-1.5 text-xs text-slate-100/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg px-2.5 py-1.5 transition opacity-0 group-hover/header:opacity-100 focus:opacity-100"
-                title={indicatorOn ? 'Hide level indicators' : 'Show level indicators'}
+                className={`flex items-center gap-1 text-xs text-slate-100/70 hover:text-white hover:bg-white/20 rounded-lg px-2 py-1.5 transition-all focus:opacity-100 ${
+                  indicatorOn
+                    ? 'opacity-0 group-hover/badge:opacity-100'
+                    : 'opacity-60 hover:opacity-100'
+                }`}
+                title={indicatorOn ? 'Hide status badge' : 'Show status badge'}
               >
                 {indicatorOn ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{indicatorOn ? 'Hide levels' : 'Show levels'}</span>
               </button>
             </div>
           </div>
@@ -278,32 +281,32 @@ function App() {
             </button>
           </div>
           <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {ACTIVE_ION_IDS.map(id => {
+            {ACTIVE_ION_IDS.map((id, idx) => {
               const ion = ION_MAP[id];
               const ppm = ionTotals[id];
               const level = classifyIon(ppm, activeRanges[id]);
               const s = TRAFFIC_STYLES[level];
               const r = activeRanges[id];
-              const neutral = 'border-slate-700/40 bg-slate-900/40';
+              const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
               return (
                 <div
                   key={id}
-                  className={`group/ion relative rounded-xl border ${indicatorOn ? `${s.border} ${s.bg}` : neutral} px-4 py-3`}
+                  className={`group/ion relative rounded-xl border ${s.border} ${s.bg} px-4 py-3`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
-                    {indicatorOn && <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />}
+                    <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className={`text-lg font-bold ${indicatorOn ? s.text : 'text-slate-100'}`}>{ppm.toFixed(1)}</span>
+                    <span className={`text-lg font-bold ${s.text}`}>{ppm.toFixed(1)}</span>
                     <span className="text-xs text-slate-400">ppm</span>
                   </div>
-                  {indicatorOn && (
-                    <div className={`text-xs ${s.text} mt-0.5`}>
-                      {s.label} · &lt;{r.greenMax} / {r.greenMax}–{r.yellowMax} / &gt;{r.yellowMax}
-                    </div>
-                  )}
-                  <span className="pointer-events-none absolute left-0 top-full mt-2 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl">
+                  <div className={`text-xs ${s.text} mt-0.5`}>
+                    {s.label} · &lt;{r.greenMax} / {r.greenMax}–{r.yellowMax} / &gt;{r.yellowMax}
+                  </div>
+                  <span className={`pointer-events-none absolute left-0 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl ${
+                    tooltipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
+                  }`}>
                     {ion.tasteNote}
                   </span>
                 </div>
