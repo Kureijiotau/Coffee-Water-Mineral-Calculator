@@ -1,10 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff } from 'lucide-react';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, classifyIon, computeSaltMg,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH,
-  type IonId, type TrafficLevel,
+  type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
 } from '@/waterData';
+import { SettingsModal } from '@/SettingsModal';
+import {
+  loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
+  loadIndicatorOn, saveIndicatorOn, createProfile,
+} from '@/profiles';
 
 type SaltRow = { target: string; formIdx: number };
 type BaseWater = Partial<Record<IonId, string>>;
@@ -29,6 +34,34 @@ function App() {
   );
   const [baseWater, setBaseWater] = useState<BaseWater>({});
   const [bottledMl, setBottledMl] = useState('0');
+
+  // Profile + settings state
+  const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
+  const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
+  const [showSettings, setShowSettings] = useState(false);
+  const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
+
+  const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
+  const activeRanges: RangeSet = activeProfile.ranges;
+
+  // Persist on changes
+  useEffect(() => { saveProfiles(profiles); }, [profiles]);
+  useEffect(() => { saveActiveProfileId(activeProfileId); }, [activeProfileId]);
+  useEffect(() => { saveIndicatorOn(indicatorOn); }, [indicatorOn]);
+
+  const handleSelectProfile = (id: string) => setActiveProfileId(id);
+  const handleSaveProfile = (profile: WaterProfile) => {
+    setProfiles(prev => {
+      const existing = prev.find(p => p.id === profile.id);
+      if (existing) return prev.map(p => p.id === profile.id ? profile : p);
+      return [...prev, profile];
+    });
+    setActiveProfileId(profile.id);
+  };
+  const handleDeleteProfile = (id: string) => {
+    setProfiles(prev => prev.filter(p => p.id !== id));
+    if (activeProfileId === id) setActiveProfileId(AIKI_DEFAULT_PROFILE.id);
+  };
 
   const L = num(liters);
   const batchMl = L * 1000;
@@ -71,12 +104,12 @@ function App() {
   const overallLevel: TrafficLevel = useMemo(() => {
     let worst: TrafficLevel = 'green';
     for (const id of ACTIVE_ION_IDS) {
-      const lvl = classifyIon(ionTotals[id], ION_MAP[id]);
+      const lvl = classifyIon(ionTotals[id], activeRanges[id]);
       if (lvl === 'red') return 'red';
       if (lvl === 'yellow') worst = 'yellow';
     }
     return worst;
-  }, [ionTotals]);
+  }, [ionTotals, activeRanges]);
 
   const updateRow = (i: number, patch: Partial<SaltRow>) =>
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -91,7 +124,17 @@ function App() {
               <Calculator className="w-6 h-6 text-white" />
               <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
-            <OverallBadge level={overallLevel} />
+            <div className="group/header flex items-center gap-2">
+              <OverallBadge level={overallLevel} />
+              <button
+                onClick={() => setIndicatorOn(prev => !prev)}
+                className="flex items-center gap-1.5 text-xs text-slate-100/80 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg px-2.5 py-1.5 transition opacity-0 group-hover/header:opacity-100 focus:opacity-100"
+                title={indicatorOn ? 'Hide level indicators' : 'Show level indicators'}
+              >
+                {indicatorOn ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{indicatorOn ? 'Hide levels' : 'Show levels'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -221,32 +264,65 @@ function App() {
 
         {/* Ion Profile */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Ion Profile" />
+          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700/40 text-slate-300">
+            <div className="flex items-center gap-2">
+              <Gauge className="w-4 h-4" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
+            </div>
+            <button
+              onClick={() => setShowSettings(true)}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Settings</span>
+            </button>
+          </div>
           <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {ACTIVE_ION_IDS.map(id => {
               const ion = ION_MAP[id];
               const ppm = ionTotals[id];
-              const level = classifyIon(ppm, ion);
+              const level = classifyIon(ppm, activeRanges[id]);
               const s = TRAFFIC_STYLES[level];
+              const r = activeRanges[id];
+              const neutral = 'border-slate-700/40 bg-slate-900/40';
               return (
-                <div key={id} className={`rounded-xl border ${s.border} ${s.bg} px-4 py-3`}>
+                <div
+                  key={id}
+                  className={`group/ion relative rounded-xl border ${indicatorOn ? `${s.border} ${s.bg}` : neutral} px-4 py-3`}
+                >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-slate-200">{ion.name}</span>
-                    <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+                    <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
+                    {indicatorOn && <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />}
                   </div>
                   <div className="flex items-baseline gap-2">
-                    <span className={`text-lg font-bold ${s.text}`}>{ppm.toFixed(1)}</span>
+                    <span className={`text-lg font-bold ${indicatorOn ? s.text : 'text-slate-100'}`}>{ppm.toFixed(1)}</span>
                     <span className="text-xs text-slate-400">ppm</span>
                   </div>
-                  <div className={`text-xs ${s.text} mt-0.5`}>
-                    {s.label} · &lt;{ion.greenMax} / {ion.greenMax}–{ion.yellowMax} / &gt;{ion.yellowMax}
-                  </div>
+                  {indicatorOn && (
+                    <div className={`text-xs ${s.text} mt-0.5`}>
+                      {s.label} · &lt;{r.greenMax} / {r.greenMax}–{r.yellowMax} / &gt;{r.yellowMax}
+                    </div>
+                  )}
+                  <span className="pointer-events-none absolute left-0 top-full mt-2 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl">
+                    {ion.tasteNote}
+                  </span>
                 </div>
               );
             })}
           </div>
         </div>
       </div>
+
+      {showSettings && (
+        <SettingsModal
+          profiles={profiles}
+          activeProfileId={activeProfileId}
+          onClose={() => setShowSettings(false)}
+          onSelectProfile={handleSelectProfile}
+          onSaveProfile={handleSaveProfile}
+          onDeleteProfile={handleDeleteProfile}
+        />
+      )}
     </div>
   );
 }
