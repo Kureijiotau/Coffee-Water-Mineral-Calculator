@@ -1,0 +1,5 @@
+{
+  "buildCommand": "pnpm --filter @workspace/coffee-water-calculator run build",
+  "outputDirectory": "artifacts/coffee-water-calculator/dist/public",
+  "installCommand": "pnpm install"
+}
