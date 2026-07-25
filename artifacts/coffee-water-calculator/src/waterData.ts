@@ -301,6 +301,40 @@ export function computeIonTotals(
   return totals;
 }
 
+export interface SaltRecipeEntry {
+  target: string;
+  formIdx: number;
+}
+
+export interface SaltRecipe {
+  id: string;
+  name: string;
+  salts: Record<string, SaltRecipeEntry>;
+}
+
+export const RECIPES: SaltRecipe[] = [
+  {
+    id: 'kimoi',
+    name: 'Kimoi Water',
+    salts: {
+      mgcl2:  { target: '9.5',  formIdx: 1 },
+      mgso4:  { target: '6.0',  formIdx: 1 },
+      cacl2:  { target: '11.1', formIdx: 1 },
+      nacl:   { target: '10',   formIdx: 0 },
+      nahco3: { target: '16.8', formIdx: 0 },
+    },
+  },
+  {
+    id: 'terebat',
+    name: 'Terebat Water',
+    salts: {
+      mgcl2:  { target: '19.0', formIdx: 1 },
+      nacl:   { target: '20',   formIdx: 0 },
+      nahco3: { target: '10.1', formIdx: 0 },
+    },
+  },
+];
+
 export function computeGH(totals: Record<IonId, number>): number {
   return totals.magnesium * (CACO3_FACTOR.magnesium ?? 0)
        + totals.calcium   * (CACO3_FACTOR.calcium ?? 0);

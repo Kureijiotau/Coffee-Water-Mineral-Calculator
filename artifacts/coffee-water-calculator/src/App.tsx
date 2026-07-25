@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2 } from 'lucide-react';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, classifyIon, computeSaltMg,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
+  type SaltRecipe, type SaltRecipeEntry,
 } from '@/waterData';
+import {
+  loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
+} from '@/recipes';
 import { SettingsModal } from '@/SettingsModal';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
@@ -111,8 +115,97 @@ function App() {
     return worst;
   }, [ionTotals, activeRanges]);
 
-  const updateRow = (i: number, patch: Partial<SaltRow>) =>
+  // Recipe state
+  const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
+  const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
+  useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
+
+  const allRecipes = [...RECIPES, ...savedRecipes];
+  const activeRecipe = allRecipes.find(r => r.id === activeRecipeId);
+  const isSavedRecipeActive = savedRecipes.some(r => r.id === activeRecipeId);
+
+  const applyRecipeObject = (recipe: SaltRecipe) => {
+    setActiveRecipeId(recipe.id);
+    setRows(SALTS.map(salt => {
+      const entry = recipe.salts[salt.id];
+      if (entry) return { target: entry.target, formIdx: entry.formIdx };
+      return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
+    }));
+  };
+
+  const applyRecipe = (recipeId: string) => {
+    if (recipeId === 'custom') { setActiveRecipeId('custom'); return; }
+    const recipe = allRecipes.find(r => r.id === recipeId);
+    if (recipe) applyRecipeObject(recipe);
+  };
+
+  const buildCurrentSalts = (): Record<string, SaltRecipeEntry> => {
+    const m: Record<string, SaltRecipeEntry> = {};
+    SALTS.forEach((s, i) => {
+      if (num(rows[i].target) > 0) m[s.id] = { target: rows[i].target, formIdx: rows[i].formIdx };
+    });
+    return m;
+  };
+
+  const handleSaveRecipe = () => {
+    const salts = buildCurrentSalts();
+    if (Object.keys(salts).length === 0) {
+      window.alert('Enter at least one salt target before saving a recipe.');
+      return;
+    }
+    const name = window.prompt('Name this recipe:')?.trim();
+    if (!name) return;
+    const recipe: SaltRecipe = { id: newRecipeId(), name, salts };
+    setSavedRecipes(prev => [...prev, recipe]);
+    setActiveRecipeId(recipe.id);
+  };
+
+  const handleDeleteRecipe = () => {
+    const recipe = savedRecipes.find(r => r.id === activeRecipeId);
+    if (!recipe) return;
+    if (!window.confirm(`Delete saved recipe "${recipe.name}"? This cannot be undone.`)) return;
+    setSavedRecipes(prev => prev.filter(r => r.id !== recipe.id));
+    setActiveRecipeId('custom');
+  };
+
+  const handleExportRecipe = () => {
+    const salts = buildCurrentSalts();
+    if (Object.keys(salts).length === 0) {
+      window.alert('Enter at least one salt target before exporting a recipe.');
+      return;
+    }
+    let name = activeRecipe?.name;
+    if (!name) {
+      name = window.prompt('Name this recipe for sharing:')?.trim() || '';
+      if (!name) return;
+    }
+    const text = serializeRecipeFile({ name, salts });
+    const blob = new Blob([text], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'recipe';
+    a.download = `${slug}.coffeewater.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const handleImportFile = async (file: File) => {
+    const text = await file.text();
+    const recipe = parseRecipeFile(text);
+    if (!recipe) {
+      window.alert("Couldn't read that file — it doesn't look like a valid coffee water recipe.");
+      return;
+    }
+    setSavedRecipes(prev => [...prev, recipe]);
+    applyRecipeObject(recipe);
+  };
+
+  const updateRow = (i: number, patch: Partial<SaltRow>) => {
+    setActiveRecipeId('custom');
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  };
 
   // Export recipe card
   const [exportCopied, setExportCopied] = useState(false);
@@ -235,7 +328,82 @@ function App() {
 
         {/* Mineral Table */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<FlaskConical className="w-4 h-4" />} title="Mineral Salts" />
+          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700/40 text-slate-300">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="w-4 h-4" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider">Mineral Salts</h2>
+              <span className="text-xs text-slate-400 font-normal normal-case">
+                — {activeRecipe?.name ?? 'Custom'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={activeRecipeId}
+                onChange={e => applyRecipe(e.target.value)}
+                className="bg-slate-700/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+              >
+                <option value="custom">Custom</option>
+                <optgroup label="Built-in">
+                  {RECIPES.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </optgroup>
+                {savedRecipes.length > 0 && (
+                  <optgroup label="My recipes">
+                    {savedRecipes.map(r => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              {activeRecipeId === 'custom' && (
+                <button
+                  onClick={handleSaveRecipe}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                  title="Save the current salts as a named recipe on this device"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Save</span>
+                </button>
+              )}
+              {isSavedRecipeActive && (
+                <button
+                  onClick={handleDeleteRecipe}
+                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2.5 py-1.5 transition"
+                  title="Delete this saved recipe"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+              <button
+                onClick={handleExportRecipe}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                title="Export this recipe as a shareable file"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Share</span>
+              </button>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                title="Import a shared recipe file"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Import</span>
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImportFile(f);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+          </div>
           <div className="grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
