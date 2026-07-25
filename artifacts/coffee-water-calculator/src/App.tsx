@@ -30,7 +30,7 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
-    SALTS.map(() => ({ target: '', formIdx: 0 })),
+    SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [baseWater, setBaseWater] = useState<BaseWater>({});
   const [bottledMl, setBottledMl] = useState('0');

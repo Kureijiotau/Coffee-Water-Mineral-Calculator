@@ -1,5 +1,5 @@
 import {
-  AIKI_DEFAULT_PROFILE, ACTIVE_ION_IDS, ION_MAP,
+  AIKI_DEFAULT_PROFILE, ACTIVE_ION_IDS, ION_MAP, IONS,
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
 
@@ -29,7 +29,17 @@ export function loadProfiles(): WaterProfile[] {
   const stored = readJSON<WaterProfile[]>(PROFILES_KEY, []);
   // Always ensure Aiki's default is present and up to date
   const withoutAiki = stored.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id);
-  return [AIKI_DEFAULT_PROFILE, ...withoutAiki];
+  // Migrate stored profiles that are missing any ions (e.g. newly added citrates)
+  const migrated = withoutAiki.map(p => {
+    const missing = IONS.filter(i => !(i.id in p.ranges));
+    if (missing.length === 0) return p;
+    const ranges = { ...p.ranges };
+    for (const i of missing) {
+      ranges[i.id] = { greenMax: i.greenMax, yellowMax: i.yellowMax };
+    }
+    return { ...p, ranges };
+  });
+  return [AIKI_DEFAULT_PROFILE, ...migrated];
 }
 
 export function saveProfiles(profiles: WaterProfile[]): void {
@@ -75,7 +85,8 @@ export function createProfile(name: string, ranges: RangeSet): WaterProfile {
 export function emptyRangeSet(): RangeSet {
   const rs = {} as RangeSet;
   for (const id of ACTIVE_ION_IDS) {
-    rs[id] = { greenMax: ION_MAP[id as IonId].greenMax, yellowMax: ION_MAP[id as IonId].yellowMax };
+    const info = ION_MAP[id as IonId];
+    if (info) rs[id] = { greenMax: info.greenMax, yellowMax: info.yellowMax };
   }
   return rs;
 }

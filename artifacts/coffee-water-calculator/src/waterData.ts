@@ -46,6 +46,8 @@ export interface SaltInfo {
   formula: string;
   anhydrousMass: number;
   hydrationForms: HydrationForm[];
+  /** Index into hydrationForms selected by default (common commercial form). */
+  defaultFormIdx?: number;
   ions: IonContribution[];
 }
 
@@ -175,8 +177,9 @@ export const SALTS: SaltInfo[] = [
     id: 'mgso4', name: 'Magnesium Sulfate', formula: 'MgSO₄', anhydrousMass: 120.365,
     hydrationForms: [
       { label: 'Anhydrous', molarMass: 120.365 },
-      { label: 'Heptahydrate', molarMass: 246.474 },
+      { label: 'Heptahydrate (Epsom)', molarMass: 246.474 },
     ],
+    defaultFormIdx: 1,
     ions: [
       { ionId: 'magnesium', fraction: 24.305 / 120.365 },
       { ionId: 'sulfate',    fraction: 96.06  / 120.365 },
@@ -188,9 +191,22 @@ export const SALTS: SaltInfo[] = [
       { label: 'Anhydrous', molarMass: 95.205 },
       { label: 'Hexahydrate', molarMass: 203.301 },
     ],
+    defaultFormIdx: 1,
     ions: [
       { ionId: 'magnesium', fraction: 24.305 / 95.205 },
       { ionId: 'chloride',  fraction: 70.90  / 95.205 },
+    ],
+  },
+  {
+    id: 'mgcit', name: 'Magnesium Citrate', formula: 'Mg₃(C₆H₅O₇)₂', anhydrousMass: 451.114,
+    hydrationForms: [
+      { label: 'Anhydrous', molarMass: 451.114 },
+      { label: 'Nonahydrate', molarMass: 613.251 },
+    ],
+    defaultFormIdx: 1,
+    ions: [
+      { ionId: 'magnesium', fraction: (3 * 24.305) / 451.114 },
+      { ionId: 'citrates',  fraction: (2 * 189.100) / 451.114 },
     ],
   },
   {
@@ -199,9 +215,22 @@ export const SALTS: SaltInfo[] = [
       { label: 'Anhydrous', molarMass: 110.978 },
       { label: 'Dihydrate', molarMass: 147.008 },
     ],
+    defaultFormIdx: 1,
     ions: [
       { ionId: 'calcium',  fraction: 40.078 / 110.978 },
       { ionId: 'chloride', fraction: 70.90  / 110.978 },
+    ],
+  },
+  {
+    id: 'cacit', name: 'Calcium Citrate', formula: 'Ca₃(C₆H₅O₇)₂', anhydrousMass: 498.433,
+    hydrationForms: [
+      { label: 'Anhydrous', molarMass: 498.433 },
+      { label: 'Tetrahydrate', molarMass: 570.494 },
+    ],
+    defaultFormIdx: 1,
+    ions: [
+      { ionId: 'calcium',  fraction: (3 * 40.078) / 498.433 },
+      { ionId: 'citrates', fraction: (2 * 189.100) / 498.433 },
     ],
   },
   {
@@ -231,7 +260,7 @@ export const SALTS: SaltInfo[] = [
 ];
 
 export const ACTIVE_ION_IDS: IonId[] = [
-  'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate',
+  'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate', 'citrates',
 ];
 
 // CaCO₃ equivalent: 50.04 / equivalent weight of ion
