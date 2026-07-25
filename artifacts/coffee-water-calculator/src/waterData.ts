@@ -125,7 +125,7 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'citrates', name: 'Citrates', formula: 'C₆H₅O₇³⁻', greenMax: 5, yellowMax: 15,
+    id: 'citrates', name: 'Citrates', formula: 'C₆H₅O₇³⁻', greenMax: 5, yellowMax: 10,
     tasteNote: 'Adds a bright, citrusy acidity of its own; can enhance fruity and floral notes but too much tastes sour or tart.',
     flagNotes: {
       green: 'Balanced — enhances citrusy, fruity brightness without overwhelming.',
