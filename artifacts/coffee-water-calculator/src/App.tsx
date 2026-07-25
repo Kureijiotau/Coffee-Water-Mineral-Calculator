@@ -328,7 +328,7 @@ function App() {
 
         {/* Mineral Table */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700/40 text-slate-300">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
             <div className="flex items-center gap-2">
               <FlaskConical className="w-4 h-4" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Mineral Salts</h2>
@@ -404,7 +404,7 @@ function App() {
               />
             </div>
           </div>
-          <div className="grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
+          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
             <span>Hydrated Form</span>
@@ -418,33 +418,47 @@ function App() {
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
             return (
-              <div key={salt.id} className="grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
-                <div className="flex flex-col">
+              <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-2.5 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
+                <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
                   <span className="text-sm font-medium text-slate-200">{salt.name}</span>
                   <span className="text-xs text-slate-500">{salt.formula}</span>
                 </div>
-                <input
-                  type="number"
-                  value={row.target}
-                  onChange={e => updateRow(i, { target: e.target.value })}
-                  placeholder="0"
-                  className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                />
-                {salt.hydrationForms.length > 1 ? (
-                  <select
-                    value={row.formIdx}
-                    onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
-                    className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                  >
-                    {salt.hydrationForms.map((f, fi) => (
-                      <option key={fi} value={fi}>{f.label}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="px-3 py-2 text-sm text-slate-500">{salt.hydrationForms[0].label}</span>
-                )}
-                <div className="text-sm font-mono text-emerald-300">
-                  {mg > 0 ? mg.toFixed(2) : '—'}
+                <div>
+                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Target (ppm)</label>
+                  <input
+                    id={`salt-target-${salt.id}`}
+                    type="number"
+                    inputMode="decimal"
+                    aria-label={`${salt.name} target ppm`}
+                    value={row.target}
+                    onChange={e => updateRow(i, { target: e.target.value })}
+                    placeholder="0"
+                    className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                  />
+                </div>
+                <div>
+                  <label htmlFor={salt.hydrationForms.length > 1 ? `salt-form-${salt.id}` : undefined} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Hydrated Form</label>
+                  {salt.hydrationForms.length > 1 ? (
+                    <select
+                      id={`salt-form-${salt.id}`}
+                      aria-label={`${salt.name} hydrated form`}
+                      value={row.formIdx}
+                      onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
+                      className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                    >
+                      {salt.hydrationForms.map((f, fi) => (
+                        <option key={fi} value={fi}>{f.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="block px-0 sm:px-3 py-2 text-sm text-slate-500">{salt.hydrationForms[0].label}</span>
+                  )}
+                </div>
+                <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
+                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Amount (mg)</span>
+                  <span className="text-sm font-mono text-emerald-300">
+                    {mg > 0 ? mg.toFixed(2) : '—'}
+                  </span>
                 </div>
               </div>
             );
@@ -458,6 +472,7 @@ function App() {
             <label className="text-sm text-slate-300">Final batch volume:</label>
             <input
               type="number"
+              inputMode="decimal"
               value={liters}
               onChange={e => setLiters(e.target.value)}
               placeholder="Liters"
@@ -470,10 +485,10 @@ function App() {
         {/* GH / KH Summary */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Hardness Summary (as CaCO₃)" />
-          <div className="px-6 py-4 grid grid-cols-2 gap-4">
+          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <HardnessCard label="General Hardness (GH)" value={gh} saltValue={ghSalt} bottledValue={ghBottled} />
             <HardnessCard label="Carbonate Hardness (KH)" value={kh} saltValue={khSalt} bottledValue={khBottled} />
-            <div className="col-span-2 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
+            <div className="sm:col-span-2 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
               <span className="h-4 w-px bg-slate-700" />
               {kh > 0 && gh >= 0 && Number.isFinite(gh / kh) ? (
@@ -496,6 +511,7 @@ function App() {
                 <label className="text-sm text-slate-300">Mineral water volume:</label>
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={bottledMl}
                   onChange={e => setBottledMl(e.target.value)}
                   placeholder="0"
@@ -525,6 +541,7 @@ function App() {
                   <label className="block text-xs text-slate-400 mb-1">{ION_MAP[id].formula}</label>
                   <input
                     type="number"
+                    inputMode="decimal"
                     value={baseWater[id] ?? ''}
                     onChange={e => setBaseWater(prev => ({ ...prev, [id]: e.target.value }))}
                     placeholder="0"
@@ -542,7 +559,7 @@ function App() {
 
         {/* Ion Profile */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-700/40 text-slate-300">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
@@ -570,7 +587,7 @@ function App() {
               </button>
             </div>
           </div>
-          <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {ACTIVE_ION_IDS.map((id, idx) => {
               const ion = ION_MAP[id];
               const ppm = ionTotals[id];
