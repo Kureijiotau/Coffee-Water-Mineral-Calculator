@@ -212,7 +212,7 @@ export const SALTS: SaltInfo[] = [
   {
     id: 'cacl2', name: 'Calcium Chloride', formula: 'CaCl₂', anhydrousMass: 110.978,
     hydrationForms: [
-      { label: 'Anhydrous', molarMass: 110.978 },
+      { label: 'Anhydrous (pellets)', molarMass: 110.978 },
       { label: 'Dihydrate', molarMass: 147.008 },
     ],
     defaultFormIdx: 1,
