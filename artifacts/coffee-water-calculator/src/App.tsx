@@ -22,7 +22,7 @@ const TRAFFIC_STYLES: Record<TrafficLevel, { dot: string; text: string; border: 
 
 const num = (s: string): number => {
   const v = parseFloat(s);
-  return isNaN(v) || v < 0 ? 0 : v;
+  return !Number.isFinite(v) || v < 0 ? 0 : v;
 };
 
 const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
@@ -213,6 +213,17 @@ function App() {
           <div className="px-6 py-4 grid grid-cols-2 gap-4">
             <HardnessCard label="General Hardness (GH)" value={gh} saltValue={ghSalt} bottledValue={ghBottled} />
             <HardnessCard label="Carbonate Hardness (KH)" value={kh} saltValue={khSalt} bottledValue={khBottled} />
+            <div className="col-span-2 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
+              <span className="h-4 w-px bg-slate-700" />
+              {kh > 0 && gh >= 0 && Number.isFinite(gh / kh) ? (
+                <span className="text-lg font-semibold text-sky-300 tabular-nums">
+                  {(gh / kh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                </span>
+              ) : (
+                <span className="text-lg font-semibold text-slate-500">—</span>
+              )}
+            </div>
           </div>
         </div>
 
