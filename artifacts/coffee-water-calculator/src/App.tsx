@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH,
@@ -113,6 +113,98 @@ function App() {
 
   const updateRow = (i: number, patch: Partial<SaltRow>) =>
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+
+  // Export recipe card
+  const [exportCopied, setExportCopied] = useState(false);
+  const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const buildRecipeText = (): string => {
+    const lines: string[] = [];
+    const line = (s: string) => lines.push(s);
+    const divider = (char = '─', len = 44) => lines.push(char.repeat(len));
+
+    line('╔════════════════════════════════════════════╗');
+    line('║   Coffee Water Mineral Recipe Card         ║');
+    line('╚════════════════════════════════════════════╝');
+    line('');
+    line(`Profile : ${activeProfile.name}`);
+    line(`Volume  : ${liters} L`);
+    line('');
+
+    divider();
+    line('MINERAL SALTS');
+    divider();
+    const saltLines = SALTS.map((salt, i) => {
+      const row = rows[i];
+      const form = salt.hydrationForms[row.formIdx];
+      const target = num(row.target);
+      if (target === 0) return null;
+      const mg = L > 0
+        ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
+        : 0;
+      const saltLabel = `${salt.name}${salt.hydrationForms.length > 1 ? ` (${form.label})` : ''}`;
+      return `  ${saltLabel.padEnd(32)} ${mg.toFixed(2).padStart(7)} mg  (${target} ppm target)`;
+    }).filter(Boolean);
+    if (saltLines.length === 0) {
+      line('  (no salts entered)');
+    } else {
+      saltLines.forEach(l => line(l!));
+    }
+
+    line('');
+    divider();
+    line('ION TOTALS  (mg/L)');
+    divider();
+    for (const id of ACTIVE_ION_IDS) {
+      const ion = ION_MAP[id];
+      const ppm = ionTotals[id];
+      const level = classifyIon(ppm, activeRanges[id]);
+      const flag = level === 'green' ? '✓' : level === 'yellow' ? '△' : '✗';
+      line(`  ${flag} ${ion.name.padEnd(16)} ${ppm.toFixed(1).padStart(6)} ppm`);
+    }
+
+    line('');
+    divider();
+    line('HARDNESS  (ppm as CaCO₃)');
+    divider();
+    line(`  GH (General)   : ${gh.toFixed(1)} ppm  (salts: ${ghSalt.toFixed(1)}, mineral: ${ghBottled.toFixed(1)})`);
+    line(`  KH (Carbonate) : ${kh.toFixed(1)} ppm  (salts: ${khSalt.toFixed(1)}, mineral: ${khBottled.toFixed(1)})`);
+    if (kh > 0) line(`  GH:KH ratio    : ${(gh / kh).toFixed(2)} : 1`);
+
+    if (bottled > 0) {
+      line('');
+      divider();
+      line('MINERAL WATER ADDITION');
+      divider();
+      line(`  Volume : ${bottledMl} mL of ${L * 1000} mL total batch`);
+    }
+
+    line('');
+    line(`Generated: ${new Date().toLocaleString()}`);
+
+    return lines.join('\n');
+  };
+
+  const handleExport = () => {
+    const text = buildRecipeText();
+
+    // Download .txt file
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `coffee-water-recipe-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // Copy to clipboard
+    navigator.clipboard.writeText(text).catch(() => {});
+
+    // Show confirmation briefly
+    if (exportTimerRef.current) clearTimeout(exportTimerRef.current);
+    setExportCopied(true);
+    exportTimerRef.current = setTimeout(() => setExportCopied(false), 2000);
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
@@ -288,13 +380,27 @@ function App() {
               <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
               <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
             </div>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Settings</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
+                  exportCopied
+                    ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/40'
+                    : 'text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60'
+                }`}
+                title="Export recipe card (downloads .txt and copies to clipboard)"
+              >
+                {exportCopied ? <Check className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">{exportCopied ? 'Copied!' : 'Export'}</span>
+              </button>
+              <button
+                onClick={() => setShowSettings(true)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+              >
+                <Settings className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Settings</span>
+              </button>
+            </div>
           </div>
           <div className="px-6 py-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {ACTIVE_ION_IDS.map((id, idx) => {
