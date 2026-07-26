@@ -2,7 +2,10 @@ import { useCallback, useRef, useState } from 'react';
 import { Camera, Loader2, Check, X, AlertTriangle, ScanLine } from 'lucide-react';
 import { ION_MAP, type IonId } from '@/waterData';
 
-const BASE_URL = import.meta.env.BASE_URL ?? '/';
+// On Replit, the proxy routes /api/* to the API server automatically.
+// On your own hosting (Vercel etc.), set VITE_API_URL to the Replit workspace URL
+// so scans reach the API server running on Replit.
+const API_BASE = (import.meta as Record<string, any>).env?.VITE_API_URL ?? '';
 
 interface ScannedValue {
   id: IonId;
@@ -39,7 +42,7 @@ export default function LabelScanner({ onExtracted, disabled }: Props) {
         reader.readAsDataURL(file);
       });
 
-      const resp = await fetch(`${BASE_URL}api/scan-label`, {
+      const resp = await fetch(`${API_BASE}/api/scan-label`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: b64 }),
