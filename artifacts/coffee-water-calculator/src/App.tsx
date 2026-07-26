@@ -53,6 +53,7 @@ function App() {
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
+  const [priorityOverride, setPriorityOverride] = useState<Record<string, IonId>>({});
   // 'addition' = mineral water ions stack on top of salts (original)
   // 'base'     = mineral water is the brewing base; ions don't affect totals
   const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('addition');
@@ -1196,49 +1197,95 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Salt powder amounts — adjusted for mineral water coverage */}
+                {/* Salt powder amounts — with ion priority and GH/KH nudging */}
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SALTS.map((salt, i) => {
                     const target = num(rows[i].target);
                     if (target <= 0) return null;
                     const form = salt.hydrationForms[rows[i].formIdx];
-                    // Find the most restrictive ion — the one with the least remaining headroom
-                    let minRemaining = 1;
-                    const limitingIons: string[] = [];
+                    const fullMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                    // Build per-ion headroom info
+                    const ionInfo: { id: IonId; formula: string; frac: number; headroom: number }[] = [];
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
                       if (total > 0) {
+                        const headroom = Math.max(0, total - covered);
                         const frac = Math.max(0, (total - covered) / total);
-                        if (frac < minRemaining - 0.0001) {
-                          minRemaining = frac;
-                          limitingIons.length = 0;
-                          limitingIons.push(ION_MAP[c.ionId].formula);
-                        } else if (Math.abs(frac - minRemaining) < 0.0001) {
-                          limitingIons.push(ION_MAP[c.ionId].formula);
-                        }
+                        ionInfo.push({ id: c.ionId, formula: ION_MAP[c.ionId].formula, frac, headroom });
                       }
                     }
-                    const adjustedTarget = target * minRemaining;
+                    // Default: capped by the most restrictive ion
+                    const minFrac = Math.min(...ionInfo.map(i => i.frac), 1);
+                    // User priority override
+                    const priority = priorityOverride[salt.id] as IonId | undefined;
+                    const useFrac = priority
+                      ? (ionInfo.find(i => i.id === priority)?.frac ?? minFrac)
+                      : minFrac;
+                    const adjustedTarget = target * useFrac;
                     const mg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
-                    const fullMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                    const hasConflict = ionInfo.length > 1 && Math.max(...ionInfo.map(i => i.frac)) > minFrac + 0.01;
+                    // GH/KH classification
+                    const caMgIds: IonId[] = ['calcium', 'magnesium'];
+                    const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
+                    const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
+                    const ghkhLabel = !affectsGH && !affectsKH ? 'Neutral' : affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'Affects GH' : 'Affects KH';
+                    const ghkhColor = !affectsGH && !affectsKH ? 'text-emerald-400' : 'text-slate-500';
+                    // Overshoot display when user has chosen a priority
+                    const overshoots = priority ? ionInfo.filter(i => {
+                      const contrib = i.frac > 0 ? (target * i.frac) : 0;
+                      return contrib * useFrac > i.headroom + 0.01;
+                    }) : [];
                     return (
                       <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
-                        minRemaining < 1 ? 'border-amber-500/40' : 'border-slate-700/50'
+                        mg < fullMg - 0.01 ? 'border-amber-500/40' : 'border-slate-700/50'
                       }`}>
-                        <span className="block text-[10px] text-slate-500">{salt.formula}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500">{salt.formula}</span>
+                          <span className={`text-[10px] ${ghkhColor} font-medium`}>{ghkhLabel}</span>
+                        </div>
                         <span className="text-sm font-semibold tabular-nums text-sky-300">
                           {mg.toFixed(1)} mg
                         </span>
-                        {minRemaining < 1 && (
+                        {mg < fullMg - 0.01 && (
                           <span className="text-[10px] ml-1.5 text-slate-500">
                             (of {fullMg.toFixed(1)})
                           </span>
                         )}
-                        {minRemaining < 1 && (
+                        {/* Priority override buttons when there's a real conflict */}
+                        {hasConflict && !priority && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <span className="text-[10px] text-slate-500 mr-0.5">Prioritize →</span>
+                            {ionInfo.filter(i => i.frac > minFrac + 0.01).map(i => (
+                              <button key={i.id} onClick={() => setPriorityOverride(p => ({ ...p, [salt.id]: i.id }))}
+                                className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 transition-colors">
+                                {i.formula}
+                              </button>
+                            ))}
+                            <button onClick={() => setPriorityOverride(p => ({ ...p, [salt.id]: 'capped' as IonId }))}
+                              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400/80 hover:bg-amber-800/30 transition-colors">
+                              Keep capped
+                            </button>
+                          </div>
+                        )}
+                        {/* Show current constraint */}
+                        {mg < fullMg - 0.01 && !priority && (
                           <span className="block text-[10px] text-amber-300/70 leading-tight">
-                            Limited by {limitingIons.join(', ')}
+                            Limited by {ionInfo.filter(i => Math.abs(i.frac - minFrac) < 0.001).map(i => i.formula).join(', ')}
                           </span>
+                        )}
+                        {/* Overshoot warnings when priority chosen */}
+                        {overshoots.length > 0 && (
+                          <div className="mt-1 text-[10px] text-rose-300 leading-tight">
+                            ⚠ {overshoots.map(i => `${i.formula}: +${(target * i.frac * useFrac - i.headroom).toFixed(1)} ppm`).join(', ')}
+                          </div>
+                        )}
+                        {/* Reset priority button */}
+                        {priority && (
+                          <button onClick={() => setPriorityOverride(p => { const q = { ...p }; delete q[salt.id]; return q; })}
+                            className="mt-1 text-[10px] text-slate-500 hover:text-slate-300 underline transition-colors">
+                            Reset
+                          </button>
                         )}
                       </div>
                     );
