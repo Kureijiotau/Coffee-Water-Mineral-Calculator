@@ -152,6 +152,12 @@ function App() {
     [saltTargets, combinedBaseIons, dil],
   );
 
+  // Salt-only contribution (no base water) — used for the coverage bars
+  const saltOnlyIons = useMemo(
+    () => computeIonTotals(saltTargets, {}, dil),
+    [saltTargets, dil],
+  );
+
   // Combined contribution from all mineral waters (already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
@@ -1101,9 +1107,55 @@ function App() {
               Add water source
             </button>
 
+            {/* Coverage bars — how the salt recipe hits the target */}
+            {batchMl > 0 && (
+              <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Salt recipe vs {activeProfile.name}</span>
+                {ACTIVE_ION_IDS.map(id => {
+                  const ion = ION_MAP[id];
+                  const saltPpm = saltOnlyIons[id] ?? 0;
+                  const greenMax = activeRanges[id].greenMax;
+                  const yellowMax = activeRanges[id].yellowMax;
+                  const pct = greenMax > 0 ? Math.min((saltPpm / greenMax) * 100, 100) : 0;
+                  const overshoot = saltPpm > yellowMax;
+                  const level: 'full' | 'partial' | 'overshoot' =
+                    overshoot ? 'overshoot' :
+                    saltPpm >= greenMax ? 'full' :
+                    saltPpm > 0 ? 'partial' : 'none';
+                  const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-amber-500' : 'bg-slate-600';
+                  const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-amber-300' : 'text-slate-500';
+                  const label = level === 'overshoot'
+                    ? `⚠ Overshooting by ${(saltPpm - greenMax).toFixed(1)} ppm`
+                    : level === 'full'
+                    ? `${saltPpm.toFixed(1)} ppm — in range (${greenMax} max)`
+                    : level === 'partial'
+                    ? `${(greenMax - saltPpm).toFixed(1)} ppm more needed`
+                    : 'No salt added';
+                  return (
+                    <div key={id} className="flex items-center gap-3">
+                      <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
+                            {saltPpm.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-slate-500 shrink-0">ppm</span>
+                        </div>
+                        <div className={`text-[11px] mt-0.5 ${textColor}`}>
+                          {label}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             {mineralWaters.length > 0 && batchMl <= 0 && (
               <div className="border-t border-slate-700/40 pt-4">
-                <p className="text-xs text-slate-500 italic">Set a batch volume above to calculate dilution.</p>
+                <p className="text-xs text-slate-500 italic">Set a batch volume above to see coverage.</p>
               </div>
             )}
           </div>
