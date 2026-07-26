@@ -589,20 +589,17 @@ function App() {
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-slate-300">Stock strength:</label>
                     <select
-                      value={concentrateStrength}
-                      onChange={e => setConcentrateStrength(Number(e.target.value))}
+                      value={STRENGTH_OPTIONS.includes(concentrateStrength) ? concentrateStrength : 0}
+                      onChange={e => {
+                        const v = Number(e.target.value);
+                        setConcentrateStrength(v === 0 ? concentrateStrength : v);
+                      }}
                       className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                     >
-                      <option value={10}>×10</option>
-                      <option value={25}>×25</option>
-                      <option value={50}>×50</option>
-                      <option value={100}>×100</option>
-                      <option value={150}>×150</option>
-                      <option value={200}>×200</option>
-                      <option value={500}>×500</option>
+                      {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
                       <option value={0}>Custom</option>
                     </select>
-                    {concentrateStrength === 0 && (
+                    {!STRENGTH_OPTIONS.includes(concentrateStrength) && (
                       <input
                         type="number"
                         inputMode="numeric"
