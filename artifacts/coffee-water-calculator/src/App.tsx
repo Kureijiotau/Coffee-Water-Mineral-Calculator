@@ -1110,27 +1110,28 @@ function App() {
             {/* Coverage bars — how the salt recipe hits the target */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Salt recipe vs {activeProfile.name}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of salt recipe</span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
-                  const saltPpm = saltOnlyIons[id] ?? 0;
-                  const greenMax = activeRanges[id].greenMax;
-                  const yellowMax = activeRanges[id].yellowMax;
-                  const pct = greenMax > 0 ? Math.min((saltPpm / greenMax) * 100, 100) : 0;
-                  const overshoot = saltPpm > yellowMax;
-                  const level: 'full' | 'partial' | 'overshoot' =
+                  const target = saltOnlyIons[id] ?? 0;
+                  const covered = bottledIons[id] ?? 0;
+                  const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
+                  const overshoot = target > 0 && covered > target;
+                  const level: 'none' | 'partial' | 'full' | 'overshoot' =
                     overshoot ? 'overshoot' :
-                    saltPpm >= greenMax ? 'full' :
-                    saltPpm > 0 ? 'partial' : 'none';
+                    target > 0 && covered >= target ? 'full' :
+                    covered > 0 ? 'partial' : 'none';
                   const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-amber-500' : 'bg-slate-600';
                   const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-amber-300' : 'text-slate-500';
                   const label = level === 'overshoot'
-                    ? `⚠ Overshooting by ${(saltPpm - greenMax).toFixed(1)} ppm`
+                    ? `⚠ Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
                     : level === 'full'
-                    ? `${saltPpm.toFixed(1)} ppm — in range (${greenMax} max)`
+                    ? `${covered.toFixed(1)} ppm — salt target of ${target.toFixed(1)} reached`
                     : level === 'partial'
-                    ? `${(greenMax - saltPpm).toFixed(1)} ppm more needed`
-                    : 'No salt added';
+                    ? `${covered.toFixed(1)} ppm of ${target.toFixed(1)} target covered from mineral water`
+                    : target > 0
+                    ? `Needs ${target.toFixed(1)} ppm from salts — none from mineral water`
+                    : 'No salt target set';
                   return (
                     <div key={id} className="flex items-center gap-3">
                       <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
@@ -1140,9 +1141,9 @@ function App() {
                             <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
                           </div>
                           <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
-                            {saltPpm.toFixed(1)}
+                            {covered.toFixed(1)}
                           </span>
-                          <span className="text-xs text-slate-500 shrink-0">ppm</span>
+                          <span className="text-xs text-slate-500 shrink-0">/ {target.toFixed(1)} ppm</span>
                         </div>
                         <div className={`text-[11px] mt-0.5 ${textColor}`}>
                           {label}
