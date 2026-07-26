@@ -10,6 +10,7 @@ import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
 } from '@/recipes';
 import { SettingsModal } from '@/SettingsModal';
+import LabelScanner from '@/LabelScanner';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadIndicatorOn, saveIndicatorOn, createProfile,
@@ -864,7 +865,11 @@ function App() {
 
         {/* Mineral Water */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Mineral Water Addition" />
+          <SectionHeader
+            icon={<Droplet className="w-4 h-4" />}
+            title="Mineral Water Addition"
+            after={<LabelScanner onExtracted={vals => setBaseWater(prev => ({ ...prev, ...vals }))} />}
+          />
           <div className="px-6 py-4">
             <div className="flex flex-wrap items-center gap-4 mb-4">
               <div className="flex items-center gap-2">
