@@ -5,7 +5,10 @@ import { ION_MAP, type IonId } from '@/waterData';
 // On Replit, the proxy routes /api/* to the API server automatically.
 // On your own hosting (Vercel etc.), set VITE_API_URL to the Replit workspace URL
 // so scans reach the API server running on Replit.
-const API_BASE = (import.meta as Record<string, any>).env?.VITE_API_URL ?? '';
+// Vite inlines VITE_* env vars at build time.
+// Set VITE_API_URL on your hosting platform (Vercel etc.) to point to your Replit API server.
+// On Replit the proxy routes /api/* to the API server automatically, so no config needed.
+const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
 interface ScannedValue {
   id: IonId;
