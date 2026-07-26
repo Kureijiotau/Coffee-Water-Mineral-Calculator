@@ -1196,6 +1196,42 @@ function App() {
                     );
                   })}
                 </div>
+                {/* Adjusted salt powder weights */}
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {SALTS.map((salt, i) => {
+                    const target = num(rows[i].target);
+                    if (target <= 0) return null;
+                    const form = salt.hydrationForms[rows[i].formIdx];
+                    // For each ion this salt contributes, find how much of that ion's
+                    // total need is still uncovered by mineral water
+                    let maxRemaining = 0;
+                    for (const c of salt.ions) {
+                      const total = saltOnlyIons[c.ionId] ?? 0;
+                      const covered = bottledIons[c.ionId] ?? 0;
+                      if (total > 0) {
+                        const frac = Math.max(0, (total - covered) / total);
+                        maxRemaining = Math.max(maxRemaining, frac);
+                      }
+                    }
+                    const adjustedTarget = target * maxRemaining;
+                    const adjustedMg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
+                    const originalMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                    if (adjustedMg <= 0) return null;
+                    return (
+                      <div key={salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
+                        <span className="block text-[10px] text-slate-500">{salt.formula}</span>
+                        <span className="text-sm font-semibold tabular-nums text-sky-300">
+                          {adjustedMg.toFixed(1)} mg
+                        </span>
+                        {adjustedMg < originalMg && (
+                          <span className="text-[10px] text-slate-500 ml-1.5">
+                            (was {originalMg.toFixed(1)})
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
