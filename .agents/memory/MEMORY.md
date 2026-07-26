@@ -1,0 +1,1 @@
+- [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
