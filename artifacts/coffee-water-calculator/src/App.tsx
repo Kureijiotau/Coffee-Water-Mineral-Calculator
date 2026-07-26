@@ -967,7 +967,7 @@ function App() {
             {/* Saved waters picker */}
             {!savedWatersLoading && savedWaters.length > 0 && (
               <div>
-                <details className="group">
+                <details className="group" open>
                   <summary className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 cursor-pointer hover:text-slate-200 transition select-none">
                     <Droplet className="w-3.5 h-3.5" />
                     Saved waters ({savedWaters.length})
