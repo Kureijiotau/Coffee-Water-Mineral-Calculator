@@ -1196,30 +1196,38 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Salt powder amounts — only shown when full target is safe */}
+                {/* Salt powder amounts — blocked salts shown crossed out */}
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SALTS.map((salt, i) => {
                     const target = num(rows[i].target);
                     if (target <= 0) return null;
-                    // Check whether adding this salt at the full target would overshoot any ion
-                    let overshoots = false;
+                    const form = salt.hydrationForms[rows[i].formIdx];
+                    const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                    // Check which ions this salt would overshoot
+                    const blockedBy: string[] = [];
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
                       if (total > 0 && covered >= total * (1 - 1e-9)) {
-                        overshoots = true;
-                        break;
+                        blockedBy.push(ION_MAP[c.ionId].formula);
                       }
                     }
-                    if (overshoots) return null;
-                    const form = salt.hydrationForms[rows[i].formIdx];
-                    const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                    const blocked = blockedBy.length > 0;
                     return (
-                      <div key={salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
-                        <span className="block text-[10px] text-slate-500">{salt.formula}</span>
-                        <span className="text-sm font-semibold tabular-nums text-sky-300">
+                      <div key={salt.id} className={`border rounded-lg px-3 py-2 ${
+                        blocked ? 'bg-slate-900/20 border-slate-700/30 opacity-50' : 'bg-slate-900/40 border-slate-700/50'
+                      }`}>
+                        <span className={`block text-[10px] ${blocked ? 'text-slate-600' : 'text-slate-500'}`}>
+                          {salt.formula}
+                        </span>
+                        <span className={`text-sm font-semibold tabular-nums ${blocked ? 'text-slate-600' : 'text-sky-300'} ${blocked ? 'line-through' : ''}`}>
                           {mg.toFixed(1)} mg
                         </span>
+                        {blocked && (
+                          <span className="block text-[10px] text-slate-600 leading-tight">
+                            Held back — {blockedBy.join(', ')} covered
+                          </span>
+                        )}
                       </div>
                     );
                   })}
