@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2 } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
-  computeIonTotals, computeGH, computeKH,
+  computeIonTotals, computeGH, computeKH, checkConcentrate,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
-  type SaltRecipe, type SaltRecipeEntry,
+  type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning,
 } from '@/waterData';
 import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
@@ -104,6 +104,36 @@ function App() {
   const khBottled = computeKH(bottledIons);
   const ghSalt = gh - ghBottled;
   const khSalt = kh - khBottled;
+
+  // ── Concentrate state ──────────────────────────────
+  const [concentrateOn, setConcentrateOn] = useState(false);
+  const [concentrateStrength, setConcentrateStrength] = useState(100);
+  const [concentrateMl, setConcentrateMl] = useState('500');
+
+  const concL = num(concentrateMl) / 1000;
+  const concSaltTargets = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const salt of SALTS) {
+      m[salt.id] = num(rows[SALTS.indexOf(salt)].target);
+    }
+    return m;
+  }, [rows]);
+
+  const concWarnings: ConcentrateWarning[] = useMemo(
+    () => concentrateOn ? checkConcentrate(concentrateStrength, concSaltTargets) : [],
+    [concentrateOn, concentrateStrength, concSaltTargets],
+  );
+
+  const concFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
+    const hasError = concWarnings.some(w => w.severity === 'error');
+    const hasWarning = concWarnings.some(w => w.severity === 'warning');
+    if (hasError) return { level: 'red', label: 'Split required' };
+    if (hasWarning) return { level: 'amber', label: 'Split recommended' };
+    return { level: 'green', label: 'Single stock OK' };
+  }, [concWarnings]);
+
+  const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
+  const concDoseMlPerBatch = concDoseMlPerLiter * L;
 
   const overallLevel: TrafficLevel = useMemo(() => {
     let worst: TrafficLevel = 'green';
@@ -335,6 +365,17 @@ function App() {
               <span className="text-xs text-slate-400 font-normal normal-case">
                 — {activeRecipe?.name ?? 'Custom'}
               </span>
+              {concentrateOn && (
+                <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                  concFeasibility.level === 'green'
+                    ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
+                    : concFeasibility.level === 'amber'
+                    ? 'text-amber-300 border-amber-500/40 bg-amber-500/10'
+                    : 'text-rose-300 border-rose-500/40 bg-rose-500/10'
+                }`}>
+                  {concFeasibility.label}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <select
@@ -408,7 +449,7 @@ function App() {
             <span>Salt</span>
             <span>Target (ppm)</span>
             <span>Hydrated Form</span>
-            <span>Amount (mg)</span>
+            <span>{concentrateOn ? 'Amount' : 'Amount (mg)'}</span>
           </div>
           {SALTS.map((salt, i) => {
             const row = rows[i];
@@ -417,6 +458,13 @@ function App() {
             const mg = L > 0 && target > 0
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
+            const concMg = concentrateOn && target > 0 && concL > 0
+              ? computeSaltMg(target, concL, form.molarMass, salt.anhydrousMass) * concentrateStrength
+              : 0;
+            const displayMass = concentrateOn ? concMg : mg;
+            const massLabel = concentrateOn && displayMass >= 1000
+              ? `${(displayMass / 1000).toFixed(2)} g`
+              : `${displayMass.toFixed(2)} mg`;
             return (
               <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-2.5 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
@@ -455,9 +503,9 @@ function App() {
                   )}
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
-                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Amount (mg)</span>
+                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">{concentrateOn ? 'Amount' : 'Amount (mg)'}</span>
                   <span className="text-sm font-mono text-emerald-300">
-                    {mg > 0 ? mg.toFixed(2) : '—'}
+                    {displayMass > 0 ? massLabel : '—'}
                   </span>
                 </div>
               </div>
@@ -465,20 +513,119 @@ function App() {
           })}
         </div>
 
-        {/* Water amount */}
+        {/* Water amount + Concentrate */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Water Volume" />
-          <div className="px-6 py-4 flex items-center gap-4">
-            <label className="text-sm text-slate-300">Final batch volume:</label>
-            <input
-              type="number"
-              inputMode="decimal"
-              value={liters}
-              onChange={e => setLiters(e.target.value)}
-              placeholder="Liters"
-              className="w-32 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-            />
-            <span className="text-sm text-slate-400">liters</span>
+          <SectionHeader
+            icon={<Droplet className="w-4 h-4" />}
+            title="Water Volume"
+            after={
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                <span className={`transition-colors ${concentrateOn ? 'text-sky-300' : ''}`}>Concentrate</span>
+                <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-sky-500' : 'bg-slate-600'}`}>
+                  <input
+                    type="checkbox"
+                    checked={concentrateOn}
+                    onChange={e => setConcentrateOn(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </label>
+            }
+          />
+          <div className="px-4 sm:px-6 py-4 space-y-4">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <label className="text-sm text-slate-300">Final batch volume:</label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={liters}
+                onChange={e => setLiters(e.target.value)}
+                placeholder="Liters"
+                className="w-32 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+              />
+              <span className="text-sm text-slate-400">liters</span>
+            </div>
+
+            {concentrateOn && (
+              <div className="space-y-3 border border-sky-500/30 bg-sky-500/5 rounded-xl px-4 py-3">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-300">Stock strength:</label>
+                    <select
+                      value={concentrateStrength}
+                      onChange={e => setConcentrateStrength(Number(e.target.value))}
+                      className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                    >
+                      <option value={10}>×10</option>
+                      <option value={25}>×25</option>
+                      <option value={50}>×50</option>
+                      <option value={100}>×100</option>
+                      <option value={150}>×150</option>
+                      <option value={200}>×200</option>
+                      <option value={500}>×500</option>
+                      <option value={0}>Custom</option>
+                    </select>
+                    {concentrateStrength === 0 && (
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={2}
+                        value={concentrateStrength || ''}
+                        onChange={e => setConcentrateStrength(Number(e.target.value) || 0)}
+                        placeholder="×"
+                        className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                      />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-slate-300">Stock volume:</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={concentrateMl}
+                      onChange={e => setConcentrateMl(e.target.value)}
+                      placeholder="500"
+                      className="w-24 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                    />
+                    <span className="text-xs text-slate-400">mL</span>
+                  </div>
+                </div>
+
+                {concentrateStrength > 0 && concL > 0 && (
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-sky-200 bg-sky-500/10 rounded-lg px-3 py-2 border border-sky-500/20">
+                    <span>Add <strong>{concDoseMlPerLiter.toFixed(1)} mL</strong> of stock per liter of brew water</span>
+                    {L > 0 && (
+                      <span className="text-sky-300">· <strong>{concDoseMlPerBatch.toFixed(1)} mL</strong> per batch</span>
+                    )}
+                    <span className="text-slate-400">· Weigh the amounts shown in the salts table</span>
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {concWarnings.length > 0 && (
+                  <div className="space-y-2">
+                    {concWarnings.map((w, wi) => (
+                      <div
+                        key={wi}
+                        className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${
+                          w.severity === 'error'
+                            ? 'text-rose-200 bg-rose-500/10 border border-rose-500/25'
+                            : w.severity === 'warning'
+                            ? 'text-amber-200 bg-amber-500/10 border border-amber-500/25'
+                            : 'text-slate-300 bg-slate-700/40 border border-slate-600/40'
+                        }`}
+                      >
+                        <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                          w.severity === 'error' ? 'text-rose-400' : w.severity === 'warning' ? 'text-amber-400' : 'text-slate-400'
+                        }`} />
+                        <span>{w.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -637,11 +784,14 @@ function App() {
   );
 }
 
-function SectionHeader({ icon, title }: { icon: React.ReactNode; title: string }) {
+function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: string; after?: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 px-6 py-3 border-b border-slate-700/40 text-slate-300">
-      {icon}
-      <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
+      <div className="flex items-center gap-2">
+        {icon}
+        <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
+      </div>
+      {after}
     </div>
   );
 }
