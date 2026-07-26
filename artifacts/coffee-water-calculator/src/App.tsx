@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -141,6 +141,16 @@ function App() {
     if (hasWarning) return { level: 'amber', label: 'Split recommended' };
     return { level: 'green', label: 'Single stock OK' };
   }, [concWarnings]);
+
+  // ── Reset state ────────────────────────────────────
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const handleReset = () => {
+    setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
+    setBaseWater({});
+    setBottledMl('0');
+    setLiters('1');
+    setShowResetConfirm(false);
+  };
 
   // ── Split stocks derived state ──────────────────────
   const stockGroups = useMemo(
@@ -575,6 +585,14 @@ function App() {
                 <Upload className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Import</span>
               </button>
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2.5 py-1.5 transition"
+                title="Reset all inputs to defaults"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
               <input
                 ref={importInputRef}
                 type="file"
@@ -863,12 +881,88 @@ function App() {
           </div>
         </div>
 
-        {/* Mineral Water */}
+        {/* Mineral Water Base */}
+        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+          <SectionHeader
+            icon={<FlaskConical className="w-4 h-4" />}
+            title="Mineral Water Base"
+            after={<LabelScanner onExtracted={vals => setBaseWater(prev => ({ ...prev, ...vals }))} />}
+          />
+          <div className="px-6 py-4 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              {ACTIVE_ION_IDS.map(id => (
+                <div key={id}>
+                  <label className="block text-xs text-slate-400 mb-1">{ION_MAP[id].formula}</label>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={baseWater[id] ?? ''}
+                    onChange={e => setBaseWater(prev => ({ ...prev, [id]: e.target.value }))}
+                    placeholder="0"
+                    className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-slate-500 flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5" />
+              Enter mineral concentrations from your water source in mg/L, or scan a label.
+            </p>
+
+            {/* Coverage rows */}
+            {batchMl > 0 && (
+              <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Coverage vs {activeProfile.name}</span>
+                {ACTIVE_ION_IDS.map(id => {
+                  const ion = ION_MAP[id];
+                  const bottledPpm = bottledIons[id] ?? 0;
+                  const greenMax = activeRanges[id].greenMax;
+                  const pct = greenMax > 0 ? Math.min((bottledPpm / greenMax) * 100, 100) : 0;
+                  const needed = Math.max(greenMax - bottledPpm, 0);
+                  const level: 'full' | 'partial' | 'none' =
+                    bottledPpm >= greenMax ? 'full' :
+                    bottledPpm > 0 ? 'partial' : 'none';
+                  const barColor = level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-amber-500' : 'bg-slate-600';
+                  const textColor = level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-amber-300' : 'text-slate-500';
+                  const label = level === 'full' ? 'Target reached' : level === 'partial' ? `${needed.toFixed(1)} ppm still needed from salts` : 'No mineral water added';
+                  return (
+                    <div key={id} className="flex items-center gap-3">
+                      <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-slate-700/60 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
+                            {bottledPpm.toFixed(1)}
+                          </span>
+                          <span className="text-xs text-slate-500 shrink-0">ppm</span>
+                        </div>
+                        <div className={`text-[11px] mt-0.5 ${textColor}`}>
+                          {label}
+                          {greenMax > 0 && level !== 'none' && (
+                            <span className="text-slate-500"> · Target &lt;{greenMax} ppm</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {batchMl <= 0 && (
+              <div className="border-t border-slate-700/40 pt-4">
+                <p className="text-xs text-slate-500 italic">Set a batch volume and add mineral water to see coverage.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Mineral Water Addition (volume only) */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Mineral Water Addition"
-            after={<LabelScanner onExtracted={vals => setBaseWater(prev => ({ ...prev, ...vals }))} />}
           />
           <div className="px-6 py-4">
             <div className="flex flex-wrap items-center gap-4 mb-4">
@@ -895,30 +989,11 @@ function App() {
               )}
             </div>
             {overfill && (
-              <div className="flex items-center gap-2 mb-4 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 Mineral water volume exceeds the final batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
               </div>
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-              {ACTIVE_ION_IDS.map(id => (
-                <div key={id}>
-                  <label className="block text-xs text-slate-400 mb-1">{ION_MAP[id].formula}</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={baseWater[id] ?? ''}
-                    onChange={e => setBaseWater(prev => ({ ...prev, [id]: e.target.value }))}
-                    placeholder="0"
-                    className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 mt-3 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5" />
-              Enter mineral concentrations from the mineral water label in mg/L. The mineral water is part of the final batch — the remainder is 0 TDS water.
-            </p>
           </div>
         </div>
 
@@ -987,6 +1062,32 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Reset confirmation */}
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-slate-800 border border-slate-600/60 rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <h3 className="text-base font-semibold text-slate-100">Reset everything?</h3>
+            <p className="text-sm text-slate-400">
+              This will clear all salt targets, mineral water values, and volume back to defaults. This cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="text-sm text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-4 py-2 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReset}
+                className="text-sm font-medium text-white bg-rose-600 hover:bg-rose-500 rounded-lg px-4 py-2 transition"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showSettings && (
         <SettingsModal
