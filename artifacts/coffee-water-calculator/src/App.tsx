@@ -1196,53 +1196,30 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Adjusted salt powder weights — capped to prevent overshoot */}
+                {/* Salt powder amounts — only shown when full target is safe */}
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SALTS.map((salt, i) => {
                     const target = num(rows[i].target);
                     if (target <= 0) return null;
-                    const form = salt.hydrationForms[rows[i].formIdx];
-                    // For each ion this salt contributes, find how much of that ion's
-                    // headroom is still free (0 = fully covered, caps the salt)
-                    let minRemaining = 1; // most restrictive ion controls the cap
-                    const constraints: { name: string; headroom: number; contributes: number }[] = [];
+                    // Check whether adding this salt at the full target would overshoot any ion
+                    let overshoots = false;
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
-                      if (total > 0) {
-                        const frac = Math.max(0, (total - covered) / total);
-                        const headroom = Math.max(0, total - covered);
-                        const contributes = c.fraction * target;
-                        constraints.push({ name: ION_MAP[c.ionId].formula, headroom, contributes, frac });
-                        if (frac < minRemaining) minRemaining = frac;
+                      if (total > 0 && covered >= total * (1 - 1e-9)) {
+                        overshoots = true;
+                        break;
                       }
                     }
-                    const adjustedTarget = target * minRemaining;
-                    const cappedBy = constraints.filter(c => Math.abs(c.frac - minRemaining) < 0.001);
-                    const adjustedMg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
-                    const originalMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
-                    if (adjustedMg <= 0) return null;
-                    const wasReduced = adjustedMg < originalMg - 0.01;
+                    if (overshoots) return null;
+                    const form = salt.hydrationForms[rows[i].formIdx];
+                    const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                     return (
-                      <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
-                        cappedBy.length > 0 ? 'border-amber-500/40' : 'border-slate-700/50'
-                      }`}>
+                      <div key={salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{salt.formula}</span>
                         <span className="text-sm font-semibold tabular-nums text-sky-300">
-                          {adjustedMg.toFixed(1)} mg
+                          {mg.toFixed(1)} mg
                         </span>
-                        {wasReduced && (
-                          <span className="text-[10px] text-slate-500 ml-1.5">
-                            (was {originalMg.toFixed(1)})
-                          </span>
-                        )}
-                        {cappedBy.length > 0 && (
-                          <div className="mt-1 text-[10px] text-amber-300 leading-tight">
-                            ⛔ Capped — {cappedBy.map(c =>
-                              `${c.name} covers ${c.headroom.toFixed(1)} ppm (would add ${(c.contributes * minRemaining).toFixed(1)})`
-                            ).join(', ')}
-                          </div>
-                        )}
                       </div>
                     );
                   })}
