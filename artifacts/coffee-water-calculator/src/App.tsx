@@ -1213,12 +1213,12 @@ function App() {
                         const frac = Math.max(0, (total - covered) / total);
                         const headroom = Math.max(0, total - covered);
                         const contributes = c.fraction * target;
-                        constraints.push({ name: ION_MAP[c.ionId].formula, headroom, contributes });
+                        constraints.push({ name: ION_MAP[c.ionId].formula, headroom, contributes, frac });
                         if (frac < minRemaining) minRemaining = frac;
                       }
                     }
                     const adjustedTarget = target * minRemaining;
-                    const cappedBy = constraints.filter(c => c.headroom < c.contributes * minRemaining);
+                    const cappedBy = constraints.filter(c => Math.abs(c.frac - minRemaining) < 0.001);
                     const adjustedMg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
                     const originalMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                     if (adjustedMg <= 0) return null;
