@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2 } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
-  computeIonTotals, computeGH, computeKH, checkConcentrate,
+  computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
-  type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning,
+  type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
 import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
@@ -110,6 +110,15 @@ function App() {
   const [concentrateStrength, setConcentrateStrength] = useState(100);
   const [concentrateMl, setConcentrateMl] = useState('500');
 
+  // ── Split stocks state ──────────────────────────────
+  const [splitMode, setSplitMode] = useState(false);
+  const [splitStrengths, setSplitStrengths] = useState<Record<string, number>>({
+    hardness: 100, alkalinity: 100, citrate: 50,
+  });
+  const [splitMls, setSplitMls] = useState<Record<string, string>>({
+    hardness: '500', alkalinity: '500', citrate: '500',
+  });
+
   const concL = num(concentrateMl) / 1000;
   const concSaltTargets = useMemo(() => {
     const m: Record<string, number> = {};
@@ -131,6 +140,30 @@ function App() {
     if (hasWarning) return { level: 'amber', label: 'Split recommended' };
     return { level: 'green', label: 'Single stock OK' };
   }, [concWarnings]);
+
+  // ── Split stocks derived state ──────────────────────
+  const stockGroups = useMemo(
+    () => (splitMode && concentrateOn) ? splitIntoStockGroups(concSaltTargets) : [],
+    [splitMode, concentrateOn, concSaltTargets],
+  );
+
+  const splitGroupWarnings = useMemo(() => {
+    const result: Record<string, ConcentrateWarning[]> = {};
+    for (const group of stockGroups) {
+      const groupTargets: Record<string, number> = {};
+      for (const saltId of group.saltIds) groupTargets[saltId] = concSaltTargets[saltId] ?? 0;
+      result[group.id] = checkConcentrate(splitStrengths[group.id] ?? 100, groupTargets);
+    }
+    return result;
+  }, [stockGroups, splitStrengths, concSaltTargets]);
+
+  const splitFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
+    if (!splitMode || stockGroups.length === 0) return { level: 'green', label: 'Split OK' };
+    const all = Object.values(splitGroupWarnings).flat();
+    if (all.some(w => w.severity === 'error'))   return { level: 'red',   label: 'Still issues' };
+    if (all.some(w => w.severity === 'warning')) return { level: 'amber', label: 'Check stocks' };
+    return { level: 'green', label: 'Split OK' };
+  }, [splitMode, stockGroups, splitGroupWarnings]);
 
   const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
@@ -365,17 +398,20 @@ function App() {
               <span className="text-xs text-slate-400 font-normal normal-case">
                 — {activeRecipe?.name ?? 'Custom'}
               </span>
-              {concentrateOn && (
-                <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                  concFeasibility.level === 'green'
-                    ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
-                    : concFeasibility.level === 'amber'
-                    ? 'text-amber-300 border-amber-500/40 bg-amber-500/10'
-                    : 'text-rose-300 border-rose-500/40 bg-rose-500/10'
-                }`}>
-                  {concFeasibility.label}
-                </span>
-              )}
+              {concentrateOn && (() => {
+                const pill = splitMode ? splitFeasibility : concFeasibility;
+                return (
+                  <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                    pill.level === 'green'
+                      ? 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10'
+                      : pill.level === 'amber'
+                      ? 'text-amber-300 border-amber-500/40 bg-amber-500/10'
+                      : 'text-rose-300 border-rose-500/40 bg-rose-500/10'
+                  }`}>
+                    {pill.label}
+                  </span>
+                );
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <select
@@ -547,7 +583,7 @@ function App() {
               <span className="text-sm text-slate-400">liters</span>
             </div>
 
-            {concentrateOn && (
+            {concentrateOn && !splitMode && (
               <div className="space-y-3 border border-sky-500/30 bg-sky-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   <div className="flex items-center gap-2">
@@ -651,6 +687,52 @@ function App() {
                       </div>
                     ))}
                   </div>
+                )}
+
+                {/* Split into stocks button */}
+                {concFeasibility.level !== 'green' && (
+                  <button
+                    onClick={() => setSplitMode(true)}
+                    className="flex items-center gap-2 text-xs font-medium text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-lg px-3 py-2 transition w-full justify-center"
+                  >
+                    <Layers className="w-3.5 h-3.5" />
+                    Split into stocks
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* ── Split stocks panels ── */}
+            {concentrateOn && splitMode && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5" /> Split stocks mode
+                  </span>
+                  <button
+                    onClick={() => setSplitMode(false)}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-300 transition"
+                  >
+                    <X className="w-3.5 h-3.5" /> Exit split
+                  </button>
+                </div>
+                {stockGroups.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic">Add salts to the recipe to see stocks.</p>
+                ) : (
+                  stockGroups.map(group => (
+                    <SplitStockCard
+                      key={group.id}
+                      group={group}
+                      saltTargets={concSaltTargets}
+                      rows={rows}
+                      strength={splitStrengths[group.id] ?? 100}
+                      volumeMl={splitMls[group.id] ?? '500'}
+                      batchL={L}
+                      warnings={splitGroupWarnings[group.id] ?? []}
+                      onStrengthChange={v => setSplitStrengths(prev => ({ ...prev, [group.id]: v }))}
+                      onVolumeChange={v => setSplitMls(prev => ({ ...prev, [group.id]: v }))}
+                    />
+                  ))
                 )}
               </div>
             )}
@@ -831,6 +913,134 @@ function OverallBadge({ level }: { level: TrafficLevel }) {
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${s.bg} border ${s.border}`}>
       <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
       <span className={`text-xs font-medium ${s.text}`}>{text}</span>
+    </div>
+  );
+}
+
+const STRENGTH_OPTIONS = [10, 25, 50, 100, 150, 200, 500];
+
+const STOCK_COLOR_CLASSES = {
+  sky:    { border: 'border-sky-500/30',    bg: 'bg-sky-500/5',    heading: 'text-sky-300',    doseBg: 'bg-sky-500/10 border-sky-500/20',    doseText: 'text-sky-200' },
+  violet: { border: 'border-violet-500/30', bg: 'bg-violet-500/5', heading: 'text-violet-300', doseBg: 'bg-violet-500/10 border-violet-500/20', doseText: 'text-violet-200' },
+  amber:  { border: 'border-amber-500/30',  bg: 'bg-amber-500/5',  heading: 'text-amber-300',  doseBg: 'bg-amber-500/10 border-amber-500/20',  doseText: 'text-amber-200' },
+};
+
+function SplitStockCard({
+  group, saltTargets, rows, strength, volumeMl, batchL, warnings,
+  onStrengthChange, onVolumeChange,
+}: {
+  group: StockGroup;
+  saltTargets: Record<string, number>;
+  rows: SaltRow[];
+  strength: number;
+  volumeMl: string;
+  batchL: number;
+  warnings: ConcentrateWarning[];
+  onStrengthChange: (v: number) => void;
+  onVolumeChange: (v: string) => void;
+}) {
+  const cls = STOCK_COLOR_CLASSES[group.color];
+  const stockL = num(volumeMl) / 1000;
+  const dosePerLiter = strength > 0 ? 1000 / strength : 0;
+  const dosePerBatch = dosePerLiter * batchL;
+
+  return (
+    <div className={`rounded-xl border ${cls.border} ${cls.bg} px-4 py-3 space-y-3`}>
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Layers className={`w-3.5 h-3.5 ${cls.heading}`} />
+        <span className={`text-xs font-semibold uppercase tracking-wider ${cls.heading}`}>{group.name}</span>
+      </div>
+
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-300">Strength:</label>
+          <select
+            value={STRENGTH_OPTIONS.includes(strength) ? strength : 0}
+            onChange={e => {
+              const v = Number(e.target.value);
+              onStrengthChange(v === 0 ? strength : v);
+            }}
+            className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+          >
+            {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
+            <option value={0}>Custom</option>
+          </select>
+          {!STRENGTH_OPTIONS.includes(strength) && (
+            <input
+              type="number"
+              inputMode="numeric"
+              min={2}
+              value={strength || ''}
+              onChange={e => onStrengthChange(Number(e.target.value) || 0)}
+              placeholder="×"
+              className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+            />
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-slate-300">Volume:</label>
+          <input
+            type="number"
+            inputMode="decimal"
+            value={volumeMl}
+            onChange={e => onVolumeChange(e.target.value)}
+            placeholder="500"
+            className="w-24 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+          />
+          <span className="text-xs text-slate-400">mL</span>
+        </div>
+      </div>
+
+      {/* Dosing info */}
+      {strength > 0 && stockL > 0 && (
+        <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${cls.doseText} ${cls.doseBg} rounded-lg px-3 py-2 border`}>
+          <span>Add <strong>{dosePerLiter.toFixed(1)} mL</strong> per liter of brew water</span>
+          {batchL > 0 && <span>· <strong>{dosePerBatch.toFixed(1)} mL</strong> per batch</span>}
+        </div>
+      )}
+
+      {/* Salt masses */}
+      <div className="space-y-1">
+        {group.saltIds.map(saltId => {
+          const salt = SALTS.find(s => s.id === saltId)!;
+          const saltIdx = SALTS.indexOf(salt);
+          const row = rows[saltIdx];
+          const form = salt.hydrationForms[row.formIdx];
+          const target = saltTargets[saltId] ?? 0;
+          const mg = strength > 0 && stockL > 0 && target > 0
+            ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * strength
+            : 0;
+          const massLabel = mg >= 1000 ? `${(mg / 1000).toFixed(3)} g` : `${mg.toFixed(2)} mg`;
+          const formLabel = salt.hydrationForms.length > 1 ? ` (${form.label})` : '';
+          return (
+            <div key={saltId} className="flex items-baseline justify-between gap-2">
+              <span className="text-xs text-slate-300">{salt.name}{formLabel}</span>
+              <span className="text-xs font-mono text-emerald-300 shrink-0">{mg > 0 ? massLabel : '—'}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Warnings for this group */}
+      {warnings.filter(w => w.severity !== 'info').length > 0 && (
+        <div className="space-y-1.5">
+          {warnings.filter(w => w.severity !== 'info').map((w, wi) => (
+            <div
+              key={wi}
+              className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${
+                w.severity === 'error'
+                  ? 'text-rose-200 bg-rose-500/10 border border-rose-500/25'
+                  : 'text-amber-200 bg-amber-500/10 border border-amber-500/25'
+              }`}
+            >
+              <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${w.severity === 'error' ? 'text-rose-400' : 'text-amber-400'}`} />
+              <span>{w.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

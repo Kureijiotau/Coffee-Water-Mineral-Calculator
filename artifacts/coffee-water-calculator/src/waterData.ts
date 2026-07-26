@@ -586,6 +586,47 @@ export function checkConcentrate(
   return warnings;
 }
 
+// ── Stock splitting ──────────────────────────────────────
+
+export interface StockGroup {
+  id: 'hardness' | 'alkalinity' | 'citrate';
+  name: string;
+  saltIds: string[];
+  color: 'sky' | 'violet' | 'amber';
+}
+
+/**
+ * Split active salts into compatible stock groups for safe concentrate mixing.
+ * Only returns groups that contain at least one active salt.
+ *
+ * Groups:
+ *   hardness  — Ca/Mg salts without citrate (CaCl₂, MgCl₂, MgSO₄, NaCl, …)
+ *   alkalinity — bicarbonate/carbonate salts (NaHCO₃, KHCO₃)
+ *   citrate   — citrate-containing salts (Ca citrate, Mg citrate)
+ */
+export function splitIntoStockGroups(
+  saltTargets: Record<string, number>,
+): StockGroup[] {
+  const ALKALINITY = new Set(['nahco3', 'khco3']);
+  const CITRATE    = new Set(['cacit', 'mgcit']);
+
+  const groups: StockGroup[] = [
+    { id: 'hardness',   name: 'Hardness Stock',  saltIds: [], color: 'sky' },
+    { id: 'alkalinity', name: 'Alkalinity Stock', saltIds: [], color: 'violet' },
+    { id: 'citrate',    name: 'Citrate Stock',    saltIds: [], color: 'amber' },
+  ];
+
+  for (const salt of SALTS) {
+    const target = saltTargets[salt.id] ?? 0;
+    if (target <= 0) continue;
+    if (ALKALINITY.has(salt.id))   groups[1].saltIds.push(salt.id);
+    else if (CITRATE.has(salt.id)) groups[2].saltIds.push(salt.id);
+    else                           groups[0].saltIds.push(salt.id);
+  }
+
+  return groups.filter(g => g.saltIds.length > 0);
+}
+
 export function computeGH(totals: Record<IonId, number>): number {
   return totals.magnesium * (CACO3_FACTOR.magnesium ?? 0)
        + totals.calcium   * (CACO3_FACTOR.calcium ?? 0);
