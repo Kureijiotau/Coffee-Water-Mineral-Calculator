@@ -1000,23 +1000,8 @@ function App() {
                           <span className="text-sm text-slate-200 group-hover/water:text-sky-200 transition truncate block">
                             {w.name || `Water #${w.id}`}
                           </span>
-                          <span className="text-[10px] text-slate-500">
-                            {Object.keys(w.ions).length} ions
-                          </span>
                         </div>
-                        <button
-                          onClick={async e => {
-                            e.stopPropagation();
-                            try {
-                              await fetch(`${API_BASE}/api/waters/${w.id}`, { method: 'DELETE' });
-                              fetchSavedWaters();
-                            } catch {}
-                          }}
-                          className="text-slate-600 hover:text-rose-400 transition shrink-0"
-                          title="Delete this saved water"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                        <span className="text-[10px] text-slate-600 shrink-0">{Object.keys(w.ions).length} ions</span>
                       </div>
                     ))}
                   </div>
@@ -1116,50 +1101,9 @@ function App() {
               Add water source
             </button>
 
-            {/* Coverage rows */}
-            {mineralWaters.length > 0 && batchMl > 0 && (
-              <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Combined coverage vs {activeProfile.name}</span>
-                {ACTIVE_ION_IDS.map(id => {
-                  const ion = ION_MAP[id];
-                  const bottledPpm = bottledIons[id] ?? 0;
-                  const greenMax = activeRanges[id].greenMax;
-                  const pct = greenMax > 0 ? Math.min((bottledPpm / greenMax) * 100, 100) : 0;
-                  const needed = Math.max(greenMax - bottledPpm, 0);
-                  const level: 'full' | 'partial' | 'none' =
-                    bottledPpm >= greenMax ? 'full' :
-                    bottledPpm > 0 ? 'partial' : 'none';
-                  const barColor = level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-amber-500' : 'bg-slate-600';
-                  const textColor = level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-amber-300' : 'text-slate-500';
-                  const label = level === 'full' ? 'Target reached' : level === 'partial' ? `${needed.toFixed(1)} ppm still needed from salts` : 'No mineral water added';
-                  return (
-                    <div key={id} className="flex items-center gap-3">
-                      <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-slate-700/60 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
-                            {bottledPpm.toFixed(1)}
-                          </span>
-                          <span className="text-xs text-slate-500 shrink-0">ppm</span>
-                        </div>
-                        <div className={`text-[11px] mt-0.5 ${textColor}`}>
-                          {label}
-                          {greenMax > 0 && level !== 'none' && (
-                            <span className="text-slate-500"> · Target &lt;{greenMax} ppm</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
             {mineralWaters.length > 0 && batchMl <= 0 && (
               <div className="border-t border-slate-700/40 pt-4">
-                <p className="text-xs text-slate-500 italic">Set a batch volume above to see coverage.</p>
+                <p className="text-xs text-slate-500 italic">Set a batch volume above to calculate dilution.</p>
               </div>
             )}
           </div>
