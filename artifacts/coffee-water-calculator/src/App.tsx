@@ -1291,6 +1291,42 @@ function App() {
                     );
                   })}
                 </div>
+                {/* Total overshoot summary across all priority overrides */}
+                {(() => {
+                  const totals: Record<string, number> = {};
+                  for (const salt of SALTS) {
+                    const target = num(rows[SALTS.indexOf(salt)].target);
+                    if (target <= 0) continue;
+                    const priority = priorityOverride[salt.id] as IonId | undefined;
+                    if (!priority) continue;
+                    for (const c of salt.ions) {
+                      const total = saltOnlyIons[c.ionId] ?? 0;
+                      const covered = bottledIons[c.ionId] ?? 0;
+                      if (total > 0) {
+                        const headroom = Math.max(0, total - covered);
+                        const contributes = c.fraction * target;
+                        const overshoot = Math.max(0, contributes - headroom);
+                        if (overshoot > 0.01) {
+                          totals[ION_MAP[c.ionId].formula] = (totals[ION_MAP[c.ionId].formula] ?? 0) + overshoot;
+                        }
+                      }
+                    }
+                  }
+                  const entries = Object.entries(totals);
+                  if (entries.length === 0) return null;
+                  return (
+                    <div className="mt-3 border-t border-slate-700/40 pt-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-400">Total overshoot</span>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {entries.map(([formula, ppm]) => (
+                          <span key={formula} className="text-[11px] text-rose-300 tabular-nums bg-rose-900/20 border border-rose-700/30 rounded px-2 py-0.5">
+                            {formula}: +{ppm.toFixed(1)} ppm
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
