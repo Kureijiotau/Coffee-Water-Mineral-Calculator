@@ -1044,15 +1044,33 @@ function App() {
                       placeholder="Water name (e.g. Solán de Cabras)"
                       className="flex-1 min-w-0 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                     />
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={entry.volumeMl}
+                        onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
+                        placeholder="0"
+                        className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                      />
+                      <span className="text-xs text-slate-400 shrink-0">mL</span>
+                    </div>
                     <input
-                      type="number"
-                      inputMode="decimal"
-                      value={entry.volumeMl}
+                      type="range"
+                      min={0}
+                      max={2000}
+                      step={50}
+                      value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
                       onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
-                      placeholder="0"
-                      className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer
+                        bg-slate-700/60 accent-sky-400
+                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
+                        [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
+                        [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
+                        [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
+                        [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
                     />
-                    <span className="text-xs text-slate-400 shrink-0">mL</span>
                   </div>
                   <button
                     onClick={() => removeMineralWater(entry.id)}
@@ -1064,12 +1082,9 @@ function App() {
                 </div>
                 {/* Ion inputs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                  {ACTIVE_ION_IDS.map(id => {
-                    const ion = ION_MAP[id];
-                    const sliderMax = Math.max(ion.yellowMax * 6, 50);
-                    return (
+                  {ACTIVE_ION_IDS.map(id => (
                     <div key={id}>
-                      <label className="block text-[10px] text-slate-500 mb-0.5">{ion.formula}</label>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">{ION_MAP[id].formula}</label>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -1080,27 +1095,8 @@ function App() {
                         placeholder="0"
                         className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                       />
-                      <input
-                        type="range"
-                        min={0}
-                        max={sliderMax}
-                        step={1}
-                        value={Math.min(parseFloat(entry.ions[id] ?? '0') || 0, sliderMax)}
-                        onChange={e => updateMineralWater(entry.id, {
-                          ions: { ...entry.ions, [id]: e.target.value }
-                        })}
-                        className="w-full mt-1.5 h-1.5 rounded-full appearance-none cursor-pointer
-                          bg-slate-700/60 accent-sky-400
-                          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                          [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
-                          [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
-                          [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
-                          [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
-                          [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
-                      />
                     </div>
-                    );
-                  })}
+                  ))}
                 </div>
               </div>
             ))}
