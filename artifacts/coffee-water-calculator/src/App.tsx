@@ -194,6 +194,10 @@ function App() {
       if (entry) return { target: entry.target, formIdx: entry.formIdx };
       return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
     }));
+    // Restore split stocks state — missing fields default to off/100/'500'
+    setSplitMode(recipe.splitMode ?? false);
+    if (recipe.splitStrengths) setSplitStrengths(prev => ({ ...prev, ...recipe.splitStrengths }));
+    if (recipe.splitMls) setSplitMls(prev => ({ ...prev, ...recipe.splitMls }));
   };
 
   const applyRecipe = (recipeId: string) => {
@@ -218,7 +222,16 @@ function App() {
     }
     const name = window.prompt('Name this recipe:')?.trim();
     if (!name) return;
-    const recipe: SaltRecipe = { id: newRecipeId(), name, salts };
+    const recipe: SaltRecipe = {
+      id: newRecipeId(),
+      name,
+      salts,
+      ...(splitMode && {
+        splitMode: true,
+        splitStrengths: { ...splitStrengths },
+        splitMls: { ...splitMls },
+      }),
+    };
     setSavedRecipes(prev => [...prev, recipe]);
     setActiveRecipeId(recipe.id);
   };
@@ -242,7 +255,15 @@ function App() {
       name = window.prompt('Name this recipe for sharing:')?.trim() || '';
       if (!name) return;
     }
-    const text = serializeRecipeFile({ name, salts });
+    const text = serializeRecipeFile({
+      name,
+      salts,
+      ...(splitMode && {
+        splitMode: true,
+        splitStrengths: { ...splitStrengths },
+        splitMls: { ...splitMls },
+      }),
+    });
     const blob = new Blob([text], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

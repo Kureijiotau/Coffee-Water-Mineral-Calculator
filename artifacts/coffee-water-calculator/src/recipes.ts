@@ -46,13 +46,46 @@ export function saveSavedRecipes(recipes: SaltRecipe[]): void {
   }
 }
 
+export interface SplitSettings {
+  splitMode: boolean;
+  splitStrengths: Record<string, number>;
+  splitMls: Record<string, string>;
+}
+
 /** Serialize a recipe into a shareable JSON file body. */
-export function serializeRecipeFile(recipe: { name: string; salts: Record<string, SaltRecipeEntry> }): string {
-  return JSON.stringify(
-    { kind: RECIPE_FILE_KIND, version: 1, name: recipe.name, salts: recipe.salts },
-    null,
-    2,
-  );
+export function serializeRecipeFile(
+  recipe: { name: string; salts: Record<string, SaltRecipeEntry> } & Partial<SplitSettings>,
+): string {
+  const payload: Record<string, unknown> = {
+    kind: RECIPE_FILE_KIND,
+    version: 1,
+    name: recipe.name,
+    salts: recipe.salts,
+  };
+  if (recipe.splitMode) {
+    payload.splitMode = recipe.splitMode;
+    payload.splitStrengths = recipe.splitStrengths;
+    payload.splitMls = recipe.splitMls;
+  }
+  return JSON.stringify(payload, null, 2);
+}
+
+/** Validate and coerce split settings from an unknown parsed value. */
+function parseSplitSettings(o: Record<string, unknown>): Partial<SplitSettings> {
+  if (!o.splitMode) return {};
+  const splitStrengths: Record<string, number> = {};
+  if (o.splitStrengths && typeof o.splitStrengths === 'object' && !Array.isArray(o.splitStrengths)) {
+    for (const [k, v] of Object.entries(o.splitStrengths as Record<string, unknown>)) {
+      if (typeof v === 'number' && Number.isFinite(v) && v > 0) splitStrengths[k] = v;
+    }
+  }
+  const splitMls: Record<string, string> = {};
+  if (o.splitMls && typeof o.splitMls === 'object' && !Array.isArray(o.splitMls)) {
+    for (const [k, v] of Object.entries(o.splitMls as Record<string, unknown>)) {
+      if (typeof v === 'string') splitMls[k] = v;
+    }
+  }
+  return { splitMode: true, splitStrengths, splitMls };
 }
 
 /** Parse a shared recipe file. Returns null when the file is not a valid recipe. */
@@ -60,7 +93,12 @@ export function parseRecipeFile(text: string): SaltRecipe | null {
   try {
     const o = JSON.parse(text);
     if (!o || typeof o !== 'object' || o.kind !== RECIPE_FILE_KIND) return null;
-    const candidate: SaltRecipe = { id: newRecipeId(), name: String(o.name ?? '').trim(), salts: o.salts };
+    const candidate: SaltRecipe = {
+      id: newRecipeId(),
+      name: String(o.name ?? '').trim(),
+      salts: o.salts,
+      ...parseSplitSettings(o as Record<string, unknown>),
+    };
     return isValidRecipe(candidate) ? candidate : null;
   } catch {
     return null;

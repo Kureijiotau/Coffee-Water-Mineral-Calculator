@@ -310,6 +310,12 @@ export interface SaltRecipe {
   id: string;
   name: string;
   salts: Record<string, SaltRecipeEntry>;
+  /** Split stocks mode — absent/false means off */
+  splitMode?: boolean;
+  /** Per-group concentrate strengths (×N multiplier); absent means default (100 per group) */
+  splitStrengths?: Record<string, number>;
+  /** Per-group stock volumes in mL; absent means default ('500' per group) */
+  splitMls?: Record<string, string>;
 }
 
 export const RECIPES: SaltRecipe[] = [
