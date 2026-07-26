@@ -602,24 +602,52 @@ function App() {
                   </div>
                 )}
 
-                {/* Warnings */}
+                {/* Warnings — ERROR and WARNING level get bold banners */}
                 {concWarnings.length > 0 && (
                   <div className="space-y-2">
+                    {/* Count badge */}
+                    {(() => {
+                      const errCount = concWarnings.filter(w => w.severity === 'error').length;
+                      const warnCount = concWarnings.filter(w => w.severity === 'warning').length;
+                      if (errCount === 0 && warnCount === 0) return null;
+                      const label = errCount > 0
+                        ? `${errCount} precipitation risk${errCount > 1 ? 's' : ''} — do not mix this concentrate as-is`
+                        : `${warnCount} concern${warnCount > 1 ? 's' : ''} to review`;
+                      return (
+                        <div className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold border ${
+                          errCount > 0
+                            ? 'text-rose-100 bg-rose-600/25 border-rose-500/60 shadow-[0_0_12px_-2px_rgba(244,63,94,0.3)]'
+                            : 'text-amber-100 bg-amber-600/20 border-amber-500/50'
+                        }`}>
+                          <AlertTriangle className={`w-5 h-5 shrink-0 ${
+                            errCount > 0 ? 'text-rose-300' : 'text-amber-300'
+                          }`} />
+                          <span>{label}</span>
+                        </div>
+                      );
+                    })()}
                     {concWarnings.map((w, wi) => (
                       <div
                         key={wi}
-                        className={`flex items-start gap-2 text-xs rounded-lg px-3 py-2 ${
+                        className={`flex items-start gap-3 rounded-lg ${
                           w.severity === 'error'
-                            ? 'text-rose-200 bg-rose-500/10 border border-rose-500/25'
+                            ? 'bg-rose-950/60 border border-rose-600/50 text-rose-200 px-4 py-3 shadow-[0_0_10px_-1px_rgba(244,63,94,0.15)]'
                             : w.severity === 'warning'
-                            ? 'text-amber-200 bg-amber-500/10 border border-amber-500/25'
-                            : 'text-slate-300 bg-slate-700/40 border border-slate-600/40'
+                            ? 'bg-amber-950/40 border border-amber-600/40 text-amber-200 px-3.5 py-2.5'
+                            : 'bg-slate-800/60 border border-slate-600/40 text-slate-300 px-3.5 py-2.5'
                         }`}
                       >
-                        <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                        <AlertTriangle className={`w-4 h-4 mt-0.5 shrink-0 ${
                           w.severity === 'error' ? 'text-rose-400' : w.severity === 'warning' ? 'text-amber-400' : 'text-slate-400'
                         }`} />
-                        <span>{w.message}</span>
+                        <div className="space-y-0.5">
+                          <span className="text-xs">{w.message}</span>
+                          {w.severity === 'error' && w.maxSafeStrength && (
+                            <div className="text-[11px] text-rose-300/70 mt-1 font-medium">
+                              Try ×{w.maxSafeStrength} or lower, or keep the conflicting salts in separate stocks.
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
