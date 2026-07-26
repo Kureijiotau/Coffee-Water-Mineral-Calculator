@@ -77,10 +77,6 @@ function App() {
   // ── Saved waters (database-backed) ──────────────────
   const [savedWaters, setSavedWaters] = useState<SavedWater[]>([]);
   const [savedWatersLoading, setSavedWatersLoading] = useState(true);
-  const [scanMatch, setScanMatch] = useState<{
-    scanned: Partial<Record<IonId, string>>;
-    match: SavedWater;
-  } | null>(null);
   const fetchSavedWaters = useCallback(async () => {
     try {
       const resp = await fetch(`${API_BASE}/api/waters`);
@@ -977,7 +973,7 @@ function App() {
             title="Mineral Water Base"
             after={<div className="flex items-center gap-2">
               <LabelScanner onExtracted={vals => {
-              // Check for a similar saved water
+              // Silently use existing saved water if ionic profile matches
               const match = savedWaters.find(w => {
                 for (const [k, raw] of Object.entries(vals)) {
                   const v = parseFloat(raw ?? '0');
@@ -989,7 +985,11 @@ function App() {
                 return true;
               });
               if (match) {
-                setScanMatch({ scanned: vals, match });
+                const existing: Partial<Record<IonId, string>> = {};
+                for (const [k, v] of Object.entries(match.ions)) {
+                  if (v > 0) existing[k as IonId] = String(v);
+                }
+                addMineralWater({ name: match.name || undefined, ions: existing });
               } else {
                 addMineralWater({ ions: vals });
                 const name = window.prompt("Name this water (so you can find it later):");
@@ -1016,53 +1016,6 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-            {/* Scan match notification */}
-            {scanMatch && (
-              <div className="bg-emerald-900/20 border border-emerald-600/40 rounded-xl px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <div className="grow min-w-0">
-                    <p className="text-sm text-emerald-200 font-medium">
-                      Similar water found: <strong>{scanMatch.match.name}</strong>
-                    </p>
-                    <p className="text-[11px] text-emerald-300/70 mt-0.5">
-                      Ion profile matches a saved water. Use it instead of adding a new entry?
-                    </p>
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">
-                    <button
-                      onClick={() => {
-                        const vals: Partial<Record<IonId, string>> = {};
-                        for (const [k, v] of Object.entries(scanMatch.match.ions)) {
-                          if (v > 0) vals[k as IonId] = String(v);
-                        }
-                        addMineralWater({ name: scanMatch.match.name || undefined, ions: vals });
-                        setScanMatch(null);
-                      }}
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg bg-emerald-600/30 text-emerald-200 border border-emerald-500/40 hover:bg-emerald-600/50 transition font-medium"
-                    >
-                      Use {scanMatch.match.name}
-                    </button>
-                    <button
-                      onClick={() => {
-                        addMineralWater({ ions: scanMatch.scanned });
-                        const name = window.prompt("Name this water (so you can find it later):");
-                        if (name && name.trim()) {
-                          fetch(`${API_BASE}/api/waters`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: name.trim(), ions: scanMatch.scanned }),
-                          }).then(() => fetchSavedWaters()).catch(() => {});
-                        }
-                        setScanMatch(null);
-                      }}
-                      className="text-[11px] px-2.5 py-1.5 rounded-lg bg-slate-700/40 text-slate-300 border border-slate-600/40 hover:bg-slate-600/40 transition"
-                    >
-                      Add as new
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
             {/* Saved waters picker */}
             {!savedWatersLoading && savedWaters.length > 0 && (
               <div>
