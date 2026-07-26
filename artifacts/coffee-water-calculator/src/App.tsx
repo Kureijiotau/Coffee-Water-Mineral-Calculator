@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
@@ -39,6 +39,14 @@ const num = (s: string): number => {
 
 const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
+const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
+
+interface SavedWater {
+  id: number;
+  name: string;
+  ions: Record<string, number>;
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -61,6 +69,21 @@ function App() {
   const removeMineralWater = (id: string) => {
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
+
+  // ── Saved waters (database-backed) ──────────────────
+  const [savedWaters, setSavedWaters] = useState<SavedWater[]>([]);
+  const [savedWatersLoading, setSavedWatersLoading] = useState(true);
+  const fetchSavedWaters = useCallback(async () => {
+    try {
+      const resp = await fetch(`${API_BASE}/api/waters`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setSavedWaters(data.waters ?? []);
+      }
+    } catch { /* server may be down */ }
+    setSavedWatersLoading(false);
+  }, []);
+  useEffect(() => { fetchSavedWaters(); }, [fetchSavedWaters]);
 
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
@@ -938,13 +961,63 @@ function App() {
           <SectionHeader
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
-            after={<LabelScanner onExtracted={vals => addMineralWater({ ions: vals })} />}
+            after={<LabelScanner onExtracted={vals => { addMineralWater({ ions: vals }); fetchSavedWaters(); }} />}
           />
           <div className="px-6 py-4 space-y-4">
+            {/* Saved waters picker */}
+            {!savedWatersLoading && savedWaters.length > 0 && (
+              <div>
+                <details className="group">
+                  <summary className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 cursor-pointer hover:text-slate-200 transition select-none">
+                    <Droplet className="w-3.5 h-3.5" />
+                    Saved waters ({savedWaters.length})
+                    <span className="text-slate-600 group-open:rotate-90 transition-transform ml-auto">▶</span>
+                  </summary>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {savedWaters.map(w => (
+                      <div
+                        key={w.id}
+                        className="flex items-center justify-between gap-2 bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 hover:bg-sky-500/10 hover:border-sky-500/40 transition cursor-pointer group/water"
+                        onClick={() => {
+                          const vals: Partial<Record<IonId, string>> = {};
+                          for (const [k, v] of Object.entries(w.ions)) {
+                            if (v > 0) vals[k as IonId] = String(v);
+                          }
+                          addMineralWater({ name: w.name || undefined, ions: vals });
+                        }}
+                      >
+                        <div className="min-w-0">
+                          <span className="text-sm text-slate-200 group-hover/water:text-sky-200 transition truncate block">
+                            {w.name || `Water #${w.id}`}
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            {Object.keys(w.ions).length} ions
+                          </span>
+                        </div>
+                        <button
+                          onClick={async e => {
+                            e.stopPropagation();
+                            try {
+                              await fetch(`${API_BASE}/api/waters/${w.id}`, { method: 'DELETE' });
+                              fetchSavedWaters();
+                            } catch {}
+                          }}
+                          className="text-slate-600 hover:text-rose-400 transition shrink-0"
+                          title="Delete this saved water"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              </div>
+            )}
+
             {mineralWaters.length === 0 && (
               <p className="text-xs text-slate-500 italic flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" />
-                No mineral waters added yet. Scan a label or add one manually.
+                No mineral waters added yet. Scan a label, pick a saved one, or add manually.
               </p>
             )}
 

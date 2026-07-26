@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { db, watersTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -107,7 +108,20 @@ router.post("/scan-label", async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ values: cleaned });
+    // Auto-save to the waters database — save both scanned and user-shared waters
+    let savedId: number | null = null;
+    try {
+      const [saved] = await db
+        .insert(watersTable)
+        .values({ name: "", ions: cleaned })
+        .returning({ id: watersTable.id });
+      savedId = saved.id;
+    } catch (dbErr) {
+      console.error("Failed to auto-save scanned water:", dbErr);
+      // Non-fatal — return the scan result regardless
+    }
+
+    res.json({ values: cleaned, savedWaterId: savedId });
   } catch (err: any) {
     console.error("Gemini scan error:", err);
 
