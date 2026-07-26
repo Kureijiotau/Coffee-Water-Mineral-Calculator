@@ -53,6 +53,9 @@ function App() {
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
+  // 'addition' = mineral water ions stack on top of salts (original)
+  // 'base'     = mineral water is the brewing base; ions don't affect totals
+  const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('addition');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -148,8 +151,8 @@ function App() {
   }, [mineralWaters]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, combinedBaseIons, dil),
-    [saltTargets, combinedBaseIons, dil],
+    () => computeIonTotals(saltTargets, mineralWaterMode === 'addition' ? combinedBaseIons : {}, dil),
+    [saltTargets, combinedBaseIons, dil, mineralWaterMode],
   );
 
   // Salt-only contribution (no base water) — used for the coverage bars
@@ -967,7 +970,8 @@ function App() {
           <SectionHeader
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
-            after={<LabelScanner onExtracted={vals => {
+            after={<div className="flex items-center gap-2">
+              <LabelScanner onExtracted={vals => {
               addMineralWater({ ions: vals });
               const name = window.prompt("Name this water (so you can find it later):");
               if (name && name.trim()) {
@@ -977,7 +981,19 @@ function App() {
                   body: JSON.stringify({ name: name.trim(), ions: vals }),
                 }).then(() => fetchSavedWaters()).catch(() => {});
               }
-            }} />}
+            }} />
+              <button
+                onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
+                className={`text-[11px] font-medium rounded-lg px-2.5 py-1.5 transition border shrink-0 ${
+                  mineralWaterMode === 'addition'
+                    ? 'text-sky-300 bg-sky-500/10 border-sky-500/30 hover:bg-sky-500/20'
+                    : 'text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
+                }`}
+                title={mineralWaterMode === 'addition' ? 'Mineral water adds on top of salts' : 'Mineral water is the base; ions ignored in totals'}
+              >
+                {mineralWaterMode === 'addition' ? 'Addition' : 'Base'}
+              </button>
+            </div>}
           />
           <div className="px-6 py-4 space-y-4">
             {/* Saved waters picker */}
