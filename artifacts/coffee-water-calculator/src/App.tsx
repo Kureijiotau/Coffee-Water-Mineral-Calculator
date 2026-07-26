@@ -1126,7 +1126,7 @@ function App() {
             {/* Coverage bars — how the salt recipe hits the target */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of salt recipe</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of {activeProfile.name}</span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
                   const target = saltOnlyIons[id] ?? 0;
@@ -1205,20 +1205,27 @@ function App() {
                     // For each ion this salt contributes, find how much of that ion's
                     // total need is still uncovered by mineral water
                     let maxRemaining = 0;
+                    const ionHeadrooms: { name: string; headroom: number; contributes: number }[] = [];
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
                       if (total > 0) {
                         const frac = Math.max(0, (total - covered) / total);
+                        const headroom = Math.max(0, total - covered);
+                        const contributes = c.fraction * target;
+                        ionHeadrooms.push({ name: ION_MAP[c.ionId].formula, headroom, contributes });
                         maxRemaining = Math.max(maxRemaining, frac);
                       }
                     }
                     const adjustedTarget = target * maxRemaining;
+                    const excessIons = ionHeadrooms.filter(h => h.headroom < h.contributes * maxRemaining && h.headroom < h.contributes);
                     const adjustedMg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
                     const originalMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                     if (adjustedMg <= 0) return null;
                     return (
-                      <div key={salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
+                      <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
+                        excessIons.length > 0 ? 'border-rose-500/40' : 'border-slate-700/50'
+                      }`}>
                         <span className="block text-[10px] text-slate-500">{salt.formula}</span>
                         <span className="text-sm font-semibold tabular-nums text-sky-300">
                           {adjustedMg.toFixed(1)} mg
@@ -1227,6 +1234,13 @@ function App() {
                           <span className="text-[10px] text-slate-500 ml-1.5">
                             (was {originalMg.toFixed(1)})
                           </span>
+                        )}
+                        {excessIons.length > 0 && (
+                          <div className="mt-1 text-[10px] text-rose-300 leading-tight">
+                            ⚠ Also adds {excessIons.map(h =>
+                              `${h.name}: +${(h.contributes * maxRemaining).toFixed(1)} ppm`
+                            ).join(', ')} — already covered
+                          </div>
                         )}
                       </div>
                     );
