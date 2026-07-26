@@ -961,7 +961,17 @@ function App() {
           <SectionHeader
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
-            after={<LabelScanner onExtracted={vals => { addMineralWater({ ions: vals }); fetchSavedWaters(); }} />}
+            after={<LabelScanner onExtracted={vals => {
+              addMineralWater({ ions: vals });
+              const name = window.prompt("Name this water (so you can find it later):");
+              if (name && name.trim()) {
+                fetch(`${API_BASE}/api/waters`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: name.trim(), ions: vals }),
+                }).then(() => fetchSavedWaters()).catch(() => {});
+              }
+            }} />}
           />
           <div className="px-6 py-4 space-y-4">
             {/* Saved waters picker */}
