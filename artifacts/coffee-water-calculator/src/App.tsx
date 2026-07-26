@@ -1175,6 +1175,29 @@ function App() {
                 <p className="text-xs text-slate-500 italic">Set a batch volume above to see coverage.</p>
               </div>
             )}
+
+            {/* Remaining gaps — what the salt recipe still needs */}
+            {batchMl > 0 && (
+              <div className="border-t border-slate-700/40 pt-4">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Still needed from salts</span>
+                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {ACTIVE_ION_IDS.map(id => {
+                    const target = saltOnlyIons[id] ?? 0;
+                    const covered = bottledIons[id] ?? 0;
+                    const remaining = Math.max(target - covered, 0);
+                    if (target <= 0) return null;
+                    return (
+                      <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
+                        <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
+                        <span className={`text-sm font-semibold tabular-nums ${remaining > 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
+                          {remaining > 0 ? `${remaining.toFixed(1)} ppm` : '✓ Covered'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
