@@ -1055,22 +1055,6 @@ function App() {
                       />
                       <span className="text-xs text-slate-400 shrink-0">mL</span>
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={2000}
-                      step={50}
-                      value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
-                      onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
-                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer
-                        bg-slate-700/60 accent-sky-400
-                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
-                        [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
-                        [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
-                        [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
-                        [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
-                    />
                   </div>
                   <button
                     onClick={() => removeMineralWater(entry.id)}
@@ -1079,6 +1063,28 @@ function App() {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
+                </div>
+                {/* Volume slider */}
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={2000}
+                    step={1}
+                    value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
+                    onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
+                    className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer
+                      bg-slate-700/60 accent-sky-400
+                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
+                      [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
+                      [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
+                      [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
+                      [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
+                  />
+                  <span className="text-xs tabular-nums text-slate-400 w-10 text-right shrink-0">
+                    {fmt(Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000))} mL
+                  </span>
                 </div>
                 {/* Ion inputs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
