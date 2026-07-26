@@ -1196,36 +1196,48 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Salt powder amounts — blocked salts shown crossed out */}
+                {/* Salt powder amounts — adjusted for mineral water coverage */}
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SALTS.map((salt, i) => {
                     const target = num(rows[i].target);
                     if (target <= 0) return null;
                     const form = salt.hydrationForms[rows[i].formIdx];
-                    const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
-                    // Check which ions this salt would overshoot
-                    const blockedBy: string[] = [];
+                    // Find the most restrictive ion — the one with the least remaining headroom
+                    let minRemaining = 1;
+                    const limitingIons: string[] = [];
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
-                      if (total > 0 && covered >= total * (1 - 1e-9)) {
-                        blockedBy.push(ION_MAP[c.ionId].formula);
+                      if (total > 0) {
+                        const frac = Math.max(0, (total - covered) / total);
+                        if (frac < minRemaining - 0.0001) {
+                          minRemaining = frac;
+                          limitingIons.length = 0;
+                          limitingIons.push(ION_MAP[c.ionId].formula);
+                        } else if (Math.abs(frac - minRemaining) < 0.0001) {
+                          limitingIons.push(ION_MAP[c.ionId].formula);
+                        }
                       }
                     }
-                    const blocked = blockedBy.length > 0;
+                    const adjustedTarget = target * minRemaining;
+                    const mg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
+                    const fullMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                     return (
-                      <div key={salt.id} className={`border rounded-lg px-3 py-2 ${
-                        blocked ? 'bg-slate-900/20 border-slate-700/30 opacity-50' : 'bg-slate-900/40 border-slate-700/50'
+                      <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
+                        minRemaining < 1 ? 'border-amber-500/40' : 'border-slate-700/50'
                       }`}>
-                        <span className={`block text-[10px] ${blocked ? 'text-slate-600' : 'text-slate-500'}`}>
-                          {salt.formula}
-                        </span>
-                        <span className={`text-sm font-semibold tabular-nums ${blocked ? 'text-slate-600' : 'text-sky-300'} ${blocked ? 'line-through' : ''}`}>
+                        <span className="block text-[10px] text-slate-500">{salt.formula}</span>
+                        <span className="text-sm font-semibold tabular-nums text-sky-300">
                           {mg.toFixed(1)} mg
                         </span>
-                        {blocked && (
-                          <span className="block text-[10px] text-slate-600 leading-tight">
-                            Held back — {blockedBy.join(', ')} covered
+                        {minRemaining < 1 && (
+                          <span className="text-[10px] ml-1.5 text-slate-500">
+                            (of {fullMg.toFixed(1)})
+                          </span>
+                        )}
+                        {minRemaining < 1 && (
+                          <span className="block text-[10px] text-amber-300/70 leading-tight">
+                            Limited by {limitingIons.join(', ')}
                           </span>
                         )}
                       </div>
