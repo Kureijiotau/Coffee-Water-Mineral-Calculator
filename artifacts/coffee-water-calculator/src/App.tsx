@@ -1126,7 +1126,7 @@ function App() {
             {/* Coverage bars — how the salt recipe hits the target */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of {activeProfile.name}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of salt recipe</span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
                   const target = saltOnlyIons[id] ?? 0;
