@@ -25,6 +25,7 @@ export const watersTable = pgTable("waters", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().default(''),
   ions: jsonb("ions").notNull().$type<Record<string, number>>(),
+  shared: text("shared").default('no').notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

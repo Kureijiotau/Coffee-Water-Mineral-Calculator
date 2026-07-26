@@ -28,7 +28,7 @@ router.get("/waters", async (_req: Request, res: Response) => {
  */
 router.post("/waters", async (req: Request, res: Response) => {
   try {
-    const { name, ions } = req.body;
+    const { name, ions, shared } = req.body;
     if (!ions || typeof ions !== "object" || Object.keys(ions).length === 0) {
       res.status(400).json({ error: "Missing or empty 'ions' field" });
       return;
@@ -36,7 +36,7 @@ router.post("/waters", async (req: Request, res: Response) => {
 
     const [saved] = await db
       .insert(watersTable)
-      .values({ name: name ?? "", ions })
+      .values({ name: name ?? "", ions, shared: shared ?? 'no' })
       .returning();
 
     res.status(201).json({ water: saved });

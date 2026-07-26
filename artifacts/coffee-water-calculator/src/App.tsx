@@ -994,10 +994,11 @@ function App() {
                 addMineralWater({ ions: vals });
                 const name = window.prompt("Name this water (so you can find it later):");
                 if (name && name.trim()) {
+                  const isShared = window.confirm("Upload this water for other users to find too?");
                   fetch(`${API_BASE}/api/waters`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name.trim(), ions: vals }),
+                    body: JSON.stringify({ name: name.trim(), ions: vals, shared: isShared ? 'yes' : 'no' }),
                   }).then(() => fetchSavedWaters()).catch(() => {});
                 }
               }
