@@ -1126,7 +1126,7 @@ function App() {
             {/* Coverage bars — how the salt recipe hits the target */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of salt recipe</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of {activeRecipe?.name ?? 'Custom'}</span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
                   const target = saltOnlyIons[id] ?? 0;
@@ -1196,16 +1196,16 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Adjusted salt powder weights */}
+                {/* Adjusted salt powder weights — capped to prevent overshoot */}
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {SALTS.map((salt, i) => {
                     const target = num(rows[i].target);
                     if (target <= 0) return null;
                     const form = salt.hydrationForms[rows[i].formIdx];
                     // For each ion this salt contributes, find how much of that ion's
-                    // total need is still uncovered by mineral water
-                    let maxRemaining = 0;
-                    const ionHeadrooms: { name: string; headroom: number; contributes: number }[] = [];
+                    // headroom is still free (0 = fully covered, caps the salt)
+                    let minRemaining = 1; // most restrictive ion controls the cap
+                    const constraints: { name: string; headroom: number; contributes: number }[] = [];
                     for (const c of salt.ions) {
                       const total = saltOnlyIons[c.ionId] ?? 0;
                       const covered = bottledIons[c.ionId] ?? 0;
@@ -1213,33 +1213,34 @@ function App() {
                         const frac = Math.max(0, (total - covered) / total);
                         const headroom = Math.max(0, total - covered);
                         const contributes = c.fraction * target;
-                        ionHeadrooms.push({ name: ION_MAP[c.ionId].formula, headroom, contributes });
-                        maxRemaining = Math.max(maxRemaining, frac);
+                        constraints.push({ name: ION_MAP[c.ionId].formula, headroom, contributes });
+                        if (frac < minRemaining) minRemaining = frac;
                       }
                     }
-                    const adjustedTarget = target * maxRemaining;
-                    const excessIons = ionHeadrooms.filter(h => h.headroom < h.contributes * maxRemaining && h.headroom < h.contributes);
+                    const adjustedTarget = target * minRemaining;
+                    const cappedBy = constraints.filter(c => c.headroom < c.contributes * minRemaining);
                     const adjustedMg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
                     const originalMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                     if (adjustedMg <= 0) return null;
+                    const wasReduced = adjustedMg < originalMg - 0.01;
                     return (
                       <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
-                        excessIons.length > 0 ? 'border-rose-500/40' : 'border-slate-700/50'
+                        cappedBy.length > 0 ? 'border-amber-500/40' : 'border-slate-700/50'
                       }`}>
                         <span className="block text-[10px] text-slate-500">{salt.formula}</span>
                         <span className="text-sm font-semibold tabular-nums text-sky-300">
                           {adjustedMg.toFixed(1)} mg
                         </span>
-                        {adjustedMg < originalMg && (
+                        {wasReduced && (
                           <span className="text-[10px] text-slate-500 ml-1.5">
                             (was {originalMg.toFixed(1)})
                           </span>
                         )}
-                        {excessIons.length > 0 && (
-                          <div className="mt-1 text-[10px] text-rose-300 leading-tight">
-                            ⚠ Also adds {excessIons.map(h =>
-                              `${h.name}: +${(h.contributes * maxRemaining).toFixed(1)} ppm`
-                            ).join(', ')} — already covered
+                        {cappedBy.length > 0 && (
+                          <div className="mt-1 text-[10px] text-amber-300 leading-tight">
+                            ⛔ Capped — {cappedBy.map(c =>
+                              `${c.name} covers ${c.headroom.toFixed(1)} ppm (would add ${(c.contributes * minRemaining).toFixed(1)})`
+                            ).join(', ')}
                           </div>
                         )}
                       </div>
