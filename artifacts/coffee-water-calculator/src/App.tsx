@@ -285,10 +285,17 @@ function App() {
     line('');
     line(`Profile : ${activeProfile.name}`);
     line(`Volume  : ${liters} L`);
+    if (concentrateOn) {
+      if (splitMode && stockGroups.length > 0) {
+        line('Mode    : Split stock concentrate');
+      } else {
+        line(`Mode    : Single stock concentrate  (×${concentrateStrength}  ${concentrateMl} mL stock)`);
+      }
+    }
     line('');
 
     divider();
-    line('MINERAL SALTS');
+    line('MINERAL SALTS  (per-batch direct amounts)');
     divider();
     const saltLines = SALTS.map((salt, i) => {
       const row = rows[i];
@@ -305,6 +312,84 @@ function App() {
       line('  (no salts entered)');
     } else {
       saltLines.forEach(l => line(l!));
+    }
+
+    // ── Concentrate instructions ──────────────────────────────────────
+    if (concentrateOn && !splitMode) {
+      // Single stock
+      const stockL = num(concentrateMl) / 1000;
+      const dosePerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
+      const dosePerBatch = dosePerLiter * L;
+      line('');
+      divider();
+      line('SINGLE STOCK CONCENTRATE');
+      divider();
+      line(`  Strength : ×${concentrateStrength}`);
+      line(`  Volume   : ${concentrateMl} mL`);
+      line('');
+      line('  Weigh into stock:');
+      const concSaltLines = SALTS.map((salt, i) => {
+        const row = rows[i];
+        const form = salt.hydrationForms[row.formIdx];
+        const target = num(row.target);
+        if (target === 0) return null;
+        const mg = concentrateStrength > 0 && stockL > 0
+          ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * concentrateStrength
+          : 0;
+        const massLabel = mg >= 1000 ? `${(mg / 1000).toFixed(3)} g ` : `${mg.toFixed(2)} mg`;
+        const saltLabel = `${salt.name}${salt.hydrationForms.length > 1 ? ` (${form.label})` : ''}`;
+        return `    ${saltLabel.padEnd(30)} ${massLabel.padStart(10)}`;
+      }).filter(Boolean);
+      if (concSaltLines.length === 0) {
+        line('    (no salts entered)');
+      } else {
+        concSaltLines.forEach(l => line(l!));
+      }
+      if (concentrateStrength > 0 && stockL > 0) {
+        line('');
+        line('  Dosing:');
+        line(`    ${dosePerLiter.toFixed(1)} mL of stock per liter of brew water`);
+        if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${liters} L)`);
+      }
+    } else if (concentrateOn && splitMode && stockGroups.length > 0) {
+      // Split stocks — one section per group
+      line('');
+      divider();
+      line('SPLIT STOCKS');
+      divider();
+      for (const group of stockGroups) {
+        const strength = splitStrengths[group.id] ?? 100;
+        const volumeMl = splitMls[group.id] ?? '500';
+        const stockL = num(volumeMl) / 1000;
+        const dosePerLiter = strength > 0 ? 1000 / strength : 0;
+        const dosePerBatch = dosePerLiter * L;
+        line('');
+        line(`  ── ${group.name} ${'─'.repeat(Math.max(0, 38 - group.name.length))}`);
+        line(`  Strength : ×${strength}  |  Volume: ${volumeMl} mL`);
+        line('');
+        line('  Weigh into stock:');
+        for (const saltId of group.saltIds) {
+          const salt = SALTS.find(s => s.id === saltId);
+          if (!salt) continue;
+          const saltIdx = SALTS.indexOf(salt);
+          const row = rows[saltIdx];
+          const form = salt.hydrationForms[row.formIdx];
+          const target = concSaltTargets[saltId] ?? 0;
+          if (target === 0) continue;
+          const mg = strength > 0 && stockL > 0
+            ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * strength
+            : 0;
+          const massLabel = mg >= 1000 ? `${(mg / 1000).toFixed(3)} g ` : `${mg.toFixed(2)} mg`;
+          const saltLabel = `${salt.name}${salt.hydrationForms.length > 1 ? ` (${form.label})` : ''}`;
+          line(`    ${saltLabel.padEnd(30)} ${massLabel.padStart(10)}`);
+        }
+        if (strength > 0 && stockL > 0) {
+          line('');
+          line('  Dosing:');
+          line(`    ${dosePerLiter.toFixed(1)} mL of stock per liter of brew water`);
+          if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${liters} L)`);
+        }
+      }
     }
 
     line('');
