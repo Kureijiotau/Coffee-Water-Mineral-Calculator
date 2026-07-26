@@ -17,7 +17,14 @@ import {
 } from '@/profiles';
 
 type SaltRow = { target: string; formIdx: number };
-type BaseWater = Partial<Record<IonId, string>>;
+type MineralWaterEntry = {
+  id: string;
+  name: string;
+  ions: Partial<Record<IonId, string>>;
+  volumeMl: string;
+};
+let _mwId = 0;
+const newMwId = () => `mw_${++_mwId}_${Date.now()}`;
 
 const TRAFFIC_STYLES: Record<TrafficLevel, { dot: string; text: string; border: string; bg: string; label: string }> = {
   green:  { dot: 'bg-emerald-400', text: 'text-emerald-300', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', label: 'In range' },
@@ -37,8 +44,23 @@ function App() {
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
-  const [baseWater, setBaseWater] = useState<BaseWater>({});
-  const [bottledMl, setBottledMl] = useState('0');
+  const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
+  const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
+    const entry: MineralWaterEntry = {
+      id: newMwId(),
+      name: partial?.name ?? '',
+      ions: partial?.ions ?? {},
+      volumeMl: partial?.volumeMl ?? '0',
+    };
+    setMineralWaters(prev => [...prev, entry]);
+    return entry;
+  };
+  const updateMineralWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    setMineralWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  };
+  const removeMineralWater = (id: string) => {
+    setMineralWaters(prev => prev.filter(e => e.id !== id));
+  };
 
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
@@ -70,10 +92,14 @@ function App() {
 
   const L = num(liters);
   const batchMl = L * 1000;
-  const bottled = num(bottledMl);
-  const overfill = bottled > batchMl && batchMl > 0;
-  const dil = batchMl > 0 ? Math.min(bottled / batchMl, 1) : 0;
-  const tdsMl = Math.max(batchMl - Math.min(bottled, batchMl), 0);
+
+  // Combined mineral water state
+  const totalMineralMl = batchMl > 0
+    ? Math.min(mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0), batchMl)
+    : 0;
+  const tdsMl = Math.max(batchMl - totalMineralMl, 0);
+  const overfill = mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0) > batchMl && batchMl > 0;
+  const dil = batchMl > 0 ? totalMineralMl / batchMl : 0;
 
   const saltTargets = useMemo(() => {
     const m: Record<string, number> = {};
@@ -81,23 +107,43 @@ function App() {
     return m;
   }, [rows]);
 
-  const baseIons = useMemo(() => {
+  // Weighted-average base water concentrations across all entries
+  const combinedBaseIons = useMemo(() => {
     const m = {} as Partial<Record<IonId, number>>;
-    for (const id of ACTIVE_ION_IDS) m[id] = num(baseWater[id] ?? '');
+    for (const id of ACTIVE_ION_IDS) {
+      let weighted = 0, totalVol = 0;
+      for (const entry of mineralWaters) {
+        const vol = num(entry.volumeMl);
+        if (vol > 0) {
+          weighted += (num(entry.ions[id] ?? '') * vol);
+          totalVol += vol;
+        }
+      }
+      m[id] = totalVol > 0 ? weighted / totalVol : 0;
+    }
     return m;
-  }, [baseWater]);
+  }, [mineralWaters]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, baseIons, dil),
-    [saltTargets, baseIons, dil],
+    () => computeIonTotals(saltTargets, combinedBaseIons, dil),
+    [saltTargets, combinedBaseIons, dil],
   );
 
-  // Bottled water's own contribution (already diluted)
+  // Combined contribution from all mineral waters (already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
-    for (const ion of IONS) m[ion.id] = (baseIons[ion.id] || 0) * dil;
+    for (const ion of IONS) {
+      let total = 0;
+      for (const entry of mineralWaters) {
+        const vol = num(entry.volumeMl);
+        if (vol > 0 && batchMl > 0) {
+          total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
+        }
+      }
+      m[ion.id] = total;
+    }
     return m;
-  }, [baseIons, dil]);
+  }, [mineralWaters, batchMl]);
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
@@ -146,8 +192,7 @@ function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
-    setBaseWater({});
-    setBottledMl('0');
+    setMineralWaters([]);
     setLiters('1');
     setShowResetConfirm(false);
   };
@@ -444,12 +489,19 @@ function App() {
     line(`  KH (Carbonate) : ${kh.toFixed(1)} ppm  (salts: ${khSalt.toFixed(1)}, mineral: ${khBottled.toFixed(1)})`);
     if (kh > 0) line(`  GH:KH ratio    : ${(gh / kh).toFixed(2)} : 1`);
 
-    if (bottled > 0) {
+    if (mineralWaters.length > 0 && totalMineralMl > 0) {
       line('');
       divider();
       line('MINERAL WATER ADDITION');
       divider();
-      line(`  Volume : ${bottledMl} mL of ${L * 1000} mL total batch`);
+      line(`  Total volume: ${totalMineralMl} mL of ${L * 1000} mL batch`);
+      for (const entry of mineralWaters) {
+        const vol = num(entry.volumeMl);
+        if (vol > 0) {
+          const name = entry.name || 'Unnamed';
+          line(`  ${name}: ${fmt(vol)} mL`);
+        }
+      }
     }
 
     line('');
@@ -886,33 +938,81 @@ function App() {
           <SectionHeader
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
-            after={<LabelScanner onExtracted={vals => setBaseWater(prev => ({ ...prev, ...vals }))} />}
+            after={<LabelScanner onExtracted={vals => addMineralWater({ ions: vals })} />}
           />
           <div className="px-6 py-4 space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-              {ACTIVE_ION_IDS.map(id => (
-                <div key={id}>
-                  <label className="block text-xs text-slate-400 mb-1">{ION_MAP[id].formula}</label>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    value={baseWater[id] ?? ''}
-                    onChange={e => setBaseWater(prev => ({ ...prev, [id]: e.target.value }))}
-                    placeholder="0"
-                    className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                  />
+            {mineralWaters.length === 0 && (
+              <p className="text-xs text-slate-500 italic flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                No mineral waters added yet. Scan a label or add one manually.
+              </p>
+            )}
+
+            {/* Entry list */}
+            {mineralWaters.map(entry => (
+              <div key={entry.id} className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
+                {/* Entry header: name + volume + remove */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={entry.name}
+                      onChange={e => updateMineralWater(entry.id, { name: e.target.value })}
+                      placeholder="Water name (e.g. Solán de Cabras)"
+                      className="flex-1 min-w-0 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                    />
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={entry.volumeMl}
+                      onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
+                      placeholder="0"
+                      className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                    />
+                    <span className="text-xs text-slate-400 shrink-0">mL</span>
+                  </div>
+                  <button
+                    onClick={() => removeMineralWater(entry.id)}
+                    className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2 py-1.5 transition shrink-0"
+                    title="Remove this water source"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5" />
-              Enter mineral concentrations from your water source in mg/L, or scan a label.
-            </p>
+                {/* Ion inputs */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                  {ACTIVE_ION_IDS.map(id => (
+                    <div key={id}>
+                      <label className="block text-[10px] text-slate-500 mb-0.5">{ION_MAP[id].formula}</label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        value={entry.ions[id] ?? ''}
+                        onChange={e => updateMineralWater(entry.id, {
+                          ions: { ...entry.ions, [id]: e.target.value }
+                        })}
+                        placeholder="0"
+                        className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            {/* Add button */}
+            <button
+              onClick={() => addMineralWater()}
+              className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
+            >
+              <Droplet className="w-4 h-4" />
+              Add water source
+            </button>
 
             {/* Coverage rows */}
-            {batchMl > 0 && (
+            {mineralWaters.length > 0 && batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Coverage vs {activeProfile.name}</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Combined coverage vs {activeProfile.name}</span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
                   const bottledPpm = bottledIons[id] ?? 0;
@@ -950,37 +1050,25 @@ function App() {
                 })}
               </div>
             )}
-            {batchMl <= 0 && (
+            {mineralWaters.length > 0 && batchMl <= 0 && (
               <div className="border-t border-slate-700/40 pt-4">
-                <p className="text-xs text-slate-500 italic">Set a batch volume and add mineral water to see coverage.</p>
+                <p className="text-xs text-slate-500 italic">Set a batch volume above to see coverage.</p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Mineral Water Addition (volume only) */}
+        {/* Mineral Water Addition (volume summary) */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Mineral Water Addition"
           />
           <div className="px-6 py-4">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <label className="text-sm text-slate-300">Mineral water volume:</label>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={bottledMl}
-                  onChange={e => setBottledMl(e.target.value)}
-                  placeholder="0"
-                  className="w-28 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                />
-                <span className="text-sm text-slate-400">mL</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-4">
               {batchMl > 0 && (
                 <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-700/40">
-                  {fmt(Math.min(bottled, batchMl))} mL mineral
+                  {totalMineralMl > 0 ? fmt(totalMineralMl) : '0'} mL mineral
                   <span className="text-slate-500 mx-1.5">+</span>
                   {fmt(tdsMl)} mL 0 TDS
                   <span className="text-slate-500 mx-1.5">=</span>
@@ -989,9 +1077,9 @@ function App() {
               )}
             </div>
             {overfill && (
-              <div className="flex items-center gap-2 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2 mt-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
-                Mineral water volume exceeds the final batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
+                Total mineral water volume exceeds the batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
               </div>
             )}
           </div>
