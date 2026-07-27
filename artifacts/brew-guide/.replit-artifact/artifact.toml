@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/brew-guide/"
+title = "Brew Guide"
+version = "1.0.0"
+id = "artifacts/brew-guide"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/brew-guide/" ]
+localPort = 18382
+
+[services.development]
+run = "pnpm --filter @workspace/brew-guide run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/brew-guide", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/brew-guide/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18382"
+BASE_PATH = "/brew-guide/"
