@@ -1327,7 +1327,7 @@ function App() {
                     const target = saltOnlyIons[id] ?? 0;
                     const covered = bottledIons[id] ?? 0;
                     const remaining = Math.max(target - covered, 0);
-                    const overshot = covered > target;
+                    const overshot = covered > target + 0.01;
                     if (target <= 0) return null;
                     return (
                       <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
