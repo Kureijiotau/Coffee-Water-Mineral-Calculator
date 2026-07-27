@@ -1003,12 +1003,20 @@ function App() {
                 }
               }
             }} />
-              <span className="text-[11px] text-slate-500">
+              <span className={`text-[11px] font-medium rounded-lg px-2.5 py-1.5 border ${
+                mineralWaterMode === 'base'
+                  ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
+                  : 'text-sky-300 bg-sky-500/10 border-sky-500/30'
+              }`}>
                 Mode: {mineralWaterMode === 'base' ? 'Base' : 'Addition'}
                 {' '}
                 <button
                   onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
-                  className="text-slate-500 hover:text-slate-300 underline transition-colors"
+                  className={`underline transition-colors ${
+                    mineralWaterMode === 'base'
+                      ? 'text-emerald-300/70 hover:text-emerald-200'
+                      : 'text-sky-300/70 hover:text-sky-200'
+                  }`}
                 >
                   (swap)
                 </button>
@@ -1228,12 +1236,12 @@ function App() {
                 {/* Salt powder amounts — safe salts only, sorted by GH/KH neutrality */}
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
-                  <span className="text-[10px] text-slate-500">
+                  <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
                     Salts: {sulfateFirst ? 'Sulfates first' : 'Chlorides first'}
                     {' '}
                     <button
                       onClick={() => setSulfateFirst(p => !p)}
-                      className="text-slate-500 hover:text-slate-300 underline transition-colors"
+                      className="text-violet-300/70 hover:text-violet-200 underline transition-colors"
                     >
                       (swap)
                     </button>
