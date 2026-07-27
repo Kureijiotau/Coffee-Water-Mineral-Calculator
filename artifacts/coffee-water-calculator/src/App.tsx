@@ -190,12 +190,12 @@ function App() {
     [saltTargets, dil],
   );
 
-  // Combined contribution from all addition waters (already diluted)
+  // Combined contribution from all bottled waters (base + addition, already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
     for (const ion of IONS) {
       let total = 0;
-      for (const entry of additionWaters) {
+      for (const entry of [...mineralWaters, ...additionWaters]) {
         const vol = num(entry.volumeMl);
         if (vol > 0 && batchMl > 0) {
           total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
@@ -204,7 +204,7 @@ function App() {
       m[ion.id] = total;
     }
     return m;
-  }, [additionWaters, batchMl]);
+  }, [mineralWaters, additionWaters, batchMl]);
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
