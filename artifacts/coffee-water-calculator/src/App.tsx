@@ -53,7 +53,7 @@ function App() {
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
-  const [priorityOverride, setPriorityOverride] = useState<Record<string, IonId>>({});
+  const [sulfateFirst, setSulfateFirst] = useState(false);
   // 'addition' = mineral water ions stack on top of salts (original)
   // 'base'     = mineral water is the brewing base; ions don't affect totals
   const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('base');
@@ -1206,147 +1206,102 @@ function App() {
                     const target = saltOnlyIons[id] ?? 0;
                     const covered = bottledIons[id] ?? 0;
                     const remaining = Math.max(target - covered, 0);
+                    const overshot = covered > target;
                     if (target <= 0) return null;
                     return (
                       <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
-                        <span className={`text-sm font-semibold tabular-nums ${remaining > 0 ? 'text-amber-300' : 'text-emerald-300'}`}>
-                          {remaining > 0 ? `${remaining.toFixed(1)} ppm` : '✓ Covered'}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* Salt powder amounts — with ion priority and GH/KH nudging */}
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {SALTS.map((salt, i) => {
-                    const target = num(rows[i].target);
-                    if (target <= 0) return null;
-                    const form = salt.hydrationForms[rows[i].formIdx];
-                    const fullMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
-                    // Build per-ion headroom info
-                    const ionInfo: { id: IonId; formula: string; frac: number; headroom: number }[] = [];
-                    for (const c of salt.ions) {
-                      const total = saltOnlyIons[c.ionId] ?? 0;
-                      const covered = bottledIons[c.ionId] ?? 0;
-                      if (total > 0) {
-                        const headroom = Math.max(0, total - covered);
-                        const frac = Math.max(0, (total - covered) / total);
-                        ionInfo.push({ id: c.ionId, formula: ION_MAP[c.ionId].formula, frac, headroom });
-                      }
-                    }
-                    // Default: capped by the most restrictive ion
-                    const minFrac = Math.min(...ionInfo.map(i => i.frac), 1);
-                    // User priority override
-                    const priority = priorityOverride[salt.id] as IonId | undefined;
-                    const useFrac = priority
-                      ? (ionInfo.find(i => i.id === priority)?.frac ?? minFrac)
-                      : minFrac;
-                    const adjustedTarget = target * useFrac;
-                    const mg = computeSaltMg(adjustedTarget, L, form.molarMass, salt.anhydrousMass);
-                    const hasConflict = ionInfo.length > 1 && Math.max(...ionInfo.map(i => i.frac)) > minFrac + 0.01;
-                    // GH/KH classification
-                    const caMgIds: IonId[] = ['calcium', 'magnesium'];
-                    const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
-                    const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
-                    const ghkhLabel = !affectsGH && !affectsKH ? 'Neutral' : affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'Affects GH' : 'Affects KH';
-                    const ghkhColor = !affectsGH && !affectsKH ? 'text-emerald-400' : 'text-slate-500';
-                    // Overshoot display when user has chosen a priority
-                    const overshoots = priority ? ionInfo.filter(i => {
-                      const contrib = i.frac > 0 ? (target * i.frac) : 0;
-                      return contrib * useFrac > i.headroom + 0.01;
-                    }) : [];
-                    return (
-                      <div key={salt.id} className={`bg-slate-900/40 border rounded-lg px-3 py-2 ${
-                        mg < fullMg - 0.01 ? 'border-amber-500/40' : 'border-slate-700/50'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500">{salt.formula}</span>
-                          <span className={`text-[10px] ${ghkhColor} font-medium`}>{ghkhLabel}</span>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums text-sky-300">
-                          {mg.toFixed(1)} mg
-                        </span>
-                        {mg < fullMg - 0.01 && (
-                          <span className="text-[10px] ml-1.5 text-slate-500">
-                            (of {fullMg.toFixed(1)})
+                        {overshot ? (
+                          <span className="text-sm font-semibold tabular-nums text-rose-300">
+                            +{(covered - target).toFixed(1)} ppm overshoot
                           </span>
-                        )}
-                        {/* Priority override buttons when there's a real conflict */}
-                        {hasConflict && !priority && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            <span className="text-[10px] text-slate-500 mr-0.5">Prioritize →</span>
-                            {ionInfo.filter(i => i.frac > minFrac + 0.01).map(i => (
-                              <button key={i.id} onClick={() => setPriorityOverride(p => ({ ...p, [salt.id]: i.id }))}
-                                className="text-[10px] px-1.5 py-0.5 rounded bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 transition-colors">
-                                {i.formula}
-                              </button>
-                            ))}
-                            <button onClick={() => setPriorityOverride(p => ({ ...p, [salt.id]: 'capped' as IonId }))}
-                              className="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400/80 hover:bg-amber-800/30 transition-colors">
-                              Keep capped
-                            </button>
-                          </div>
-                        )}
-                        {/* Show current constraint */}
-                        {mg < fullMg - 0.01 && !priority && (
-                          <span className="block text-[10px] text-amber-300/70 leading-tight">
-                            Limited by {ionInfo.filter(i => Math.abs(i.frac - minFrac) < 0.001).map(i => i.formula).join(', ')}
+                        ) : remaining > 0 ? (
+                          <span className="text-sm font-semibold tabular-nums text-amber-300">
+                            {remaining.toFixed(1)} ppm
                           </span>
-                        )}
-                        {/* Overshoot warnings when priority chosen */}
-                        {overshoots.length > 0 && (
-                          <div className="mt-1 text-[10px] text-rose-300 leading-tight">
-                            ⚠ {overshoots.map(i => `${i.formula}: +${(target * i.frac * useFrac - i.headroom).toFixed(1)} ppm`).join(', ')}
-                          </div>
-                        )}
-                        {/* Reset priority button */}
-                        {priority && (
-                          <button onClick={() => setPriorityOverride(p => { const q = { ...p }; delete q[salt.id]; return q; })}
-                            className="mt-1 text-[10px] text-slate-500 hover:text-slate-300 underline transition-colors">
-                            Reset
-                          </button>
+                        ) : (
+                          <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
                         )}
                       </div>
                     );
                   })}
                 </div>
-                {/* Total overshoot summary across all priority overrides */}
-                {(() => {
-                  const totals: Record<string, number> = {};
-                  for (const salt of SALTS) {
-                    const target = num(rows[SALTS.indexOf(salt)].target);
-                    if (target <= 0) continue;
-                    const priority = priorityOverride[salt.id] as IonId | undefined;
-                    if (!priority) continue;
-                    for (const c of salt.ions) {
-                      const total = saltOnlyIons[c.ionId] ?? 0;
-                      const covered = bottledIons[c.ionId] ?? 0;
-                      if (total > 0) {
-                        const headroom = Math.max(0, total - covered);
-                        const contributes = c.fraction * target;
-                        const overshoot = Math.max(0, contributes - headroom);
-                        if (overshoot > 0.01) {
-                          totals[ION_MAP[c.ionId].formula] = (totals[ION_MAP[c.ionId].formula] ?? 0) + overshoot;
+                {/* Salt powder amounts — safe salts only, sorted by GH/KH neutrality */}
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
+                  <button
+                    onClick={() => setSulfateFirst(p => !p)}
+                    className="text-[10px] text-slate-500 hover:text-slate-300 underline transition-colors"
+                    title="Swap preference between chlorides and sulfates"
+                  >
+                    {sulfateFirst ? 'Sulfates ↑' : 'Chlorides ↑'}
+                  </button>
+                </div>
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {(() => {
+                    // Gather salts that are safe to add at full target
+                    const safe: { salt: typeof SALTS[0]; target: number; form: { molarMass: number }; mg: number; ghkhLabel: string; isChloride: boolean; isSulfate: boolean }[] = [];
+                    for (let i = 0; i < SALTS.length; i++) {
+                      const tgt = num(rows[i].target);
+                      if (tgt <= 0) continue;
+                      const salt = SALTS[i];
+                      const form = salt.hydrationForms[rows[i].formIdx];
+                      // Check if adding at full target would overshoot any ion
+                      let overshoots = false;
+                      for (const c of salt.ions) {
+                        const total = saltOnlyIons[c.ionId] ?? 0;
+                        const covered = bottledIons[c.ionId] ?? 0;
+                        if (total > 0 && covered >= total * (1 - 1e-9)) {
+                          overshoots = true;
+                          break;
                         }
                       }
+                      if (overshoots) continue;
+                      const caMgIds: IonId[] = ['calcium', 'magnesium'];
+                      const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
+                      const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
+                      const ghkhLabel = !affectsGH && !affectsKH ? 'Neutral' : affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'GH' : 'KH';
+                      const isChloride = salt.id === 'mgcl2' || salt.id === 'cacl2' || salt.id === 'nacl';
+                      const isSulfate = salt.id === 'mgso4';
+                      safe.push({
+                        salt, target: tgt, form,
+                        mg: computeSaltMg(tgt, L, form.molarMass, salt.anhydrousMass),
+                        ghkhLabel, isChloride, isSulfate,
+                      });
                     }
-                  }
-                  const entries = Object.entries(totals);
-                  if (entries.length === 0) return null;
-                  return (
-                    <div className="mt-3 border-t border-slate-700/40 pt-3">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-rose-400">Total overshoot</span>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        {entries.map(([formula, ppm]) => (
-                          <span key={formula} className="text-[11px] text-rose-300 tabular-nums bg-rose-900/20 border border-rose-700/30 rounded px-2 py-0.5">
-                            {formula}: +{ppm.toFixed(1)} ppm
+                    // Sort: neutral first, then chlorides or sulfates depending on toggle
+                    safe.sort((a, b) => {
+                      const aNeutral = a.ghkhLabel === 'Neutral' ? 0 : 1;
+                      const bNeutral = b.ghkhLabel === 'Neutral' ? 0 : 1;
+                      if (aNeutral !== bNeutral) return aNeutral - bNeutral;
+                      if (sulfateFirst) {
+                        if (a.isSulfate && !b.isSulfate) return -1;
+                        if (!a.isSulfate && b.isSulfate) return 1;
+                        if (a.isChloride && !b.isChloride) return 1;
+                        if (!a.isChloride && b.isChloride) return -1;
+                      } else {
+                        if (a.isChloride && !b.isChloride) return -1;
+                        if (!a.isChloride && b.isChloride) return 1;
+                        if (a.isSulfate && !b.isSulfate) return 1;
+                        if (!a.isSulfate && b.isSulfate) return -1;
+                      }
+                      return 0;
+                    });
+                    return safe.map(item => (
+                      <div key={item.salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-slate-500">{item.salt.formula}</span>
+                          <span className={`text-[10px] font-medium ${item.ghkhLabel === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {item.ghkhLabel}
                           </span>
-                        ))}
+                        </div>
+                        <span className="text-sm font-semibold tabular-nums text-sky-300">
+                          {item.mg.toFixed(1)} mg
+                        </span>
                       </div>
-                    </div>
-                  );
-                })()}
+                    ));
+                  })()}
+                </div>
               </div>
             )}
           </div>
