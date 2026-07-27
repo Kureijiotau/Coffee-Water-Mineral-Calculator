@@ -1003,17 +1003,16 @@ function App() {
                 }
               }
             }} />
-              <button
-                onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
-                className={`text-[11px] font-medium rounded-lg px-2.5 py-1.5 transition border shrink-0 ${
-                  mineralWaterMode === 'base'
-                    ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
-                    : 'text-sky-300 bg-sky-500/10 border-sky-500/30 hover:bg-sky-500/20'
-                }`}
-                title={mineralWaterMode === 'base' ? 'Mineral water is the brewing base' : 'Mineral water adds on top of salts'}
-              >
-                {mineralWaterMode === 'base' ? 'Base' : 'Addition'}
-              </button>
+              <span className="text-[11px] text-slate-500">
+                Mode: {mineralWaterMode === 'base' ? 'Base' : 'Addition'}
+                {' '}
+                <button
+                  onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
+                  className="text-slate-500 hover:text-slate-300 underline transition-colors"
+                >
+                  (swap)
+                </button>
+              </span>
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
