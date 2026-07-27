@@ -1172,10 +1172,77 @@ function App() {
                     </div>
                   ))}
                 </div>
+                {/* Save + Share buttons */}
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      const hasName = entry.name.trim().length > 0;
+                      const hasIons = Object.values(entry.ions).some(v => parseFloat(v || '0') > 0);
+                      if (!hasName || !hasIons) return;
+                      const alreadySaved = localWaters.some(l =>
+                        l.name === entry.name.trim() &&
+                        Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                      );
+                      if (alreadySaved) return;
+                      saveWaters([...localWaters, {
+                        id: newLocalWaterId(),
+                        name: entry.name.trim(),
+                        ions: Object.fromEntries(
+                          Object.entries(entry.ions)
+                            .filter(([, v]) => parseFloat(v || '0') > 0)
+                            .map(([k, v]) => [k, parseFloat(v || '0')])
+                        ) as Record<string, number>,
+                      }]);
+                    }}
+                    className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                      (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
+                        ? 'text-slate-600 bg-slate-700/20 cursor-not-allowed'
+                        : localWaters.some(l =>
+                            l.name === entry.name.trim() &&
+                            Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                          )
+                        ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 cursor-default'
+                        : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
+                    }`}
+                  >
+                    {localWaters.some(l =>
+                      l.name === entry.name.trim() &&
+                      Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                    ) && entry.name.trim() ? (
+                      <><Check className="w-3 h-3 inline mr-1" />Saved</>
+                    ) : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const hasName = entry.name.trim().length > 0;
+                      const hasIons = Object.values(entry.ions).some(v => parseFloat(v || '0') > 0);
+                      if (!hasName || !hasIons) return;
+                      if (window.confirm(`Share "${entry.name.trim()}" with the community? Other users will be able to find and use this water profile.`)) {
+                        const vals: Record<string, number> = Object.fromEntries(
+                          Object.entries(entry.ions)
+                            .filter(([, v]) => parseFloat(v || '0') > 0)
+                            .map(([k, v]) => [k, parseFloat(v || '0')])
+                        );
+                        fetch(`${API_BASE}/api/waters`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ name: entry.name.trim(), ions: vals, shared: 'yes' }),
+                        }).catch(() => {});
+                      }
+                    }}
+                    className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                      (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
+                        ? 'text-slate-600 bg-slate-700/20 cursor-not-allowed'
+                        : 'text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30'
+                    }`}
+                  >
+                    <Share2 className="w-3 h-3 inline mr-1" />Share
+                  </button>
+                </div>
               </div>
             ))}
 
-            {/* Add button */}
+          {/* Add button */}
             <button
               onClick={() => addMineralWater()}
               className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
