@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BrewGuideModal from './BrewGuideModal';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -58,7 +57,6 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
-  const [showBrewGuide, setShowBrewGuide] = useState(false);
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -619,19 +617,6 @@ function App() {
               <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowBrewGuide(true)}
-                disabled={batchMl <= 0}
-                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                  batchMl > 0
-                    ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
-                }`}
-                title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
-              >
-                <ListChecks className="w-4 h-4" />
-                <span className="hidden sm:inline">Brew Guide</span>
-              </button>
               <button
                 onClick={handleExport}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
@@ -2047,20 +2032,6 @@ function SplitStockCard({
           ))}
         </div>
       )}
-
-      <BrewGuideModal
-        show={showBrewGuide}
-        onClose={() => setShowBrewGuide(false)}
-        rows={rows}
-        batchMl={batchMl}
-        liters={liters}
-        totalBaseMl={totalBaseMl}
-        totalMineralMl={totalMineralMl}
-        mineralWaters={mineralWaters}
-        additionWaters={additionWaters}
-        activeRecipe={activeRecipe}
-        sulfateFirst={sulfateFirst}
-      />
       </div>
   );
 }
