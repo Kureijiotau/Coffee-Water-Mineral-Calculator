@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import BrewGuideModal from './BrewGuideModal';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
@@ -58,7 +57,6 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
-  const [showBrewGuide, setShowBrewGuide] = useState(false);
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -608,6 +606,102 @@ function App() {
     exportTimerRef.current = setTimeout(() => setExportCopied(false), 2000);
   };
 
+  const handleBrewGuideExport = () => {
+    const l = L;
+    const bMl = batchMl;
+    const roMl = Math.max(bMl - totalMineralMl - totalBaseMl, 0);
+
+    const lines: string[] = [];
+    const line = (s: string) => lines.push(s);
+    const div = () => lines.push('─'.repeat(44));
+
+    const rName = activeRecipe?.name ?? 'Custom';
+    line(`╔════════════════════════════════════════════╗`);
+    line(`║         Brew Guide — ${rName.padEnd(19)}║`);
+    line(`╚════════════════════════════════════════════╝`);
+    line('');
+    line(`${'Recipe:'.padEnd(18)} ${rName}`);
+    line(`${'Batch:'.padEnd(18)} ${bMl} mL  (${liters} L)`);
+    line(`${'RO / distilled water:'.padEnd(18)} ${roMl} mL`);
+    if (totalBaseMl > 0) line(`${'Base mineral water:'.padEnd(18)} ${totalBaseMl} mL`);
+    if (totalMineralMl > 0) line(`${'Addition water:'.padEnd(18)} ${totalMineralMl} mL`);
+    line('');
+
+    div();
+    line('  1.  PREPARE YOUR WATER');
+    div();
+    line('');
+    if (roMl > 0) line(`    • Start with ${roMl} mL of RO / distilled water in your brewing vessel.`);
+    for (const w of mineralWaters) {
+      const vol = num(w.volumeMl);
+      if (vol <= 0) continue;
+      const ions = ACTIVE_ION_IDS.filter(id => num(w.ions[id] ?? '') > 0).map(id => `${ION_MAP[id].name} ${w.ions[id]} ppm`).join(', ');
+      line(`    • Add ${vol} mL of ${w.name || 'base water'}${ions ? `  (${ions})` : ''}.`);
+    }
+    for (const w of additionWaters) {
+      const vol = num(w.volumeMl);
+      if (vol <= 0) continue;
+      const ions = ACTIVE_ION_IDS.filter(id => num(w.ions[id] ?? '') > 0).map(id => `${ION_MAP[id].name} ${w.ions[id]} ppm`).join(', ');
+      line(`    • Add ${vol} mL of ${w.name || 'addition water'}${ions ? `  (${ions})` : ''}.`);
+    }
+    line('');
+
+    const activeSalts = SALTS.map((s, i) => {
+      const tgt = num(rows[i].target);
+      if (tgt <= 0) return null;
+      const form = s.hydrationForms[rows[i].formIdx];
+      const mg = l > 0 ? computeSaltMg(tgt, l, form.molarMass, s.anhydrousMass) : 0;
+      return { name: s.name, formula: s.formula, mg, hydrate: form.label || form.name, sulfate: s.formula.includes('SO₄') };
+    }).filter(Boolean) as { name: string; formula: string; mg: number; hydrate: string; sulfate: boolean }[];
+
+    if (activeSalts.length > 0) {
+      div();
+      line('  2.  ADD MINERALS');
+      div();
+      line('');
+
+      if (sulfateFirst) {
+        line('    Order: add sulfate minerals first, then the remaining salts.');
+        line('');
+        const sulfates = activeSalts.filter(s => s.sulfate);
+        const others = activeSalts.filter(s => !s.sulfate);
+        [...sulfates, ...others].forEach((s, i) => {
+          line(`    ${i + 1}.  ${s.name.padEnd(24)} ${s.mg.toFixed(2).padStart(7)} mg  (${s.hydrate})`);
+        });
+      } else {
+        activeSalts.forEach((s, i) => {
+          line(`    ${i + 1}.  ${s.name.padEnd(24)} ${s.mg.toFixed(2).padStart(7)} mg  (${s.hydrate})`);
+        });
+      }
+      line('');
+      line('    Weigh each salt on a 0.01 g precision scale.');
+      line('    Add to the water and stir until fully dissolved.');
+      line('');
+    }
+
+    div();
+    line(`  ${activeSalts.length > 0 ? '3' : '2'}.  VERIFY & BREW`);
+    div();
+    line('');
+    line('    • Stir thoroughly.');
+    line('    • Check that all minerals are fully dissolved.');
+    line('    • Proceed with your brew method as usual.');
+    line('    • Adjust extraction parameters to taste.');
+    line('');
+    line('── End of Brew Guide ──────────────────────────');
+    line('');
+
+    const text = lines.join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `brew-guide-${Date.now()}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    navigator.clipboard.writeText(text).catch(() => {});
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
       <div className="w-full max-w-5xl space-y-4">
@@ -620,7 +714,7 @@ function App() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowBrewGuide(true)}
+                onClick={handleBrewGuideExport}
                 disabled={batchMl <= 0}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
                   batchMl > 0
@@ -2048,19 +2142,6 @@ function SplitStockCard({
         </div>
       )}
 
-      <BrewGuideModal
-        show={showBrewGuide}
-        onClose={() => setShowBrewGuide(false)}
-        rows={rows}
-        batchMl={batchMl}
-        liters={liters}
-        totalBaseMl={totalBaseMl}
-        totalMineralMl={totalMineralMl}
-        mineralWaters={mineralWaters}
-        additionWaters={additionWaters}
-        activeRecipe={activeRecipe}
-        sulfateFirst={sulfateFirst}
-      />
       </div>
   );
 }
