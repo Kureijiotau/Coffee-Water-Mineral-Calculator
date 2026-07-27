@@ -610,6 +610,7 @@ function App() {
     const l = L;
     const bMl = batchMl;
     const roMl = Math.max(bMl - totalMineralMl - totalBaseMl, 0);
+    const isLargeBatch = bMl > 1000;
 
     const lines: string[] = [];
     const line = (s: string) => lines.push(s);
@@ -631,7 +632,7 @@ function App() {
     line('  1.  PREPARE YOUR WATER');
     div();
     line('');
-    if (roMl > 0) line(`    • Start with ${roMl} mL of RO / distilled water in your brewing vessel.`);
+    if (roMl > 0) line(`    • Start with ${roMl} mL of RO / distilled water.`);
     for (const w of mineralWaters) {
       const vol = num(w.volumeMl);
       if (vol <= 0) continue;
@@ -644,6 +645,12 @@ function App() {
       const ions = ACTIVE_ION_IDS.filter(id => num(w.ions[id] ?? '') > 0).map(id => `${ION_MAP[id].name} ${w.ions[id]} ppm`).join(', ');
       line(`    • Add ${vol} mL of ${w.name || 'addition water'}${ions ? `  (${ions})` : ''}.`);
     }
+    if (isLargeBatch) {
+      line('');
+      line(`    Reserve ~500 mL of the water in a separate container —`);
+      line(`    this will be your mixing vessel for dissolving minerals.`);
+      line(`    Set aside the remaining ${Math.max(bMl - 500, 0)} mL as dilution water.`);
+    }
     line('');
 
     const activeSalts = SALTS.map((s, i) => {
@@ -651,40 +658,68 @@ function App() {
       if (tgt <= 0) return null;
       const form = s.hydrationForms[rows[i].formIdx];
       const mg = l > 0 ? computeSaltMg(tgt, l, form.molarMass, s.anhydrousMass) : 0;
-      return { name: s.name, formula: s.formula, mg, hydrate: form.label || form.name, sulfate: s.formula.includes('SO₄') };
-    }).filter(Boolean) as { name: string; formula: string; mg: number; hydrate: string; sulfate: boolean }[];
+      const isBicarbonate = s.formula.includes('HCO₃') || s.formula.includes('CO₃');
+      const isSulfate = s.formula.includes('SO₄');
+      const isChloride = s.formula.includes('Cl');
+      return { name: s.name, formula: s.formula, mg, hydrate: form.label || form.name, isSulfate, isChloride, isBicarbonate };
+    }).filter(Boolean) as { name: string; formula: string; mg: number; hydrate: string; isSulfate: boolean; isChloride: boolean; isBicarbonate: boolean }[];
 
     if (activeSalts.length > 0) {
       div();
-      line('  2.  ADD MINERALS');
+      line(isLargeBatch ? '  2.  DISSOLVE MINERALS IN MIXING VESSEL' : '  2.  ADD MINERALS');
       div();
       line('');
+      line('    Safe addition order (prevents CaCO₃ precipitation):');
+      line('    1) Sulfates  — dissolve slowly, add first');
+      line('    2) Chlorides — dissolve readily');
+      line('    3) Bicarbonates / Carbonates — last, avoid CaCO₃ binding');
+      line('');
 
-      if (sulfateFirst) {
-        line('    Order: add sulfate minerals first, then the remaining salts.');
-        line('');
-        const sulfates = activeSalts.filter(s => s.sulfate);
-        const others = activeSalts.filter(s => !s.sulfate);
-        [...sulfates, ...others].forEach((s, i) => {
-          line(`    ${i + 1}.  ${s.name.padEnd(24)} ${s.mg.toFixed(2).padStart(7)} mg  (${s.hydrate})`);
-        });
-      } else {
-        activeSalts.forEach((s, i) => {
-          line(`    ${i + 1}.  ${s.name.padEnd(24)} ${s.mg.toFixed(2).padStart(7)} mg  (${s.hydrate})`);
-        });
+      // Order: sulfates → chlorides → bicarbonates/carbonates
+      const ordered = [
+        ...activeSalts.filter(s => s.isSulfate),
+        ...activeSalts.filter(s => s.isChloride && !s.isSulfate),
+        ...activeSalts.filter(s => s.isBicarbonate),
+      ];
+
+      if (ordered.length < activeSalts.length) {
+        // Any remaining salts not captured by the groups (e.g. Mg citrate)
+        const remaining = activeSalts.filter(s => !s.isSulfate && !s.isChloride && !s.isBicarbonate);
+        ordered.push(...remaining);
       }
+
+      ordered.forEach((s, i) => {
+        const prefix = s.isSulfate ? '  [Sulfate]' : s.isChloride ? ' [Chloride]' : s.isBicarbonate ? '     [KH/碱]' : '          ';
+        line(`    ${i + 1}.${prefix}  ${s.name.padEnd(22)} ${s.mg.toFixed(2).padStart(7)} mg  (${s.hydrate})`);
+      });
       line('');
       line('    Weigh each salt on a 0.01 g precision scale.');
-      line('    Add to the water and stir until fully dissolved.');
+      if (isLargeBatch) {
+        line('    Add salts one at a time to the 500 mL mixing vessel.');
+        line('    Stir until fully dissolved before adding the next salt.');
+      } else {
+        line('    Add to the water and stir until fully dissolved before adding the next salt.');
+      }
+      line('');
+    }
+
+    if (isLargeBatch) {
+      div();
+      line('  3.  COMBINE & TOP UP');
+      div();
+      line('');
+      line('    • Pour the mineral concentrate from the mixing vessel');
+      line('      into the main batch of dilution water.');
+      line('    • Stir thoroughly to homogenize.');
+      line('    • The water is now ready for brewing.');
       line('');
     }
 
     div();
-    line(`  ${activeSalts.length > 0 ? '3' : '2'}.  VERIFY & BREW`);
+    line(`  ${isLargeBatch ? '4' : activeSalts.length > 0 ? '3' : '2'}.  VERIFY & BREW`);
     div();
     line('');
-    line('    • Stir thoroughly.');
-    line('    • Check that all minerals are fully dissolved.');
+    line('    • Check that all minerals are fully dissolved (the water should be clear).');
     line('    • Proceed with your brew method as usual.');
     line('    • Adjust extraction parameters to taste.');
     line('');
