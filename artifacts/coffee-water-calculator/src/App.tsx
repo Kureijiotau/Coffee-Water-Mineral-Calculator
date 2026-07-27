@@ -56,7 +56,7 @@ function App() {
   const [priorityOverride, setPriorityOverride] = useState<Record<string, IonId>>({});
   // 'addition' = mineral water ions stack on top of salts (original)
   // 'base'     = mineral water is the brewing base; ions don't affect totals
-  const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('addition');
+  const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('base');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -1006,13 +1006,13 @@ function App() {
               <button
                 onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
                 className={`text-[11px] font-medium rounded-lg px-2.5 py-1.5 transition border shrink-0 ${
-                  mineralWaterMode === 'addition'
-                    ? 'text-sky-300 bg-sky-500/10 border-sky-500/30 hover:bg-sky-500/20'
-                    : 'text-amber-300 bg-amber-500/10 border-amber-500/30 hover:bg-amber-500/20'
+                  mineralWaterMode === 'base'
+                    ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20'
+                    : 'text-sky-300 bg-sky-500/10 border-sky-500/30 hover:bg-sky-500/20'
                 }`}
-                title={mineralWaterMode === 'addition' ? 'Mineral water adds on top of salts' : 'Mineral water is the base; ions ignored in totals'}
+                title={mineralWaterMode === 'base' ? 'Mineral water is the brewing base' : 'Mineral water adds on top of salts'}
               >
-                {mineralWaterMode === 'addition' ? 'Addition' : 'Base'}
+                {mineralWaterMode === 'base' ? 'Base' : 'Addition'}
               </button>
             </div>}
           />
