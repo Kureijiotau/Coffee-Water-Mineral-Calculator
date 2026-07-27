@@ -585,6 +585,20 @@ function App() {
               <Calculator className="w-6 h-6 text-white" />
               <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
+                  exportCopied
+                    ? 'text-emerald-900 bg-emerald-300 border border-emerald-400 scale-105'
+                    : 'text-amber-900 bg-gradient-to-r from-amber-300 to-orange-300 hover:from-amber-200 hover:to-orange-200 border border-amber-400/60 hover:shadow-amber-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
+                }`}
+                title="Export recipe card (downloads .txt and copies to clipboard)"
+              >
+                {exportCopied ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+                <span>{exportCopied ? 'Saved!' : 'Export Recipe'}</span>
+              </button>
+            </div>
             <div className="group/badge flex items-center gap-1">
               {indicatorOn && <OverallBadge level={overallLevel} />}
               <button
@@ -1453,18 +1467,6 @@ function App() {
               <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleExport}
-                className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
-                  exportCopied
-                    ? 'text-emerald-300 bg-emerald-500/20 border border-emerald-500/40'
-                    : 'text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60'
-                }`}
-                title="Export recipe card (downloads .txt and copies to clipboard)"
-              >
-                {exportCopied ? <Check className="w-3.5 h-3.5" /> : <Download className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{exportCopied ? 'Copied!' : 'Export'}</span>
-              </button>
               <button
                 onClick={() => setShowSettings(true)}
                 className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
