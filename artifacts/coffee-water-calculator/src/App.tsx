@@ -1229,13 +1229,16 @@ function App() {
                 {/* Salt powder amounts — safe salts only, sorted by GH/KH neutrality */}
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
-                  <button
-                    onClick={() => setSulfateFirst(p => !p)}
-                    className="text-[10px] text-slate-500 hover:text-slate-300 underline transition-colors"
-                    title="Swap preference between chlorides and sulfates"
-                  >
-                    {sulfateFirst ? 'Sulfates ↑' : 'Chlorides ↑'}
-                  </button>
+                  <span className="text-[10px] text-slate-500">
+                    Salts: {sulfateFirst ? 'Sulfates first' : 'Chlorides first'}
+                    {' '}
+                    <button
+                      onClick={() => setSulfateFirst(p => !p)}
+                      className="text-slate-500 hover:text-slate-300 underline transition-colors"
+                    >
+                      (swap)
+                    </button>
+                  </span>
                 </div>
                 <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {(() => {
