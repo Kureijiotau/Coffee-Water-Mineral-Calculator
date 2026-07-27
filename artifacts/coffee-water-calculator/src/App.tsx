@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -11,6 +11,7 @@ import {
 } from '@/recipes';
 import { SettingsModal } from '@/SettingsModal';
 import LabelScanner from '@/LabelScanner';
+import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater } from '@/localWaters';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadIndicatorOn, saveIndicatorOn, createProfile,
@@ -41,10 +42,11 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
-interface SavedWater {
+interface CommunityWater {
   id: number;
   name: string;
   ions: Record<string, number>;
+  shared: string;
 }
 
 function App() {
@@ -74,20 +76,29 @@ function App() {
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
 
-  // ── Saved waters (database-backed) ──────────────────
-  const [savedWaters, setSavedWaters] = useState<SavedWater[]>([]);
-  const [savedWatersLoading, setSavedWatersLoading] = useState(true);
-  const fetchSavedWaters = useCallback(async () => {
+  // ── Local waters (curated by user, stored in localStorage) ──
+  const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
+  const saveWaters = useCallback((waters: LocalWater[]) => {
+    setLocalWaters(waters);
+    saveLocalWaters(waters);
+  }, []);
+
+  // ── Community waters browser (on-demand from API) ──
+  const [communityModalOpen, setCommunityModalOpen] = useState(false);
+  const [communityWaters, setCommunityWaters] = useState<CommunityWater[]>([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const openCommunityModal = async () => {
+    setCommunityModalOpen(true);
+    setCommunityLoading(true);
     try {
       const resp = await fetch(`${API_BASE}/api/waters`);
       if (resp.ok) {
         const data = await resp.json();
-        setSavedWaters(data.waters ?? []);
+        setCommunityWaters(data.waters ?? []);
       }
     } catch { /* server may be down */ }
-    setSavedWatersLoading(false);
-  }, []);
-  useEffect(() => { fetchSavedWaters(); }, [fetchSavedWaters]);
+    setCommunityLoading(false);
+  };
 
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
@@ -973,8 +984,8 @@ function App() {
             title="Mineral Water Base"
             after={<div className="flex items-center gap-2">
               <LabelScanner onExtracted={vals => {
-              // Silently use existing saved water if ionic profile matches
-              const match = savedWaters.find(w => {
+              // Silently use existing local water if ionic profile matches
+              const match = localWaters.find(w => {
                 for (const [k, raw] of Object.entries(vals)) {
                   const v = parseFloat(raw ?? '0');
                   if (!Number.isFinite(v) || v <= 0) continue;
@@ -994,12 +1005,15 @@ function App() {
                 addMineralWater({ ions: vals });
                 const name = window.prompt("Name this water (so you can find it later):");
                 if (name && name.trim()) {
-                  const isShared = window.confirm("Upload this water for other users to find too?");
-                  fetch(`${API_BASE}/api/waters`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name.trim(), ions: vals, shared: isShared ? 'yes' : 'no' }),
-                  }).then(() => fetchSavedWaters()).catch(() => {});
+                  saveWaters([...localWaters, { id: newLocalWaterId(), name: name.trim(), ions: vals as Record<string, number> }]);
+                  const share = window.confirm("Also share this profile with the community?");
+                  if (share) {
+                    fetch(`${API_BASE}/api/waters`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ name: name.trim(), ions: vals, shared: 'yes' }),
+                    }).catch(() => {});
+                  }
                 }
               }
             }} />
@@ -1024,17 +1038,27 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-            {/* Saved waters picker */}
-            {!savedWatersLoading && savedWaters.length > 0 && (
-              <div>
-                <details className="group" open>
-                  <summary className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 cursor-pointer hover:text-slate-200 transition select-none">
-                    <Droplet className="w-3.5 h-3.5" />
-                    Saved waters ({savedWaters.length})
-                    <span className="text-slate-600 group-open:rotate-90 transition-transform ml-auto">▶</span>
-                  </summary>
+            {/* My waters picker (local) */}
+            <div>
+              <details className="group" open>
+                <summary className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 cursor-pointer hover:text-slate-200 transition select-none">
+                  <Droplet className="w-3.5 h-3.5" />
+                  My waters ({localWaters.length})
+                  <button
+                    onClick={e => { e.preventDefault(); e.stopPropagation(); openCommunityModal(); }}
+                    className="ml-1 flex items-center gap-0.5 text-[11px] text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-lg px-2 py-0.5 transition shrink-0"
+                    title="Browse community waters"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Community
+                  </button>
+                  <span className="text-slate-600 group-open:rotate-90 transition-transform ml-auto">▶</span>
+                </summary>
+                {localWaters.length === 0 ? (
+                  <div className="mt-2 text-xs text-slate-500 italic">No saved waters yet. Scan a label or browse the community.</div>
+                ) : (
                   <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {savedWaters.map(w => (
+                    {localWaters.map(w => (
                       <div
                         key={w.id}
                         className="flex items-center justify-between gap-2 bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2 hover:bg-sky-500/10 hover:border-sky-500/40 transition cursor-pointer group/water"
@@ -1046,18 +1070,27 @@ function App() {
                           addMineralWater({ name: w.name || undefined, ions: vals });
                         }}
                       >
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <span className="text-sm text-slate-200 group-hover/water:text-sky-200 transition truncate block">
-                            {w.name || `Water #${w.id}`}
+                            {w.name || 'Unnamed'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-600 shrink-0">{Object.keys(w.ions).length} ions</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] text-slate-600">{Object.keys(w.ions).length} ions</span>
+                          <button
+                            onClick={e => { e.stopPropagation(); saveWaters(localWaters.filter(x => x.id !== w.id)); }}
+                            className="text-slate-600 hover:text-rose-300 transition p-0.5"
+                            title="Remove from my waters"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
-                </details>
-              </div>
-            )}
+                )}
+              </details>
+            </div>
 
             {mineralWaters.length === 0 && (
               <p className="text-xs text-slate-500 italic flex items-center gap-1.5">
@@ -1445,6 +1478,71 @@ function App() {
           onSaveProfile={handleSaveProfile}
           onDeleteProfile={handleDeleteProfile}
         />
+      )}
+
+      {/* ── Community waters modal ── */}
+      {communityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCommunityModalOpen(false)}>
+          <div className="w-full max-w-2xl max-h-[80vh] bg-slate-800 rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40 shrink-0">
+              <h2 className="text-sm font-semibold text-slate-200">Community waters</h2>
+              <button onClick={() => setCommunityModalOpen(false)} className="text-slate-500 hover:text-slate-200 transition p-1">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {communityLoading ? (
+                <p className="text-xs text-slate-500 italic text-center py-8">Loading community waters…</p>
+              ) : communityWaters.length === 0 ? (
+                <p className="text-xs text-slate-500 italic text-center py-8">No community waters found yet.</p>
+              ) : (
+                communityWaters
+                  .filter(w => w.shared === 'yes')
+                  .map(w => {
+                    const alreadyAdded = localWaters.some(l => l.sourceId === w.id);
+                    return (
+                      <div key={w.id} className="flex items-center justify-between gap-3 bg-slate-900/40 border border-slate-700/50 rounded-lg px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <span className="text-sm text-slate-200 block truncate">{w.name || `Water #${w.id}`}</span>
+                          <span className="text-[10px] text-slate-500">{Object.keys(w.ions).length} ions</span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (alreadyAdded) return;
+                            const nw: LocalWater = {
+                              id: newLocalWaterId(),
+                              name: w.name || `Water #${w.id}`,
+                              ions: w.ions,
+                              sourceId: w.id,
+                            };
+                            saveWaters([...localWaters, nw]);
+                            const vals: Partial<Record<IonId, string>> = {};
+                            for (const [k, v] of Object.entries(w.ions)) {
+                              if (v > 0) vals[k as IonId] = String(v);
+                            }
+                            addMineralWater({ name: w.name || undefined, ions: vals });
+                          }}
+                          disabled={alreadyAdded}
+                          className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                            alreadyAdded
+                              ? 'text-slate-500 bg-slate-700/30 cursor-default'
+                              : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
+                          }`}
+                        >
+                          {alreadyAdded ? 'Added' : 'Add to my waters'}
+                        </button>
+                      </div>
+                    );
+                  })
+              )}
+              {!communityLoading && communityWaters.filter(w => w.shared === 'yes').length === 0 && communityWaters.length > 0 && (
+                <p className="text-xs text-slate-500 italic text-center py-4">No publicly shared waters available.</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
