@@ -55,10 +55,8 @@ function App() {
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
+  const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
-  // 'addition' = mineral water ions stack on top of salts (original)
-  // 'base'     = mineral water is the brewing base; ions don't affect totals
-  const [mineralWaterMode, setMineralWaterMode] = useState<'addition' | 'base'>('base');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -74,6 +72,22 @@ function App() {
   };
   const removeMineralWater = (id: string) => {
     setMineralWaters(prev => prev.filter(e => e.id !== id));
+  };
+  const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
+    const entry: MineralWaterEntry = {
+      id: newMwId(),
+      name: partial?.name ?? '',
+      ions: partial?.ions ?? {},
+      volumeMl: partial?.volumeMl ?? '0',
+    };
+    setAdditionWaters(prev => [...prev, entry]);
+    return entry;
+  };
+  const updateAdditionWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    setAdditionWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  };
+  const removeAdditionWater = (id: string) => {
+    setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
 
   // ── Local waters (curated by user, stored in localStorage) ──
@@ -131,12 +145,15 @@ function App() {
   const L = num(liters);
   const batchMl = L * 1000;
 
-  // Combined mineral water state
+  // Combined mineral water state (only addition waters affect the recipe)
   const totalMineralMl = batchMl > 0
+    ? Math.min(additionWaters.reduce((s, e) => s + num(e.volumeMl), 0), batchMl)
+    : 0;
+  const totalBaseMl = batchMl > 0
     ? Math.min(mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0), batchMl)
     : 0;
   const tdsMl = Math.max(batchMl - totalMineralMl, 0);
-  const overfill = mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0) > batchMl && batchMl > 0;
+  const overfill = additionWaters.reduce((s, e) => s + num(e.volumeMl), 0) > batchMl && batchMl > 0;
   const dil = batchMl > 0 ? totalMineralMl / batchMl : 0;
 
   const saltTargets = useMemo(() => {
@@ -145,12 +162,12 @@ function App() {
     return m;
   }, [rows]);
 
-  // Weighted-average base water concentrations across all entries
-  const combinedBaseIons = useMemo(() => {
+  // Weighted-average addition water concentrations across all entries
+  const combinedAdditionIons = useMemo(() => {
     const m = {} as Partial<Record<IonId, number>>;
     for (const id of ACTIVE_ION_IDS) {
       let weighted = 0, totalVol = 0;
-      for (const entry of mineralWaters) {
+      for (const entry of additionWaters) {
         const vol = num(entry.volumeMl);
         if (vol > 0) {
           weighted += (num(entry.ions[id] ?? '') * vol);
@@ -160,25 +177,25 @@ function App() {
       m[id] = totalVol > 0 ? weighted / totalVol : 0;
     }
     return m;
-  }, [mineralWaters]);
+  }, [additionWaters]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, mineralWaterMode === 'addition' ? combinedBaseIons : {}, dil),
-    [saltTargets, combinedBaseIons, dil, mineralWaterMode],
+    () => computeIonTotals(saltTargets, combinedAdditionIons, dil),
+    [saltTargets, combinedAdditionIons, dil],
   );
 
-  // Salt-only contribution (no base water) — used for the coverage bars
+  // Salt-only contribution — used for the coverage bars
   const saltOnlyIons = useMemo(
     () => computeIonTotals(saltTargets, {}, dil),
     [saltTargets, dil],
   );
 
-  // Combined contribution from all mineral waters (already diluted)
+  // Combined contribution from all addition waters (already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
     for (const ion of IONS) {
       let total = 0;
-      for (const entry of mineralWaters) {
+      for (const entry of additionWaters) {
         const vol = num(entry.volumeMl);
         if (vol > 0 && batchMl > 0) {
           total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
@@ -187,7 +204,7 @@ function App() {
       m[ion.id] = total;
     }
     return m;
-  }, [mineralWaters, batchMl]);
+  }, [additionWaters, batchMl]);
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
@@ -533,12 +550,26 @@ function App() {
     line(`  KH (Carbonate) : ${kh.toFixed(1)} ppm  (salts: ${khSalt.toFixed(1)}, mineral: ${khBottled.toFixed(1)})`);
     if (kh > 0) line(`  GH:KH ratio    : ${(gh / kh).toFixed(2)} : 1`);
 
-    if (mineralWaters.length > 0 && totalMineralMl > 0) {
+    if (additionWaters.length > 0 && totalMineralMl > 0) {
       line('');
       divider();
       line('MINERAL WATER ADDITION');
       divider();
       line(`  Total volume: ${totalMineralMl} mL of ${L * 1000} mL batch`);
+      for (const entry of additionWaters) {
+        const vol = num(entry.volumeMl);
+        if (vol > 0) {
+          const name = entry.name || 'Unnamed';
+          line(`  ${name}: ${fmt(vol)} mL`);
+        }
+      }
+    }
+    if (mineralWaters.length > 0 && totalBaseMl > 0) {
+      line('');
+      divider();
+      line('BASE WATER');
+      divider();
+      line(`  Total volume: ${totalBaseMl} mL`);
       for (const entry of mineralWaters) {
         const vol = num(entry.volumeMl);
         if (vol > 0) {
@@ -1031,24 +1062,6 @@ function App() {
                 }
               }
             }} />
-              <span className={`text-[11px] font-medium rounded-lg px-2.5 py-1.5 border ${
-                mineralWaterMode === 'base'
-                  ? 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30'
-                  : 'text-sky-300 bg-sky-500/10 border-sky-500/30'
-              }`}>
-                Mode: {mineralWaterMode === 'base' ? 'Base' : 'Addition'}
-                {' '}
-                <button
-                  onClick={() => setMineralWaterMode(prev => prev === 'addition' ? 'base' : 'addition')}
-                  className={`underline transition-colors ${
-                    mineralWaterMode === 'base'
-                      ? 'text-emerald-300/70 hover:text-emerald-200'
-                      : 'text-sky-300/70 hover:text-sky-200'
-                  }`}
-                >
-                  (swap)
-                </button>
-              </span>
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
@@ -1454,13 +1467,19 @@ function App() {
           </div>
         </div>
 
-        {/* Mineral Water Addition (volume summary) */}
+        {/* Mineral Water Addition */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Mineral Water Addition"
+            after={<div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400">
+                {additionWaters.length} water{additionWaters.length !== 1 ? 's' : ''}
+              </span>
+            </div>}
           />
-          <div className="px-6 py-4">
+          <div className="px-6 py-4 space-y-4">
+            {/* Volume summary */}
             <div className="flex flex-wrap items-center gap-4">
               {batchMl > 0 && (
                 <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-700/40">
@@ -1478,6 +1497,186 @@ function App() {
                 Total mineral water volume exceeds the batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
               </div>
             )}
+
+            {/* Addition entry list */}
+            {additionWaters.length === 0 ? (
+              <p className="text-xs text-slate-500 italic flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                No addition waters yet. These stack on top of your salt recipe to fine-tune the profile.
+              </p>
+            ) : (
+              additionWaters.map(entry => (
+                <div key={entry.id} className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
+                  {/* Entry header: name + volume + remove */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={entry.name}
+                        onChange={e => updateAdditionWater(entry.id, { name: e.target.value })}
+                        placeholder="Water name"
+                        className="flex-1 min-w-0 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={entry.volumeMl}
+                          onChange={e => updateAdditionWater(entry.id, { volumeMl: e.target.value })}
+                          placeholder="0"
+                          className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                        />
+                        <span className="text-xs text-slate-400 shrink-0">mL</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeAdditionWater(entry.id)}
+                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2 py-1.5 transition shrink-0"
+                      title="Remove this addition water"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {/* Volume slider */}
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={2000}
+                      step={1}
+                      value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
+                      onChange={e => updateAdditionWater(entry.id, { volumeMl: e.target.value })}
+                      className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer
+                        bg-slate-700/60 accent-sky-400
+                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
+                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
+                        [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
+                        [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
+                        [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
+                        [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
+                    />
+                    <span className="text-xs tabular-nums text-slate-400 w-10 text-right shrink-0">
+                      {fmt(Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000))} mL
+                    </span>
+                    {batchMl > 0 && (() => {
+                      const vols: { ion: string; ml: number }[] = [];
+                      for (const id of ACTIVE_ION_IDS) {
+                        const conc = parseFloat(entry.ions[id] ?? '0');
+                        if (conc <= 0) continue;
+                        const needed = saltOnlyIons[id] ?? 0;
+                        if (needed <= 0) continue;
+                        const ml = (needed * batchMl) / conc;
+                        if (ml > 0 && ml <= 2000) vols.push({ ion: ION_MAP[id].formula, ml });
+                      }
+                      if (vols.length === 0) return null;
+                      const best = vols.reduce((a, b) => a.ml < b.ml ? a : b);
+                      return (
+                        <button
+                          onClick={() => updateAdditionWater(entry.id, { volumeMl: String(Math.round(best.ml)) })}
+                          className="text-[10px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg px-2 py-1 transition shrink-0"
+                          title={`Fill to ${Math.round(best.ml)} mL — hits ${best.ion} target exactly`}
+                        >
+                          Auto-fill ({Math.round(best.ml)} mL)
+                        </button>
+                      );
+                    })()}
+                  </div>
+                  {/* Ion inputs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                    {ACTIVE_ION_IDS.map(id => (
+                      <div key={id}>
+                        <label className="block text-[10px] text-slate-500 mb-0.5">{ION_MAP[id].formula}</label>
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          value={entry.ions[id] ?? ''}
+                          onChange={e => updateAdditionWater(entry.id, {
+                            ions: { ...entry.ions, [id]: e.target.value }
+                          })}
+                          placeholder="0"
+                          className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Save + Share buttons */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => {
+                        const hasName = entry.name.trim().length > 0;
+                        const hasIons = Object.values(entry.ions).some(v => parseFloat(v || '0') > 0);
+                        if (!hasName || !hasIons) return;
+                        const alreadySaved = localWaters.some(l =>
+                          l.name === entry.name.trim() &&
+                          Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                        );
+                        if (alreadySaved) return;
+                        saveWaters([...localWaters, {
+                          id: newLocalWaterId(),
+                          name: entry.name.trim(),
+                          ions: Object.fromEntries(
+                            Object.entries(entry.ions)
+                              .filter(([, v]) => parseFloat(v || '0') > 0)
+                              .map(([k, v]) => [k, parseFloat(v || '0')])
+                          ) as Record<string, number>,
+                        }]);
+                      }}
+                      className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                        (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
+                          ? 'text-slate-600 bg-slate-700/20 cursor-not-allowed'
+                          : localWaters.some(l =>
+                              l.name === entry.name.trim() &&
+                              Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                            )
+                          ? 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 cursor-default'
+                          : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
+                      }`}
+                    >
+                      {localWaters.some(l =>
+                        l.name === entry.name.trim() &&
+                        Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
+                      ) && entry.name.trim() ? (
+                        <><Check className="w-3 h-3 inline mr-1" />Saved</>
+                      ) : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        const hasName = entry.name.trim().length > 0;
+                        const hasIons = Object.values(entry.ions).some(v => parseFloat(v || '0') > 0);
+                        if (!hasName || !hasIons) return;
+                        if (window.confirm(`Share "${entry.name.trim()}" with the community? Other users will be able to find and use this water profile.`)) {
+                          const vals: Record<string, number> = Object.fromEntries(
+                            Object.entries(entry.ions)
+                              .filter(([, v]) => parseFloat(v || '0') > 0)
+                              .map(([k, v]) => [k, parseFloat(v || '0')])
+                          );
+                          fetch(`${API_BASE}/api/waters`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: entry.name.trim(), ions: vals, shared: 'yes' }),
+                          }).catch(() => {});
+                        }
+                      }}
+                      className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                        (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
+                          ? 'text-slate-600 bg-slate-700/20 cursor-not-allowed'
+                          : 'text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30'
+                      }`}
+                    >
+                      <Share2 className="w-3 h-3 inline mr-1" />Share
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            {/* Addition add button */}
+            <button
+              onClick={() => addAdditionWater()}
+              className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
+            >
+              <Droplet className="w-4 h-4" />
+              Add addition water
+            </button>
           </div>
         </div>
 
