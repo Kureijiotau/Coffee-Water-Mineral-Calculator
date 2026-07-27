@@ -1237,7 +1237,7 @@ function App() {
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
                   <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
-                    Salts: {sulfateFirst ? 'Sulfates first' : 'Chlorides first'}
+                    Salts: {sulfateFirst ? 'Sulfates preferred' : 'Chlorides preferred'}
                     {' '}
                     <button
                       onClick={() => setSulfateFirst(p => !p)}
