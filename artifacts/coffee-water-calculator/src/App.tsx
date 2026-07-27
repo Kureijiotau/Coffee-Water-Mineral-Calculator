@@ -1167,6 +1167,29 @@ function App() {
                   <span className="text-xs tabular-nums text-slate-400 w-10 text-right shrink-0">
                     {fmt(Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000))} mL
                   </span>
+                  {batchMl > 0 && (() => {
+                    // Calculate optimal volume to hit the nearest ion target
+                    const vols: { ion: string; ml: number }[] = [];
+                    for (const id of ACTIVE_ION_IDS) {
+                      const conc = parseFloat(entry.ions[id] ?? '0');
+                      if (conc <= 0) continue;
+                      const needed = saltOnlyIons[id] ?? 0;
+                      if (needed <= 0) continue;
+                      const ml = (needed * batchMl) / conc;
+                      if (ml > 0 && ml <= 2000) vols.push({ ion: ION_MAP[id].formula, ml });
+                    }
+                    if (vols.length === 0) return null;
+                    const best = vols.reduce((a, b) => a.ml < b.ml ? a : b);
+                    return (
+                      <button
+                        onClick={() => updateMineralWater(entry.id, { volumeMl: String(Math.round(best.ml)) })}
+                        className="text-[10px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg px-2 py-1 transition shrink-0"
+                        title={`Fill to ${Math.round(best.ml)} mL — hits ${best.ion} target exactly`}
+                      >
+                        Auto-fill ({Math.round(best.ml)} mL)
+                      </button>
+                    );
+                  })()}
                 </div>
                 {/* Ion inputs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
