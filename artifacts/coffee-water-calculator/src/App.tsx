@@ -620,23 +620,18 @@ function App() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => {
-                  const hasSalts = SALTS.some((_, i) => num(rows[i].target) > 0);
-                  if (!hasSalts || batchMl <= 0) return;
-                  setShowBrewGuide(true);
-                }}
+                onClick={() => setShowBrewGuide(true)}
+                disabled={batchMl <= 0}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                  SALTS.some((_, i) => num(rows[i].target) > 0) && batchMl > 0
+                  batchMl > 0
                     ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed'
+                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
                 }`}
-                title={SALTS.some((_, i) => num(rows[i].target) > 0) && batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a salt target and batch volume first'}
+                title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
               >
                 <ListChecks className="w-4 h-4" />
                 <span className="hidden sm:inline">Brew Guide</span>
               </button>
-            </div>
-            <div className="flex items-center gap-2">
               <button
                 onClick={handleExport}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
