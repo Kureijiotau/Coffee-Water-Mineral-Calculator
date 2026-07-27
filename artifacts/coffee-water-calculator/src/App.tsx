@@ -1479,24 +1479,70 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-            {/* Volume summary */}
-            <div className="flex flex-wrap items-center gap-4">
-              {batchMl > 0 && (
-                <div className="text-xs text-slate-400 bg-slate-900/50 rounded-lg px-3 py-1.5 border border-slate-700/40">
-                  {totalMineralMl > 0 ? fmt(totalMineralMl) : '0'} mL mineral
-                  <span className="text-slate-500 mx-1.5">+</span>
-                  {fmt(tdsMl)} mL 0 TDS
-                  <span className="text-slate-500 mx-1.5">=</span>
-                  {fmt(batchMl)} mL final
+            {/* Volume breakdown — prominent */}
+            {batchMl > 0 && (() => {
+              const totalMineral = totalBaseMl + totalMineralMl;
+              const remaining0Tds = Math.max(batchMl - totalMineral, 0);
+              const pctMineral = batchMl > 0 ? Math.round((totalMineral / batchMl) * 100) : 0;
+              return (
+                <div className="bg-gradient-to-r from-sky-500/10 via-cyan-500/10 to-emerald-500/10 border border-sky-500/30 rounded-xl px-4 py-3 shadow-lg shadow-sky-500/5">
+                  {overfill && (
+                    <div className="flex items-center gap-2 mb-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      Total mineral water volume exceeds the batch volume — the whole batch will be mineral water.
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-1">
+                    {totalBaseMl > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-400">Base water</span>
+                        <span className="text-sm font-semibold text-slate-300 tabular-nums">{fmt(totalBaseMl)} mL</span>
+                      </div>
+                    )}
+                    {totalMineralMl > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-slate-400">Addition water</span>
+                        <span className="text-sm font-semibold text-slate-300 tabular-nums">{fmt(totalMineralMl)} mL</span>
+                      </div>
+                    )}
+                    {(totalBaseMl > 0 || totalMineralMl > 0) && (
+                      <div className="border-t border-sky-500/20 my-1" />
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-slate-300">
+                        {overfill ? 'Mineral water (all)' : 'Mineral water'}
+                      </span>
+                      <span className="text-lg font-bold text-sky-300 tabular-nums">
+                        {overfill ? fmt(batchMl) : fmt(totalMineral)} mL
+                      </span>
+                    </div>
+                    {!overfill && (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-slate-400">0 TDS water</span>
+                          <span className="text-lg font-bold text-amber-300 tabular-nums">{fmt(remaining0Tds)} mL</span>
+                        </div>
+                        {/* Visual bar */}
+                        <div className="w-full h-2 bg-slate-700/60 rounded-full overflow-hidden mt-1">
+                          <div
+                            className="h-full bg-gradient-to-r from-sky-400 to-cyan-400 rounded-full transition-all"
+                            style={{ width: `${pctMineral}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[10px] text-slate-500">
+                          <span>{pctMineral}% mineral</span>
+                          <span>{100 - pctMineral}% 0 TDS</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="border-t border-sky-500/20 mt-1 pt-1 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total batch</span>
+                      <span className="text-base font-bold text-white tabular-nums">{fmt(batchMl)} mL</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
-            {overfill && (
-              <div className="flex items-center gap-2 mt-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
-                <AlertTriangle className="w-4 h-4 shrink-0" />
-                Total mineral water volume exceeds the batch volume. The excess is ignored — the whole batch will be mineral water with no 0 TDS added.
-              </div>
-            )}
+              );
+            })()}
 
             {/* Addition entry list */}
             {additionWaters.length === 0 ? (
