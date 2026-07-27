@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import TasteProfileCard from './TasteProfileCard';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
@@ -1165,6 +1166,9 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Taste Profile */}
+        <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} />
 
         {/* Mineral Water Base */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
