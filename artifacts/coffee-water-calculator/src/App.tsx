@@ -367,7 +367,10 @@ function App() {
   const selectedExternalRecipe: ExternalRecipe | undefined = ROBERT_ASAMI_RECIPES.find(
     r => r.id === externalRecipeId,
   );
-  const displayedRecipeName = selectedExternalRecipe?.name ?? activeRecipe?.name ?? 'Custom';
+  const selectedSourceRecipe = selectedExternalRecipe ?? (
+    activeRecipe?.sourceUrl ? activeRecipe : undefined
+  );
+  const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
@@ -994,7 +997,7 @@ function App() {
               />
             </div>
           </div>
-           {selectedExternalRecipe && (
+           {selectedSourceRecipe && (
              <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
                <div className="flex flex-wrap items-start justify-between gap-3">
                  <div className="min-w-0">
@@ -1003,22 +1006,22 @@ function App() {
                        Source recipe
                      </span>
                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                       selectedExternalRecipe.conversion === 'exact'
+                        selectedSourceRecipe.conversion === 'exact'
                          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
                          : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
                      }`}>
-                       {selectedExternalRecipe.conversion === 'exact' ? 'Direct conversion' : 'Approximation'}
+                        {selectedSourceRecipe.conversion === 'exact' ? 'Direct conversion' : 'Approximation'}
                      </span>
                    </div>
                    <p className="mt-1 text-xs text-slate-300">
-                     {selectedExternalRecipe.attribution} · {selectedExternalRecipe.method}
+                      {selectedSourceRecipe.attribution} · {selectedSourceRecipe.method}
                    </p>
                    <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
-                     {selectedExternalRecipe.notes}
+                      {selectedSourceRecipe.notes}
                    </p>
                  </div>
                  <a
-                   href={selectedExternalRecipe.sourceUrl}
+                   href={selectedSourceRecipe.sourceUrl}
                    target="_blank"
                    rel="noreferrer"
                    className="shrink-0 text-xs font-medium text-amber-300 underline decoration-amber-300/40 underline-offset-2 hover:text-amber-100"

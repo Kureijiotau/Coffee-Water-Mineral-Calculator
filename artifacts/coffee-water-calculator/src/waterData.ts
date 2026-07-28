@@ -311,6 +311,13 @@ export interface SaltRecipe {
   id: string;
   name: string;
   salts: Record<string, SaltRecipeEntry>;
+  /** Public source metadata for recipes transcribed from external resources. */
+  source?: string;
+  sourceUrl?: string;
+  attribution?: string;
+  method?: string;
+  notes?: string;
+  conversion?: 'exact' | 'approximation';
   /** Split stocks mode — absent/false means off */
   splitMode?: boolean;
   /** Per-group concentrate strengths (×N multiplier); absent means default (100 per group) */
@@ -323,6 +330,12 @@ export const RECIPES: SaltRecipe[] = [
   {
     id: 'kimoi',
     name: 'Kimoi Water',
+    source: 'Kimoi.coffee Resources',
+    sourceUrl: 'https://kimoi.coffee/resources',
+    attribution: 'Recipe credited to Kimoi.coffee',
+    method: 'Water recipe',
+    notes: 'Values transcribed from Kimoi.coffee’s public Resources collection and represented using this calculator’s salt-target model.',
+    conversion: 'exact',
     salts: {
       mgcl2:  { target: '9.5',  formIdx: 1 },
       mgso4:  { target: '6.0',  formIdx: 1 },
@@ -334,6 +347,12 @@ export const RECIPES: SaltRecipe[] = [
   {
     id: 'terebat',
     name: 'Terebat Water',
+    source: 'Kimoi.coffee Resources',
+    sourceUrl: 'https://kimoi.coffee/resources',
+    attribution: 'Recipe credited to Kimoi.coffee',
+    method: 'Water recipe',
+    notes: 'Values transcribed from Kimoi.coffee’s public Resources collection and represented using this calculator’s salt-target model.',
+    conversion: 'exact',
     salts: {
       mgcl2:  { target: '19.0', formIdx: 1 },
       nacl:   { target: '20',   formIdx: 0 },
