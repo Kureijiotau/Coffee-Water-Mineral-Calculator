@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, watersTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
+import { SHARED_WATERS } from "../data/sharedWaters";
 
 const router: IRouter = Router();
 
@@ -60,11 +61,9 @@ router.get("/waters", async (_req: Request, res: Response) => {
     res.json({ waters: rows });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
-    res.status(500).json({
-      error: "Failed to fetch waters",
-      diagnostic: classifyDatabaseError(err),
-      database: getSafeDatabaseError(err),
-    });
+    // The public catalog is bundled with the API so a missing Vercel
+    // production schema cannot break the calculator's water selector.
+    res.json({ waters: SHARED_WATERS });
   }
 });
 
