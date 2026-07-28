@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks } from 'lucide-react';
+import TastePreferenceModal from './TastePreferenceModal';
+import type { TasteInference } from './tastePreference';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -119,6 +121,7 @@ function App() {
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
   const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
   const [showSettings, setShowSettings] = useState(false);
+  const [showTastePreference, setShowTastePreference] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
@@ -141,6 +144,17 @@ function App() {
   const handleDeleteProfile = (id: string) => {
     setProfiles(prev => prev.filter(p => p.id !== id));
     if (activeProfileId === id) setActiveProfileId(AIKI_DEFAULT_PROFILE.id);
+  };
+
+  const handleApplyTasteInference = (inference: TasteInference) => {
+    setActiveRecipeId('custom');
+    setRows(SALTS.map(salt => {
+      const entry = inference.recipe.salts[salt.id];
+      return entry
+        ? { target: entry.target, formIdx: entry.formIdx }
+        : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
+    }));
+    setShowTastePreference(false);
   };
 
   const L = num(liters);
@@ -662,7 +676,7 @@ function App() {
       const isBicarbonate = s.formula.includes('HCO₃') || s.formula.includes('CO₃');
       const isSulfate = s.formula.includes('SO₄');
       const isChloride = s.formula.includes('Cl');
-      return { name: s.name, formula: s.formula, mg, hydrate: form.label || form.name, isSulfate, isChloride, isBicarbonate };
+      return { name: s.name, formula: s.formula, mg, hydrate: form.label, isSulfate, isChloride, isBicarbonate };
     }).filter(Boolean) as { name: string; formula: string; mg: number; hydrate: string; isSulfate: boolean; isChloride: boolean; isBicarbonate: boolean }[];
 
     if (activeSalts.length > 0) {
@@ -749,6 +763,14 @@ function App() {
               <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowTastePreference(true)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600/90 hover:bg-violet-500 border border-violet-400/40 rounded-lg px-3 py-1.5 transition-all shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95"
+                title="Answer a few questions to find your ideal water profile"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">Find My Water</span>
+              </button>
               <button
                 onClick={handleBrewGuideExport}
                 disabled={batchMl <= 0}
@@ -1962,6 +1984,13 @@ function App() {
           onSelectProfile={handleSelectProfile}
           onSaveProfile={handleSaveProfile}
           onDeleteProfile={handleDeleteProfile}
+        />
+      )}
+
+      {showTastePreference && (
+        <TastePreferenceModal
+          onClose={() => setShowTastePreference(false)}
+          onApply={handleApplyTasteInference}
         />
       )}
 
