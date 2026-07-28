@@ -10,7 +10,11 @@ function classifyDatabaseError(err: unknown): string {
     : "";
 
   if (code === "42P01") return "DATABASE_TABLE_MISSING";
+  if (code === "42703" || code === "42804" || code === "42883") {
+    return "DATABASE_SCHEMA_MISMATCH";
+  }
   if (code === "28P01" || code === "3D000") return "DATABASE_AUTH_FAILED";
+  if (code === "42501") return "DATABASE_PERMISSION_DENIED";
   if (
     code.startsWith("08") ||
     code === "ENOTFOUND" ||
@@ -21,6 +25,26 @@ function classifyDatabaseError(err: unknown): string {
   }
 
   return "DATABASE_QUERY_FAILED";
+}
+
+function getSafeDatabaseError(err: unknown): {
+  code?: string;
+  message?: string;
+} {
+  if (!err || typeof err !== "object") return {};
+
+  const rawCode = "code" in err ? (err as { code?: unknown }).code : undefined;
+  const rawMessage = "message" in err
+    ? (err as { message?: unknown }).message
+    : undefined;
+  const code = typeof rawCode === "string" ? rawCode : undefined;
+  const message = typeof rawMessage === "string"
+    ? rawMessage
+        .replace(/postgres(?:ql)?:\/\/\S+/gi, "[redacted-database-url]")
+        .slice(0, 240)
+    : undefined;
+
+  return { code, message };
 }
 
 /**
@@ -39,6 +63,7 @@ router.get("/waters", async (_req: Request, res: Response) => {
     res.status(500).json({
       error: "Failed to fetch waters",
       diagnostic: classifyDatabaseError(err),
+      database: getSafeDatabaseError(err),
     });
   }
 });
