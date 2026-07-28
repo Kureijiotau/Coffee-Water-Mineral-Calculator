@@ -34,7 +34,8 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Prefer that the agent inspect running pages, endpoints, logs, and deployment behavior directly instead of asking the user to verify them.
+- Only ask the user to check something when it is genuinely inaccessible to the agent, such as a private dashboard control or one-time credential value.
 
 ## Gotchas
 
