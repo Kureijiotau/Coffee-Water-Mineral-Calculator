@@ -1,1 +1,2 @@
 - [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
+- [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
