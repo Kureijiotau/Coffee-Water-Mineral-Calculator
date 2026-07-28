@@ -1634,6 +1634,38 @@ function App() {
                     ));
                   })()}
                 </div>
+                 {(() => {
+                   const overshoots = ACTIVE_ION_IDS
+                     .map(id => {
+                       const target = saltOnlyIons[id] ?? 0;
+                       const actual = ionTotals[id] ?? 0;
+                       return { id, amount: actual - target };
+                     })
+                     .filter(item => item.amount > 0.05);
+
+                   if (overshoots.length === 0) return null;
+
+                   return (
+                     <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
+                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                         Final recipe overshoot
+                       </span>
+                       <p className="mt-1 text-[11px] text-slate-400">
+                         Mineral water and unavoidable salt co-ions can take the finished batch above the recipe target.
+                       </p>
+                       <div className="mt-2 flex flex-wrap gap-2">
+                         {overshoots.map(({ id, amount }) => (
+                           <span
+                             key={id}
+                             className="rounded-md border border-rose-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-rose-200"
+                           >
+                             {ION_MAP[id].formula} +{amount.toFixed(1)} ppm
+                           </span>
+                         ))}
+                       </div>
+                     </div>
+                   );
+                 })()}
               </div>
             )}
           </div>
