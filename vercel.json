@@ -1,5 +1,0 @@
-{
-  "buildCommand": "pnpm --filter @workspace/api-server run build",
-  "installCommand": "pnpm install",
-  "outputDirectory": "artifacts/api-server/dist"
-}
