@@ -252,6 +252,7 @@ function App() {
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
   );
+  const preferredMagnesiumSaltId = sulfateFirst ? 'mgso4' : 'mgcl2';
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
@@ -301,7 +302,16 @@ function App() {
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
     setMineralWaters([]);
+    setAdditionWaters([]);
     setLiters('1');
+    setActiveRecipeId('custom');
+    setConcentrateOn(false);
+    setConcentrateStrength(100);
+    setConcentrateMl('500');
+    setSplitMode(false);
+    setSplitStrengths({ hardness: 100, alkalinity: 100, citrate: 50 });
+    setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
+    setSulfateFirst(false);
     setShowResetConfirm(false);
   };
 
@@ -789,12 +799,12 @@ function App() {
       <div className="w-full max-w-5xl space-y-4">
         {/* Header */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-sky-600 to-cyan-500">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r from-sky-600 to-cyan-500">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <Calculator className="w-6 h-6 text-white" />
-              <h1 className="text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
+              <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="order-3 flex w-full items-center justify-end gap-2 sm:order-none sm:w-auto">
               <button
                 onClick={() => setShowTastePreference(true)}
                 className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600/90 hover:bg-violet-500 border border-violet-400/40 rounded-lg px-3 py-1.5 transition-all shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95"
@@ -829,7 +839,7 @@ function App() {
                 <span>{exportCopied ? 'Saved!' : 'Export Recipe'}</span>
               </button>
             </div>
-            <div className="group/badge flex items-center gap-1">
+            <div className="group/badge flex shrink-0 items-center gap-1">
               {indicatorOn && <OverallBadge level={overallLevel} />}
               <button
                 onClick={() => setIndicatorOn(prev => !prev)}
@@ -1616,7 +1626,9 @@ function App() {
                           break;
                         }
                       }
-                      if (overshoots) continue;
+                       // Keep the selected magnesium source visible even when
+                       // its coupled ion is the reason for a final overshoot.
+                       if (overshoots && salt.id !== preferredMagnesiumSaltId) continue;
                       const caMgIds: IonId[] = ['calcium', 'magnesium'];
                       const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
                       const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
@@ -1651,8 +1663,8 @@ function App() {
                       <div key={item.salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-500">{item.salt.formula}</span>
-                          <span className={`text-[10px] font-medium ${item.ghkhLabel === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'}`}>
-                            {item.ghkhLabel}
+                           <span className={`text-[10px] font-medium ${item.salt.id === preferredMagnesiumSaltId ? 'text-violet-300' : item.ghkhLabel === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'}`}>
+                             {item.salt.id === preferredMagnesiumSaltId ? 'Preferred' : item.ghkhLabel}
                           </span>
                         </div>
                         <span className="text-sm font-semibold tabular-nums text-sky-300">
