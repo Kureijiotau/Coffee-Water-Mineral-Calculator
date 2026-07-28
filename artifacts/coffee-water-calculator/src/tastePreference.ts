@@ -35,6 +35,10 @@ export interface TasteInference {
 }
 
 const round = (value: number) => Math.round(value * 10) / 10;
+const recipeNumber = (value: number) => {
+  const normalized = Math.max(0, value);
+  return normalized.toFixed(8).replace(/\.?0+$/, '');
+};
 
 export function inferTasteProfile(answers: TastePreferenceAnswers): TasteInference {
   // Aiki's light-roast baseline is the neutral starting point. Each answer nudges
@@ -105,18 +109,34 @@ export function inferTasteProfile(answers: TastePreferenceAnswers): TasteInferen
   const chlorideSalt = Math.max(0, profile.magnesium - magnesiumFromSulfate) / (24.305 / 95.205);
   const calciumSalt = profile.calcium / (40.078 / 110.978);
   const chlorideFromOtherSalts = chlorideSalt * (70.90 / 95.205) + calciumSalt * (70.90 / 110.978);
-  const sodiumSalt = Math.max(0, profile.chloride - chlorideFromOtherSalts) / (22.990 / 58.44);
   const bicarbonateSalt = profile.bicarbonate / (61.017 / 84.007);
+  // Sodium bicarbonate contributes sodium as well as bicarbonate. Subtract
+  // that contribution before solving the remaining chloride with NaCl.
+  const sodiumFromBicarbonate = bicarbonateSalt * (22.990 / 84.007);
+  const sodiumSalt = Math.max(0, profile.sodium - sodiumFromBicarbonate) / (22.990 / 58.44);
+  const achievableSodium = sodiumFromBicarbonate + sodiumSalt * (22.990 / 58.44);
 
   const salts: Record<string, SaltRecipeEntry> = {};
   const add = (id: string, value: number, formIdx = 0) => {
-    if (value > 0.05) salts[id] = { target: round(value).toString(), formIdx };
+    if (value > 0.00000001) salts[id] = { target: recipeNumber(value), formIdx };
   };
   add('mgso4', sulfateSalt, 1);
   add('mgcl2', chlorideSalt, 1);
   add('cacl2', calciumSalt, 1);
   add('nacl', sodiumSalt);
   add('nahco3', bicarbonateSalt);
+  const achievableMagnesium =
+    sulfateSalt * (24.305 / 120.365) + chlorideSalt * (24.305 / 95.205);
+  const achievableChloride =
+    chlorideSalt * (70.90 / 95.205)
+    + calciumSalt * (70.90 / 110.978)
+    + sodiumSalt * (35.450 / 58.44);
+  profile = {
+    ...profile,
+    sodium: round(achievableSodium),
+    magnesium: round(achievableMagnesium),
+    chloride: round(achievableChloride),
+  };
 
   const roastLabel = answers.roast === 'light' ? 'Light' : answers.roast === 'medium' ? 'Medium' : 'Dark';
   const processLabel = answers.process === 'coferment' ? 'co-ferment' : answers.process;

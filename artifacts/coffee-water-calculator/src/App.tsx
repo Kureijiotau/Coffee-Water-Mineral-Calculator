@@ -160,16 +160,19 @@ function App() {
   const L = num(liters);
   const batchMl = L * 1000;
 
-  // Combined mineral water state (only addition waters affect the recipe)
-  const totalMineralMl = batchMl > 0
-    ? Math.min(additionWaters.reduce((s, e) => s + num(e.volumeMl), 0), batchMl)
-    : 0;
-  const totalBaseMl = batchMl > 0
-    ? Math.min(mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0), batchMl)
-    : 0;
-  const tdsMl = Math.max(batchMl - totalMineralMl, 0);
-  const overfill = additionWaters.reduce((s, e) => s + num(e.volumeMl), 0) > batchMl && batchMl > 0;
-  const dil = batchMl > 0 ? totalMineralMl / batchMl : 0;
+  // Combined mineral-water state. Both base and addition sources contribute to
+  // the final batch; sourceScale keeps overfilled entries physically possible.
+  const rawAdditionMl = additionWaters.reduce((s, e) => s + num(e.volumeMl), 0);
+  const rawBaseMl = mineralWaters.reduce((s, e) => s + num(e.volumeMl), 0);
+  const rawSourceMl = rawBaseMl + rawAdditionMl;
+  // If sources exceed the final batch, normalize their proportions so the
+  // displayed and calculated water still totals exactly one batch.
+  const sourceScale = batchMl > 0 ? Math.min(1, batchMl / rawSourceMl || 0) : 0;
+  const totalMineralMl = rawAdditionMl * sourceScale;
+  const totalBaseMl = rawBaseMl * sourceScale;
+  const tdsMl = Math.max(batchMl - totalMineralMl - totalBaseMl, 0);
+  const overfill = rawSourceMl > batchMl && batchMl > 0;
+  const dil = batchMl > 0 ? (totalMineralMl + totalBaseMl) / batchMl : 0;
 
   const saltTargets = useMemo(() => {
     const m: Record<string, number> = {};
@@ -177,12 +180,13 @@ function App() {
     return m;
   }, [rows]);
 
-  // Weighted-average addition water concentrations across all entries
-  const combinedAdditionIons = useMemo(() => {
+  // Weighted-average concentrations across all bottled water sources. Base
+  // water and addition water are both part of the final batch composition.
+  const combinedBottledIons = useMemo(() => {
     const m = {} as Partial<Record<IonId, number>>;
     for (const id of ACTIVE_ION_IDS) {
       let weighted = 0, totalVol = 0;
-      for (const entry of additionWaters) {
+      for (const entry of [...mineralWaters, ...additionWaters]) {
         const vol = num(entry.volumeMl);
         if (vol > 0) {
           weighted += (num(entry.ions[id] ?? '') * vol);
@@ -192,11 +196,11 @@ function App() {
       m[id] = totalVol > 0 ? weighted / totalVol : 0;
     }
     return m;
-  }, [additionWaters]);
+  }, [mineralWaters, additionWaters]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, combinedAdditionIons, dil),
-    [saltTargets, combinedAdditionIons, dil],
+    () => computeIonTotals(saltTargets, combinedBottledIons, dil),
+    [saltTargets, combinedBottledIons, dil],
   );
 
   // Salt-only contribution — used for the coverage bars
@@ -211,7 +215,7 @@ function App() {
     for (const ion of IONS) {
       let total = 0;
       for (const entry of [...mineralWaters, ...additionWaters]) {
-        const vol = num(entry.volumeMl);
+        const vol = num(entry.volumeMl) * sourceScale;
         if (vol > 0 && batchMl > 0) {
           total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
         }
@@ -219,7 +223,7 @@ function App() {
       m[ion.id] = total;
     }
     return m;
-  }, [mineralWaters, additionWaters, batchMl]);
+  }, [mineralWaters, additionWaters, batchMl, sourceScale]);
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
@@ -572,7 +576,7 @@ function App() {
       divider();
       line(`  Total volume: ${totalMineralMl} mL of ${L * 1000} mL batch`);
       for (const entry of additionWaters) {
-        const vol = num(entry.volumeMl);
+        const vol = num(entry.volumeMl) * sourceScale;
         if (vol > 0) {
           const name = entry.name || 'Unnamed';
           line(`  ${name}: ${fmt(vol)} mL`);
@@ -586,7 +590,7 @@ function App() {
       divider();
       line(`  Total volume: ${totalBaseMl} mL`);
       for (const entry of mineralWaters) {
-        const vol = num(entry.volumeMl);
+        const vol = num(entry.volumeMl) * sourceScale;
         if (vol > 0) {
           const name = entry.name || 'Unnamed';
           line(`  ${name}: ${fmt(vol)} mL`);
@@ -649,13 +653,13 @@ function App() {
     line('');
     if (roMl > 0) line(`    • Start with ${roMl} mL of RO / distilled water.`);
     for (const w of mineralWaters) {
-      const vol = num(w.volumeMl);
+      const vol = num(w.volumeMl) * sourceScale;
       if (vol <= 0) continue;
       const ions = ACTIVE_ION_IDS.filter(id => num(w.ions[id] ?? '') > 0).map(id => `${ION_MAP[id].name} ${w.ions[id]} ppm`).join(', ');
       line(`    • Add ${vol} mL of ${w.name || 'base water'}${ions ? `  (${ions})` : ''}.`);
     }
     for (const w of additionWaters) {
-      const vol = num(w.volumeMl);
+      const vol = num(w.volumeMl) * sourceScale;
       if (vol <= 0) continue;
       const ions = ACTIVE_ION_IDS.filter(id => num(w.ions[id] ?? '') > 0).map(id => `${ION_MAP[id].name} ${w.ions[id]} ppm`).join(', ');
       line(`    • Add ${vol} mL of ${w.name || 'addition water'}${ions ? `  (${ions})` : ''}.`);
@@ -1659,7 +1663,7 @@ function App() {
                   {overfill && (
                     <div className="flex items-center gap-2 mb-3 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
                       <AlertTriangle className="w-4 h-4 shrink-0" />
-                      Total mineral water volume exceeds the batch volume — the whole batch will be mineral water.
+                      Source water exceeds the batch volume — volumes are normalized proportionally to fit the batch.
                     </div>
                   )}
                   <div className="flex flex-col gap-1">

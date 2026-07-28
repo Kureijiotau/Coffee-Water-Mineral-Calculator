@@ -146,6 +146,15 @@ describe('computeKH', () => {
     const totals = computeIonTotals({}, {}, 0);
     expect(computeKH(totals)).toBe(0);
   });
+
+  it('includes carbonate in KH as CaCO₃ equivalent', () => {
+    const totals = computeIonTotals({ nahco3: 10 }, {}, 0);
+    totals.carbonate = 10;
+    expect(computeKH(totals)).toBeCloseTo(
+      (10 * (61.017 / 84.007) * 0.820) + (10 * 1.667),
+      4,
+    );
+  });
 });
 
 // ─── GH:KH ratio guard (mirrors App.tsx display logic) ───────────────────────

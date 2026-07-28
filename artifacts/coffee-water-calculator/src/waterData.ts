@@ -268,6 +268,7 @@ export const CACO3_FACTOR: Partial<Record<IonId, number>> = {
   magnesium: 4.118,
   calcium: 2.497,
   bicarbonate: 0.820,
+  carbonate: 1.667,
 };
 
 export function classifyIon(ppm: number, ion: IonInfo): TrafficLevel;
@@ -639,5 +640,6 @@ export function computeGH(totals: Record<IonId, number>): number {
 }
 
 export function computeKH(totals: Record<IonId, number>): number {
-  return totals.bicarbonate * (CACO3_FACTOR.bicarbonate ?? 0);
+  return totals.bicarbonate * (CACO3_FACTOR.bicarbonate ?? 0)
+       + totals.carbonate * (CACO3_FACTOR.carbonate ?? 0);
 }
