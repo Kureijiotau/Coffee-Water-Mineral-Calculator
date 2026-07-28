@@ -19,6 +19,7 @@ import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadIndicatorOn, saveIndicatorOn, createProfile,
 } from '@/profiles';
+import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 
 export type SaltRow = { target: string; formIdx: number };
 export type MineralWaterEntry = {
@@ -60,6 +61,7 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
+  const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -148,6 +150,7 @@ function App() {
 
   const handleApplyTasteInference = (inference: TasteInference) => {
     setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
     setRows(SALTS.map(salt => {
       const entry = inference.recipe.salts[salt.id];
       return entry
@@ -305,6 +308,7 @@ function App() {
     setAdditionWaters([]);
     setLiters('1');
     setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
     setConcentrateOn(false);
     setConcentrateStrength(100);
     setConcentrateMl('500');
@@ -360,6 +364,10 @@ function App() {
   const allRecipes = [...RECIPES, ...savedRecipes];
   const activeRecipe = allRecipes.find(r => r.id === activeRecipeId);
   const isSavedRecipeActive = savedRecipes.some(r => r.id === activeRecipeId);
+  const selectedExternalRecipe: ExternalRecipe | undefined = ROBERT_ASAMI_RECIPES.find(
+    r => r.id === externalRecipeId,
+  );
+  const displayedRecipeName = selectedExternalRecipe?.name ?? activeRecipe?.name ?? 'Custom';
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
@@ -375,9 +383,24 @@ function App() {
   };
 
   const applyRecipe = (recipeId: string) => {
+    setExternalRecipeId('custom');
     if (recipeId === 'custom') { setActiveRecipeId('custom'); return; }
     const recipe = allRecipes.find(r => r.id === recipeId);
     if (recipe) applyRecipeObject(recipe);
+  };
+
+  const applyExternalRecipe = (recipeId: string) => {
+    setExternalRecipeId(recipeId);
+    if (recipeId === 'custom') return;
+    const recipe = ROBERT_ASAMI_RECIPES.find(r => r.id === recipeId);
+    if (!recipe) return;
+    setActiveRecipeId('custom');
+    setRows(SALTS.map(salt => {
+      const entry = recipe.salts[salt.id];
+      return entry
+        ? { target: entry.target, formIdx: entry.formIdx }
+        : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
+    }));
   };
 
   const buildCurrentSalts = (): Record<string, SaltRecipeEntry> => {
@@ -416,6 +439,7 @@ function App() {
     if (!window.confirm(`Delete saved recipe "${recipe.name}"? This cannot be undone.`)) return;
     setSavedRecipes(prev => prev.filter(r => r.id !== recipe.id));
     setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
   };
 
   const handleExportRecipe = () => {
@@ -462,6 +486,7 @@ function App() {
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
     setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   };
 
@@ -863,7 +888,7 @@ function App() {
               <FlaskConical className="w-4 h-4" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Mineral Salts</h2>
               <span className="text-xs text-slate-400 font-normal normal-case">
-                — {activeRecipe?.name ?? 'Custom'}
+                 — {displayedRecipeName}
               </span>
               {concentrateOn && (() => {
                 const pill = splitMode ? splitFeasibility : concFeasibility;
@@ -880,7 +905,7 @@ function App() {
                 );
               })()}
             </div>
-            <div className="flex items-center gap-2">
+             <div className="flex flex-wrap items-center justify-end gap-2">
               <select
                 value={activeRecipeId}
                 onChange={e => applyRecipe(e.target.value)}
@@ -900,6 +925,19 @@ function App() {
                   </optgroup>
                 )}
               </select>
+               <select
+                 value={externalRecipeId}
+                 onChange={e => applyExternalRecipe(e.target.value)}
+                 aria-label="Robert Asami Watering Hole recipes"
+                 className="max-w-[220px] bg-slate-700/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-400 transition"
+               >
+                 <option value="custom">Watering Hole recipes</option>
+                 <optgroup label="Robert Asami’s Watering Hole">
+                   {ROBERT_ASAMI_RECIPES.map(r => (
+                     <option key={r.id} value={r.id}>{r.name}</option>
+                   ))}
+                 </optgroup>
+               </select>
               {activeRecipeId === 'custom' && (
                 <button
                   onClick={handleSaveRecipe}
@@ -956,6 +994,40 @@ function App() {
               />
             </div>
           </div>
+           {selectedExternalRecipe && (
+             <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
+               <div className="flex flex-wrap items-start justify-between gap-3">
+                 <div className="min-w-0">
+                   <div className="flex flex-wrap items-center gap-2">
+                     <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+                       Source recipe
+                     </span>
+                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
+                       selectedExternalRecipe.conversion === 'exact'
+                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                         : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                     }`}>
+                       {selectedExternalRecipe.conversion === 'exact' ? 'Direct conversion' : 'Approximation'}
+                     </span>
+                   </div>
+                   <p className="mt-1 text-xs text-slate-300">
+                     {selectedExternalRecipe.attribution} · {selectedExternalRecipe.method}
+                   </p>
+                   <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
+                     {selectedExternalRecipe.notes}
+                   </p>
+                 </div>
+                 <a
+                   href={selectedExternalRecipe.sourceUrl}
+                   target="_blank"
+                   rel="noreferrer"
+                   className="shrink-0 text-xs font-medium text-amber-300 underline decoration-amber-300/40 underline-offset-2 hover:text-amber-100"
+                 >
+                   View original source
+                 </a>
+               </div>
+             </div>
+           )}
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
