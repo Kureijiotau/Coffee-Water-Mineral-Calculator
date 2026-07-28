@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, watersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -13,7 +13,7 @@ router.get("/waters", async (_req: Request, res: Response) => {
     const rows = await db
       .select()
       .from(watersTable)
-      .orderBy(watersTable.createdAt, "desc");
+      .orderBy(desc(watersTable.createdAt));
     res.json({ waters: rows });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
@@ -52,7 +52,7 @@ router.post("/waters", async (req: Request, res: Response) => {
  */
 router.delete("/waters/:id", async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
+    const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
