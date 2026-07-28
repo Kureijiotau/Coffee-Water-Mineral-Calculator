@@ -225,6 +225,34 @@ function App() {
     return m;
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
 
+  // Build the salt recommendation shown below the calculator. The sulfate /
+  // chloride preference is a real source selection for magnesium, not merely
+  // a sort order. Keep the user's actual recipe rows unchanged until they
+  // choose to edit or apply the recommendation.
+  const suggestedSaltTargets = useMemo(() => {
+    const targets: Record<string, number> = {};
+    SALTS.forEach((salt, i) => { targets[salt.id] = num(rows[i].target); });
+
+    const magnesiumSulfate = SALTS.find(s => s.id === 'mgso4');
+    const magnesiumChloride = SALTS.find(s => s.id === 'mgcl2');
+    if (magnesiumSulfate && magnesiumChloride) {
+      const sulfateFraction = magnesiumSulfate.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
+      const chlorideFraction = magnesiumChloride.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
+      const remainingMagnesium = Math.max(
+        (saltOnlyIons?.magnesium ?? 0) - (bottledIons?.magnesium ?? 0),
+        0,
+      );
+      targets.mgso4 = sulfateFirst && sulfateFraction > 0 ? remainingMagnesium / sulfateFraction : 0;
+      targets.mgcl2 = !sulfateFirst && chlorideFraction > 0 ? remainingMagnesium / chlorideFraction : 0;
+    }
+    return targets;
+  }, [rows, sulfateFirst, saltOnlyIons, bottledIons]);
+
+  const suggestedIonTotals = useMemo(
+    () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
+    [suggestedSaltTargets, combinedBottledIons, dil],
+  );
+
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
   const ghBottled = computeGH(bottledIons);
@@ -1574,9 +1602,9 @@ function App() {
                     // Gather salts that are safe to add at full target
                     const safe: { salt: typeof SALTS[0]; target: number; form: { molarMass: number }; mg: number; ghkhLabel: string; isChloride: boolean; isSulfate: boolean }[] = [];
                     for (let i = 0; i < SALTS.length; i++) {
-                      const tgt = num(rows[i].target);
-                      if (tgt <= 0) continue;
                       const salt = SALTS[i];
+                      const tgt = suggestedSaltTargets[salt.id] ?? 0;
+                      if (tgt <= 0) continue;
                       const form = salt.hydrationForms[rows[i].formIdx];
                       // Check if adding at full target would overshoot any ion
                       let overshoots = false;
@@ -1638,7 +1666,7 @@ function App() {
                    const overshoots = ACTIVE_ION_IDS
                      .map(id => {
                        const target = saltOnlyIons[id] ?? 0;
-                       const actual = ionTotals[id] ?? 0;
+                       const actual = suggestedIonTotals[id] ?? 0;
                        return { id, amount: actual - target };
                      })
                      .filter(item => item.amount > 0.05);
