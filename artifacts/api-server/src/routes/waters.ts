@@ -4,6 +4,25 @@ import { desc, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function classifyDatabaseError(err: unknown): string {
+  const code = typeof err === "object" && err !== null && "code" in err
+    ? String((err as { code?: unknown }).code)
+    : "";
+
+  if (code === "42P01") return "DATABASE_TABLE_MISSING";
+  if (code === "28P01" || code === "3D000") return "DATABASE_AUTH_FAILED";
+  if (
+    code.startsWith("08") ||
+    code === "ENOTFOUND" ||
+    code === "ECONNREFUSED" ||
+    code === "ETIMEDOUT"
+  ) {
+    return "DATABASE_CONNECTION_FAILED";
+  }
+
+  return "DATABASE_QUERY_FAILED";
+}
+
 /**
  * GET /api/waters
  * Returns all saved mineral water entries, newest first.
@@ -17,7 +36,10 @@ router.get("/waters", async (_req: Request, res: Response) => {
     res.json({ waters: rows });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
-    res.status(500).json({ error: "Failed to fetch waters" });
+    res.status(500).json({
+      error: "Failed to fetch waters",
+      diagnostic: classifyDatabaseError(err),
+    });
   }
 });
 
