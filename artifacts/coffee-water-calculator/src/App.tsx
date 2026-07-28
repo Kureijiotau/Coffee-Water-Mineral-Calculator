@@ -1537,16 +1537,14 @@ function App() {
                     const target = saltOnlyIons[id] ?? 0;
                     const covered = bottledIons[id] ?? 0;
                     const remaining = Math.max(target - covered, 0);
-                    const overshot = covered > target + 0.01;
+                     const coveredTarget = covered >= target - 0.01;
                     if (target <= 0) return null;
                     return (
                       <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
-                        {overshot ? (
-                          <span className="text-sm font-semibold tabular-nums text-rose-300">
-                            +{(covered - target).toFixed(1)} ppm overshoot
-                          </span>
-                        ) : remaining > 0 ? (
+                         {coveredTarget ? (
+                           <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
+                         ) : remaining > 0 ? (
                           <span className="text-sm font-semibold tabular-nums text-amber-300">
                             {remaining.toFixed(1)} ppm
                           </span>
