@@ -2730,6 +2730,36 @@ function BrewStationMode({
   const [stepIndex, setStepIndex] = useState(0);
   const [scaleReading, setScaleReading] = useState('');
   const [tareOffset, setTareOffset] = useState(0);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+
+  useEffect(() => {
+    type ScreenWakeLock = {
+      release: () => Promise<void>;
+      addEventListener?: (type: 'release', listener: () => void) => void;
+    };
+    let wakeLock: ScreenWakeLock | null = null;
+    let cancelled = false;
+    const requestWakeLock = async () => {
+      const wakeLockApi = (navigator as Navigator & {
+        wakeLock?: { request: (type: 'screen') => Promise<ScreenWakeLock> };
+      }).wakeLock;
+      if (!wakeLockApi) return;
+      try {
+        wakeLock = await wakeLockApi.request('screen');
+        if (!cancelled) setWakeLockActive(true);
+        wakeLock.addEventListener?.('release', () => {
+          if (!cancelled) setWakeLockActive(false);
+        });
+      } catch {
+        setWakeLockActive(false);
+      }
+    };
+    void requestWakeLock();
+    return () => {
+      cancelled = true;
+      if (wakeLock) void wakeLock.release();
+    };
+  }, []);
 
   const steps = [
     { id: 'mgso4', label: 'Epsom Salt' },
@@ -2758,6 +2788,14 @@ function BrewStationMode({
   const isOnTarget = Boolean(currentStep) && Math.abs(targetDifference) <= tolerance;
   const isFinished = steps.length > 0 && safeIndex === steps.length - 1 && isOnTarget;
   const formatted = (value: number) => value.toFixed(3);
+  const targetLow = Math.max(0, cumulativeTarget - tolerance);
+  const targetHigh = cumulativeTarget + tolerance;
+  const gaugePosition = Math.max(0, Math.min(100, 50 + (targetDifference / Math.max(cumulativeTarget * 0.1, 0.01)) * 50));
+  const gaugeTone = isOnTarget
+    ? 'bg-emerald-400'
+    : Math.abs(targetDifference) <= cumulativeTarget * 0.1
+      ? 'bg-amber-300'
+      : 'bg-rose-400';
 
   const tare = () => {
     if (Number.isFinite(rawReading)) {
@@ -2779,23 +2817,29 @@ function BrewStationMode({
   return (
     <div className="fixed inset-0 z-[70] overflow-y-auto bg-black text-white">
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-4 sm:px-8 sm:py-5">
-        <header className="flex min-h-8 items-center justify-end">
+        <header className="flex min-h-8 items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+          <div className="text-sm font-black uppercase tracking-wider text-zinc-300 sm:text-lg">
+            Step {safeIndex + 1} of {steps.length}
+          </div>
           <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-xs font-bold uppercase tracking-wider text-zinc-600 transition hover:bg-zinc-900 hover:text-zinc-200" aria-label="Close brew station">
-            Exit station
+            ← Exit
           </button>
         </header>
 
         <main className="flex flex-1 flex-col pt-1 pb-10 sm:pt-0 sm:pb-12">
           <div className="text-center">
-            <div className="text-xl font-black uppercase tracking-wider text-zinc-300 sm:text-2xl">Step {safeIndex + 1}</div>
-            <h1 className="mt-5 text-5xl font-black tracking-tight sm:mt-6 sm:text-8xl">{currentStep.label}</h1>
+            <div className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Current ingredient</div>
+            <h1 className="mt-3 text-5xl font-black tracking-tight sm:mt-4 sm:text-8xl">{currentStep.label}</h1>
             <div className="mt-9 text-base font-bold uppercase tracking-[0.22em] text-zinc-500 sm:mt-11 sm:text-xl">Add this much</div>
             <div className="mt-1 font-mono text-7xl font-black tracking-tight text-emerald-300 sm:text-9xl">{formatted(currentStep.grams)}<span className="ml-2 text-3xl sm:text-5xl">g</span></div>
+            <div className="mt-3 text-sm font-bold text-zinc-500">
+              Acceptable range: {formatted(Math.max(0, currentStep.grams - tolerance))}–{formatted(currentStep.grams + tolerance)} g
+            </div>
           </div>
 
           <div className="mx-auto mt-12 w-full max-w-4xl rounded-[2rem] border-2 border-zinc-700 bg-zinc-950 p-5 sm:mt-16 sm:p-10">
             <label className="block text-center text-base font-bold uppercase tracking-wider text-zinc-400 sm:text-xl" htmlFor="brew-station-scale">
-              Scale reading (running total)
+              Scale reading · running total
             </label>
             <div className="mt-5 flex items-center gap-3 sm:mt-6 sm:gap-5">
               <input
@@ -2812,9 +2856,22 @@ function BrewStationMode({
               />
               <span className="text-4xl font-black text-zinc-400 sm:text-6xl">g</span>
             </div>
+            <div className="mt-5">
+              <div className="relative h-4 rounded-full bg-zinc-800">
+                <div className="absolute inset-y-0 left-1/2 w-1/5 -translate-x-1/2 rounded-full bg-emerald-400/35" aria-hidden="true" />
+                <div
+                  className={`absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-black shadow-lg ${gaugeTone}`}
+                  style={{ left: `${gaugePosition}%` }}
+                  aria-hidden="true"
+                />
+                <div className="absolute inset-x-0 top-7 flex justify-between text-[10px] font-bold uppercase tracking-wider text-zinc-600">
+                  <span>-10%</span><span>Perfect</span><span>+10%</span>
+                </div>
+              </div>
+            </div>
             <div className="mt-5 grid grid-cols-2 gap-3 text-center sm:mt-6 sm:gap-5">
               <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
-                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Scale total</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Actual total</div>
                 <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(cumulativeReading)} g</div>
               </div>
               <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
@@ -2835,7 +2892,9 @@ function BrewStationMode({
               <button type="button" onClick={tare} className="rounded-2xl border border-zinc-600 px-5 py-4 text-base font-bold text-zinc-200 hover:bg-zinc-800 sm:px-6 sm:text-lg">
                 Tare / zero scale
               </button>
-              <span className="text-xs text-zinc-500 sm:text-sm">Auto-tare offset: {formatted(tareOffset)} g</span>
+              <span className="text-xs text-zinc-500 sm:text-sm">
+                {wakeLockActive ? 'Screen staying awake' : 'Screen wake lock unavailable'} · tare {formatted(tareOffset)} g
+              </span>
             </div>
           </div>
 
@@ -2857,7 +2916,7 @@ function BrewStationMode({
               onClick={() => setStepIndex(index => Math.min(steps.length - 1, index + 1))}
               className="min-h-14 flex-[2] rounded-2xl bg-emerald-400 px-4 py-4 text-lg font-black text-black"
             >
-              {isFinished ? 'Finished — mix minerals' : isOnTarget ? 'Check & next' : 'Continue anyway'}
+            {isFinished ? 'Finished — mix minerals' : isOnTarget ? 'Next mineral' : 'Next anyway'}
             </button>
           </div>
           <p className="mt-4 text-center text-xs leading-relaxed text-zinc-500">
