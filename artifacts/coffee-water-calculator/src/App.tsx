@@ -53,6 +53,16 @@ function brewerSliderStatus(value: number): { label: string; className: string }
 }
 
 const BREWER_SALT_IDS = new Set(['mgso4', 'cacl2', 'nahco3', 'nacl']);
+const WATERMANCER_SALT_IDS = new Set(['mgcit', 'cacit']);
+
+function nerdLevelForRecipe(recipe: SaltRecipe): NerdLevel {
+  const activeSaltIds = Object.entries(recipe.salts)
+    .filter(([, entry]) => num(entry.target) > 0)
+    .map(([saltId]) => saltId);
+  if (activeSaltIds.every(saltId => BREWER_SALT_IDS.has(saltId))) return 'brewer';
+  if (activeSaltIds.some(saltId => WATERMANCER_SALT_IDS.has(saltId))) return 'watermancer';
+  return 'alchemist';
+}
 
 function brewerSliderFromIon(value: number, greenMax: number, yellowMax: number): number {
   const safeMax = greenMax * 0.98;
@@ -581,6 +591,7 @@ function App() {
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
+    setNerdLevel(nerdLevelForRecipe(recipe));
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
@@ -607,6 +618,7 @@ function App() {
     const recipe = ROBERT_ASAMI_RECIPES.find(r => r.id === recipeId);
     if (!recipe) return;
     setActiveRecipeId('custom');
+    setNerdLevel(nerdLevelForRecipe(recipe));
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
