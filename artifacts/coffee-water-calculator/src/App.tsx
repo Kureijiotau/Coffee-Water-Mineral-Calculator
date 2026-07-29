@@ -293,14 +293,15 @@ function App() {
   const ghSalt = gh - ghBottled;
   const khSalt = kh - khBottled;
   const tdsSalt = useMemo(() => {
-    if (batchMl <= 0) return 0;
+    if (L <= 0) return 0;
     return SALTS.reduce((total, salt, index) => {
       const target = num(rows[index]?.target ?? '');
       if (target <= 0) return total;
       const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
-      return total + target * (form.molarMass / salt.anhydrousMass);
-    }, 0) * dil;
-  }, [rows, batchMl, dil]);
+      const saltMassMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+      return total + saltMassMg / L;
+    }, 0);
+  }, [rows, L]);
   const tdsMineral = useMemo(() => {
     if (batchMl <= 0) return 0;
     return [...mineralWaters, ...additionWaters].reduce((total, entry) => {
