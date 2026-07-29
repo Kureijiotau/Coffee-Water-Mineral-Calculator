@@ -2356,7 +2356,11 @@ function WaterMetadataFields({
 
 function OverallBadge({ level }: { level: TrafficLevel }) {
   const s = TRAFFIC_STYLES[level];
-  const text = level === 'green' ? 'All ions in range' : level === 'yellow' ? 'Some ions elevated' : 'Ion levels too high';
+  const text = level === 'green'
+    ? 'Profile suggestion: aligned'
+    : level === 'yellow'
+      ? 'Profile suggestion: review'
+      : 'Profile suggestion: outside range';
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${s.bg} border ${s.border}`}>
       <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
