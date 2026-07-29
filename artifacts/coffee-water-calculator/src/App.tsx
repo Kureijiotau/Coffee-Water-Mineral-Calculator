@@ -2983,10 +2983,14 @@ function BrewerFlavorPyramid({
     left: flavor.sweetness / 100,
     right: flavor.body / 100,
   };
-  const weightTotal = weights.apex + weights.left + weights.right || 1;
+  const weightTotal = weights.apex + weights.left + weights.right;
   const point = {
-    x: (apex.x * weights.apex + left.x * weights.left + right.x * weights.right) / weightTotal,
-    y: (apex.y * weights.apex + left.y * weights.left + right.y * weights.right) / weightTotal,
+    x: weightTotal > 0
+      ? (apex.x * weights.apex + left.x * weights.left + right.x * weights.right) / weightTotal
+      : (apex.x + left.x + right.x) / 3,
+    y: weightTotal > 0
+      ? (apex.y * weights.apex + left.y * weights.left + right.y * weights.right) / weightTotal
+      : (apex.y + left.y + right.y) / 3,
   };
 
   const flavorFromPoint = (x: number, y: number): BrewerFlavorInput => {
