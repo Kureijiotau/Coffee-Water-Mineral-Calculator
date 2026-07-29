@@ -2753,18 +2753,15 @@ function BrewStationMode({
   const grossReading = Number.isFinite(rawReading) ? Math.max(0, rawReading) : 0;
   const cumulativeReading = Math.max(0, grossReading - tareOffset);
   const cumulativeTarget = steps.slice(0, safeIndex + 1).reduce((sum, step) => sum + step.grams, 0);
-  // The input is the gross scale reading; subtract tare for the net running
-  // total. Delta follows the station convention: net reading minus target.
-  const delta = cumulativeReading - cumulativeTarget;
+  const targetDifference = cumulativeReading - cumulativeTarget;
   const tolerance = Math.max(0.005, cumulativeTarget * 0.02);
-  const isOnTarget = Boolean(currentStep) && Math.abs(delta) <= tolerance;
+  const isOnTarget = Boolean(currentStep) && Math.abs(targetDifference) <= tolerance;
   const isFinished = steps.length > 0 && safeIndex === steps.length - 1 && isOnTarget;
   const formatted = (value: number) => value.toFixed(3);
 
   const tare = () => {
     if (Number.isFinite(rawReading)) {
       setTareOffset(rawReading);
-      setScaleReading('0');
     }
   };
 
@@ -2817,14 +2814,21 @@ function BrewStationMode({
             </div>
             <div className="mt-5 grid grid-cols-2 gap-3 text-center sm:mt-6 sm:gap-5">
               <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Scale total</div>
+                <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(cumulativeReading)} g</div>
+              </div>
+              <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
                 <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Target total</div>
                 <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(cumulativeTarget)} g</div>
               </div>
-              <div className={`rounded-3xl p-4 sm:p-6 ${isOnTarget ? 'bg-emerald-500/20' : 'bg-zinc-900'}`}>
-                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Still needed</div>
-                <div className={`mt-2 font-mono text-2xl font-bold ${isOnTarget ? 'text-emerald-300' : 'text-amber-300'} sm:text-4xl`}>
-                  {delta >= 0 ? '+' : ''}{formatted(delta)} g
-                </div>
+            </div>
+            <div className={`mt-3 rounded-3xl p-4 text-center sm:p-5 ${isOnTarget ? 'bg-emerald-500/20' : 'bg-zinc-900'}`}>
+              <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Difference from target</div>
+              <div className={`mt-2 font-mono text-2xl font-bold ${isOnTarget ? 'text-emerald-300' : targetDifference > 0 ? 'text-rose-300' : 'text-amber-300'} sm:text-4xl`}>
+                {targetDifference >= 0 ? '+' : ''}{formatted(targetDifference)} g
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">
+                {isOnTarget ? 'on cumulative target' : targetDifference < 0 ? 'under cumulative target' : 'over cumulative target'}
               </div>
             </div>
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3 sm:mt-6">
@@ -2836,7 +2840,7 @@ function BrewStationMode({
           </div>
 
           <div className={`mx-auto mt-7 w-full max-w-4xl rounded-2xl px-5 py-5 text-center text-xl font-black sm:text-2xl ${isOnTarget ? 'bg-emerald-400 text-black' : 'bg-zinc-900 text-zinc-400'}`}>
-            {isOnTarget ? '✓ Check — on target' : delta < 0 ? `Add ${formatted(Math.abs(delta))} g more` : `Remove ${formatted(delta)} g`}
+            {isOnTarget ? '✓ Check — on target' : targetDifference < 0 ? `Add ${formatted(Math.abs(targetDifference))} g to reach the cumulative target` : `Remove ${formatted(targetDifference)} g to reach the cumulative target`}
           </div>
 
           <div className="mt-5 flex gap-3">
@@ -2850,11 +2854,10 @@ function BrewStationMode({
             </button>
             <button
               type="button"
-              disabled={!isOnTarget}
               onClick={() => setStepIndex(index => Math.min(steps.length - 1, index + 1))}
-              className="min-h-14 flex-[2] rounded-2xl bg-emerald-400 px-4 py-4 text-lg font-black text-black disabled:bg-zinc-800 disabled:text-zinc-600"
+              className="min-h-14 flex-[2] rounded-2xl bg-emerald-400 px-4 py-4 text-lg font-black text-black"
             >
-              {isFinished ? 'Finished — mix minerals' : 'Check & next'}
+              {isFinished ? 'Finished — mix minerals' : isOnTarget ? 'Check & next' : 'Continue anyway'}
             </button>
           </div>
           <p className="mt-4 text-center text-xs leading-relaxed text-zinc-500">
