@@ -17,7 +17,8 @@ import LabelScanner from '@/LabelScanner';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
-  loadIndicatorOn, saveIndicatorOn, createProfile,
+  loadIndicatorOn, saveIndicatorOn, loadNerdLevel, saveNerdLevel, createProfile,
+  type NerdLevel,
 } from '@/profiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 
@@ -154,14 +155,18 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
+  const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
+  const showAlchemist = nerdLevel !== 'brewer';
+  const showWatermancer = nerdLevel === 'watermancer';
 
   // Persist on changes
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
   useEffect(() => { saveActiveProfileId(activeProfileId); }, [activeProfileId]);
   useEffect(() => { saveIndicatorOn(indicatorOn); }, [indicatorOn]);
+  useEffect(() => { saveNerdLevel(nerdLevel); }, [nerdLevel]);
 
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
   const handleSaveProfile = (profile: WaterProfile) => {
@@ -961,6 +966,41 @@ function App() {
           </div>
         </div>
 
+        {/* Nerd level — presentation only; the recipe state and calculations are shared by every level. */}
+        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 px-4 sm:px-6 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Nerd Level</div>
+                <div className="mt-0.5 text-xs text-slate-500">Choose how much calculator detail to show. Your recipe will not change.</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+              {([
+                ['brewer', 'Brewer', 'Core recipe'],
+                ['alchemist', 'Alchemist', 'GH / KH & stocks'],
+                ['watermancer', 'Watermancer', 'Full ion detail'],
+              ] as const).map(([value, label, description]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setNerdLevel(value)}
+                  aria-pressed={nerdLevel === value}
+                  title={description}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                    nerdLevel === value
+                      ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
+                      : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* Mineral Table */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
@@ -1364,7 +1404,7 @@ function App() {
         </div>
 
         {/* GH / KH Summary */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Hardness Summary (as CaCO₃)" />
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <HardnessCard label="General Hardness (GH)" value={gh} saltValue={ghSalt} bottledValue={ghBottled} />
@@ -1382,20 +1422,22 @@ function App() {
               )}
             </div>
           </div>
-        </div>
+        </div>}
 
-        {/* Estimated pH / alkalinity */}
-        <WaterChemistryCard
-          estimate={waterChemistry.estimate}
-          basePH={waterChemistry.basePH}
-          baseAlkalinity={waterChemistry.baseAlkalinity}
-        />
+        {showAlchemist && (
+          /* Estimated pH / alkalinity */
+          <WaterChemistryCard
+            estimate={waterChemistry.estimate}
+            basePH={waterChemistry.basePH}
+            baseAlkalinity={waterChemistry.baseAlkalinity}
+          />
+        )}
 
         {/* Taste Profile */}
         <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} />
 
         {/* Mineral Water Base */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
@@ -1878,10 +1920,10 @@ function App() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         {/* Mineral Water Addition */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Mineral Water Addition"
@@ -2138,10 +2180,10 @@ function App() {
               Add addition water
             </button>
           </div>
-        </div>
+        </div>}
 
         {/* Ion Profile */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
             <div className="flex items-center gap-2">
               <Gauge className="w-4 h-4" />
@@ -2191,7 +2233,7 @@ function App() {
               );
             })}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* Reset confirmation */}

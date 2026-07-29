@@ -6,6 +6,9 @@ import {
 const PROFILES_KEY = 'cwm.profiles';
 const ACTIVE_KEY = 'cwm.activeProfileId';
 const INDICATOR_KEY = 'cwm.indicatorOn';
+const NERD_LEVEL_KEY = 'cwm.nerdLevel';
+
+export type NerdLevel = 'brewer' | 'alchemist' | 'watermancer';
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
@@ -68,6 +71,19 @@ export function loadIndicatorOn(): boolean {
 export function saveIndicatorOn(on: boolean): void {
   try {
     localStorage.setItem(INDICATOR_KEY, String(on));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadNerdLevel(): NerdLevel {
+  const raw = localStorage.getItem(NERD_LEVEL_KEY);
+  return raw === 'alchemist' || raw === 'watermancer' ? raw : 'brewer';
+}
+
+export function saveNerdLevel(level: NerdLevel): void {
+  try {
+    localStorage.setItem(NERD_LEVEL_KEY, level);
   } catch {
     /* ignore */
   }
