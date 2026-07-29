@@ -23,6 +23,43 @@ import {
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 
 export type SaltRow = { target: string; formIdx: number };
+type BrewerFlavorInput = {
+  brightness: number;
+  body: number;
+  juiciness: number;
+  sweetness: number;
+};
+
+const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
+  brightness: 70,
+  body: 35,
+  juiciness: 65,
+  sweetness: 55,
+};
+
+function brewerSaltSuggestion(flavor: BrewerFlavorInput): Record<string, number> {
+  // This is only an adapter into the existing salt/ion calculation engine.
+  const kh = 18 + (100 - flavor.brightness) * 0.34 + flavor.sweetness * 0.16;
+  const gh = 38 + flavor.body * 0.45 + flavor.sweetness * 0.12;
+  const magnesiumTarget = 5 + flavor.juiciness * 0.12 + flavor.brightness * 0.04;
+  const sulfate = 8 + flavor.brightness * 0.16 + flavor.juiciness * 0.06;
+  const chloride = 7 + flavor.body * 0.15 + flavor.sweetness * 0.04;
+  const mgso4 = sulfate / (96.06 / 120.365);
+  const mgcl2 = Math.max(0, (magnesiumTarget - mgso4 * (24.305 / 120.365)) / (70.90 / 95.205));
+  const magnesium = mgso4 * (24.305 / 120.365) + mgcl2 * (24.305 / 95.205);
+  // GH is the sum of the CaCO₃-equivalent contributions from Mg and Ca.
+  // Subtract Mg first so the preview lands near the requested total GH.
+  const calcium = Math.max(2, (gh - magnesium * 4.118) / 2.497);
+
+  return {
+    mgso4: Number(mgso4.toFixed(2)),
+    mgcl2: Number(mgcl2.toFixed(2)),
+    cacl2: Number((calcium / (40.078 / 110.978)).toFixed(2)),
+    nahco3: Number((kh / (61.017 / 84.007)).toFixed(2)),
+    nacl: Number((chloride / (35.45 / 58.44)).toFixed(2)),
+  };
+}
+
 export type MineralWaterEntry = {
   id: string;
   name: string;
@@ -89,6 +126,7 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
+  const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
@@ -216,6 +254,25 @@ function App() {
     SALTS.forEach((s, i) => { m[s.id] = num(rows[i].target); });
     return m;
   }, [rows]);
+
+  const brewerSuggestedSaltTargets = useMemo(
+    () => brewerSaltSuggestion(brewerFlavor),
+    [brewerFlavor],
+  );
+  const brewerSuggestedIons = useMemo(
+    () => computeIonTotals(brewerSuggestedSaltTargets, {}, 1),
+    [brewerSuggestedSaltTargets],
+  );
+  const applyBrewerSuggestion = () => {
+    setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
+    setRows(SALTS.map(salt => ({
+      target: brewerSuggestedSaltTargets[salt.id]
+        ? String(brewerSuggestedSaltTargets[salt.id])
+        : '',
+      formIdx: salt.defaultFormIdx ?? 0,
+    })));
+  };
 
   // Weighted-average concentrations across all bottled water sources. Base
   // water and addition water are both part of the final batch composition.
@@ -1148,6 +1205,14 @@ function App() {
                </div>
              </div>
            )}
+          {nerdLevel === 'brewer' && (
+            <BrewerFlavorPanel
+              flavor={brewerFlavor}
+              suggestedIons={brewerSuggestedIons}
+              onChange={setBrewerFlavor}
+              onApply={applyBrewerSuggestion}
+            />
+          )}
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
@@ -2357,6 +2422,105 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
         <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
       </div>
       {after}
+    </div>
+  );
+}
+
+function BrewerFlavorPanel({
+  flavor,
+  suggestedIons,
+  onChange,
+  onApply,
+}: {
+  flavor: BrewerFlavorInput;
+  suggestedIons: Record<IonId, number>;
+  onChange: (flavor: BrewerFlavorInput) => void;
+  onApply: () => void;
+}) {
+  const gh = computeGH(suggestedIons);
+  const kh = computeKH(suggestedIons);
+  const direction = flavor.brightness >= 65
+    ? flavor.juiciness >= 60 ? 'Bright, juicy, and clear' : 'Bright and crisp'
+    : flavor.body >= 60
+      ? 'Round, full, and structured'
+      : 'Balanced and approachable';
+
+  const sliders: {
+    key: keyof BrewerFlavorInput;
+    label: string;
+    low: string;
+    high: string;
+  }[] = [
+    { key: 'brightness', label: 'Acidity brightness', low: 'Soft', high: 'Bright' },
+    { key: 'body', label: 'Tactile body', low: 'Light', high: 'Full' },
+    { key: 'juiciness', label: 'Fruit character', low: 'Balanced', high: 'Juicy' },
+    { key: 'sweetness', label: 'Sweetness', low: 'Crisp', high: 'Round' },
+  ];
+
+  return (
+    <div className="border-b border-slate-700/40 bg-sky-500/5 px-4 py-4 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
+          <p className="mt-1 text-xs text-slate-400">
+            Tune the cup you want. These controls preview a recipe without changing your current salts.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onApply}
+          className="shrink-0 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/30"
+        >
+          Use this recipe
+        </button>
+      </div>
+      <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
+        {sliders.map(({ key, label, low, high }) => (
+          <label key={key} className="block">
+            <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
+              <span>{label}</span>
+              <span className="font-mono text-sky-300">{flavor[key]}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={flavor[key]}
+              onChange={e => onChange({ ...flavor, [key]: Number(e.target.value) })}
+              className="w-full accent-sky-400"
+              aria-label={label}
+            />
+            <div className="flex justify-between text-[10px] text-slate-600">
+              <span>{low}</span>
+              <span>{high}</span>
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="mt-4 grid gap-2 rounded-xl border border-slate-700/50 bg-slate-900/35 px-3 py-3 sm:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suggested direction</div>
+          <div className="mt-1 text-sm font-medium text-slate-200">{direction}</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">GH</div>
+          <div className="mt-1 font-mono text-sm text-cyan-300">{gh.toFixed(0)} ppm</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">KH</div>
+          <div className="mt-1 font-mono text-sm text-cyan-300">{kh.toFixed(0)} ppm</div>
+        </div>
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Key ions</div>
+          <div className="mt-1 font-mono text-xs text-slate-300">
+            Mg {suggestedIons.magnesium.toFixed(0)} · Ca {suggestedIons.calcium.toFixed(0)}
+          </div>
+        </div>
+      </div>
+      <p className="mt-2 text-[10px] text-slate-500">
+        Nothing is applied until you choose “Use this recipe.” The detailed salt table below remains the source of truth.
+      </p>
     </div>
   );
 }
