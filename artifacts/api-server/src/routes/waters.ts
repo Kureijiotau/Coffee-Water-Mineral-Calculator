@@ -5,6 +5,13 @@ import { SHARED_WATERS } from "../data/sharedWaters";
 
 const router: IRouter = Router();
 
+function catalogName(name: string): string {
+  return name
+    .replace(/\s+—\s+madensulari\.com\s*$/i, "")
+    .trim()
+    .toLocaleLowerCase("tr-TR");
+}
+
 function classifyDatabaseError(err: unknown): string {
   const code = typeof err === "object" && err !== null && "code" in err
     ? String((err as { code?: unknown }).code)
@@ -58,7 +65,16 @@ router.get("/waters", async (_req: Request, res: Response) => {
       .select()
       .from(watersTable)
       .orderBy(desc(watersTable.createdAt));
-    res.json({ waters: rows });
+    const metadataByName = new Map(
+      SHARED_WATERS
+        .filter(water => water.metadata)
+        .map(water => [catalogName(water.name), water.metadata]),
+    );
+    const enrichedRows = rows.map(row => {
+      const metadata = metadataByName.get(catalogName(row.name));
+      return metadata ? { ...row, metadata } : row;
+    });
+    res.json({ waters: enrichedRows });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
     // The public catalog is bundled with the API so a missing Vercel
