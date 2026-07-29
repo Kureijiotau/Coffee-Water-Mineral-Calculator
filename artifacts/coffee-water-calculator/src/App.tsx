@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles, Maximize2 } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -267,6 +267,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState(false);
+  const [showBrewStation, setShowBrewStation] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
 
@@ -1310,6 +1311,7 @@ function App() {
               suggestedIons={brewerSuggestedIons}
               onChange={handleBrewerFlavorChange}
               onShowSteps={() => setShowBrewerSteps(true)}
+             onShowStation={() => setShowBrewStation(true)}
             />
           )}
          {nerdLevel === 'brewer' ? (
@@ -2466,6 +2468,16 @@ function App() {
           onClose={() => setShowBrewerSteps(false)}
         />
       )}
+      {showBrewStation && (
+        <BrewStationMode
+          saltTargets={brewerSuggestedSaltTargets}
+          liters={L}
+          concentrateOn={concentrateOn}
+          concentrateLiters={concL}
+          concentrateStrength={concentrateStrength}
+          onClose={() => setShowBrewStation(false)}
+        />
+      )}
 
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
@@ -2700,16 +2712,174 @@ function BrewerRecipeStepsModal({
   );
 }
 
+function BrewStationMode({
+  saltTargets,
+  liters,
+  concentrateOn,
+  concentrateLiters,
+  concentrateStrength,
+  onClose,
+}: {
+  saltTargets: Record<string, number>;
+  liters: number;
+  concentrateOn: boolean;
+  concentrateLiters: number;
+  concentrateStrength: number;
+  onClose: () => void;
+}) {
+  const [stepIndex, setStepIndex] = useState(0);
+  const [scaleReading, setScaleReading] = useState('');
+  const [tareOffset, setTareOffset] = useState(0);
+
+  const steps = [
+    { id: 'mgso4', label: 'Epsom Salt' },
+    { id: 'nahco3', label: 'Baking Soda' },
+    { id: 'nacl', label: 'Table Salt' },
+    ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium Chloride' }] : []),
+  ].map(step => {
+    const salt = SALTS.find(item => item.id === step.id);
+    const target = saltTargets[step.id] ?? 0;
+    const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
+    const massMg = salt && target > 0
+      ? computeSaltMg(target, volume || 1, salt.hydrationForms[salt.defaultFormIdx ?? 0].molarMass, salt.anhydrousMass)
+        * (concentrateOn ? concentrateStrength : 1)
+      : 0;
+    return { ...step, grams: massMg / 1000 };
+  }).filter(step => step.grams > 0);
+
+  const safeIndex = Math.min(stepIndex, Math.max(0, steps.length - 1));
+  const currentStep = steps[safeIndex];
+  const rawReading = parseFloat(scaleReading);
+  const cumulativeReading = Number.isFinite(rawReading) ? Math.max(0, rawReading - tareOffset) : 0;
+  const cumulativeTarget = steps.slice(0, safeIndex + 1).reduce((sum, step) => sum + step.grams, 0);
+  const previousTarget = steps.slice(0, safeIndex).reduce((sum, step) => sum + step.grams, 0);
+  const delta = cumulativeReading - cumulativeTarget;
+  const tolerance = Math.max(0.005, cumulativeTarget * 0.02);
+  const isOnTarget = Boolean(currentStep) && Math.abs(delta) <= tolerance;
+  const isFinished = steps.length > 0 && safeIndex === steps.length - 1 && isOnTarget;
+  const formatted = (value: number) => value.toFixed(3);
+
+  const tare = () => {
+    if (Number.isFinite(rawReading)) {
+      setTareOffset(rawReading);
+      setScaleReading('0');
+    }
+  };
+
+  if (steps.length === 0) {
+    return (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black p-6 text-white">
+        <div className="text-center">
+          <p className="text-2xl font-bold">No minerals to weigh</p>
+          <button type="button" onClick={onClose} className="mt-6 rounded-xl bg-white px-6 py-3 font-bold text-black">Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] overflow-y-auto bg-black text-white">
+      <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-5 py-6 sm:px-8 sm:py-8">
+        <header className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-300">Brew Station</div>
+            <div className="mt-1 text-xs text-zinc-400">Cumulative weighing · {safeIndex + 1} of {steps.length}</div>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-xl border border-zinc-700 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800" aria-label="Close brew station">
+            Done
+          </button>
+        </header>
+
+        <main className="flex flex-1 flex-col justify-center py-8">
+          <div className="text-center">
+            <div className="text-xl font-bold uppercase tracking-wider text-zinc-300">Step {safeIndex + 1}</div>
+            <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-6xl">{currentStep.label}</h1>
+            <div className="mt-7 text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">Add this much</div>
+            <div className="mt-1 font-mono text-7xl font-black text-emerald-300 sm:text-8xl">{formatted(currentStep.grams)}<span className="ml-2 text-3xl sm:text-4xl">g</span></div>
+          </div>
+
+          <div className="mt-10 rounded-3xl border-2 border-zinc-700 bg-zinc-950 p-5 sm:p-7">
+            <label className="block text-center text-sm font-bold uppercase tracking-wider text-zinc-400" htmlFor="brew-station-scale">
+              Scale reading (running total)
+            </label>
+            <div className="mt-3 flex items-center gap-3">
+              <input
+                id="brew-station-scale"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.001"
+                value={scaleReading}
+                onChange={event => setScaleReading(event.target.value)}
+                placeholder="0.000"
+                className="min-w-0 flex-1 rounded-2xl border-2 border-zinc-600 bg-black px-4 py-4 text-center font-mono text-5xl font-black text-white outline-none focus:border-emerald-400 sm:text-6xl"
+                autoFocus
+              />
+              <span className="text-3xl font-black text-zinc-400">g</span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+              <div className="rounded-2xl bg-zinc-900 p-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Target total</div>
+                <div className="mt-1 font-mono text-2xl font-bold text-white">{formatted(cumulativeTarget)} g</div>
+              </div>
+              <div className={`rounded-2xl p-3 ${isOnTarget ? 'bg-emerald-500/20' : 'bg-zinc-900'}`}>
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Target delta</div>
+                <div className={`mt-1 font-mono text-2xl font-bold ${isOnTarget ? 'text-emerald-300' : 'text-amber-300'}`}>
+                  {delta >= 0 ? '+' : ''}{formatted(delta)} g
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <button type="button" onClick={tare} className="rounded-xl border border-zinc-600 px-4 py-3 text-sm font-bold text-zinc-200 hover:bg-zinc-800">
+                Tare / zero scale
+              </button>
+              <span className="text-xs text-zinc-500">Auto-tare offset: {formatted(tareOffset)} g</span>
+            </div>
+          </div>
+
+          <div className={`mt-6 rounded-2xl px-5 py-4 text-center text-xl font-black ${isOnTarget ? 'bg-emerald-400 text-black' : 'bg-zinc-900 text-zinc-400'}`}>
+            {isOnTarget ? '✓ Check — on target' : delta < 0 ? `Add ${formatted(Math.abs(delta))} g more` : 'Remove a little'}
+          </div>
+
+          <div className="mt-5 flex gap-3">
+            <button
+              type="button"
+              disabled={safeIndex === 0}
+              onClick={() => { setStepIndex(index => Math.max(0, index - 1)); setScaleReading(''); }}
+              className="min-h-14 flex-1 rounded-2xl border border-zinc-700 px-4 py-4 text-lg font-bold text-zinc-300 disabled:opacity-30"
+            >
+              Previous
+            </button>
+            <button
+              type="button"
+              disabled={!isOnTarget}
+              onClick={() => { setStepIndex(index => Math.min(steps.length - 1, index + 1)); setScaleReading(''); }}
+              className="min-h-14 flex-[2] rounded-2xl bg-emerald-400 px-4 py-4 text-lg font-black text-black disabled:bg-zinc-800 disabled:text-zinc-600"
+            >
+              {isFinished ? 'Finished — mix minerals' : 'Check & next'}
+            </button>
+          </div>
+          <p className="mt-4 text-center text-xs leading-relaxed text-zinc-500">
+            Keep the container on the scale. The reading is cumulative, so after each addition the target includes every mineral already added.
+          </p>
+        </main>
+      </div>
+    </div>
+  );
+}
+
 function BrewerFlavorPanel({
   flavor,
   suggestedIons,
   onChange,
   onShowSteps,
+  onShowStation,
 }: {
   flavor: BrewerFlavorInput;
   suggestedIons: Record<IonId, number>;
   onChange: (flavor: BrewerFlavorInput) => void;
   onShowSteps: () => void;
+  onShowStation: () => void;
 }) {
   const gh = computeGH(suggestedIons);
   const kh = computeKH(suggestedIons);
@@ -2728,14 +2898,24 @@ function BrewerFlavorPanel({
             Tune the cup you want. Drag the star and the recipe below updates instantly.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onShowSteps}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/30"
-        >
-          <ListChecks className="h-3.5 w-3.5" />
-          Show recipe steps
-        </button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onShowSteps}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/40 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-700/70"
+          >
+            <ListChecks className="h-3.5 w-3.5" />
+            Recipe steps
+          </button>
+          <button
+            type="button"
+            onClick={onShowStation}
+            className="flex items-center gap-1.5 rounded-lg border border-emerald-300/50 bg-emerald-400/20 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/30"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+            Brew Station
+          </button>
+        </div>
       </div>
       <BrewerFlavorPyramid flavor={flavor} onChange={onChange} />
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
