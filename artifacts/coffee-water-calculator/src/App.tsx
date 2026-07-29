@@ -293,15 +293,11 @@ function App() {
   const ghSalt = gh - ghBottled;
   const khSalt = kh - khBottled;
   const tdsSalt = useMemo(() => {
-    if (L <= 0) return 0;
-    return SALTS.reduce((total, salt, index) => {
-      const target = num(rows[index]?.target ?? '');
-      if (target <= 0) return total;
-      const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
-      const saltMassMg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
-      return total + saltMassMg / L;
-    }, 0);
-  }, [rows, L]);
+    // Recipe targets are ion concentrations. Sum the dissolved ion mass
+    // rather than hydrated salt mass; hydration water is not part of TDS.
+    const recipeIons = computeIonTotals(saltTargets, {}, 1);
+    return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
+  }, [saltTargets]);
   const tdsMineral = useMemo(() => {
     if (batchMl <= 0) return 0;
     return [...mineralWaters, ...additionWaters].reduce((total, entry) => {
