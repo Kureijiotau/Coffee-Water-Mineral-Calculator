@@ -1257,6 +1257,15 @@ function App() {
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Reset</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setShowBrewerSteps(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-slate-700/40 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/70"
+                title="View step-by-step recipe instructions"
+              >
+                <ListChecks className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Recipe steps</span>
+              </button>
               <input
                 ref={importInputRef}
                 type="file"
@@ -1309,7 +1318,6 @@ function App() {
               flavor={brewerFlavor}
               suggestedIons={brewerSuggestedIons}
               onChange={handleBrewerFlavorChange}
-              onShowSteps={() => setShowBrewerSteps(true)}
             />
           )}
          {nerdLevel === 'brewer' ? (
@@ -2922,12 +2930,10 @@ function BrewerFlavorPanel({
   flavor,
   suggestedIons,
   onChange,
-  onShowSteps,
 }: {
   flavor: BrewerFlavorInput;
   suggestedIons: Record<IonId, number>;
   onChange: (flavor: BrewerFlavorInput) => void;
-  onShowSteps: () => void;
 }) {
   const gh = computeGH(suggestedIons);
   const kh = computeKH(suggestedIons);
@@ -2945,16 +2951,6 @@ function BrewerFlavorPanel({
           <p className="mt-1 text-xs text-slate-400">
             Tune the cup you want. Drag the star and the recipe below updates instantly.
           </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onShowSteps}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/40 px-3 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-700/70"
-          >
-            <ListChecks className="h-3.5 w-3.5" />
-            Recipe steps
-          </button>
         </div>
       </div>
       <BrewerFlavorPyramid flavor={flavor} onChange={onChange} />
