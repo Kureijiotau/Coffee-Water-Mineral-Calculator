@@ -2498,6 +2498,7 @@ function BrewerFlavorPanel({
           </label>
         ))}
       </div>
+      <BrewerFlavorRadar flavor={flavor} suggestedIons={suggestedIons} />
       <div className="mt-4 grid gap-2 rounded-xl border border-slate-700/50 bg-slate-900/35 px-3 py-3 sm:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suggested direction</div>
@@ -2521,6 +2522,109 @@ function BrewerFlavorPanel({
       <p className="mt-2 text-[10px] text-slate-500">
         Nothing is applied until you choose “Use this recipe.” The detailed salt table below remains the source of truth.
       </p>
+    </div>
+  );
+}
+
+function BrewerFlavorRadar({
+  flavor,
+  suggestedIons,
+}: {
+  flavor: BrewerFlavorInput;
+  suggestedIons: Record<IonId, number>;
+}) {
+  const clampRadar = (value: number) => Math.max(12, Math.min(96, value));
+  const scores = [
+    clampRadar(flavor.brightness * 0.72 + Math.min(suggestedIons.sulfate, 30) * 0.8 + 8),
+    clampRadar(flavor.body * 0.72 + Math.min(suggestedIons.calcium, 45) * 0.38 + 8),
+    clampRadar(flavor.sweetness * 0.58 + flavor.juiciness * 0.22 + Math.min(suggestedIons.chloride, 35) * 0.45 + 10),
+    clampRadar((100 - Math.min(suggestedIons.bicarbonate, 90)) * 0.4 + flavor.brightness * 0.3 + flavor.juiciness * 0.2 + 12),
+  ];
+  const labels = [
+    { text: 'Brightness / Fruit Acidity', x: 140, y: 10, anchor: 'middle' as const },
+    { text: 'Body / Mouthfeel', x: 270, y: 116, anchor: 'start' as const },
+    { text: 'Sweetness', x: 140, y: 230, anchor: 'middle' as const },
+    { text: 'Clarity', x: 10, y: 116, anchor: 'end' as const },
+  ];
+  const center = { x: 140, y: 112 };
+  const radius = 75;
+  const point = (index: number, value: number) => {
+    const angle = -Math.PI / 2 + index * (Math.PI / 2);
+    const distance = radius * (value / 100);
+    return {
+      x: center.x + Math.cos(angle) * distance,
+      y: center.y + Math.sin(angle) * distance,
+    };
+  };
+  const polygon = scores.map((score, index) => {
+    const p = point(index, score);
+    return `${p.x},${p.y}`;
+  }).join(' ');
+  const gridPolygon = (scale: number) => [0, 1, 2, 3].map(index => {
+    const p = point(index, scale);
+    return `${p.x},${p.y}`;
+  }).join(' ');
+
+  return (
+    <div className="mt-4 rounded-xl border border-slate-700/50 bg-slate-900/35 px-3 py-3">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        Predicted flavor profile
+      </div>
+      <div className="flex justify-center overflow-x-auto">
+        <svg
+          viewBox="0 0 280 242"
+          className="h-56 w-full max-w-[360px] min-w-[280px]"
+          role="img"
+          aria-label="Live predicted flavor profile radar"
+        >
+          {[25, 50, 75, 100].map(scale => (
+            <polygon
+              key={scale}
+              points={gridPolygon(scale)}
+              fill="none"
+              stroke="rgb(71 85 105 / 0.45)"
+              strokeWidth="1"
+            />
+          ))}
+          {[0, 1, 2, 3].map(index => {
+            const end = point(index, 100);
+            return (
+              <line
+                key={index}
+                x1={center.x}
+                y1={center.y}
+                x2={end.x}
+                y2={end.y}
+                stroke="rgb(71 85 105 / 0.5)"
+                strokeWidth="1"
+              />
+            );
+          })}
+          <polygon
+            points={polygon}
+            fill="rgb(14 165 233 / 0.28)"
+            stroke="rgb(56 189 248)"
+            strokeWidth="2"
+            className="transition-all duration-300"
+          />
+          {scores.map((score, index) => {
+            const p = point(index, score);
+            return <circle key={index} cx={p.x} cy={p.y} r="3.5" fill="rgb(125 211 252)" />;
+          })}
+          {labels.map(label => (
+            <text
+              key={label.text}
+              x={label.x}
+              y={label.y}
+              textAnchor={label.anchor}
+              fill="rgb(148 163 184)"
+              fontSize="9"
+            >
+              {label.text}
+            </text>
+          ))}
+        </svg>
+      </div>
     </div>
   );
 }
