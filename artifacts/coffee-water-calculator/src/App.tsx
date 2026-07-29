@@ -292,6 +292,24 @@ function App() {
   const khBottled = computeKH(bottledIons);
   const ghSalt = gh - ghBottled;
   const khSalt = kh - khBottled;
+  const tdsSalt = useMemo(() => {
+    if (batchMl <= 0) return 0;
+    return SALTS.reduce((total, salt, index) => {
+      const target = num(rows[index]?.target ?? '');
+      if (target <= 0) return total;
+      const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+      return total + target * (form.molarMass / salt.anhydrousMass);
+    }, 0) * dil;
+  }, [rows, batchMl, dil]);
+  const tdsMineral = useMemo(() => {
+    if (batchMl <= 0) return 0;
+    return [...mineralWaters, ...additionWaters].reduce((total, entry) => {
+      const volume = num(entry.volumeMl) * sourceScale;
+      const reportedTds = num(entry.metadata.tds ?? '');
+      return total + (reportedTds * volume) / batchMl;
+    }, 0);
+  }, [mineralWaters, additionWaters, batchMl, sourceScale]);
+  const tds = tdsSalt + tdsMineral;
 
   // ── Concentrate state ──────────────────────────────
   const [concentrateOn, setConcentrateOn] = useState(false);
@@ -1318,10 +1336,11 @@ function App() {
         {/* GH / KH Summary */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Hardness Summary (as CaCO₃)" />
-          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <HardnessCard label="General Hardness (GH)" value={gh} saltValue={ghSalt} bottledValue={ghBottled} />
             <HardnessCard label="Carbonate Hardness (KH)" value={kh} saltValue={khSalt} bottledValue={khBottled} />
-            <div className="sm:col-span-2 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
+            <TdsCard value={tds} saltValue={tdsSalt} bottledValue={tdsMineral} />
+            <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
               <span className="h-4 w-px bg-slate-700" />
               {kh > 0 && gh >= 0 && Number.isFinite(gh / kh) ? (
@@ -2457,6 +2476,32 @@ function HardnessCard({ label, value, saltValue, bottledValue }: {
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-sky-400" />
           <span className="text-slate-400">Mineral:</span>
+          <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TdsCard({ value, saltValue, bottledValue }: {
+  value: number; saltValue: number; bottledValue: number;
+}) {
+  return (
+    <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
+      <div className="text-xs text-slate-400 mb-1">Total Dissolved Solids (TDS)</div>
+      <div className="flex items-baseline gap-2 mb-2">
+        <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
+        <span className="text-sm text-slate-400">mg/L</span>
+      </div>
+      <div className="flex gap-4 text-xs">
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span className="text-slate-400">Salts:</span>
+          <span className="font-mono text-emerald-300">{saltValue.toFixed(1)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-sky-400" />
+          <span className="text-slate-400">Reported water:</span>
           <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
         </div>
       </div>
