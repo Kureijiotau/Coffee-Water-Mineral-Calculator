@@ -37,29 +37,52 @@ const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   sweetness: 55,
 };
 
+function brewerRangeValue(value: number, greenMax: number, yellowMax: number): number {
+  const clamped = Math.max(0, Math.min(100, value));
+  if (clamped <= 60) return greenMax * 0.98 * (clamped / 60);
+  if (clamped <= 75) {
+    return greenMax + (yellowMax - greenMax) * ((clamped - 60) / 15);
+  }
+  return yellowMax + Math.max(0.01, yellowMax * 0.31 * ((clamped - 75) / 25));
+}
+
+function brewerSliderStatus(value: number): { label: string; className: string } {
+  if (value <= 60) return { label: 'Safe', className: 'text-emerald-300' };
+  if (value <= 75) return { label: 'Elevated', className: 'text-amber-300' };
+  return { label: 'Out of range', className: 'text-rose-300' };
+}
+
 function brewerSaltSuggestion(flavor: BrewerFlavorInput): Record<string, number> {
-  // This is only an adapter into the existing salt/ion calculation engine.
-  const kh = 18 + (100 - flavor.brightness) * 0.34 + flavor.sweetness * 0.16;
-  const gh = 38 + flavor.body * 0.45 + flavor.sweetness * 0.12;
-  const magnesiumTarget = 5 + flavor.juiciness * 0.12 + flavor.brightness * 0.04;
-  const sulfate = 8 + flavor.brightness * 0.16 + flavor.juiciness * 0.06;
-  const chloride = 7 + flavor.body * 0.15 + flavor.sweetness * 0.04;
-  // Brewer mode intentionally uses Epsom salt as the only magnesium source.
-  // Advanced modes still expose magnesium chloride in the full table.
-  const mgso4 = Math.max(
-    sulfate / (96.06 / 120.365),
-    magnesiumTarget / (24.305 / 120.365),
+  // Each Brewer control is normalized against Aiki's actual ion ranges:
+  // 0–60 = green band, 60–75 = yellow band, 75–100 = beyond yellow.
+  // Epsom and calcium chloride are constrained by both ions they contribute.
+  const magnesium = brewerRangeValue(flavor.juiciness, ION_MAP.magnesium.greenMax, ION_MAP.magnesium.yellowMax);
+  const sulfate = brewerRangeValue(flavor.brightness, ION_MAP.sulfate.greenMax, ION_MAP.sulfate.yellowMax);
+  const calcium = brewerRangeValue(flavor.body, ION_MAP.calcium.greenMax, ION_MAP.calcium.yellowMax);
+  const bicarbonate = brewerRangeValue(flavor.sweetness, ION_MAP.bicarbonate.greenMax, ION_MAP.bicarbonate.yellowMax);
+  const chloride = brewerRangeValue(
+    Math.max(flavor.body, flavor.sweetness * 0.7),
+    ION_MAP.chloride.greenMax,
+    ION_MAP.chloride.yellowMax,
   );
-  const magnesium = mgso4 * (24.305 / 120.365);
-  // GH is the sum of the CaCO₃-equivalent contributions from Mg and Ca.
-  // Subtract Mg first so the preview lands near the requested total GH.
-  const calcium = Math.max(2, (gh - magnesium * 4.118) / 2.497);
+  const mgso4Fraction = 24.305 / 120.365;
+  const sulfateFraction = 96.06 / 120.365;
+  const calciumFraction = 40.078 / 110.978;
+  const calciumChlorideFraction = 70.90 / 110.978;
+  const epsomTarget = Math.min(
+    magnesium / mgso4Fraction,
+    sulfate / sulfateFraction,
+  );
+  const calciumChlorideTarget = Math.min(
+    calcium / calciumFraction,
+    chloride / calciumChlorideFraction,
+  );
 
   return {
-    mgso4: Number(mgso4.toFixed(2)),
-    cacl2: Number((calcium / (40.078 / 110.978)).toFixed(2)),
-    nahco3: Number((kh / (61.017 / 84.007)).toFixed(2)),
-    nacl: Number((chloride / (35.45 / 58.44)).toFixed(2)),
+    mgso4: Number(epsomTarget.toFixed(2)),
+    cacl2: Number(calciumChlorideTarget.toFixed(2)),
+    nahco3: Number((bicarbonate / (61.017 / 84.007)).toFixed(2)),
+    nacl: Number(Math.max(0, (chloride - calciumChlorideTarget * calciumChlorideFraction) / (35.45 / 58.44)).toFixed(2)),
   };
 }
 
@@ -500,9 +523,10 @@ function App() {
     const badgeIons = nerdLevel === 'brewer'
       ? computeIonTotals(brewerSuggestedSaltTargets, combinedBottledIons, dil)
       : ionTotals;
+    const badgeRanges = nerdLevel === 'brewer' ? AIKI_DEFAULT_PROFILE.ranges : activeRanges;
     let worst: TrafficLevel = 'green';
     for (const id of ACTIVE_ION_IDS) {
-      const lvl = classifyIon(badgeIons[id], activeRanges[id]);
+      const lvl = classifyIon(badgeIons[id], badgeRanges[id]);
       if (lvl === 'red') return 'red';
       if (lvl === 'yellow') worst = 'yellow';
     }
@@ -2669,7 +2693,12 @@ function BrewerFlavorPanel({
           <label key={key} className="block">
             <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
               <span>{label}</span>
-              <span className="font-mono text-sky-300">{flavor[key]}</span>
+              <span className="flex items-center gap-2">
+                <span className={`text-[10px] font-semibold uppercase tracking-wide ${brewerSliderStatus(flavor[key]).className}`}>
+                  {brewerSliderStatus(flavor[key]).label}
+                </span>
+                <span className="font-mono text-sky-300">{flavor[key]}</span>
+              </span>
             </div>
             <input
               type="range"
@@ -2710,7 +2739,7 @@ function BrewerFlavorPanel({
         </div>
       </div>
       <p className="mt-2 text-[10px] text-slate-500">
-        This live recipe is now the active calculator recipe. Use the steps button for a simple preparation guide.
+        0–60 stays within Aiki’s safe band · 60–75 is elevated · 75–100 is out of range. Use the steps button for a simple preparation guide.
       </p>
     </div>
   );
