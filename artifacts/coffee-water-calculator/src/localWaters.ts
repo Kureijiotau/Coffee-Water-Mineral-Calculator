@@ -2,8 +2,16 @@ export interface LocalWater {
   id: string;
   name: string;
   ions: Record<string, number>;
+  metadata?: WaterMetadata;
   /** API id if imported from the community database */
   sourceId?: number;
+}
+
+export interface WaterMetadata {
+  silica?: number;
+  ph?: number;
+  tds?: number;
+  alkalinity?: number;
 }
 
 const LOCAL_WATERS_KEY = 'cwm.localWaters';

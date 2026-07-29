@@ -14,7 +14,7 @@ import {
 } from '@/recipes';
 import { SettingsModal } from '@/SettingsModal';
 import LabelScanner from '@/LabelScanner';
-import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater } from '@/localWaters';
+import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadIndicatorOn, saveIndicatorOn, createProfile,
@@ -26,6 +26,7 @@ export type MineralWaterEntry = {
   id: string;
   name: string;
   ions: Partial<Record<IonId, string>>;
+  metadata: Partial<Record<keyof WaterMetadata, string>>;
   volumeMl: string;
 };
 let _mwId = 0;
@@ -46,11 +47,37 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
+const WATER_METADATA_FIELDS: { key: keyof WaterMetadata; label: string; unit: string }[] = [
+  { key: 'silica', label: 'Silica (SiO₂)', unit: 'mg/L' },
+  { key: 'ph', label: 'pH', unit: '' },
+  { key: 'tds', label: 'TDS', unit: 'mg/L' },
+  { key: 'alkalinity', label: 'Alkalinity', unit: 'mg/L as CaCO₃' },
+];
+
+function metadataToStrings(metadata?: WaterMetadata): Partial<Record<keyof WaterMetadata, string>> {
+  if (!metadata) return {};
+  return Object.fromEntries(
+    Object.entries(metadata)
+      .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
+      .map(([key, value]) => [key, String(value)]),
+  ) as Partial<Record<keyof WaterMetadata, string>>;
+}
+
+function metadataToNumbers(metadata: Partial<Record<keyof WaterMetadata, string>>): WaterMetadata | undefined {
+  const values: WaterMetadata = {};
+  for (const [key, rawValue] of Object.entries(metadata) as [keyof WaterMetadata, string | undefined][]) {
+    const value = parseFloat(rawValue ?? '');
+    if (Number.isFinite(value) && value >= 0) values[key] = value;
+  }
+  return Object.keys(values).length > 0 ? values : undefined;
+}
+
 interface CommunityWater {
   id: number;
   name: string;
   ions: Record<string, number>;
   shared: string;
+  metadata?: WaterMetadata;
 }
 
 function App() {
@@ -62,11 +89,12 @@ function App() {
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
-  const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
+  const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
       ions: partial?.ions ?? {},
+      metadata: partial?.metadata ?? {},
       volumeMl: partial?.volumeMl ?? '0',
     };
     setMineralWaters(prev => [...prev, entry]);
@@ -78,11 +106,12 @@ function App() {
   const removeMineralWater = (id: string) => {
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
-  const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; volumeMl?: string }) => {
+  const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
       ions: partial?.ions ?? {},
+      metadata: partial?.metadata ?? {},
       volumeMl: partial?.volumeMl ?? '0',
     };
     setAdditionWaters(prev => [...prev, entry]);
@@ -1332,7 +1361,11 @@ function App() {
                 for (const [k, v] of Object.entries(match.ions)) {
                   if (v > 0) existing[k as IonId] = String(v);
                 }
-                addMineralWater({ name: match.name || undefined, ions: existing });
+                addMineralWater({
+                  name: match.name || undefined,
+                  ions: existing,
+                  metadata: match.metadata ? metadataToStrings(match.metadata) : undefined,
+                });
               } else {
                 addMineralWater({ ions: vals });
                 const name = window.prompt("Name this water (so you can find it later):");
@@ -1381,7 +1414,7 @@ function App() {
                           for (const [k, v] of Object.entries(w.ions)) {
                             if (v > 0) vals[k as IonId] = String(v);
                           }
-                          addMineralWater({ name: w.name || undefined, ions: vals });
+                          addMineralWater({ name: w.name || undefined, ions: vals, metadata: w.metadata ? metadataToStrings(w.metadata) : undefined });
                         }}
                       >
                         <div className="min-w-0 flex-1">
@@ -1509,6 +1542,10 @@ function App() {
                     </div>
                   ))}
                 </div>
+                <WaterMetadataFields
+                  metadata={entry.metadata}
+                  onChange={metadata => updateMineralWater(entry.id, { metadata })}
+                />
                 {/* Save + Share buttons */}
                 <div className="flex items-center gap-2 pt-1">
                   <button
@@ -1521,9 +1558,10 @@ function App() {
                         Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
                       );
                       if (alreadySaved) return;
-                      saveWaters([...localWaters, {
+                  saveWaters([...localWaters, {
                         id: newLocalWaterId(),
                         name: entry.name.trim(),
+                    metadata: metadataToNumbers(entry.metadata),
                         ions: Object.fromEntries(
                           Object.entries(entry.ions)
                             .filter(([, v]) => parseFloat(v || '0') > 0)
@@ -1563,7 +1601,7 @@ function App() {
                         fetch(`${API_BASE}/api/waters`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ name: entry.name.trim(), ions: vals, shared: 'yes' }),
+                          body: JSON.stringify({ name: entry.name.trim(), ions: vals, metadata: metadataToNumbers(entry.metadata), shared: 'yes' }),
                         }).catch(() => {});
                       }
                     }}
@@ -1979,6 +2017,7 @@ function App() {
                         saveWaters([...localWaters, {
                           id: newLocalWaterId(),
                           name: entry.name.trim(),
+                          metadata: metadataToNumbers(entry.metadata),
                           ions: Object.fromEntries(
                             Object.entries(entry.ions)
                               .filter(([, v]) => parseFloat(v || '0') > 0)
@@ -2018,7 +2057,7 @@ function App() {
                           fetch(`${API_BASE}/api/waters`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ name: entry.name.trim(), ions: vals, shared: 'yes' }),
+                            body: JSON.stringify({ name: entry.name.trim(), ions: vals, metadata: metadataToNumbers(entry.metadata), shared: 'yes' }),
                           }).catch(() => {});
                         }
                       }}
@@ -2178,6 +2217,7 @@ function App() {
                               id: newLocalWaterId(),
                               name: w.name || `Water #${w.id}`,
                               ions: w.ions,
+                              metadata: w.metadata,
                               sourceId: w.id,
                             };
                             saveWaters([...localWaters, nw]);
@@ -2185,7 +2225,7 @@ function App() {
                             for (const [k, v] of Object.entries(w.ions)) {
                               if (v > 0) vals[k as IonId] = String(v);
                             }
-                            addMineralWater({ name: w.name || undefined, ions: vals });
+                            addMineralWater({ name: w.name || undefined, ions: vals, metadata: w.metadata ? metadataToStrings(w.metadata) : undefined });
                           }}
                           disabled={alreadyAdded}
                           className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
@@ -2220,6 +2260,41 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
       </div>
       {after}
     </div>
+  );
+}
+
+function WaterMetadataFields({
+  metadata,
+  onChange,
+}: {
+  metadata: Partial<Record<keyof WaterMetadata, string>>;
+  onChange: (metadata: Partial<Record<keyof WaterMetadata, string>>) => void;
+}) {
+  return (
+    <details className="rounded-lg border border-slate-700/50 bg-slate-900/25">
+      <summary className="cursor-pointer select-none px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-300">
+        Reported water metadata
+      </summary>
+      <div className="grid grid-cols-2 gap-2 border-t border-slate-700/40 p-3 sm:grid-cols-4">
+        {WATER_METADATA_FIELDS.map(field => (
+          <label key={field.key} className="block">
+            <span className="mb-1 block text-[10px] text-slate-500">
+              {field.label}{field.unit ? ` (${field.unit})` : ''}
+            </span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step={field.key === 'ph' ? '0.01' : 'any'}
+              value={metadata[field.key] ?? ''}
+              onChange={e => onChange({ ...metadata, [field.key]: e.target.value })}
+              placeholder="—"
+              className="w-full rounded-lg border border-slate-600/60 bg-slate-900/60 px-2 py-1.5 text-sm text-slate-100 placeholder-slate-600 focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-500/60"
+            />
+          </label>
+        ))}
+      </div>
+    </details>
   );
 }
 
