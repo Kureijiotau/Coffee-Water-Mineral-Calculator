@@ -44,16 +44,19 @@ function brewerSaltSuggestion(flavor: BrewerFlavorInput): Record<string, number>
   const magnesiumTarget = 5 + flavor.juiciness * 0.12 + flavor.brightness * 0.04;
   const sulfate = 8 + flavor.brightness * 0.16 + flavor.juiciness * 0.06;
   const chloride = 7 + flavor.body * 0.15 + flavor.sweetness * 0.04;
-  const mgso4 = sulfate / (96.06 / 120.365);
-  const mgcl2 = Math.max(0, (magnesiumTarget - mgso4 * (24.305 / 120.365)) / (70.90 / 95.205));
-  const magnesium = mgso4 * (24.305 / 120.365) + mgcl2 * (24.305 / 95.205);
+  // Brewer mode intentionally uses Epsom salt as the only magnesium source.
+  // Advanced modes still expose magnesium chloride in the full table.
+  const mgso4 = Math.max(
+    sulfate / (96.06 / 120.365),
+    magnesiumTarget / (24.305 / 120.365),
+  );
+  const magnesium = mgso4 * (24.305 / 120.365);
   // GH is the sum of the CaCO₃-equivalent contributions from Mg and Ca.
   // Subtract Mg first so the preview lands near the requested total GH.
   const calcium = Math.max(2, (gh - magnesium * 4.118) / 2.497);
 
   return {
     mgso4: Number(mgso4.toFixed(2)),
-    mgcl2: Number(mgcl2.toFixed(2)),
     cacl2: Number((calcium / (40.078 / 110.978)).toFixed(2)),
     nahco3: Number((kh / (61.017 / 84.007)).toFixed(2)),
     nacl: Number((chloride / (35.45 / 58.44)).toFixed(2)),
@@ -1213,7 +1216,17 @@ function App() {
               onApply={applyBrewerSuggestion}
             />
           )}
-          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
+         {nerdLevel === 'brewer' ? (
+           <BrewerSimpleRecipeCard
+             saltTargets={brewerSuggestedSaltTargets}
+             liters={L}
+             concentrateOn={concentrateOn}
+             concentrateLiters={concL}
+             concentrateStrength={concentrateStrength}
+           />
+         ) : (
+         <>
+         <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
             <span>Hydrated Form</span>
@@ -1278,7 +1291,9 @@ function App() {
                 </div>
               </div>
             );
-          })}
+         })}
+         </>
+         )}
         </div>
 
         {/* Water amount + Concentrate */}
@@ -2422,6 +2437,68 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
         <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
       </div>
       {after}
+    </div>
+  );
+}
+
+function BrewerSimpleRecipeCard({
+  saltTargets,
+  liters,
+  concentrateOn,
+  concentrateLiters,
+  concentrateStrength,
+}: {
+  saltTargets: Record<string, number>;
+  liters: number;
+  concentrateOn: boolean;
+  concentrateLiters: number;
+  concentrateStrength: number;
+}) {
+  const simpleSalts = [
+    { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
+    { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
+    { id: 'nacl', label: 'Table salt', note: 'sweetness & balance' },
+  ];
+  const calciumTarget = saltTargets.cacl2 ?? 0;
+  if (calciumTarget > 0.05) {
+    simpleSalts.push({ id: 'cacl2', label: 'Calcium chloride', note: 'optional extra body' });
+  }
+
+  const getMassLabel = (id: string) => {
+    const salt = SALTS.find(item => item.id === id);
+    const target = saltTargets[id] ?? 0;
+    if (!salt || target <= 0 || liters <= 0) return '—';
+    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const mass = concentrateOn && concentrateLiters > 0
+      ? computeSaltMg(target, concentrateLiters, form.molarMass, salt.anhydrousMass) * concentrateStrength
+      : computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
+    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
+  };
+
+  return (
+    <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
+        <Check className="h-4 w-4" />
+        Simple recipe
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Use familiar kitchen-friendly ingredients. Amounts are for {liters || 1} L of water
+        {concentrateOn ? ' stock preparation' : ''}.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {simpleSalts.map(salt => (
+          <div key={salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2.5">
+            <div>
+              <div className="text-sm font-medium text-slate-200">{salt.label}</div>
+              <div className="text-[10px] text-slate-500">{salt.note}</div>
+            </div>
+            <span className="shrink-0 font-mono text-sm text-emerald-300">{getMassLabel(salt.id)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="mt-3 text-[10px] text-slate-500">
+        Epsom salt, baking soda, and table salt are the beginner defaults. Advanced levels show the full mineral and hydration details.
+      </p>
     </div>
   );
 }
