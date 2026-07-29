@@ -274,6 +274,12 @@ function App() {
   const activeRanges: RangeSet = activeProfile.ranges;
   const showAlchemist = nerdLevel !== 'brewer';
   const showWatermancer = nerdLevel === 'watermancer';
+  const handleNerdLevelChange = (level: NerdLevel) => {
+    if (level === 'brewer') {
+      setMineralWaters([]);
+    }
+    setNerdLevel(level);
+  };
 
   // Persist on changes
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
@@ -1131,14 +1137,14 @@ function App() {
           </div>
         </div>
 
-        {/* Experience level — presentation only; the recipe state and calculations are shared by every level. */}
+        {/* Experience level */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 px-4 sm:px-6 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Experience Level</div>
-                <div className="mt-0.5 text-xs text-slate-500">Choose how much calculator detail to show. Your recipe will not change.</div>
+                <div className="mt-0.5 text-xs text-slate-500">Choose how much calculator detail to show. Brewer mode uses salts only.</div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
@@ -1150,7 +1156,7 @@ function App() {
                 <button
                   key={value}
                   type="button"
-                  onClick={() => setNerdLevel(value)}
+                  onClick={() => handleNerdLevelChange(value)}
                   aria-pressed={nerdLevel === value}
                   title={description}
                   className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
