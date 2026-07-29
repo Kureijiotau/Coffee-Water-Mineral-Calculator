@@ -2466,7 +2466,7 @@ function App() {
 
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
-          saltTargets={brewerSuggestedSaltTargets}
+          saltTargets={saltTargets}
           liters={L}
           concentrateOn={concentrateOn}
           concentrateLiters={concL}
@@ -2665,7 +2665,7 @@ function BrewerRecipeStepsModal({
               <ListChecks className="h-5 w-5" />
               <h2 className="text-base font-semibold">Your recipe steps</h2>
             </div>
-            <p className="mt-1 text-xs text-slate-400">A simple guide for your current flavor profile.</p>
+            <p className="mt-1 text-xs text-slate-400">A simple guide for the recipe currently selected above.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
             <X className="h-4 w-4" />
