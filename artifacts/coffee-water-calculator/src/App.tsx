@@ -1937,8 +1937,8 @@ function App() {
                     overshoot ? 'overshoot' :
                     target > 0 && covered >= target ? 'full' :
                     covered > 0 ? 'partial' : 'none';
-                  const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-amber-500' : 'bg-slate-600';
-                  const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-amber-300' : 'text-slate-500';
+                  const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-sky-400' : 'bg-slate-600';
+                  const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-sky-300' : 'text-slate-500';
                   const label = level === 'overshoot'
                     ? `⚠ Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
                     : level === 'full'
