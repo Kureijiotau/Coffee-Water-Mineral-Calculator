@@ -52,6 +52,35 @@ function brewerSliderStatus(value: number): { label: string; className: string }
   return { label: 'Out of range', className: 'text-rose-300' };
 }
 
+const BREWER_SALT_IDS = new Set(['mgso4', 'cacl2', 'nahco3', 'nacl']);
+
+function brewerSliderFromIon(value: number, greenMax: number, yellowMax: number): number {
+  const safeMax = greenMax * 0.98;
+  if (value <= safeMax) return Math.max(0, Math.min(60, (value / safeMax) * 60));
+  if (value <= yellowMax) {
+    return 60 + ((value - safeMax) / (yellowMax - safeMax)) * 15;
+  }
+  return Math.min(100, 75 + ((value - yellowMax) / Math.max(yellowMax * 0.31, 0.01)) * 25);
+}
+
+function brewerFlavorFromRecipe(recipe: SaltRecipe): BrewerFlavorInput | null {
+  const activeSaltIds = Object.entries(recipe.salts)
+    .filter(([, entry]) => num(entry.target) > 0)
+    .map(([saltId]) => saltId);
+  if (!activeSaltIds.every(saltId => BREWER_SALT_IDS.has(saltId))) return null;
+
+  const targets = Object.fromEntries(
+    activeSaltIds.map(saltId => [saltId, num(recipe.salts[saltId].target)]),
+  );
+  const ions = computeIonTotals(targets, {}, 1);
+  return {
+    brightness: Math.round(brewerSliderFromIon(ions.sulfate, ION_MAP.sulfate.greenMax, ION_MAP.sulfate.yellowMax)),
+    body: Math.round(brewerSliderFromIon(ions.calcium, ION_MAP.calcium.greenMax, ION_MAP.calcium.yellowMax)),
+    juiciness: Math.round(brewerSliderFromIon(ions.magnesium, ION_MAP.magnesium.greenMax, ION_MAP.magnesium.yellowMax)),
+    sweetness: Math.round(brewerSliderFromIon(ions.bicarbonate, ION_MAP.bicarbonate.greenMax, ION_MAP.bicarbonate.yellowMax)),
+  };
+}
+
 function brewerSaltSuggestion(flavor: BrewerFlavorInput): Record<string, number> {
   // Each Brewer control is normalized against Aiki's actual ion ranges:
   // 0–60 = green band, 60–75 = yellow band, 75–100 = beyond yellow.
@@ -552,6 +581,8 @@ function App() {
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
+    const brewerFlavor = brewerFlavorFromRecipe(recipe);
+    if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
       const entry = recipe.salts[salt.id];
       if (entry) return { target: entry.target, formIdx: entry.formIdx };
@@ -576,6 +607,8 @@ function App() {
     const recipe = ROBERT_ASAMI_RECIPES.find(r => r.id === recipeId);
     if (!recipe) return;
     setActiveRecipeId('custom');
+    const brewerFlavor = brewerFlavorFromRecipe(recipe);
+    if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
       const entry = recipe.salts[salt.id];
       return entry
