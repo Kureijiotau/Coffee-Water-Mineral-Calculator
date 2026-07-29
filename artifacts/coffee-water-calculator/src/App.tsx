@@ -383,10 +383,16 @@ function App() {
     [saltTargets, combinedBottledIons, dil],
   );
 
-  // Salt-only contribution — used for the coverage bars
+  const hasMineralWater = useMemo(
+    () => [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
+    [mineralWaters, additionWaters],
+  );
+
+  // Full recipe contribution without base/addition water. These are the
+  // targets that mineral-water coverage must replace.
   const saltOnlyIons = useMemo(
-    () => computeIonTotals(saltTargets, {}, dil),
-    [saltTargets, dil],
+    () => computeIonTotals(saltTargets, {}, 1),
+    [saltTargets],
   );
 
   // Combined contribution from all bottled waters (base + addition, already diluted)
@@ -413,6 +419,26 @@ function App() {
     const targets: Record<string, number> = {};
     SALTS.forEach((salt, i) => { targets[salt.id] = num(rows[i].target); });
 
+    // Mineral water is part of the final batch, so reduce salts whose primary
+    // ions are already supplied by that water. Co-ions remain visible in the
+    // final-mixture totals and overshoot warning because they cannot be
+    // removed independently from a real salt.
+    const reduceForIon = (saltId: string, ionId: IonId) => {
+      const salt = SALTS.find(item => item.id === saltId);
+      const fraction = salt?.ions.find(contribution => contribution.ionId === ionId)?.fraction ?? 0;
+      if (fraction <= 0) return;
+      const originalTarget = targets[saltId] ?? 0;
+      const originalIon = originalTarget * fraction;
+      targets[saltId] = Math.max(originalIon - (bottledIons[ionId] ?? 0), 0) / fraction;
+    };
+
+    if (hasMineralWater) {
+      reduceForIon('cacl2', 'calcium');
+      reduceForIon('nahco3', 'bicarbonate');
+      reduceForIon('khco3', 'potassium');
+      reduceForIon('nacl', 'sodium');
+    }
+
     const magnesiumSulfate = SALTS.find(s => s.id === 'mgso4');
     const magnesiumChloride = SALTS.find(s => s.id === 'mgcl2');
     if (magnesiumSulfate && magnesiumChloride) {
@@ -426,7 +452,7 @@ function App() {
       targets.mgcl2 = !sulfateFirst && chlorideFraction > 0 ? remainingMagnesium / chlorideFraction : 0;
     }
     return targets;
-  }, [rows, sulfateFirst, saltOnlyIons, bottledIons]);
+  }, [rows, sulfateFirst, saltOnlyIons, bottledIons, hasMineralWater]);
 
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
@@ -436,24 +462,18 @@ function App() {
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
+  const baseSaltGh = computeGH(saltOnlyIons);
+  const baseSaltKh = computeKH(saltOnlyIons);
   const ghBottled = computeGH(bottledIons);
   const khBottled = computeKH(bottledIons);
-  const ghSalt = gh - ghBottled;
-  const khSalt = kh - khBottled;
-  const hasMineralWater = useMemo(
-    () => [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
-    [mineralWaters, additionWaters],
-  );
+  const ghSalt = baseSaltGh;
+  const khSalt = baseSaltKh;
   const tdsSalt = useMemo(() => {
     // Recipe targets are ion concentrations. Sum only the salt-derived ions;
     // hydration water is not part of TDS.
-    const recipeIons = computeIonTotals(
-      hasMineralWater ? suggestedSaltTargets : saltTargets,
-      {},
-      1,
-    );
+    const recipeIons = computeIonTotals(saltTargets, {}, 1);
     return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
-  }, [hasMineralWater, saltTargets, suggestedSaltTargets]);
+  }, [saltTargets]);
   const tdsMineral = useMemo(() => {
     // Use the same modeled ion contribution as the rest of the calculator.
     // Metadata TDS can include unmodeled substances and must not be added to
@@ -462,7 +482,17 @@ function App() {
       ? Object.values(bottledIons).reduce((total, ppm) => total + ppm, 0)
       : 0;
   }, [hasMineralWater, bottledIons]);
-  const tds = tdsSalt + tdsMineral;
+  const tds = tdsSalt;
+  const finalGh = computeGH(suggestedIonTotals);
+  const finalKh = computeKH(suggestedIonTotals);
+  const finalTds = Object.values(suggestedIonTotals).reduce((total, ppm) => total + ppm, 0);
+  const finalSaltIons = useMemo(
+    () => computeIonTotals(suggestedSaltTargets, {}, 1),
+    [suggestedSaltTargets],
+  );
+  const finalSaltGh = computeGH(finalSaltIons);
+  const finalSaltKh = computeKH(finalSaltIons);
+  const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
   const tdsForRecipeSteps = useMemo(() => {
     const finalIons = computeIonTotals(
       hasMineralWater ? suggestedSaltTargets : saltTargets,
@@ -1611,17 +1641,17 @@ function App() {
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Hardness Summary (as CaCO₃)" />
+          <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Base Salt Recipe Summary (as CaCO₃)" />
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <HardnessCard label="General Hardness (GH)" value={gh} saltValue={ghSalt} bottledValue={ghBottled} />
-            <HardnessCard label="Carbonate Hardness (KH)" value={kh} saltValue={khSalt} bottledValue={khBottled} />
-            <TdsCard value={tds} saltValue={tdsSalt} bottledValue={tdsMineral} />
+            <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" />
+            <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" />
+            <SimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" />
             <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
               <span className="h-4 w-px bg-slate-700" />
-              {kh > 0 && gh >= 0 && Number.isFinite(gh / kh) ? (
+              {baseSaltKh > 0 && baseSaltGh >= 0 && Number.isFinite(baseSaltGh / baseSaltKh) ? (
                 <span className="text-lg font-semibold text-sky-300 tabular-nums">
-                  {(gh / kh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                  {(baseSaltGh / baseSaltKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
                 </span>
               ) : (
                 <span className="text-lg font-semibold text-slate-500">—</span>
@@ -1629,6 +1659,31 @@ function App() {
             </div>
           </div>
         </div>}
+
+        {showAlchemist && hasMineralWater && (
+          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
+            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
+            <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
+              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
+            </div>
+            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
+              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
+              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
+              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
+                <span className="h-4 w-px bg-slate-700" />
+                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
+                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
+                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                  </span>
+                ) : (
+                  <span className="text-lg font-semibold text-slate-500">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {showAlchemist && (
           /* Estimated pH / alkalinity */
@@ -3666,6 +3721,20 @@ function HardnessCard({ label, value, saltValue, bottledValue }: {
           <span className="text-slate-400">Mineral:</span>
           <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SimpleMetricCard({ label, value, unit }: {
+  label: string; value: number; unit: string;
+}) {
+  return (
+    <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
+      <div className="text-xs text-slate-400 mb-1">{label}</div>
+      <div className="flex items-baseline gap-2">
+        <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
+        <span className="text-sm text-slate-400">{unit}</span>
       </div>
     </div>
   );
