@@ -310,6 +310,39 @@ function App() {
     }, 0);
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
   const tds = tdsSalt + tdsMineral;
+  const waterChemistry = useMemo(() => {
+    let pHWeighted = 0;
+    let pHVolume = 0;
+    let alkalinityWeighted = 0;
+    let alkalinityVolume = 0;
+    for (const entry of [...mineralWaters, ...additionWaters]) {
+      const volume = num(entry.volumeMl) * sourceScale;
+      if (volume <= 0) continue;
+      const pH = num(entry.metadata.ph ?? '');
+      const alkalinity = num(entry.metadata.alkalinity ?? '');
+      if (pH > 0) {
+        pHWeighted += pH * volume;
+        pHVolume += volume;
+      }
+      if (alkalinity > 0) {
+        alkalinityWeighted += alkalinity * volume;
+        alkalinityVolume += volume;
+      }
+    }
+    const basePH = pHVolume > 0 ? pHWeighted / pHVolume : undefined;
+    const baseAlkalinity = alkalinityVolume > 0 ? alkalinityWeighted / alkalinityVolume : undefined;
+    const saltAlkalinity = Math.max(
+      (saltOnlyIons.bicarbonate ?? 0) + 2 * (saltOnlyIons.carbonate ?? 0),
+      0,
+    ) * 50 / 61;
+    const saltCitrate = Math.max(saltOnlyIons.citrates ?? 0, 0);
+    const estimate = basePH !== undefined && baseAlkalinity !== undefined
+      ? Math.max(4, Math.min(10, basePH
+        + 0.12 * Math.log10(1 + saltAlkalinity / Math.max(baseAlkalinity, 1))
+        - 0.08 * Math.log10(1 + saltCitrate / Math.max(baseAlkalinity, 1))))
+      : undefined;
+    return { basePH, baseAlkalinity, estimate };
+  }, [mineralWaters, additionWaters, sourceScale, saltOnlyIons]);
 
   // ── Concentrate state ──────────────────────────────
   const [concentrateOn, setConcentrateOn] = useState(false);
@@ -1353,6 +1386,13 @@ function App() {
             </div>
           </div>
         </div>
+
+        {/* Estimated pH / alkalinity */}
+        <WaterChemistryCard
+          estimate={waterChemistry.estimate}
+          basePH={waterChemistry.basePH}
+          baseAlkalinity={waterChemistry.baseAlkalinity}
+        />
 
         {/* Taste Profile */}
         <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} />
@@ -2506,6 +2546,67 @@ function TdsCard({ value, saltValue, bottledValue }: {
         </div>
       </div>
     </div>
+  );
+}
+
+function WaterChemistryCard({
+  estimate,
+  basePH,
+  baseAlkalinity,
+}: {
+  estimate?: number;
+  basePH?: number;
+  baseAlkalinity?: number;
+}) {
+  const hasEstimate = estimate !== undefined;
+  const status = hasEstimate
+    ? `Estimated pH: ${estimate.toFixed(2)}`
+    : basePH === undefined
+      ? 'Add base-water pH to estimate'
+      : 'Add base-water alkalinity to estimate';
+
+  return (
+    <details className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6 [&::-webkit-details-marker]:hidden">
+        <div className="flex min-w-0 items-center gap-2">
+          <Info className="h-4 w-4 shrink-0 text-sky-300" />
+          <span className="text-sm font-semibold uppercase tracking-wider text-slate-300">Water Chemistry</span>
+          <span className="hidden truncate text-xs text-slate-500 sm:inline">pH and buffering estimate</span>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className={`text-xs ${hasEstimate ? 'text-sky-300' : 'text-slate-500'}`}>{status}</span>
+          <span className="text-slate-500 transition-transform group-open:rotate-180">⌄</span>
+        </div>
+      </summary>
+      <div className="border-t border-slate-700/40 px-4 py-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="text-xs text-slate-400">Estimated final pH</div>
+            <div className="mt-1 text-2xl font-bold text-cyan-300">
+              {hasEstimate ? estimate.toFixed(2) : '—'}
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="text-xs text-slate-400">Base-water pH</div>
+            <div className="mt-1 text-2xl font-bold text-slate-200">
+              {basePH !== undefined ? basePH.toFixed(2) : '—'}
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="text-xs text-slate-400">Base alkalinity</div>
+            <div className="mt-1 text-2xl font-bold text-slate-200">
+              {baseAlkalinity !== undefined ? baseAlkalinity.toFixed(1) : '—'}
+              <span className="ml-1 text-sm font-normal text-slate-500">mg/L CaCO₃</span>
+            </div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-slate-500">
+          {hasEstimate
+            ? 'Estimated from reported base-water pH and alkalinity plus the recipe’s carbonate and citrate balance. Verify with a calibrated pH meter.'
+            : 'Add reported pH and alkalinity to a mineral-water entry above for a meaningful estimate. Listed ion concentrations alone cannot determine pH reliably.'}
+        </p>
+      </div>
+    </details>
   );
 }
 
