@@ -2729,7 +2729,6 @@ function BrewStationMode({
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [scaleReading, setScaleReading] = useState('');
-  const [tareOffset, setTareOffset] = useState(0);
   const [wakeLockActive, setWakeLockActive] = useState(false);
 
   useEffect(() => {
@@ -2780,27 +2779,30 @@ function BrewStationMode({
   const safeIndex = Math.min(stepIndex, Math.max(0, steps.length - 1));
   const currentStep = steps[safeIndex];
   const rawReading = parseFloat(scaleReading);
-  const grossReading = Number.isFinite(rawReading) ? Math.max(0, rawReading) : 0;
-  const cumulativeReading = Math.max(0, grossReading - tareOffset);
-  const cumulativeTarget = steps.slice(0, safeIndex + 1).reduce((sum, step) => sum + step.grams, 0);
-  const targetDifference = cumulativeReading - cumulativeTarget;
-  const tolerance = Math.max(0.005, cumulativeTarget * 0.02);
+  // The field represents the net running weight shown by the scale. Tare is a
+  // physical scale action, so it must not also be subtracted from this value.
+  const actualTotal = Number.isFinite(rawReading) ? Math.max(0, rawReading) : 0;
+  // Use the rounded values shown in the step cards so the running target agrees
+  // with the numbers the brewer can actually read and dose.
+  const roundedGrams = (value: number) => Math.round(value * 1000) / 1000;
+  const currentTarget = currentStep ? roundedGrams(currentStep.grams) : 0;
+  const cumulativeTarget = steps.slice(0, safeIndex + 1).reduce((sum, step) => sum + roundedGrams(step.grams), 0);
+  const targetDifference = actualTotal - cumulativeTarget;
+  const tolerance = Math.max(0.005, currentTarget * 0.02);
   const isOnTarget = Boolean(currentStep) && Math.abs(targetDifference) <= tolerance;
   const isFinished = steps.length > 0 && safeIndex === steps.length - 1 && isOnTarget;
   const formatted = (value: number) => value.toFixed(3);
-  const targetLow = Math.max(0, cumulativeTarget - tolerance);
-  const targetHigh = cumulativeTarget + tolerance;
-  const gaugePosition = Math.max(0, Math.min(100, 50 + (targetDifference / Math.max(cumulativeTarget * 0.1, 0.01)) * 50));
+  const targetLow = Math.max(0, currentTarget - tolerance);
+  const targetHigh = currentTarget + tolerance;
+  const gaugePosition = Math.max(0, Math.min(100, 50 + (targetDifference / Math.max(currentTarget * 0.1, 0.01)) * 50));
   const gaugeTone = isOnTarget
     ? 'bg-emerald-400'
-    : Math.abs(targetDifference) <= cumulativeTarget * 0.1
+    : Math.abs(targetDifference) <= Math.max(currentTarget * 0.1, 0.01)
       ? 'bg-amber-300'
       : 'bg-rose-400';
 
   const tare = () => {
-    if (Number.isFinite(rawReading)) {
-      setTareOffset(rawReading);
-    }
+    setScaleReading('0');
   };
 
   if (steps.length === 0) {
@@ -2833,7 +2835,7 @@ function BrewStationMode({
             <div className="mt-9 text-base font-bold uppercase tracking-[0.22em] text-zinc-500 sm:mt-11 sm:text-xl">Add this much</div>
             <div className="mt-1 font-mono text-7xl font-black tracking-tight text-emerald-300 sm:text-9xl">{formatted(currentStep.grams)}<span className="ml-2 text-3xl sm:text-5xl">g</span></div>
             <div className="mt-3 text-sm font-bold text-zinc-500">
-              Acceptable range: {formatted(Math.max(0, currentStep.grams - tolerance))}–{formatted(currentStep.grams + tolerance)} g
+              Acceptable running total: {formatted(cumulativeTarget - tolerance)}–{formatted(cumulativeTarget + tolerance)} g
             </div>
           </div>
 
@@ -2872,10 +2874,10 @@ function BrewStationMode({
             <div className="mt-5 grid grid-cols-2 gap-3 text-center sm:mt-6 sm:gap-5">
               <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
                 <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Actual total</div>
-                <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(cumulativeReading)} g</div>
+                <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(actualTotal)} g</div>
               </div>
               <div className="rounded-3xl bg-zinc-900 p-4 sm:p-6">
-                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Target total</div>
+                <div className="text-xs font-bold uppercase tracking-wider text-zinc-500 sm:text-base">Target after this step</div>
                 <div className="mt-2 font-mono text-2xl font-bold text-white sm:text-4xl">{formatted(cumulativeTarget)} g</div>
               </div>
             </div>
@@ -2893,7 +2895,7 @@ function BrewStationMode({
                 Tare / zero scale
               </button>
               <span className="text-xs text-zinc-500 sm:text-sm">
-                {wakeLockActive ? 'Screen staying awake' : 'Screen wake lock unavailable'} · tare {formatted(tareOffset)} g
+                {wakeLockActive ? 'Screen staying awake' : 'Screen wake lock unavailable'} · scale is net weight
               </span>
             </div>
           </div>
@@ -2920,7 +2922,7 @@ function BrewStationMode({
             </button>
           </div>
           <p className="mt-4 text-center text-xs leading-relaxed text-zinc-500">
-            Keep the container on the scale. The reading is cumulative, so after each addition the target includes every mineral already added.
+            Keep the container on the scale. Enter the running net weight after each addition; the target total includes every mineral already added.
           </p>
         </main>
       </div>
