@@ -2480,6 +2480,7 @@ function App() {
           bottledIons={bottledIons}
           suggestedSaltTargets={suggestedSaltTargets}
           nerdLevel={nerdLevel}
+          tdsTarget={tds}
           onClose={() => setShowBrewerSteps(false)}
         />
       )}
@@ -2642,6 +2643,7 @@ function BrewerRecipeStepsModal({
   bottledIons,
   suggestedSaltTargets,
   nerdLevel,
+  tdsTarget,
   onClose,
 }: {
   saltTargets: Record<string, number>;
@@ -2658,6 +2660,7 @@ function BrewerRecipeStepsModal({
   bottledIons: Record<IonId, number>;
   suggestedSaltTargets: Record<string, number>;
   nerdLevel: NerdLevel;
+  tdsTarget: number;
   onClose: () => void;
 }) {
   const configuredBaseWaters = baseWaters
@@ -2891,7 +2894,7 @@ function BrewerRecipeStepsModal({
               <div>
                 <div className="text-sm font-medium text-slate-200">Verify and brew</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                  Check that the water is clear and all minerals are dissolved. Proceed with your brew method and adjust extraction to taste.
+                  Check for approximately {tdsTarget.toFixed(0)} ppm TDS. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
                 </div>
               </div>
             </li>
