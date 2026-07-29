@@ -966,13 +966,13 @@ function App() {
           </div>
         </div>
 
-        {/* Nerd level — presentation only; the recipe state and calculations are shared by every level. */}
+        {/* Experience level — presentation only; the recipe state and calculations are shared by every level. */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 px-4 sm:px-6 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Nerd Level</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Experience Level</div>
                 <div className="mt-0.5 text-xs text-slate-500">Choose how much calculator detail to show. Your recipe will not change.</div>
               </div>
             </div>
