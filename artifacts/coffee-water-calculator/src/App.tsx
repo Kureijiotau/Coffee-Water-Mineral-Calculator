@@ -1660,31 +1660,6 @@ function App() {
           </div>
         </div>}
 
-        {showAlchemist && hasMineralWater && (
-          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
-            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
-            <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
-              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
-            </div>
-            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
-              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
-              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
-              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
-                <span className="h-4 w-px bg-slate-700" />
-                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
-                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
-                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
-                  </span>
-                ) : (
-                  <span className="text-lg font-semibold text-slate-500">—</span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         {showAlchemist && (
           /* Estimated pH / alkalinity */
           <WaterChemistryCard
@@ -2186,6 +2161,31 @@ function App() {
             )}
           </div>
         </div>}
+
+        {showAlchemist && hasMineralWater && (
+          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
+            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
+            <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
+              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
+            </div>
+            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
+              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
+              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
+              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
+                <span className="h-4 w-px bg-slate-700" />
+                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
+                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
+                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                  </span>
+                ) : (
+                  <span className="text-lg font-semibold text-slate-500">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mineral Water Addition */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
