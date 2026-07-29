@@ -2704,11 +2704,13 @@ function BrewerRecipeStepsModal({
       - configuredAdditionWaters.reduce((sum, water) => sum + water.volume, 0),
     0,
   );
+  const stepSalts = hasBaseWater ? suggestedSalts : recipeSalts;
+  const stepSaltTargets = hasBaseWater ? suggestedSaltTargets : saltTargets;
   const orderedRecipeSalts = [
-    ...recipeSalts.filter(salt => salt.formula.includes('SO₄')),
-    ...recipeSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄')),
-    ...recipeSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃')),
-    ...recipeSalts.filter(salt =>
+    ...stepSalts.filter(salt => salt.formula.includes('SO₄')),
+    ...stepSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄')),
+    ...stepSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃')),
+    ...stepSalts.filter(salt =>
       !salt.formula.includes('SO₄')
       && !salt.formula.includes('Cl')
       && !salt.formula.includes('HCO₃')
@@ -2864,7 +2866,7 @@ function BrewerRecipeStepsModal({
                                 {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
                               </div>
                             </div>
-                            <span className="shrink-0 font-mono text-xs text-emerald-300">{amount(salt)}</span>
+                            <span className="shrink-0 font-mono text-xs text-emerald-300">{amount(salt, stepSaltTargets)}</span>
                           </div>
                         </div>
                       );
