@@ -130,6 +130,7 @@ function App() {
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
+  const [brewerSuggestionApplied, setBrewerSuggestionApplied] = useState(false);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
@@ -269,12 +270,17 @@ function App() {
   const applyBrewerSuggestion = () => {
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
+    setBrewerSuggestionApplied(true);
     setRows(SALTS.map(salt => ({
       target: brewerSuggestedSaltTargets[salt.id]
         ? String(brewerSuggestedSaltTargets[salt.id])
         : '',
       formIdx: salt.defaultFormIdx ?? 0,
     })));
+  };
+  const handleBrewerFlavorChange = (flavor: BrewerFlavorInput) => {
+    setBrewerSuggestionApplied(false);
+    setBrewerFlavor(flavor);
   };
 
   // Weighted-average concentrations across all bottled water sources. Base
@@ -1212,7 +1218,8 @@ function App() {
             <BrewerFlavorPanel
               flavor={brewerFlavor}
               suggestedIons={brewerSuggestedIons}
-              onChange={setBrewerFlavor}
+              applied={brewerSuggestionApplied}
+              onChange={handleBrewerFlavorChange}
               onApply={applyBrewerSuggestion}
             />
           )}
@@ -1223,6 +1230,7 @@ function App() {
              concentrateOn={concentrateOn}
              concentrateLiters={concL}
              concentrateStrength={concentrateStrength}
+             applied={brewerSuggestionApplied}
            />
          ) : (
          <>
@@ -2447,12 +2455,14 @@ function BrewerSimpleRecipeCard({
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
+  applied,
 }: {
   saltTargets: Record<string, number>;
   liters: number;
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
+  applied: boolean;
 }) {
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
@@ -2479,7 +2489,7 @@ function BrewerSimpleRecipeCard({
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
         <Check className="h-4 w-4" />
-        Simple recipe
+        {applied ? 'Active simple recipe' : 'Simple recipe preview'}
       </div>
       <p className="mt-1 text-xs text-slate-400">
         Use familiar kitchen-friendly ingredients. Amounts are for {liters || 1} L of water
@@ -2506,11 +2516,13 @@ function BrewerSimpleRecipeCard({
 function BrewerFlavorPanel({
   flavor,
   suggestedIons,
+  applied,
   onChange,
   onApply,
 }: {
   flavor: BrewerFlavorInput;
   suggestedIons: Record<IonId, number>;
+  applied: boolean;
   onChange: (flavor: BrewerFlavorInput) => void;
   onApply: () => void;
 }) {
@@ -2546,9 +2558,14 @@ function BrewerFlavorPanel({
         <button
           type="button"
           onClick={onApply}
-          className="shrink-0 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/30"
+          disabled={applied}
+          className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            applied
+              ? 'cursor-default border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+              : 'border-sky-400/40 bg-sky-500/20 text-sky-200 hover:bg-sky-500/30'
+          }`}
         >
-          Use this recipe
+          {applied ? 'Recipe applied' : 'Apply this recipe'}
         </button>
       </div>
       <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -2597,7 +2614,9 @@ function BrewerFlavorPanel({
         </div>
       </div>
       <p className="mt-2 text-[10px] text-slate-500">
-        Nothing is applied until you choose “Use this recipe.” The detailed salt table below remains the source of truth.
+        {applied
+          ? 'This flavor profile is now the active calculator recipe. Adjust a slider to preview a different direction.'
+          : 'Slider changes are a preview only. Apply the profile when you want it to become the active calculator recipe.'}
       </p>
     </div>
   );
