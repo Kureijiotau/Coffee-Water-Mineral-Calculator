@@ -440,30 +440,37 @@ function App() {
   const khBottled = computeKH(bottledIons);
   const ghSalt = gh - ghBottled;
   const khSalt = kh - khBottled;
+  const hasMineralWater = useMemo(
+    () => [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
+    [mineralWaters, additionWaters],
+  );
   const tdsSalt = useMemo(() => {
-    // Recipe targets are ion concentrations. Sum the dissolved ion mass
-    // rather than hydrated salt mass; hydration water is not part of TDS.
-    const recipeIons = computeIonTotals(saltTargets, {}, 1);
+    // Recipe targets are ion concentrations. Sum only the salt-derived ions;
+    // hydration water is not part of TDS.
+    const recipeIons = computeIonTotals(
+      hasMineralWater ? suggestedSaltTargets : saltTargets,
+      {},
+      1,
+    );
     return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
-  }, [saltTargets]);
+  }, [hasMineralWater, saltTargets, suggestedSaltTargets]);
   const tdsMineral = useMemo(() => {
-    if (batchMl <= 0) return 0;
-    return [...mineralWaters, ...additionWaters].reduce((total, entry) => {
-      const volume = num(entry.volumeMl) * sourceScale;
-      const reportedTds = num(entry.metadata.tds ?? '');
-      const ionTds = ACTIVE_ION_IDS.reduce((sum, id) => sum + num(entry.ions[id] ?? ''), 0);
-      const waterTds = reportedTds > 0 ? reportedTds : ionTds;
-      return total + (waterTds * volume) / batchMl;
-    }, 0);
-  }, [mineralWaters, additionWaters, batchMl, sourceScale]);
+    // Use the same modeled ion contribution as the rest of the calculator.
+    // Metadata TDS can include unmodeled substances and must not be added to
+    // the ion-derived final result a second time.
+    return hasMineralWater
+      ? Object.values(bottledIons).reduce((total, ppm) => total + ppm, 0)
+      : 0;
+  }, [hasMineralWater, bottledIons]);
   const tds = tdsSalt + tdsMineral;
   const tdsForRecipeSteps = useMemo(() => {
-    const hasMineralWater = [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0);
-    const saltTargetsForSteps = hasMineralWater ? suggestedSaltTargets : saltTargets;
-    const saltIons = computeIonTotals(saltTargetsForSteps, {}, 1);
-    const adjustedSaltTds = Object.values(saltIons).reduce((total, ppm) => total + ppm, 0);
-    return adjustedSaltTds + tdsMineral;
-  }, [mineralWaters, additionWaters, saltTargets, suggestedSaltTargets, tdsMineral]);
+    const finalIons = computeIonTotals(
+      hasMineralWater ? suggestedSaltTargets : saltTargets,
+      hasMineralWater ? combinedBottledIons : {},
+      hasMineralWater ? dil : 1,
+    );
+    return Object.values(finalIons).reduce((total, ppm) => total + ppm, 0);
+  }, [hasMineralWater, saltTargets, suggestedSaltTargets, combinedBottledIons, dil]);
   const waterChemistry = useMemo(() => {
     let pHWeighted = 0;
     let pHVolume = 0;
