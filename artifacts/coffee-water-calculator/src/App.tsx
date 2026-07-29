@@ -64,6 +64,15 @@ function nerdLevelForRecipe(recipe: SaltRecipe): NerdLevel {
   return 'alchemist';
 }
 
+function shouldEscalateNerdLevel(current: NerdLevel, required: NerdLevel): boolean {
+  const rank: Record<NerdLevel, number> = {
+    brewer: 1,
+    alchemist: 2,
+    watermancer: 3,
+  };
+  return rank[required] > rank[current];
+}
+
 function brewerSliderFromIon(value: number, greenMax: number, yellowMax: number): number {
   const safeMax = greenMax * 0.98;
   if (value <= safeMax) return Math.max(0, Math.min(60, (value / safeMax) * 60));
@@ -591,7 +600,10 @@ function App() {
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
-    setNerdLevel(nerdLevelForRecipe(recipe));
+    const requiredNerdLevel = nerdLevelForRecipe(recipe);
+    if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
+      setNerdLevel(requiredNerdLevel);
+    }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
@@ -618,7 +630,10 @@ function App() {
     const recipe = ROBERT_ASAMI_RECIPES.find(r => r.id === recipeId);
     if (!recipe) return;
     setActiveRecipeId('custom');
-    setNerdLevel(nerdLevelForRecipe(recipe));
+    const requiredNerdLevel = nerdLevelForRecipe(recipe);
+    if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
+      setNerdLevel(requiredNerdLevel);
+    }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
