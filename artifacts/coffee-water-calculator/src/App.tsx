@@ -1932,10 +1932,14 @@ function App() {
                   const target = saltOnlyIons[id] ?? 0;
                   const covered = bottledIons[id] ?? 0;
                   const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
-                  const overshoot = target > 0 && covered > target;
+                  // Coverage is displayed to one decimal place, so classify
+                  // against that same precision instead of exposing tiny
+                  // floating-point differences (e.g. 3.9999 / 4.0) as partial.
+                  const coverageTolerance = 0.05;
+                  const overshoot = target > 0 && covered > target + coverageTolerance;
                   const level: 'none' | 'partial' | 'full' | 'overshoot' =
                     overshoot ? 'overshoot' :
-                    target > 0 && covered >= target ? 'full' :
+                    target > 0 && covered >= target - coverageTolerance ? 'full' :
                     covered > 0 ? 'partial' : 'none';
                   const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-sky-400' : 'bg-slate-600';
                   const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-sky-300' : 'text-slate-500';
