@@ -130,7 +130,6 @@ function App() {
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [sulfateFirst, setSulfateFirst] = useState(false);
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
-  const [brewerSuggestionApplied, setBrewerSuggestionApplied] = useState(false);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
@@ -196,6 +195,7 @@ function App() {
   const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
+  const [showBrewerSteps, setShowBrewerSteps] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
 
@@ -267,20 +267,20 @@ function App() {
     () => computeIonTotals(brewerSuggestedSaltTargets, {}, 1),
     [brewerSuggestedSaltTargets],
   );
-  const applyBrewerSuggestion = () => {
+  const applyBrewerFlavor = (flavor: BrewerFlavorInput) => {
+    const suggestedSaltTargets = brewerSaltSuggestion(flavor);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
-    setBrewerSuggestionApplied(true);
     setRows(SALTS.map(salt => ({
-      target: brewerSuggestedSaltTargets[salt.id]
-        ? String(brewerSuggestedSaltTargets[salt.id])
+      target: suggestedSaltTargets[salt.id]
+        ? String(suggestedSaltTargets[salt.id])
         : '',
       formIdx: salt.defaultFormIdx ?? 0,
     })));
   };
   const handleBrewerFlavorChange = (flavor: BrewerFlavorInput) => {
-    setBrewerSuggestionApplied(false);
     setBrewerFlavor(flavor);
+    applyBrewerFlavor(flavor);
   };
 
   // Weighted-average concentrations across all bottled water sources. Base
@@ -1218,9 +1218,8 @@ function App() {
             <BrewerFlavorPanel
               flavor={brewerFlavor}
               suggestedIons={brewerSuggestedIons}
-              applied={brewerSuggestionApplied}
               onChange={handleBrewerFlavorChange}
-              onApply={applyBrewerSuggestion}
+              onShowSteps={() => setShowBrewerSteps(true)}
             />
           )}
          {nerdLevel === 'brewer' ? (
@@ -1230,7 +1229,6 @@ function App() {
              concentrateOn={concentrateOn}
              concentrateLiters={concL}
              concentrateStrength={concentrateStrength}
-             applied={brewerSuggestionApplied}
            />
          ) : (
          <>
@@ -2368,6 +2366,17 @@ function App() {
         />
       )}
 
+      {showBrewerSteps && (
+        <BrewerRecipeStepsModal
+          saltTargets={brewerSuggestedSaltTargets}
+          liters={L}
+          concentrateOn={concentrateOn}
+          concentrateLiters={concL}
+          concentrateStrength={concentrateStrength}
+          onClose={() => setShowBrewerSteps(false)}
+        />
+      )}
+
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCommunityModalOpen(false)}>
@@ -2455,14 +2464,12 @@ function BrewerSimpleRecipeCard({
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
-  applied,
 }: {
   saltTargets: Record<string, number>;
   liters: number;
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
-  applied: boolean;
 }) {
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
@@ -2489,7 +2496,7 @@ function BrewerSimpleRecipeCard({
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
         <Check className="h-4 w-4" />
-        {applied ? 'Active simple recipe' : 'Simple recipe preview'}
+        Live simple recipe
       </div>
       <p className="mt-1 text-xs text-slate-400">
         Use familiar kitchen-friendly ingredients. Amounts are for {liters || 1} L of water
@@ -2513,18 +2520,106 @@ function BrewerSimpleRecipeCard({
   );
 }
 
+function BrewerRecipeStepsModal({
+  saltTargets,
+  liters,
+  concentrateOn,
+  concentrateLiters,
+  concentrateStrength,
+  onClose,
+}: {
+  saltTargets: Record<string, number>;
+  liters: number;
+  concentrateOn: boolean;
+  concentrateLiters: number;
+  concentrateStrength: number;
+  onClose: () => void;
+}) {
+  const simpleSalts = [
+    { id: 'mgso4', label: 'Epsom salt' },
+    { id: 'nahco3', label: 'Baking soda' },
+    { id: 'nacl', label: 'Table salt' },
+    ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium chloride' }] : []),
+  ];
+  const amount = (id: string) => {
+    const salt = SALTS.find(item => item.id === id);
+    const target = saltTargets[id] ?? 0;
+    if (!salt || target <= 0) return '0 mg';
+    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
+    const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
+      * (concentrateOn ? concentrateStrength : 1);
+    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
+  };
+  const volumeLabel = concentrateOn
+    ? `${concentrateLiters || 0} L stock`
+    : `${liters || 1} L water`;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl"
+        onClick={event => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-5 py-4">
+          <div>
+            <div className="flex items-center gap-2 text-sky-200">
+              <ListChecks className="h-5 w-5" />
+              <h2 className="text-base font-semibold">Your recipe steps</h2>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">A simple guide for your current flavor profile.</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="space-y-4 p-5">
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {simpleSalts.map(salt => (
+                <div key={salt.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-900/45 px-3 py-2">
+                  <span className="text-xs text-slate-200">{salt.label}</span>
+                  <span className="font-mono text-xs text-emerald-300">{amount(salt.id)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <ol className="space-y-3">
+            {[
+              ['Start with clean water', `Use ${volumeLabel}. Room-temperature or cool water is easiest to mix.`],
+              ['Add the minerals', 'Measure the amounts above as accurately as your scale allows, then add them to the water.'],
+              ['Mix completely', 'Seal and shake, or stir until everything is dissolved. Baking soda may fizz briefly.'],
+              ['Taste and brew', 'Use the finished water for coffee. Store covered and use fresh when possible.'],
+            ].map(([title, detail], index) => (
+              <li key={title} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">{index + 1}</span>
+                <div>
+                  <div className="text-sm font-medium text-slate-200">{title}</div>
+                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">{detail}</div>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
+            Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BrewerFlavorPanel({
   flavor,
   suggestedIons,
-  applied,
   onChange,
-  onApply,
+  onShowSteps,
 }: {
   flavor: BrewerFlavorInput;
   suggestedIons: Record<IonId, number>;
-  applied: boolean;
   onChange: (flavor: BrewerFlavorInput) => void;
-  onApply: () => void;
+  onShowSteps: () => void;
 }) {
   const gh = computeGH(suggestedIons);
   const kh = computeKH(suggestedIons);
@@ -2552,20 +2647,16 @@ function BrewerFlavorPanel({
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
           <p className="mt-1 text-xs text-slate-400">
-            Tune the cup you want. These controls preview a recipe without changing your current salts.
+            Tune the cup you want. The recipe below updates as you move the sliders.
           </p>
         </div>
         <button
           type="button"
-          onClick={onApply}
-          disabled={applied}
-          className={`shrink-0 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-            applied
-              ? 'cursor-default border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
-              : 'border-sky-400/40 bg-sky-500/20 text-sky-200 hover:bg-sky-500/30'
-          }`}
+          onClick={onShowSteps}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sky-400/40 bg-sky-500/20 px-3 py-2 text-xs font-semibold text-sky-200 transition hover:bg-sky-500/30"
         >
-          {applied ? 'Recipe applied' : 'Apply this recipe'}
+          <ListChecks className="h-3.5 w-3.5" />
+          Show recipe steps
         </button>
       </div>
       <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
@@ -2614,9 +2705,7 @@ function BrewerFlavorPanel({
         </div>
       </div>
       <p className="mt-2 text-[10px] text-slate-500">
-        {applied
-          ? 'This flavor profile is now the active calculator recipe. Adjust a slider to preview a different direction.'
-          : 'Slider changes are a preview only. Apply the profile when you want it to become the active calculator recipe.'}
+        This live recipe is now the active calculator recipe. Use the steps button for a simple preparation guide.
       </p>
     </div>
   );
