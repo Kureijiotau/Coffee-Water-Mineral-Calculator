@@ -495,14 +495,19 @@ function App() {
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
 
   const overallLevel: TrafficLevel = useMemo(() => {
+    // Brewer sliders are the active recipe source, so the header badge should
+    // respond in the same render as the live flavor preview.
+    const badgeIons = nerdLevel === 'brewer'
+      ? computeIonTotals(brewerSuggestedSaltTargets, combinedBottledIons, dil)
+      : ionTotals;
     let worst: TrafficLevel = 'green';
     for (const id of ACTIVE_ION_IDS) {
-      const lvl = classifyIon(ionTotals[id], activeRanges[id]);
+      const lvl = classifyIon(badgeIons[id], activeRanges[id]);
       if (lvl === 'red') return 'red';
       if (lvl === 'yellow') worst = 'yellow';
     }
     return worst;
-  }, [ionTotals, activeRanges]);
+  }, [nerdLevel, brewerSuggestedSaltTargets, combinedBottledIons, dil, ionTotals, activeRanges]);
 
   // Recipe state
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
