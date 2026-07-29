@@ -2471,6 +2471,8 @@ function App() {
           concentrateOn={concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
+          baseWaters={mineralWaters}
+          baseWaterScale={sourceScale}
           onClose={() => setShowBrewerSteps(false)}
         />
       )}
@@ -2624,6 +2626,8 @@ function BrewerRecipeStepsModal({
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
+  baseWaters,
+  baseWaterScale,
   onClose,
 }: {
   saltTargets: Record<string, number>;
@@ -2631,18 +2635,13 @@ function BrewerRecipeStepsModal({
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
+  baseWaters: MineralWaterEntry[];
+  baseWaterScale: number;
   onClose: () => void;
 }) {
-  const simpleSalts = [
-    { id: 'mgso4', label: 'Epsom salt' },
-    { id: 'nahco3', label: 'Baking soda' },
-    { id: 'nacl', label: 'Table salt' },
-    ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium chloride' }] : []),
-  ];
-  const amount = (id: string) => {
-    const salt = SALTS.find(item => item.id === id);
-    const target = saltTargets[id] ?? 0;
-    if (!salt || target <= 0) return '0 mg';
+  const recipeSalts = SALTS.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
+  const amount = (salt: typeof SALTS[number]) => {
+    const target = saltTargets[salt.id] ?? 0;
     const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
     const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
     const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
@@ -2652,6 +2651,14 @@ function BrewerRecipeStepsModal({
   const volumeLabel = concentrateOn
     ? `${concentrateLiters || 0} L stock`
     : `${liters || 1} L water`;
+  const configuredBaseWaters = baseWaters
+    .map(water => ({
+      ...water,
+      volume: num(water.volumeMl) * baseWaterScale,
+    }))
+    .filter(water => water.volume > 0);
+  const formatWaterVolume = (volumeMl: number) =>
+    volumeMl >= 1000 ? `${(volumeMl / 1000).toFixed(2)} L` : `${volumeMl.toFixed(0)} mL`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -2674,20 +2681,43 @@ function BrewerRecipeStepsModal({
         <div className="space-y-4 p-5">
           <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {simpleSalts.map(salt => (
-                <div key={salt.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-900/45 px-3 py-2">
-                  <span className="text-xs text-slate-200">{salt.label}</span>
-                  <span className="font-mono text-xs text-emerald-300">{amount(salt.id)}</span>
+            <div className="mt-2 space-y-2">
+              {recipeSalts.map(salt => {
+                const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                return (
+                <div key={salt.id} className="rounded-lg bg-slate-900/45 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-slate-200">{salt.name}</span>
+                    <span className="font-mono text-xs text-emerald-300">{amount(salt)}</span>
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-500">
+                    {salt.formula} · {form.label}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
+          {configuredBaseWaters.length > 0 && (
+            <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 p-3">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">Base water used</div>
+              <div className="mt-2 space-y-2">
+                {configuredBaseWaters.map(water => (
+                  <div key={water.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/45 px-3 py-2">
+                    <span className="min-w-0 truncate text-xs text-slate-200">{water.name || 'Unnamed base water'}</span>
+                    <span className="shrink-0 font-mono text-xs text-sky-300">{formatWaterVolume(water.volume)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <ol className="space-y-3">
             {[
-              ['Start with clean water', `Use ${volumeLabel}. Room-temperature or cool water is easiest to mix.`],
-              ['Add the minerals', 'Measure the amounts above as accurately as your scale allows, then add them to the water.'],
-              ['Mix completely', 'Seal and shake, or stir until everything is dissolved. Baking soda may fizz briefly.'],
+              ['Start with water', configuredBaseWaters.length > 0
+                ? 'Add the base water amounts listed above, then make up any remaining volume with your chosen water.'
+                : `Use ${volumeLabel}. Room-temperature or cool water is easiest to mix.`],
+              ['Add the minerals', 'Measure each listed salt using its proper hydrated form and amount, then add it to the water.'],
+              ['Mix completely', 'Seal and shake, or stir until every mineral is dissolved.'],
               ['Taste and brew', 'Use the finished water for coffee. Store covered and use fresh when possible.'],
             ].map(([title, detail], index) => (
               <li key={title} className="flex gap-3">
