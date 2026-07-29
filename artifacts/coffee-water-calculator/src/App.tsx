@@ -2719,25 +2719,13 @@ function BrewerFlavorPanel({
       ? 'Round, full, and structured'
       : 'Balanced and approachable';
 
-  const sliders: {
-    key: keyof BrewerFlavorInput;
-    label: string;
-    low: string;
-    high: string;
-  }[] = [
-    { key: 'brightness', label: 'Acidity brightness', low: 'Soft', high: 'Bright' },
-    { key: 'body', label: 'Tactile body', low: 'Light', high: 'Full' },
-    { key: 'juiciness', label: 'Fruit character', low: 'Balanced', high: 'Juicy' },
-    { key: 'sweetness', label: 'Sweetness', low: 'Crisp', high: 'Round' },
-  ];
-
   return (
     <div className="border-b border-slate-700/40 bg-sky-500/5 px-4 py-4 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
           <p className="mt-1 text-xs text-slate-400">
-            Tune the cup you want. The recipe below updates as you move the sliders.
+            Tune the cup you want. Drag the star and the recipe below updates instantly.
           </p>
         </div>
         <button
@@ -2749,36 +2737,27 @@ function BrewerFlavorPanel({
           Show recipe steps
         </button>
       </div>
-      <div className="mt-4 grid gap-x-6 gap-y-3 sm:grid-cols-2">
-        {sliders.map(({ key, label, low, high }) => (
-          <label key={key} className="block">
-            <div className="mb-1 flex items-center justify-between text-[11px] text-slate-400">
-              <span>{label}</span>
-              <span className="flex items-center gap-2">
-                <span className={`text-[10px] font-semibold uppercase tracking-wide ${brewerSliderStatus(flavor[key]).className}`}>
-                  {brewerSliderStatus(flavor[key]).label}
-                </span>
-                <span className="font-mono text-sky-300">{flavor[key]}</span>
-              </span>
+      <BrewerFlavorPyramid flavor={flavor} onChange={onChange} />
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {([
+          ['brightness', 'Brightness / acidity', 'Soft', 'Bright'],
+          ['juiciness', 'Fruit character', 'Balanced', 'Juicy'],
+          ['sweetness', 'Sweetness / clarity', 'Crisp', 'Round'],
+          ['body', 'Body / mouthfeel', 'Light', 'Full'],
+        ] as const).map(([key, label, low, high]) => {
+          const status = brewerSliderStatus(flavor[key]);
+          return (
+            <div key={key} className="rounded-lg border border-slate-700/50 bg-slate-900/30 px-2.5 py-2">
+              <div className="truncate text-[10px] text-slate-500">{label}</div>
+              <div className="mt-1 flex items-baseline justify-between gap-1">
+                <span className={`text-[10px] font-semibold uppercase tracking-wide ${status.className}`}>{status.label}</span>
+                <span className="font-mono text-xs text-sky-300">{flavor[key]}</span>
+              </div>
+              <div className="mt-1 flex justify-between text-[9px] text-slate-600"><span>{low}</span><span>{high}</span></div>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              value={flavor[key]}
-              onChange={e => onChange({ ...flavor, [key]: Number(e.target.value) })}
-              className="w-full accent-sky-400"
-              aria-label={label}
-            />
-            <div className="flex justify-between text-[10px] text-slate-600">
-              <span>{low}</span>
-              <span>{high}</span>
-            </div>
-          </label>
-        ))}
+          );
+        })}
       </div>
-      <BrewerFlavorRadar flavor={flavor} suggestedIons={suggestedIons} />
       <div className="mt-4 grid gap-2 rounded-xl border border-slate-700/50 bg-slate-900/35 px-3 py-3 sm:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div>
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suggested direction</div>
@@ -2802,6 +2781,137 @@ function BrewerFlavorPanel({
       <p className="mt-2 text-[10px] text-slate-500">
         0–60 stays within Aiki’s safe band · 60–75 is elevated · 75–100 is out of range. Use the steps button for a simple preparation guide.
       </p>
+    </div>
+  );
+}
+
+function BrewerFlavorPyramid({
+  flavor,
+  onChange,
+}: {
+  flavor: BrewerFlavorInput;
+  onChange: (flavor: BrewerFlavorInput) => void;
+}) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const draggingRef = useRef(false);
+  const apex = { x: 320, y: 42 };
+  const left = { x: 72, y: 290 };
+  const right = { x: 568, y: 290 };
+  const weights = {
+    apex: (flavor.brightness + flavor.juiciness) / 200,
+    left: flavor.sweetness / 100,
+    right: flavor.body / 100,
+  };
+  const weightTotal = weights.apex + weights.left + weights.right || 1;
+  const point = {
+    x: (apex.x * weights.apex + left.x * weights.left + right.x * weights.right) / weightTotal,
+    y: (apex.y * weights.apex + left.y * weights.left + right.y * weights.right) / weightTotal,
+  };
+
+  const flavorFromPoint = (x: number, y: number): BrewerFlavorInput => {
+    const denominator =
+      (left.y - right.y) * (apex.x - right.x) + (right.x - left.x) * (apex.y - right.y);
+    let apexWeight =
+      ((left.y - right.y) * (x - right.x) + (right.x - left.x) * (y - right.y)) / denominator;
+    let leftWeight =
+      ((right.y - apex.y) * (x - right.x) + (apex.x - right.x) * (y - right.y)) / denominator;
+    let rightWeight = 1 - apexWeight - leftWeight;
+    const positiveWeights = {
+      apex: Math.max(0, apexWeight),
+      left: Math.max(0, leftWeight),
+      right: Math.max(0, rightWeight),
+    };
+    const total = positiveWeights.apex + positiveWeights.left + positiveWeights.right || 1;
+    apexWeight = positiveWeights.apex / total;
+    leftWeight = positiveWeights.left / total;
+    rightWeight = positiveWeights.right / total;
+    return {
+      brightness: Math.round(apexWeight * 100),
+      juiciness: Math.round(apexWeight * 100),
+      sweetness: Math.round(leftWeight * 100),
+      body: Math.round(rightWeight * 100),
+    };
+  };
+
+  const updateFromPointer = (event: React.PointerEvent<SVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+    const rect = svg.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 640;
+    const y = ((event.clientY - rect.top) / rect.height) * 340;
+    onChange(flavorFromPoint(x, y));
+  };
+
+  const moveByKeyboard = (event: React.KeyboardEvent<SVGCircleElement>) => {
+    const amount = event.shiftKey ? 10 : 5;
+    let x = point.x;
+    let y = point.y;
+    if (event.key === 'ArrowLeft') x -= amount;
+    else if (event.key === 'ArrowRight') x += amount;
+    else if (event.key === 'ArrowUp') y -= amount;
+    else if (event.key === 'ArrowDown') y += amount;
+    else return;
+    event.preventDefault();
+    onChange(flavorFromPoint(x, y));
+  };
+
+  return (
+    <div className="mt-4 rounded-xl border border-slate-700/50 bg-slate-900/35 px-2 py-3 sm:px-4">
+      <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        Drag the star to shape your cup
+      </div>
+      <div className="flex justify-center">
+        <svg
+          ref={svgRef}
+          viewBox="0 0 640 340"
+          className="h-auto w-full max-w-[640px] touch-none select-none"
+          role="img"
+          aria-label="Interactive taste pyramid. Drag the star between brightness and fruit acidity, sweetness and clarity, and body and mouthfeel."
+        >
+          <defs>
+            <linearGradient id="brewer-pyramid-fill" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.16" />
+              <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.04" />
+            </linearGradient>
+          </defs>
+          <polygon points={`${apex.x},${apex.y} ${left.x},${left.y} ${right.x},${right.y}`} fill="url(#brewer-pyramid-fill)" stroke="rgb(125 211 252 / 0.65)" strokeWidth="2" />
+          <line x1={apex.x} y1={apex.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
+          <line x1={left.x} y1={left.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
+          <line x1={right.x} y1={right.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
+          <text x={apex.x} y="22" textAnchor="middle" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Brightness / Fruit Acidity</text>
+          <text x="64" y="318" textAnchor="start" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Sweetness &amp; Clarity</text>
+          <text x="576" y="318" textAnchor="end" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Body &amp; Mouthfeel</text>
+          <circle cx={point.x} cy={point.y} r="19" fill="rgb(14 165 233 / 0.16)" />
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r="12"
+            fill="#f8fafc"
+            stroke="#38bdf8"
+            strokeWidth="3"
+            tabIndex={0}
+            role="slider"
+            aria-label="Taste profile position"
+            aria-valuetext={`${flavor.brightness} brightness, ${flavor.juiciness} fruit, ${flavor.sweetness} sweetness, ${flavor.body} body`}
+            onPointerDown={event => {
+              draggingRef.current = true;
+              event.currentTarget.setPointerCapture(event.pointerId);
+              updateFromPointer(event);
+            }}
+            onPointerMove={event => {
+              if (draggingRef.current) updateFromPointer(event);
+            }}
+            onPointerUp={event => {
+              draggingRef.current = false;
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }}
+            onPointerCancel={() => { draggingRef.current = false; }}
+            onKeyDown={moveByKeyboard}
+            style={{ cursor: 'grab' }}
+          />
+          <text x={point.x} y={point.y + 5} textAnchor="middle" fill="#0284c7" fontSize="15" fontWeight="700">★</text>
+        </svg>
+      </div>
     </div>
   );
 }
