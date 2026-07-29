@@ -989,19 +989,21 @@ function App() {
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Find My Water</span>
               </button>
-              <button
-                onClick={handleBrewGuideExport}
-                disabled={batchMl <= 0}
-                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                  batchMl > 0
-                    ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
-                }`}
-                title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
-              >
-                <ListChecks className="w-4 h-4" />
-                <span className="hidden sm:inline">Brew Guide</span>
-              </button>
+              {nerdLevel !== 'brewer' && (
+                <button
+                  onClick={handleBrewGuideExport}
+                  disabled={batchMl <= 0}
+                  className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
+                    batchMl > 0
+                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
+                      : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
+                  }`}
+                  title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
+                >
+                  <ListChecks className="w-4 h-4" />
+                  <span className="hidden sm:inline">Brew Guide</span>
+                </button>
+              )}
               <button
                 onClick={handleExport}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
@@ -1223,6 +1225,7 @@ function App() {
             />
           )}
          {nerdLevel === 'brewer' ? (
+           <>
            <BrewerSimpleRecipeCard
              saltTargets={brewerSuggestedSaltTargets}
              liters={L}
@@ -1230,6 +1233,12 @@ function App() {
              concentrateLiters={concL}
              concentrateStrength={concentrateStrength}
            />
+           <BrewerActionsCard
+             canBrew={batchMl > 0}
+             onBrewGuide={handleBrewGuideExport}
+             onSave={handleSaveRecipe}
+           />
+           </>
          ) : (
          <>
          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
@@ -2454,6 +2463,57 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
         <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
       </div>
       {after}
+    </div>
+  );
+}
+
+function BrewerActionsCard({
+  canBrew,
+  onBrewGuide,
+  onSave,
+}: {
+  canBrew: boolean;
+  onBrewGuide: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
+      <div className="flex items-start gap-3">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/15 text-emerald-300">
+          <ListChecks className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Ready to brew?</div>
+          <p className="mt-1 text-xs leading-relaxed text-slate-400">
+            Your water recipe is live. Follow the guide for mixing instructions, or save it for next time.
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <button
+          type="button"
+          onClick={onBrewGuide}
+          disabled={!canBrew}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
+            canBrew
+              ? 'border-emerald-400/40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-400 hover:to-teal-400 hover:shadow-lg hover:shadow-emerald-500/20'
+              : 'cursor-not-allowed border-slate-600/40 bg-slate-700/40 text-slate-500'
+          }`}
+          title={canBrew ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
+        >
+          <ListChecks className="h-4 w-4" />
+          Brew Guide
+        </button>
+        <button
+          type="button"
+          onClick={onSave}
+          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-600/60 bg-slate-700/40 px-3 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-700/70"
+          title="Save the current recipe on this device"
+        >
+          <Save className="h-4 w-4" />
+          Save recipe
+        </button>
+      </div>
     </div>
   );
 }
