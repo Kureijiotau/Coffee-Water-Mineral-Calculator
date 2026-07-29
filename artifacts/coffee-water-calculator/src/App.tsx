@@ -2603,7 +2603,7 @@ function WaterChemistryCard({
         <p className="mt-3 text-xs leading-relaxed text-slate-500">
           {hasEstimate
             ? 'Estimated from reported base-water pH and alkalinity plus the recipe’s carbonate and citrate balance. Verify with a calibrated pH meter.'
-            : 'Add reported pH and alkalinity to a mineral-water entry above for a meaningful estimate. Listed ion concentrations alone cannot determine pH reliably.'}
+            : 'Select a mineral-water source above that includes both reported pH and alkalinity to estimate the final pH. Ion concentrations alone are not enough to determine pH reliably.'}
         </p>
       </div>
     </details>
