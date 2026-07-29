@@ -445,10 +445,19 @@ function App() {
     return [...mineralWaters, ...additionWaters].reduce((total, entry) => {
       const volume = num(entry.volumeMl) * sourceScale;
       const reportedTds = num(entry.metadata.tds ?? '');
-      return total + (reportedTds * volume) / batchMl;
+      const ionTds = ACTIVE_ION_IDS.reduce((sum, id) => sum + num(entry.ions[id] ?? ''), 0);
+      const waterTds = reportedTds > 0 ? reportedTds : ionTds;
+      return total + (waterTds * volume) / batchMl;
     }, 0);
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
   const tds = tdsSalt + tdsMineral;
+  const tdsForRecipeSteps = useMemo(() => {
+    const hasMineralWater = [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0);
+    const saltTargetsForSteps = hasMineralWater ? suggestedSaltTargets : saltTargets;
+    const saltIons = computeIonTotals(saltTargetsForSteps, {}, 1);
+    const adjustedSaltTds = Object.values(saltIons).reduce((total, ppm) => total + ppm, 0);
+    return adjustedSaltTds + tdsMineral;
+  }, [mineralWaters, additionWaters, saltTargets, suggestedSaltTargets, tdsMineral]);
   const waterChemistry = useMemo(() => {
     let pHWeighted = 0;
     let pHVolume = 0;
@@ -2480,7 +2489,7 @@ function App() {
           bottledIons={bottledIons}
           suggestedSaltTargets={suggestedSaltTargets}
           nerdLevel={nerdLevel}
-          tdsTarget={tds}
+          tdsTarget={tdsForRecipeSteps}
           onClose={() => setShowBrewerSteps(false)}
         />
       )}
