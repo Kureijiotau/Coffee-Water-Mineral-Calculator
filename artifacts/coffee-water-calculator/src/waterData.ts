@@ -134,12 +134,12 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'bicitrates', name: 'Bicitrates', formula: 'C₆H₆O₇²⁻', greenMax: 15, yellowMax: 35,
-    tasteNote: 'A milder citrate form that buffers while adding gentle acidity; can round out a cup but excess tastes sour.',
+    id: 'bicitrates', name: 'Bicitrates', formula: 'C₆H₆O₇²⁻', greenMax: 10, yellowMax: 20,
+    tasteNote: 'A milder citrate form (one fewer charge) that contributes gentle acidity and light buffering; noticeable tartness appears sooner than you might expect given its weaker acidity.',
     flagNotes: {
-      green: 'Balanced — gentle acidity and buffering work together for a rounded cup.',
-      yellow: 'Elevated — a sour or tart note builds in the background.',
-      red: 'Too high — the cup tastes sharply sour and unbalanced.',
+      green: 'Balanced — gentle acidity and soft buffering add a subtle brightness without tartness.',
+      yellow: 'Elevated — a mild sour or tart edge begins to build, slightly softening the cup\'s clarity.',
+      red: 'Too high — the cup tastes noticeably sour and unbalanced, overwhelming delicate flavors.',
     },
   },
   {
