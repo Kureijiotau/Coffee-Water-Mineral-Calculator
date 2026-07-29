@@ -2467,11 +2467,13 @@ function App() {
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
           saltTargets={saltTargets}
+          recipeRows={rows}
           liters={L}
           concentrateOn={concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
           baseWaters={mineralWaters}
+          additionWaters={additionWaters}
           baseWaterScale={sourceScale}
           batchMl={batchMl}
           saltOnlyIons={saltOnlyIons}
@@ -2627,11 +2629,13 @@ function BrewerSimpleRecipeCard({
 
 function BrewerRecipeStepsModal({
   saltTargets,
+  recipeRows,
   liters,
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
   baseWaters,
+  additionWaters,
   baseWaterScale,
   batchMl,
   saltOnlyIons,
@@ -2641,11 +2645,13 @@ function BrewerRecipeStepsModal({
   onClose,
 }: {
   saltTargets: Record<string, number>;
+  recipeRows: SaltRow[];
   liters: number;
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
   baseWaters: MineralWaterEntry[];
+  additionWaters: MineralWaterEntry[];
   baseWaterScale: number;
   batchMl: number;
   saltOnlyIons: Record<IonId, number>;
@@ -2661,6 +2667,12 @@ function BrewerRecipeStepsModal({
     }))
     .filter(water => water.volume > 0);
   const hasBaseWater = configuredBaseWaters.length > 0 && batchMl > 0;
+  const configuredAdditionWaters = additionWaters
+    .map(water => ({
+      ...water,
+      volume: num(water.volumeMl) * baseWaterScale,
+    }))
+    .filter(water => water.volume > 0);
   const recipeSalts = SALTS.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
   const suggestedSalts = SALTS.filter(salt => (suggestedSaltTargets[salt.id] ?? 0) > 0);
   const simpleSaltNames: Record<string, string> = {
@@ -2686,6 +2698,30 @@ function BrewerRecipeStepsModal({
     : `${liters || 1} L water`;
   const formatWaterVolume = (volumeMl: number) =>
     volumeMl >= 1000 ? `${(volumeMl / 1000).toFixed(2)} L` : `${volumeMl.toFixed(0)} mL`;
+  const remainingWaterMl = Math.max(
+    batchMl
+      - configuredBaseWaters.reduce((sum, water) => sum + water.volume, 0)
+      - configuredAdditionWaters.reduce((sum, water) => sum + water.volume, 0),
+    0,
+  );
+  const orderedRecipeSalts = [
+    ...recipeSalts.filter(salt => salt.formula.includes('SO₄')),
+    ...recipeSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄')),
+    ...recipeSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃')),
+    ...recipeSalts.filter(salt =>
+      !salt.formula.includes('SO₄')
+      && !salt.formula.includes('Cl')
+      && !salt.formula.includes('HCO₃')
+      && !salt.formula.includes('CO₃'),
+    ),
+  ];
+  const saltGroup = (salt: typeof SALTS[number]) =>
+    salt.formula.includes('SO₄') ? 'Sulfate'
+      : salt.formula.includes('Cl') ? 'Chloride'
+        : salt.formula.includes('HCO₃') || salt.formula.includes('CO₃') ? 'Bicarbonate / carbonate'
+          : 'Other mineral';
+  const useMixingVessel = batchMl > 1000 && orderedRecipeSalts.length > 0;
+  const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 backdrop-blur-sm sm:p-4" onClick={onClose}>
@@ -2783,22 +2819,80 @@ function BrewerRecipeStepsModal({
               </div>
             )}
           <ol className="space-y-3">
-            {[
-              ['Start with water', configuredBaseWaters.length > 0
-                ? 'Add the base water amounts listed above, then make up any remaining volume with your chosen water.'
-                : `Use ${volumeLabel}. Room-temperature or cool water is easiest to mix.`],
-              ['Add the minerals', 'Measure each listed salt using its proper hydrated form and amount, then add it to the water.'],
-              ['Mix completely', 'Seal and shake, or stir until every mineral is dissolved.'],
-              ['Taste and brew', 'Use the finished water for coffee. Store covered and use fresh when possible.'],
-            ].map(([title, detail], index) => (
-              <li key={title} className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">{index + 1}</span>
-                <div>
-                  <div className="text-sm font-medium text-slate-200">{title}</div>
-                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">{detail}</div>
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">1</span>
+              <div>
+                <div className="text-sm font-medium text-slate-200">Prepare the water</div>
+                <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                  {remainingWaterMl > 0
+                    ? `Measure ${formatWaterVolume(remainingWaterMl)} of RO / distilled water.`
+                    : `Prepare ${volumeLabel} of water.`}
+                </div>
+                <div className="mt-1 space-y-0.5 text-xs leading-relaxed text-slate-400">
+                  {configuredBaseWaters.map(water => (
+                    <div key={`step-base-${water.id}`}>• Add {formatWaterVolume(water.volume)} of {water.name || 'base water'}.</div>
+                  ))}
+                  {configuredAdditionWaters.map(water => (
+                    <div key={`step-addition-${water.id}`}>• Add {formatWaterVolume(water.volume)} of {water.name || 'addition water'}.</div>
+                  ))}
+                </div>
+              </div>
+            </li>
+            {orderedRecipeSalts.length > 0 && (
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">2</span>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-slate-200">Add the minerals in order</div>
+                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                    Add one salt at a time. Stir until fully dissolved before adding the next.
+                  </div>
+                  <div className="mt-2 space-y-2">
+                    {orderedRecipeSalts.map((salt, index) => {
+                      const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+                      const formIndex = saltIndex >= 0
+                        ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+                        : salt.defaultFormIdx ?? 0;
+                      const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                      return (
+                        <div key={`step-salt-${salt.id}`} className="rounded-lg bg-slate-900/45 px-3 py-2">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-xs font-medium text-slate-200">
+                                {index + 1}. {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-slate-500">
+                                {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
+                              </div>
+                            </div>
+                            <span className="shrink-0 font-mono text-xs text-emerald-300">{amount(salt)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </li>
-            ))}
+            )}
+            {useMixingVessel && (
+              <li className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">3</span>
+                <div>
+                  <div className="text-sm font-medium text-slate-200">Combine and top up</div>
+                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                    Dissolve the salts in {formatWaterVolume(mixingVesselMl)} first, then add the mineral concentrate to the remaining water and stir thoroughly.
+                  </div>
+                </div>
+              </li>
+            )}
+            <li className="flex gap-3">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">{useMixingVessel ? 4 : orderedRecipeSalts.length > 0 ? 3 : 2}</span>
+              <div>
+                <div className="text-sm font-medium text-slate-200">Verify and brew</div>
+                <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                  Check that the water is clear and all minerals are dissolved. Proceed with your brew method and adjust extraction to taste.
+                </div>
+              </div>
+            </li>
           </ol>
           <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
             Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
