@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles, Maximize2 } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
   computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -267,7 +267,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState(false);
-  const [showBrewStation, setShowBrewStation] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
 
@@ -1311,7 +1310,6 @@ function App() {
               suggestedIons={brewerSuggestedIons}
               onChange={handleBrewerFlavorChange}
               onShowSteps={() => setShowBrewerSteps(true)}
-             onShowStation={() => setShowBrewStation(true)}
             />
           )}
          {nerdLevel === 'brewer' ? (
@@ -2468,16 +2466,6 @@ function App() {
           onClose={() => setShowBrewerSteps(false)}
         />
       )}
-      {showBrewStation && (
-        <BrewStationMode
-          saltTargets={brewerSuggestedSaltTargets}
-          liters={L}
-          concentrateOn={concentrateOn}
-          concentrateLiters={concL}
-          concentrateStrength={concentrateStrength}
-          onClose={() => setShowBrewStation(false)}
-        />
-      )}
 
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
@@ -2935,13 +2923,11 @@ function BrewerFlavorPanel({
   suggestedIons,
   onChange,
   onShowSteps,
-  onShowStation,
 }: {
   flavor: BrewerFlavorInput;
   suggestedIons: Record<IonId, number>;
   onChange: (flavor: BrewerFlavorInput) => void;
   onShowSteps: () => void;
-  onShowStation: () => void;
 }) {
   const gh = computeGH(suggestedIons);
   const kh = computeKH(suggestedIons);
@@ -2968,14 +2954,6 @@ function BrewerFlavorPanel({
           >
             <ListChecks className="h-3.5 w-3.5" />
             Recipe steps
-          </button>
-          <button
-            type="button"
-            onClick={onShowStation}
-            className="flex items-center gap-1.5 rounded-lg border border-emerald-300/50 bg-emerald-400/20 px-3 py-2 text-xs font-bold text-emerald-100 transition hover:bg-emerald-400/30"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-            Brew Station
           </button>
         </div>
       </div>
