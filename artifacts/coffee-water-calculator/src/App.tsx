@@ -196,7 +196,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState(false);
-  const [showBrewerSave, setShowBrewerSave] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
 
@@ -563,13 +562,13 @@ function App() {
     return m;
   };
 
-  const handleSaveRecipe = (providedName?: string) => {
+  const handleSaveRecipe = () => {
     const salts = buildCurrentSalts();
     if (Object.keys(salts).length === 0) {
       window.alert('Enter at least one salt target before saving a recipe.');
       return;
     }
-    const name = providedName?.trim() || window.prompt('Name this recipe:')?.trim();
+    const name = window.prompt('Name this recipe:')?.trim();
     if (!name) return;
     const recipe: SaltRecipe = {
       id: newRecipeId(),
@@ -583,7 +582,6 @@ function App() {
     };
     setSavedRecipes(prev => [...prev, recipe]);
     setActiveRecipeId(recipe.id);
-    setShowBrewerSave(false);
   };
 
   const handleDeleteRecipe = () => {
@@ -991,21 +989,19 @@ function App() {
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Find My Water</span>
               </button>
-              {nerdLevel !== 'brewer' && (
-                <button
-                  onClick={handleBrewGuideExport}
-                  disabled={batchMl <= 0}
-                  className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                    batchMl > 0
-                      ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                      : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
-                  }`}
-                  title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
-                >
-                  <ListChecks className="w-4 h-4" />
-                  <span className="hidden sm:inline">Brew Guide</span>
-                </button>
-              )}
+              <button
+                onClick={handleBrewGuideExport}
+                disabled={batchMl <= 0}
+                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
+                  batchMl > 0
+                    ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
+                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
+                }`}
+                title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
+              >
+                <ListChecks className="w-4 h-4" />
+                <span className="hidden sm:inline">Brew Guide</span>
+              </button>
               <button
                 onClick={handleExport}
                 className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
@@ -1130,7 +1126,7 @@ function App() {
                </select>
               {activeRecipeId === 'custom' && (
                 <button
-                  onClick={() => handleSaveRecipe()}
+                  onClick={handleSaveRecipe}
                   className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
                   title="Save the current salts as a named recipe on this device"
                 >
@@ -1227,7 +1223,6 @@ function App() {
             />
           )}
          {nerdLevel === 'brewer' ? (
-           <>
            <BrewerSimpleRecipeCard
              saltTargets={brewerSuggestedSaltTargets}
              liters={L}
@@ -1235,12 +1230,6 @@ function App() {
              concentrateLiters={concL}
              concentrateStrength={concentrateStrength}
            />
-           <BrewerActionsCard
-             canBrew={batchMl > 0}
-             onBrewGuide={handleBrewGuideExport}
-             onSave={() => setShowBrewerSave(true)}
-           />
-           </>
          ) : (
          <>
          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
@@ -2388,18 +2377,6 @@ function App() {
         />
       )}
 
-      {showBrewerSave && (
-        <BrewerSaveRecipeModal
-          saltTargets={brewerSuggestedSaltTargets}
-          liters={L}
-          concentrateOn={concentrateOn}
-          concentrateLiters={concL}
-          concentrateStrength={concentrateStrength}
-          onClose={() => setShowBrewerSave(false)}
-          onSave={name => handleSaveRecipe(name)}
-        />
-      )}
-
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCommunityModalOpen(false)}>
@@ -2477,57 +2454,6 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
         <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
       </div>
       {after}
-    </div>
-  );
-}
-
-function BrewerActionsCard({
-  canBrew,
-  onBrewGuide,
-  onSave,
-}: {
-  canBrew: boolean;
-  onBrewGuide: () => void;
-  onSave: () => void;
-}) {
-  return (
-    <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-500/15 text-emerald-300">
-          <ListChecks className="h-5 w-5" />
-        </div>
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-emerald-300">Ready to brew?</div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-400">
-            Your water recipe is live. Follow the guide for mixing instructions, or save it for next time.
-          </p>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={onBrewGuide}
-          disabled={!canBrew}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
-            canBrew
-              ? 'border-emerald-400/40 bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-400 hover:to-teal-400 hover:shadow-lg hover:shadow-emerald-500/20'
-              : 'cursor-not-allowed border-slate-600/40 bg-slate-700/40 text-slate-500'
-          }`}
-          title={canBrew ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
-        >
-          <ListChecks className="h-4 w-4" />
-          Brew Guide
-        </button>
-        <button
-          type="button"
-          onClick={onSave}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-600/60 bg-slate-700/40 px-3 py-2.5 text-xs font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-700/70"
-          title="Save the current recipe on this device"
-        >
-          <Save className="h-4 w-4" />
-          Save recipe
-        </button>
-      </div>
     </div>
   );
 }
@@ -2678,104 +2604,6 @@ function BrewerRecipeStepsModal({
           <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
             Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
           </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BrewerSaveRecipeModal({
-  saltTargets,
-  liters,
-  concentrateOn,
-  concentrateLiters,
-  concentrateStrength,
-  onClose,
-  onSave,
-}: {
-  saltTargets: Record<string, number>;
-  liters: number;
-  concentrateOn: boolean;
-  concentrateLiters: number;
-  concentrateStrength: number;
-  onClose: () => void;
-  onSave: (name: string) => void;
-}) {
-  const [name, setName] = useState('My coffee water');
-  const simpleSalts = [
-    { id: 'mgso4', label: 'Epsom salt' },
-    { id: 'nahco3', label: 'Baking soda' },
-    { id: 'nacl', label: 'Table salt' },
-    ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium chloride' }] : []),
-  ];
-  const amount = (id: string) => {
-    const salt = SALTS.find(item => item.id === id);
-    const target = saltTargets[id] ?? 0;
-    if (!salt || target <= 0) return '0 mg';
-    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
-    const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
-    const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
-      * (concentrateOn ? concentrateStrength : 1);
-    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={onClose}>
-      <div
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-emerald-400/25 bg-slate-800 shadow-2xl"
-        onClick={event => event.stopPropagation()}
-      >
-        <div className="flex items-start justify-between border-b border-slate-700/50 bg-gradient-to-r from-emerald-500/15 to-sky-500/10 px-5 py-4">
-          <div>
-            <div className="flex items-center gap-2 text-emerald-200">
-              <Save className="h-5 w-5" />
-              <h2 className="text-base font-semibold">Save this recipe</h2>
-            </div>
-            <p className="mt-1 text-xs text-slate-400">Save the current live flavor recipe for next time.</p>
-          </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close save recipe">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-        <div className="space-y-4 p-5">
-          <label className="block">
-            <span className="text-xs font-medium text-slate-300">Recipe name</span>
-            <input
-              autoFocus
-              value={name}
-              onChange={event => setName(event.target.value)}
-              onKeyDown={event => {
-                if (event.key === 'Enter' && name.trim()) onSave(name);
-              }}
-              className="mt-1.5 w-full rounded-lg border border-slate-600/70 bg-slate-900/60 px-3 py-2.5 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
-              placeholder="e.g. Bright morning water"
-            />
-          </label>
-          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Recipe snapshot</div>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              {simpleSalts.map(salt => (
-                <div key={salt.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-900/45 px-3 py-2">
-                  <span className="text-xs text-slate-200">{salt.label}</span>
-                  <span className="font-mono text-xs text-emerald-300">{amount(salt.id)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-slate-700/50 pt-4">
-            <button type="button" onClick={onClose} className="rounded-lg border border-slate-600/60 bg-slate-700/40 px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/70">
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => onSave(name)}
-              disabled={!name.trim()}
-              className="flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:from-emerald-400 hover:to-teal-400 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Save className="h-4 w-4" />
-              Save recipe
-            </button>
-          </div>
         </div>
       </div>
     </div>
