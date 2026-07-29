@@ -2843,7 +2843,7 @@ function BrewStationMode({
             <button
               type="button"
               disabled={safeIndex === 0}
-              onClick={() => { setStepIndex(index => Math.max(0, index - 1)); setScaleReading(''); }}
+              onClick={() => setStepIndex(index => Math.max(0, index - 1))}
               className="min-h-14 flex-1 rounded-2xl border border-zinc-700 px-4 py-4 text-lg font-bold text-zinc-300 disabled:opacity-30"
             >
               Previous
@@ -2851,7 +2851,7 @@ function BrewStationMode({
             <button
               type="button"
               disabled={!isOnTarget}
-              onClick={() => { setStepIndex(index => Math.min(steps.length - 1, index + 1)); setScaleReading(''); }}
+              onClick={() => setStepIndex(index => Math.min(steps.length - 1, index + 1))}
               className="min-h-14 flex-[2] rounded-2xl bg-emerald-400 px-4 py-4 text-lg font-black text-black disabled:bg-zinc-800 disabled:text-zinc-600"
             >
               {isFinished ? 'Finished — mix minerals' : 'Check & next'}
