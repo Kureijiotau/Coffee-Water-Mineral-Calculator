@@ -5,6 +5,7 @@ interface Props {
   ionTotals: Record<IonId, number>;
   gh: number;
   kh: number;
+  collapsed?: boolean;
 }
 
 function clamp(v: number, lo: number, hi: number) {
@@ -212,7 +213,7 @@ function ProfileRow({ label, profile }: { label: React.ReactNode; profile: Profi
 
 // — Main component ————————————————————————————————————
 
-export default function TasteProfileCard({ ionTotals, gh, kh }: Props) {
+export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false }: Props) {
   const sc = ionTotals.chloride > 0
     ? ionTotals.sulfate / ionTotals.chloride
     : ionTotals.sulfate > 0 ? 20 : 0;
@@ -222,15 +223,16 @@ export default function TasteProfileCard({ ionTotals, gh, kh }: Props) {
 
   if (!hasData) {
     return (
-      <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-700/40 bg-gradient-to-r from-amber-600 to-orange-500">
+      <details open={!collapsed} className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        <summary className="flex list-none cursor-pointer items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-600 to-orange-500 [&::-webkit-details-marker]:hidden">
           <Coffee className="w-4 h-4 text-white" />
           <span className="text-sm font-semibold text-white">Taste Profile</span>
+          <span className="ml-auto text-xs text-white/60 transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <div className="border-t border-slate-700/40 px-5 py-6 text-center text-xs text-slate-500 italic">
+            Set salt targets or mineral waters to see how this profile might taste.
         </div>
-        <div className="px-5 py-6 text-center text-xs text-slate-500 italic">
-          Set salt targets or mineral waters to see how this profile might taste.
-        </div>
-      </div>
+      </details>
     );
   }
 
@@ -241,14 +243,15 @@ export default function TasteProfileCard({ ionTotals, gh, kh }: Props) {
   const cof = scoreCoFerment(ionTotals, gh, kh, sc);
 
   return (
-    <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-slate-700/40 bg-gradient-to-r from-amber-600 to-orange-500">
+    <details open={!collapsed} className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+      <summary className="flex list-none cursor-pointer items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-600 to-orange-500 [&::-webkit-details-marker]:hidden">
         <Coffee className="w-4 h-4 text-white" />
         <span className="text-sm font-semibold text-white">Taste Profile</span>
-      </div>
+        <span className="ml-auto text-xs text-white/60 transition-transform group-open:rotate-180">⌄</span>
+      </summary>
 
       {/* Overview metrics */}
-      <div className="px-5 py-3 space-y-1.5 text-[11px] text-slate-400 border-b border-slate-700/30">
+      <div className="border-t border-slate-700/40 px-5 py-3 space-y-1.5 text-[11px] text-slate-400 border-b border-slate-700/30">
         <p className="flex items-start gap-1.5">
           <Droplets className="w-3 h-3 text-sky-400 mt-0.5 shrink-0" />
           <span>
@@ -300,6 +303,6 @@ export default function TasteProfileCard({ ionTotals, gh, kh }: Props) {
         <ProfileRow label={<><Wind className="w-3 h-3 inline text-emerald-400" /> Natural</>} profile={natural} />
         <ProfileRow label={<><Coffee className="w-3 h-3 inline text-purple-400" /> Co-ferment / High impact</>} profile={cof} />
       </div>
-    </div>
+    </details>
   );
 }

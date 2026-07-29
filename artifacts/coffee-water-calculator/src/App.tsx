@@ -1434,7 +1434,7 @@ function App() {
         )}
 
         {/* Taste Profile */}
-        <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} />
+        <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} collapsed={showAlchemist} />
 
         {/* Mineral Water Base */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
