@@ -475,6 +475,7 @@ function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
+    setBrewerFlavor({ brightness: 0, body: 0, juiciness: 0, sweetness: 0 });
     setMineralWaters([]);
     setAdditionWaters([]);
     setLiters('1');
