@@ -2837,6 +2837,9 @@ function BrewerSimpleRecipeCard({
   concentrateLiters: number;
   concentrateStrength: number;
 }) {
+  const DROPPER_STRENGTH = 500;
+  const DROPS_PER_ML = 20;
+  const [dropperBottleMl, setDropperBottleMl] = useState('60');
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
@@ -2860,6 +2863,25 @@ function BrewerSimpleRecipeCard({
       ? computeSaltMg(target, concentrateLiters, form.molarMass, salt.anhydrousMass) * concentrateStrength
       : computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
+  };
+  const dropperBottleL = Math.max(0, num(dropperBottleMl)) / 1000;
+  const dropperDoseMlPerLiter = 1000 / DROPPER_STRENGTH;
+  const dropperDoseMlPer500 = dropperDoseMlPerLiter * 0.5;
+  const dropperDropsPer500 = Math.round(dropperDoseMlPer500 * DROPS_PER_ML);
+  const dropperBatchCount = dropperDoseMlPer500 > 0
+    ? Math.floor(Math.max(0, num(dropperBottleMl)) / dropperDoseMlPer500)
+    : 0;
+  const getDropperMassLabel = (id: string) => {
+    const salt = SALTS.find(item => item.id === id);
+    const target = saltTargets[id] ?? 0;
+    if (!salt || target <= 0 || dropperBottleL <= 0) return '—';
+    const saltIndex = SALTS.findIndex(item => item.id === id);
+    const formIndex = saltIndex >= 0
+      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+      : salt.defaultFormIdx ?? 0;
+    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const mass = computeSaltMg(target, dropperBottleL, form.molarMass, salt.anhydrousMass) * DROPPER_STRENGTH;
+    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(0)} mg`;
   };
 
   return (
@@ -2891,6 +2913,50 @@ function BrewerSimpleRecipeCard({
           For a stable concentrate, keep Epsom salt and calcium chloride in separate stock bottles. Do not combine them, since sulfate and calcium can form gypsum.
         </div>
       )}
+      <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">Optional dropper stocks</div>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+              Conservative 500× stocks keep each 500 mL brew to {dropperDropsPer500} drops per active bottle.
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-[11px] text-slate-300">
+            <span>Bottle</span>
+            <input
+              type="number"
+              min="10"
+              max="500"
+              step="1"
+              inputMode="numeric"
+              value={dropperBottleMl}
+              onChange={event => setDropperBottleMl(event.target.value)}
+              className="w-16 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2 py-1.5 text-right text-xs text-slate-100 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+              aria-label="Dropper bottle volume in milliliters"
+            />
+            <span>mL</span>
+          </label>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {simpleSalts.filter(salt => (saltTargets[salt.id] ?? 0) > 0).map(salt => (
+            <div key={`dropper-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2">
+              <div>
+                <div className="text-xs font-medium text-slate-200">{salt.label} stock</div>
+                <div className="text-[10px] text-slate-500">{dropperDropsPer500} drops / 500 mL brew</div>
+              </div>
+              <span className="shrink-0 font-mono text-xs text-violet-200">{getDropperMassLabel(salt.id)}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+          <span>Add {dropperDoseMlPer500.toFixed(1)} mL per 500 mL brew</span>
+          <span>·</span>
+          <span>~{dropperBatchCount} brews from this bottle</span>
+        </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+          Mix each bottle separately with distilled water to the selected final volume. Assumes 20 drops/mL—verify your dropper once. Smaller bottles use the same strength and simply last for fewer brews.
+        </p>
+      </div>
     </div>
   );
 }
