@@ -2845,7 +2845,6 @@ function BrewerSimpleRecipeCard({
 }) {
   const DROPS_PER_ML = 20;
   const UNIVERSAL_STOCK_PERCENT = 5;
-  const PANTRY_BOTTLE_ML = 100;
   const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
   const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / DROPS_PER_ML;
   type BrewerPrepMethod = 'dry' | 'dropper';
@@ -2854,6 +2853,8 @@ function BrewerSimpleRecipeCard({
   const [makeWaterOpen, setMakeWaterOpen] = useState(false);
   const [makeWaterStage, setMakeWaterStage] = useState<'choice' | 'prep' | 'dose'>('choice');
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
+  const [pantryBottleMl, setPantryBottleMl] = useState('60');
+  const [calciumAvailable, setCalciumAvailable] = useState(true);
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
@@ -2892,7 +2893,7 @@ function BrewerSimpleRecipeCard({
     return Math.max(1, Math.round(physicalSaltMg / UNIVERSAL_STOCK_MG_PER_DROP));
   };
   const universalStockMassLabel = () => {
-    const mass = PANTRY_BOTTLE_ML * UNIVERSAL_STOCK_MG_PER_ML / 1000;
+    const mass = Math.max(0, num(pantryBottleMl)) * UNIVERSAL_STOCK_MG_PER_ML / 1000;
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} kg` : `${mass.toFixed(1)} g`;
   };
   const activeSimpleSalts = simpleSalts.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
@@ -2902,9 +2903,10 @@ function BrewerSimpleRecipeCard({
     { id: 'nacl', label: 'Table salt', note: 'roundness & balance' },
     { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
   ];
-  const completedSaltCount = activeSimpleSalts.filter(salt => completedSteps[salt.id]).length;
-  const waterReady = activeSimpleSalts.length > 0
-    && completedSaltCount === activeSimpleSalts.length
+  const recipeSalts = activeSimpleSalts.filter(salt => calciumAvailable || salt.id !== 'cacl2');
+  const completedRecipeSaltCount = recipeSalts.filter(salt => completedSteps[salt.id]).length;
+  const waterReady = recipeSalts.length > 0
+    && completedRecipeSaltCount === recipeSalts.length
     && (prepMethod !== 'dropper' || stocksReady);
   const openMakeWaterChecklist = () => {
     setCompletedSteps({});
@@ -2928,7 +2930,11 @@ function BrewerSimpleRecipeCard({
               type="button"
               role="tab"
               aria-selected={prepMethod === method}
-              onClick={() => setPrepMethod(method)}
+              onClick={() => {
+                setPrepMethod(method);
+                if (method === 'dry' && makeWaterOpen) setMakeWaterStage('dose');
+                if (method === 'dropper' && makeWaterOpen && !stocksReady) setMakeWaterStage('choice');
+              }}
               className={`rounded-lg border px-3 py-2 text-left transition ${
                 prepMethod === method
                   ? 'border-sky-400/50 bg-sky-500/15 text-sky-100 shadow-sm'
@@ -2972,7 +2978,7 @@ function BrewerSimpleRecipeCard({
           </span>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {activeSimpleSalts.map(salt => (
+          {recipeSalts.map(salt => (
             <div key={`cockpit-${salt.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2.5">
               <span className="text-xs font-medium text-slate-200">
                 {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
@@ -2983,6 +2989,11 @@ function BrewerSimpleRecipeCard({
             </div>
           ))}
         </div>
+        {prepMethod === 'dropper' && !calciumAvailable && calciumTarget > 0.05 && (
+          <p className="mt-2 text-[10px] text-amber-200/75">
+            Calcium chloride skipped for this pantry — this recipe will have a lighter body.
+          </p>
+        )}
         <button
           type="button"
           onClick={openMakeWaterChecklist}
@@ -3055,8 +3066,27 @@ function BrewerSimpleRecipeCard({
           )}
           {makeWaterStage === 'prep' && prepMethod === 'dropper' && (
             <div className="mt-3 rounded-xl border border-violet-400/20 bg-violet-500/10 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2">
+                <span className="text-[11px] text-slate-300">Your bottle size</span>
+                <div className="flex gap-1 rounded-lg border border-slate-700/60 bg-slate-900/50 p-1">
+                  {['60', '100'].map(size => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setPantryBottleMl(size)}
+                      className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition ${
+                        pantryBottleMl === size
+                          ? 'bg-violet-400/25 text-violet-100'
+                          : 'text-slate-500 hover:text-slate-200'
+                      }`}
+                    >
+                      {size} mL
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="grid gap-1.5 sm:grid-cols-2">
-                {pantrySalts.map(salt => (
+                {pantrySalts.filter(salt => calciumAvailable || salt.id !== 'cacl2').map(salt => (
                   <div key={`prep-${salt.id}`} className="flex items-center justify-between rounded-lg bg-slate-950/25 px-3 py-2">
                     <span className="text-xs text-slate-200">{salt.label}</span>
                     <span className="font-mono text-xs font-semibold text-violet-200">{universalStockMassLabel()}</span>
@@ -3064,8 +3094,22 @@ function BrewerSimpleRecipeCard({
                 ))}
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-                Put <strong className="text-slate-200">{universalStockMassLabel()}</strong> of each salt into its own bottle, then fill each to <strong className="text-slate-200">{PANTRY_BOTTLE_ML} mL</strong> with distilled or RO water. Cap and shake.
+                Put <strong className="text-slate-200">{universalStockMassLabel()}</strong> of each listed salt into its own bottle, then fill each to <strong className="text-slate-200">{pantryBottleMl} mL</strong> with distilled or RO water. Cap and shake.
               </p>
+              {calciumTarget > 0.05 && (
+                <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={!calciumAvailable}
+                    onChange={event => setCalciumAvailable(!event.target.checked)}
+                    className="mt-0.5 h-3.5 w-3.5 accent-violet-400"
+                  />
+                  <span>
+                    I don’t have calcium chloride
+                    <span className="mt-0.5 block text-[10px] text-slate-500">Skip it and make a lighter-bodied version.</span>
+                  </span>
+                </label>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -3080,7 +3124,7 @@ function BrewerSimpleRecipeCard({
           )}
           {makeWaterStage === 'dose' && (stocksReady || prepMethod === 'dry') ? (
             <div className="mt-3 space-y-2">
-              {activeSimpleSalts.map(salt => {
+              {recipeSalts.map(salt => {
                 const isComplete = Boolean(completedSteps[salt.id]);
                 return (
                   <button
