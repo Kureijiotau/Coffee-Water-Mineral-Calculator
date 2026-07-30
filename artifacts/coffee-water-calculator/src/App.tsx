@@ -3554,13 +3554,30 @@ function BrewerFlavorPyramid({
     };
   };
 
-  const updateFromPointer = (event: React.PointerEvent<SVGElement>) => {
+  const pointIsInsidePyramid = (x: number, y: number) => {
+    const denominator =
+      (left.y - right.y) * (apex.x - right.x) + (right.x - left.x) * (apex.y - right.y);
+    const apexWeight =
+      ((left.y - right.y) * (x - right.x) + (right.x - left.x) * (y - right.y)) / denominator;
+    const leftWeight =
+      ((right.y - apex.y) * (x - right.x) + (apex.x - right.x) * (y - right.y)) / denominator;
+    const rightWeight = 1 - apexWeight - leftWeight;
+    return apexWeight >= 0 && leftWeight >= 0 && rightWeight >= 0;
+  };
+
+  const getPointerPosition = (event: React.PointerEvent<SVGSVGElement>) => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) return null;
     const rect = svg.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * 640;
-    const y = ((event.clientY - rect.top) / rect.height) * 340;
-    onChange(flavorFromPoint(x, y));
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 640,
+      y: ((event.clientY - rect.top) / rect.height) * 340,
+    };
+  };
+
+  const updateFromPointer = (event: React.PointerEvent<SVGSVGElement>) => {
+    const position = getPointerPosition(event);
+    if (position) onChange(flavorFromPoint(position.x, position.y));
   };
 
   const moveByKeyboard = (event: React.KeyboardEvent<SVGCircleElement>) => {
@@ -3588,6 +3605,24 @@ function BrewerFlavorPyramid({
           className="h-auto w-full max-w-[640px] touch-none select-none"
           role="img"
           aria-label="Interactive taste pyramid. Drag the star between brightness and fruit acidity, sweetness and clarity, and body and mouthfeel."
+           onPointerDown={event => {
+             const position = getPointerPosition(event);
+             if (!position || !pointIsInsidePyramid(position.x, position.y)) return;
+             draggingRef.current = true;
+             event.currentTarget.setPointerCapture(event.pointerId);
+             updateFromPointer(event);
+           }}
+           onPointerMove={event => {
+             if (draggingRef.current) updateFromPointer(event);
+           }}
+           onPointerUp={event => {
+             draggingRef.current = false;
+             if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+               event.currentTarget.releasePointerCapture(event.pointerId);
+             }
+           }}
+           onPointerCancel={() => { draggingRef.current = false; }}
+           style={{ cursor: 'crosshair' }}
         >
           <defs>
             <linearGradient id="brewer-pyramid-fill" x1="0" y1="0" x2="1" y2="1">
@@ -3614,19 +3649,6 @@ function BrewerFlavorPyramid({
             role="slider"
             aria-label="Taste profile position"
             aria-valuetext={`${flavor.brightness} brightness, ${flavor.juiciness} fruit, ${flavor.sweetness} sweetness, ${flavor.body} body`}
-            onPointerDown={event => {
-              draggingRef.current = true;
-              event.currentTarget.setPointerCapture(event.pointerId);
-              updateFromPointer(event);
-            }}
-            onPointerMove={event => {
-              if (draggingRef.current) updateFromPointer(event);
-            }}
-            onPointerUp={event => {
-              draggingRef.current = false;
-              event.currentTarget.releasePointerCapture(event.pointerId);
-            }}
-            onPointerCancel={() => { draggingRef.current = false; }}
             onKeyDown={moveByKeyboard}
             style={{ cursor: 'grab' }}
           />
