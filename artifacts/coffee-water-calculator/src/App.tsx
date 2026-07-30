@@ -2272,7 +2272,7 @@ function App() {
                                  <span className="salt-grain salt-grain-three" />
                                </span>
                              </span>
-                             <span className="hidden sm:inline">{sodiumCorrectionOn ? 'NaCl on' : 'Add NaCl'}</span>
+                             <span className="hidden sm:inline">{sodiumCorrectionOn ? 'Salt added' : 'Add salt'}</span>
                            </button>
                          )}
                        </div>
