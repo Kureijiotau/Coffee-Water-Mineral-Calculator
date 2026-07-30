@@ -3,7 +3,7 @@ name: Builder dosing methods
 description: The Builder presents dry-salt and dropper-stock workflows without changing the shared chemistry calculations.
 ---
 
-The Builder’s dosing method switcher is a UX layer: Dry Salt Direct keeps scale-based recipe amounts primary, while Dropper Stocks makes batch drop counts primary after the user marks the stocks ready. Concentrate preparation remains available in the vault.
+The Builder’s dosing method switcher is a UX layer: Dropper Stocks is the beginner default and the live recipe cockpit shows batch drop counts immediately. Dry Salt Direct keeps scale-based recipe amounts primary. “Make this water” opens a checklist, while concentrate preparation remains available in the vault.
 
 **Why:** Beginners need a friendly path from exact salt calculations to repeatable drop dosing, but the established ion, hydration, source-water, and correction engine must remain authoritative.
 

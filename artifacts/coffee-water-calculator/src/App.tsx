@@ -2846,8 +2846,10 @@ function BrewerSimpleRecipeCard({
   const DROPPER_STRENGTH = 500;
   const DROPS_PER_ML = 20;
   type BrewerPrepMethod = 'dry' | 'dropper';
-  const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dry');
+  const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [stocksReady, setStocksReady] = useState(false);
+  const [makeWaterOpen, setMakeWaterOpen] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
   const [dropperBottleMl, setDropperBottleMl] = useState('60');
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
@@ -2897,6 +2899,14 @@ function BrewerSimpleRecipeCard({
     return `${mass.toFixed(1)} mg`;
   };
   const activeSimpleSalts = simpleSalts.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
+  const completedSaltCount = activeSimpleSalts.filter(salt => completedSteps[salt.id]).length;
+  const waterReady = activeSimpleSalts.length > 0
+    && completedSaltCount === activeSimpleSalts.length
+    && (prepMethod !== 'dropper' || stocksReady);
+  const openMakeWaterChecklist = () => {
+    setCompletedSteps({});
+    setMakeWaterOpen(true);
+  };
 
   return (
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
@@ -2927,6 +2937,120 @@ function BrewerSimpleRecipeCard({
           ))}
         </div>
       </div>
+      <div className="mt-3 rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_24px_-12px_rgba(52,211,153,0.5)]">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
+              <Sparkles className="h-4 w-4 text-emerald-300" />
+              Your recipe is ready
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {liters || 1} L batch · {prepMethod === 'dropper' ? 'Dropper stocks' : 'Dry salt direct'}
+            </p>
+          </div>
+          <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
+            Live result
+          </span>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {activeSimpleSalts.map(salt => (
+            <div key={`cockpit-${salt.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2.5">
+              <span className="text-xs font-medium text-slate-200">
+                {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
+              </span>
+              <span className={`shrink-0 font-mono text-sm font-semibold ${prepMethod === 'dropper' ? 'text-violet-200' : 'text-emerald-200'}`}>
+                {prepMethod === 'dropper' ? `${dropperDropsForBatch} drops` : getMassLabel(salt.id)}
+              </span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={openMakeWaterChecklist}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99]"
+        >
+          <Check className="h-4 w-4" />
+          Make this water
+        </button>
+        <p className="mt-2 text-center text-[10px] text-slate-500">
+          Turn this recipe into a quick, satisfying checklist.
+        </p>
+      </div>
+      {makeWaterOpen && (
+        <div className="mt-3 rounded-xl border border-emerald-400/25 bg-slate-950/25 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
+                {waterReady ? 'Water ready — let’s brew' : 'Make this water'}
+              </div>
+              <p className="mt-1 text-[11px] text-slate-400">
+                {prepMethod === 'dropper' && !stocksReady
+                  ? 'Prepare the stocks in the vault below, then mark them ready to unlock the dosing checklist.'
+                  : 'Check off each ingredient as you add it to your measured water.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMakeWaterOpen(false)}
+              className="rounded-lg px-2 py-1 text-xs text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+            >
+              Hide
+            </button>
+          </div>
+          {prepMethod === 'dropper' && !stocksReady && (
+            <label className="mt-3 flex cursor-pointer items-center gap-2 rounded-lg border border-violet-400/20 bg-violet-500/10 px-3 py-2 text-xs text-violet-100">
+              <input
+                type="checkbox"
+                checked={stocksReady}
+                onChange={event => setStocksReady(event.target.checked)}
+                className="h-4 w-4 accent-violet-400"
+              />
+              <span>I prepared my stock bottles</span>
+            </label>
+          )}
+          {stocksReady || prepMethod === 'dry' ? (
+            <div className="mt-3 space-y-2">
+              {activeSimpleSalts.map(salt => {
+                const isComplete = Boolean(completedSteps[salt.id]);
+                return (
+                  <button
+                    key={`checklist-${salt.id}`}
+                    type="button"
+                    onClick={() => setCompletedSteps(prev => ({ ...prev, [salt.id]: !prev[salt.id] }))}
+                    className={`flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
+                      isComplete
+                        ? 'border-emerald-400/30 bg-emerald-500/10'
+                        : 'border-slate-700/60 bg-slate-900/35 hover:border-emerald-400/30 hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${
+                        isComplete
+                          ? 'border-emerald-300 bg-emerald-400 text-slate-950'
+                          : 'border-slate-600 text-transparent'
+                      }`}>
+                        <Check className="h-3 w-3" />
+                      </span>
+                      <span className={`text-xs ${isComplete ? 'text-emerald-100 line-through' : 'text-slate-200'}`}>
+                        Add {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
+                      </span>
+                    </span>
+                    <span className={`font-mono text-xs font-semibold ${isComplete ? 'text-emerald-300' : 'text-violet-200'}`}>
+                      {prepMethod === 'dropper' ? `${dropperDropsForBatch} drops` : getMassLabel(salt.id)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {waterReady && (
+            <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-100">
+              <Sparkles className="h-4 w-4 text-emerald-300" />
+              Everything is in — brew away.
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
         <Check className="h-4 w-4" />
         Live simple recipe
