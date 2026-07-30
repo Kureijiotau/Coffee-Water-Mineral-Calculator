@@ -1249,18 +1249,6 @@ function App() {
                 <ListChecks className="w-4 h-4" />
                 <span className="hidden sm:inline">Brew Guide</span>
               </button>
-              <button
-                onClick={handleExport}
-                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                  exportCopied
-                    ? 'text-emerald-900 bg-emerald-300 border border-emerald-400 scale-105'
-                    : 'text-amber-900 bg-gradient-to-r from-amber-300 to-orange-300 hover:from-amber-200 hover:to-orange-200 border border-amber-400/60 hover:shadow-amber-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                }`}
-                title="Export recipe card (downloads .txt and copies to clipboard)"
-              >
-                {exportCopied ? <Check className="w-4 h-4" /> : <Download className="w-4 h-4" />}
-                <span>{exportCopied ? 'Saved!' : 'Export Recipe'}</span>
-              </button>
             </div>
             <div className="group/badge flex shrink-0 items-center gap-1">
               {indicatorOn && <OverallBadge level={overallLevel} />}

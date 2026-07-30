@@ -37,6 +37,7 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 - Prefer that the agent inspect running pages, endpoints, logs, and deployment behavior directly instead of asking the user to verify them.
 - Only ask the user to check something when it is genuinely inaccessible to the agent, such as a private dashboard control or one-time credential value.
 - Do not push commits routinely; leave pushing to the user. Push only when an exceptional deployment or infrastructure issue makes a remote recovery point important.
+- Avoid running full test, build, workflow restart, and preview checks after every small edit; use focused verification unless the change materially affects behavior or runtime.
 
 ## Gotchas
 
