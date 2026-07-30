@@ -1470,6 +1470,8 @@ function App() {
               saltTargets={brewerSuggestedSaltTargets}
               recipeRows={rows}
              liters={L}
+              volumeInput={liters}
+              onVolumeChange={value => setLiters(value)}
              concentrateOn={concentrateOn}
              concentrateLiters={concL}
              concentrateStrength={concentrateStrength}
@@ -1546,8 +1548,8 @@ function App() {
          )}
         </div>
 
-        {/* Water amount + Concentrate */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+         {/* Water amount + Concentrate */}
+         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Water Volume"
@@ -1731,7 +1733,7 @@ function App() {
               </div>
             )}
           </div>
-        </div>
+         </div>}
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
@@ -2826,6 +2828,8 @@ function BrewerSimpleRecipeCard({
   saltTargets,
   recipeRows,
   liters,
+  volumeInput,
+  onVolumeChange,
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
@@ -2833,6 +2837,8 @@ function BrewerSimpleRecipeCard({
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
+  volumeInput: string;
+  onVolumeChange: (value: string) => void;
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
@@ -2868,6 +2874,7 @@ function BrewerSimpleRecipeCard({
   const dropperDoseMlPerLiter = 1000 / DROPPER_STRENGTH;
   const dropperDoseMlPer500 = dropperDoseMlPerLiter * 0.5;
   const dropperDropsPer500 = Math.round(dropperDoseMlPer500 * DROPS_PER_ML);
+  const dropperDropsForBatch = Math.round(dropperDoseMlPerLiter * Math.max(liters, 0) * DROPS_PER_ML);
   const dropperBatchCount = dropperDoseMlPer500 > 0
     ? Math.floor(Math.max(0, num(dropperBottleMl)) / dropperDoseMlPer500)
     : 0;
@@ -2894,6 +2901,27 @@ function BrewerSimpleRecipeCard({
         Use familiar kitchen-friendly ingredients. Amounts are for {liters || 1} L of water
         {concentrateOn ? ' stock preparation' : ''}.
       </p>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/20 bg-slate-900/25 px-3 py-3">
+        <div>
+          <div className="text-xs font-semibold text-slate-200">How much water are you making?</div>
+          <div className="mt-1 text-[10px] text-slate-500">This controls the recipe amounts and drop count below.</div>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-slate-300">
+          <span className="sr-only">Batch volume</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.1"
+            value={volumeInput}
+            onChange={event => onVolumeChange(event.target.value)}
+            placeholder="1"
+            className="w-24 rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            aria-label="Final batch volume in liters"
+          />
+          <span>liters</span>
+        </label>
+      </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {simpleSalts.map(salt => (
           <div key={salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2.5">
@@ -2942,20 +2970,36 @@ function BrewerSimpleRecipeCard({
             <div key={`dropper-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2">
               <div>
                 <div className="text-xs font-medium text-slate-200">{salt.label} stock</div>
-                <div className="text-[10px] text-slate-500">{dropperDropsPer500} drops / 500 mL brew</div>
+                <div className="text-[10px] text-slate-500">{dropperDropsForBatch} drops for this batch</div>
               </div>
               <span className="shrink-0 font-mono text-xs text-violet-200">{getDropperMassLabel(salt.id)}</span>
             </div>
           ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
-          <span>Add {dropperDoseMlPer500.toFixed(1)} mL per 500 mL brew</span>
+          <span>{dropperDropsPer500} drops / 500 mL</span>
+          <span>·</span>
+          <span>{dropperDropsForBatch} drops for {liters || 1} L</span>
           <span>·</span>
           <span>~{dropperBatchCount} brews from this bottle</span>
         </div>
         <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
           Mix each bottle separately with distilled water to the selected final volume. Assumes 20 drops/mL—verify your dropper once. Smaller bottles use the same strength and simply last for fewer brews.
         </p>
+        <details className="mt-3 rounded-lg border border-slate-700/50 bg-slate-900/30 px-3 py-2">
+          <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-violet-200">
+            How to prepare your stock bottles
+          </summary>
+          <ol className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-slate-400">
+            <li><span className="font-semibold text-slate-300">1.</span> Label one bottle for each active salt and place it on a 0.1 g scale.</li>
+            <li><span className="font-semibold text-slate-300">2.</span> Tare the bottle, add the displayed salt mass, then add distilled or RO water to the selected final bottle volume.</li>
+            <li><span className="font-semibold text-slate-300">3.</span> Cap, shake well, and wait until the solution is clear before dosing.</li>
+            <li><span className="font-semibold text-slate-300">4.</span> Add the drops to your measured brew water, swirl, and then heat or brew.</li>
+          </ol>
+          <p className="mt-2 text-[10px] leading-relaxed text-amber-200/70">
+            Keep Epsom salt and calcium chloride in separate bottles. Do not combine sulfate and calcium stocks.
+          </p>
+        </details>
       </div>
     </div>
   );
