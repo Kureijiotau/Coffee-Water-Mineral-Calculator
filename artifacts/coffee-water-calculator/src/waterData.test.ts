@@ -3,6 +3,7 @@ import {
   computeSaltMg,
   computeIonTotals,
   findIonOvershoots,
+  findIonUnderdoses,
   computeGH,
   computeKH,
   SALTS,
@@ -135,6 +136,36 @@ describe('findIonOvershoots', () => {
     expect(findIonOvershoots(
       { chloride: 0.05, sulfate: 1.04 },
       { chloride: 0, sulfate: 1 },
+    )).toEqual([]);
+  });
+});
+
+describe('findIonUnderdoses', () => {
+  it('reports a positive-target ion that remains below target', () => {
+    const underdoses = findIonUnderdoses(
+      { chloride: 8 },
+      { chloride: 20 },
+    );
+
+    expect(underdoses).toEqual([{ id: 'chloride', amount: 12 }]);
+  });
+
+  it('reports every underdosed ion and ignores zero-target ions', () => {
+    const underdoses = findIonUnderdoses(
+      { chloride: 8, sulfate: 4, sodium: 10 },
+      { chloride: 20, sulfate: 10, sodium: 10, potassium: 0 },
+    );
+
+    expect(underdoses).toEqual([
+      { id: 'chloride', amount: 12 },
+      { id: 'sulfate', amount: 6 },
+    ]);
+  });
+
+  it('ignores differences within the display tolerance', () => {
+    expect(findIonUnderdoses(
+      { chloride: 9.951 },
+      { chloride: 10 },
     )).toEqual([]);
   });
 });

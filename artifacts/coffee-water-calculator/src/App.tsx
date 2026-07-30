@@ -5,7 +5,7 @@ import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
-  computeIonTotals, findIonOvershoots, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
+  computeIonTotals, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -513,6 +513,10 @@ function App() {
   );
   const finalRecipeOvershoots = useMemo(
     () => findIonOvershoots(suggestedIonTotals, saltOnlyIons),
+    [suggestedIonTotals, saltOnlyIons],
+  );
+  const finalRecipeUnderdoses = useMemo(
+    () => findIonUnderdoses(suggestedIonTotals, saltOnlyIons),
     [suggestedIonTotals, saltOnlyIons],
   );
   const ionProfileIons = ionProfileView === 'final-mixture'
@@ -2209,13 +2213,13 @@ function App() {
                     ));
                   })()}
                 </div>
-                 {finalRecipeOvershoots.length > 0 && (
+                 {(finalRecipeOvershoots.length > 0 || finalRecipeUnderdoses.length > 0) && (
                      <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
                        <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
-                         Final recipe overshoot
+                         Final recipe deviation
                        </span>
                        <p className="mt-1 text-[11px] text-slate-400">
-                          Mineral water and unavoidable salt co-ions can take other ions above the recipe target.
+                          Mineral water and suggested salts can leave some ions above or below the recipe target.
                        </p>
                        <div className="mt-2 flex flex-wrap gap-2">
                          {finalRecipeOvershoots.map(({ id, amount }) => (
@@ -2224,6 +2228,14 @@ function App() {
                              className="rounded-md border border-rose-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-rose-200"
                            >
                              {ION_MAP[id].formula} +{amount.toFixed(1)} ppm
+                           </span>
+                         ))}
+                         {finalRecipeUnderdoses.map(({ id, amount }) => (
+                           <span
+                             key={id}
+                             className="rounded-md border border-amber-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-amber-200"
+                           >
+                             {ION_MAP[id].formula} −{amount.toFixed(1)} ppm
                            </span>
                          ))}
                        </div>

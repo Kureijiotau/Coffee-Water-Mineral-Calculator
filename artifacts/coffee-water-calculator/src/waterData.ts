@@ -325,6 +325,23 @@ export function findIonOvershoots(
     .filter(item => item.amount > tolerance);
 }
 
+/**
+ * Find every modeled ion whose final concentration remains below a positive
+ * salt-only recipe target. Zero-target ions are not underdosed by definition.
+ */
+export function findIonUnderdoses(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+  tolerance = 0.05,
+): IonOvershoot[] {
+  return IONS
+    .map(({ id }) => ({
+      id,
+      amount: (target[id] ?? 0) - (actual[id] ?? 0),
+    }))
+    .filter(item => (target[item.id] ?? 0) > 0 && item.amount > tolerance);
+}
+
 export interface SaltRecipeEntry {
   target: string;
   formIdx: number;
