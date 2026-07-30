@@ -3000,7 +3000,15 @@ function BrewerSimpleRecipeCard({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-emerald-200">
-                {waterReady ? 'Water ready — let’s brew' : makeWaterStage === 'choice' ? 'One quick question' : makeWaterStage === 'prep' ? 'Build your pantry once' : 'Add your drops'}
+                {waterReady
+                  ? 'Water ready — let’s brew'
+                  : makeWaterStage === 'choice'
+                    ? 'One quick question'
+                    : makeWaterStage === 'prep'
+                      ? 'Build your pantry once'
+                      : prepMethod === 'dry'
+                        ? 'Add your salts'
+                        : 'Add your drops'}
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
                 {waterReady
@@ -3009,7 +3017,9 @@ function BrewerSimpleRecipeCard({
                     ? 'These reusable bottles work for every recipe you make here.'
                     : makeWaterStage === 'prep'
                       ? 'Use the same simple recipe for each bottle, then come back to dose your water.'
-                      : 'Check off each stock as you add it to your measured water.'}
+                      : prepMethod === 'dry'
+                        ? 'Check off each salt as you add it to your measured water.'
+                        : 'Check off each stock as you add it to your measured water.'}
               </p>
             </div>
             <button
