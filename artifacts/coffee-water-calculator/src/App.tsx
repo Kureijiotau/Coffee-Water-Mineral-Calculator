@@ -29,6 +29,7 @@ type BrewerFlavorInput = {
   juiciness: number;
   sweetness: number;
 };
+type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -199,7 +200,7 @@ function App() {
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
-  const [sulfateFirst, setSulfateFirst] = useState(false);
+  const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
@@ -441,24 +442,60 @@ function App() {
 
     const magnesiumSulfate = SALTS.find(s => s.id === 'mgso4');
     const magnesiumChloride = SALTS.find(s => s.id === 'mgcl2');
-    if (magnesiumSulfate && magnesiumChloride) {
+    if (hasMineralWater && magnesiumSulfate && magnesiumChloride) {
       const sulfateFraction = magnesiumSulfate.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
       const chlorideFraction = magnesiumChloride.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
+      const originalSulfateTarget = num(rows[SALTS.findIndex(s => s.id === 'mgso4')]?.target);
+      const originalChlorideTarget = num(rows[SALTS.findIndex(s => s.id === 'mgcl2')]?.target);
+      const originalSulfateMg = originalSulfateTarget * sulfateFraction;
+      const originalChlorideMg = originalChlorideTarget * chlorideFraction;
+      const originalMgTotal = originalSulfateMg + originalChlorideMg;
       const remainingMagnesium = Math.max(
         (saltOnlyIons?.magnesium ?? 0) - (bottledIons?.magnesium ?? 0),
         0,
       );
-      targets.mgso4 = sulfateFirst && sulfateFraction > 0 ? remainingMagnesium / sulfateFraction : 0;
-      targets.mgcl2 = !sulfateFirst && chlorideFraction > 0 ? remainingMagnesium / chlorideFraction : 0;
+
+      if (originalMgTotal > 0 && sulfateFraction > 0 && chlorideFraction > 0) {
+        const originalSulfateShare = originalSulfateMg / originalMgTotal;
+        const preferredSulfateShare = magnesiumPreference === 'sulfates' ? 1
+          : magnesiumPreference === 'chlorides' ? 0
+            : originalSulfateShare;
+        // Preference is intentionally soft: keep 25% of the original
+        // sulfate/chloride balance instead of replacing one form entirely.
+        const sulfateShare = originalSulfateShare * 0.25 + preferredSulfateShare * 0.75;
+        targets.mgso4 = (remainingMagnesium * sulfateShare) / sulfateFraction;
+        targets.mgcl2 = (remainingMagnesium * (1 - sulfateShare)) / chlorideFraction;
+      } else if (remainingMagnesium > 0) {
+        const useSulfate = magnesiumPreference !== 'chlorides';
+        targets.mgso4 = useSulfate && sulfateFraction > 0 ? remainingMagnesium / sulfateFraction : 0;
+        targets.mgcl2 = !useSulfate && chlorideFraction > 0 ? remainingMagnesium / chlorideFraction : 0;
+      } else {
+        targets.mgso4 = 0;
+        targets.mgcl2 = 0;
+      }
     }
     return targets;
-  }, [rows, sulfateFirst, saltOnlyIons, bottledIons, hasMineralWater]);
+  }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
 
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
   );
-  const preferredMagnesiumSaltId = sulfateFirst ? 'mgso4' : 'mgcl2';
+  const preferredMagnesiumSaltId = magnesiumPreference === 'sulfates'
+    ? 'mgso4'
+    : magnesiumPreference === 'chlorides'
+      ? 'mgcl2'
+      : null;
+  const magnesiumPreferenceLabel = magnesiumPreference === 'sulfates'
+    ? 'Sulfates preferred'
+    : magnesiumPreference === 'chlorides'
+      ? 'Chlorides preferred'
+      : 'Original recipe';
+  const cycleMagnesiumPreference = () => {
+    setMagnesiumPreference(current =>
+      current === 'original' ? 'chlorides' : current === 'chlorides' ? 'sulfates' : 'original',
+    );
+  };
 
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
@@ -587,7 +624,7 @@ function App() {
     setSplitMode(false);
     setSplitStrengths({ hardness: 100, alkalinity: 100, citrate: 50 });
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
-    setSulfateFirst(false);
+    setMagnesiumPreference('original');
     setShowResetConfirm(false);
   };
 
@@ -2048,13 +2085,13 @@ function App() {
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
                   <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
-                    Salts: {sulfateFirst ? 'Sulfates preferred' : 'Chlorides preferred'}
+                    Salts: {magnesiumPreferenceLabel}
                     {' '}
                     <button
-                      onClick={() => setSulfateFirst(p => !p)}
+                      onClick={cycleMagnesiumPreference}
                       className="text-violet-300/70 hover:text-violet-200 underline transition-colors"
                     >
-                      (swap)
+                      (change)
                     </button>
                   </span>
                 </div>
@@ -2079,7 +2116,7 @@ function App() {
                       }
                        // Keep the selected magnesium source visible even when
                        // its coupled ion is the reason for a final overshoot.
-                       if (overshoots && salt.id !== preferredMagnesiumSaltId) continue;
+                       if (overshoots && preferredMagnesiumSaltId && salt.id !== preferredMagnesiumSaltId) continue;
                       const caMgIds: IonId[] = ['calcium', 'magnesium'];
                       const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
                       const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
@@ -2092,17 +2129,17 @@ function App() {
                         ghkhLabel, isChloride, isSulfate,
                       });
                     }
-                    // Sort: neutral first, then chlorides or sulfates depending on toggle
+                    // Sort: neutral first, then honor the active preference.
                     safe.sort((a, b) => {
                       const aNeutral = a.ghkhLabel === 'Neutral' ? 0 : 1;
                       const bNeutral = b.ghkhLabel === 'Neutral' ? 0 : 1;
                       if (aNeutral !== bNeutral) return aNeutral - bNeutral;
-                      if (sulfateFirst) {
+                      if (magnesiumPreference === 'sulfates') {
                         if (a.isSulfate && !b.isSulfate) return -1;
                         if (!a.isSulfate && b.isSulfate) return 1;
                         if (a.isChloride && !b.isChloride) return 1;
                         if (!a.isChloride && b.isChloride) return -1;
-                      } else {
+                      } else if (magnesiumPreference === 'chlorides') {
                         if (a.isChloride && !b.isChloride) return -1;
                         if (!a.isChloride && b.isChloride) return 1;
                         if (a.isSulfate && !b.isSulfate) return 1;
