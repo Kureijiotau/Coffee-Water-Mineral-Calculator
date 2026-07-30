@@ -2843,14 +2843,16 @@ function BrewerSimpleRecipeCard({
   concentrateLiters: number;
   concentrateStrength: number;
 }) {
-  const DROPPER_STRENGTH = 500;
   const DROPS_PER_ML = 20;
+  const UNIVERSAL_STOCK_PERCENT = 5;
+  const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
+  const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / DROPS_PER_ML;
   type BrewerPrepMethod = 'dry' | 'dropper';
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [stocksReady, setStocksReady] = useState(false);
   const [makeWaterOpen, setMakeWaterOpen] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
-  const [dropperBottleMl, setDropperBottleMl] = useState('60');
+  const [dropperBottleMl, setDropperBottleMl] = useState('100');
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
@@ -2875,30 +2877,39 @@ function BrewerSimpleRecipeCard({
       : computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
   };
-  const dropperBottleL = Math.max(0, num(dropperBottleMl)) / 1000;
-  const dropperDoseMlPerLiter = 1000 / DROPPER_STRENGTH;
-  const dropperDoseMlPer500 = dropperDoseMlPerLiter * 0.5;
-  const dropperDropsPer500 = Math.round(dropperDoseMlPer500 * DROPS_PER_ML);
-  const dropperDropsForBatch = Math.round(dropperDoseMlPerLiter * Math.max(liters, 0) * DROPS_PER_ML);
-  const dropperBatchCount = dropperDoseMlPer500 > 0
-    ? Math.floor(Math.max(0, num(dropperBottleMl)) / dropperDoseMlPer500)
-    : 0;
-  const getDropperMassLabel = (id: string) => {
-    const salt = SALTS.find(item => item.id === id);
+  const getUniversalDrops = (id: string) => {
     const target = saltTargets[id] ?? 0;
-    if (!salt || target <= 0 || dropperBottleL <= 0) return '—';
+    if (target <= 0 || liters <= 0) return 0;
+    const salt = SALTS.find(item => item.id === id);
+    if (!salt) return 0;
     const saltIndex = SALTS.findIndex(item => item.id === id);
     const formIndex = saltIndex >= 0
       ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
       : salt.defaultFormIdx ?? 0;
     const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
-    const mass = computeSaltMg(target, dropperBottleL, form.molarMass, salt.anhydrousMass) * DROPPER_STRENGTH;
-    if (mass >= 1000) return `${(mass / 1000).toFixed(2)} g`;
-    if (mass >= 100) return `${(mass / 1000).toFixed(2)} g`;
-    if (mass >= 10) return `${Math.round(mass)} mg`;
-    return `${mass.toFixed(1)} mg`;
+    const physicalSaltMg = computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
+    return Math.max(1, Math.round(physicalSaltMg / UNIVERSAL_STOCK_MG_PER_DROP));
+  };
+  const universalStockMassLabel = () => {
+    const mass = Math.max(0, num(dropperBottleMl)) * UNIVERSAL_STOCK_MG_PER_ML / 1000;
+    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} kg` : `${mass.toFixed(1)} g`;
+  };
+  const getUniversalBrews = (id: string) => {
+    const drops = getUniversalDrops(id);
+    const bottleMl = Math.max(0, num(dropperBottleMl));
+    if (drops <= 0) return 0;
+    return Math.floor(bottleMl / (drops / DROPS_PER_ML));
   };
   const activeSimpleSalts = simpleSalts.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
+  const pantrySalts = [
+    { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
+    { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
+    { id: 'nacl', label: 'Table salt', note: 'roundness & balance' },
+    { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
+  ];
+  const universalPantryBrews = activeSimpleSalts.length > 0
+    ? Math.min(...activeSimpleSalts.map(salt => getUniversalBrews(salt.id)))
+    : 0;
   const completedSaltCount = activeSimpleSalts.filter(salt => completedSteps[salt.id]).length;
   const waterReady = activeSimpleSalts.length > 0
     && completedSaltCount === activeSimpleSalts.length
@@ -2948,6 +2959,21 @@ function BrewerSimpleRecipeCard({
               {liters || 1} L batch · {prepMethod === 'dropper' ? 'Dropper stocks' : 'Dry salt direct'}
             </p>
           </div>
+          <label className="flex items-center gap-2 text-xs text-slate-300">
+            <span className="sr-only">Batch volume</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.1"
+              value={volumeInput}
+              onChange={event => onVolumeChange(event.target.value)}
+              placeholder="1"
+              className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+              aria-label="Final batch volume in liters"
+            />
+            <span>liters</span>
+          </label>
           <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
             Live result
           </span>
@@ -2959,7 +2985,7 @@ function BrewerSimpleRecipeCard({
                 {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
               </span>
               <span className={`shrink-0 font-mono text-sm font-semibold ${prepMethod === 'dropper' ? 'text-violet-200' : 'text-emerald-200'}`}>
-                {prepMethod === 'dropper' ? `${dropperDropsForBatch} drops` : getMassLabel(salt.id)}
+                {prepMethod === 'dropper' ? `${getUniversalDrops(salt.id)} drops` : getMassLabel(salt.id)}
               </span>
             </div>
           ))}
@@ -3036,7 +3062,7 @@ function BrewerSimpleRecipeCard({
                       </span>
                     </span>
                     <span className={`font-mono text-xs font-semibold ${isComplete ? 'text-emerald-300' : 'text-violet-200'}`}>
-                      {prepMethod === 'dropper' ? `${dropperDropsForBatch} drops` : getMassLabel(salt.id)}
+                      {prepMethod === 'dropper' ? `${getUniversalDrops(salt.id)} drops` : getMassLabel(salt.id)}
                     </span>
                   </button>
                 );
@@ -3051,147 +3077,87 @@ function BrewerSimpleRecipeCard({
           )}
         </div>
       )}
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-300">
-        <Check className="h-4 w-4" />
-        Live simple recipe
-      </div>
-      <p className="mt-1 text-xs text-slate-400">
-        {prepMethod === 'dropper' && stocksReady
-          ? `Your active stocks are ready. Add the drops below to ${liters || 1} L of water.`
-          : prepMethod === 'dropper'
-            ? 'Prepare the stocks once below, then use the drop counts for every brew.'
-            : `Use familiar kitchen-friendly ingredients. Amounts are for ${liters || 1} L of water${concentrateOn ? ' stock preparation' : ''}.`}
-      </p>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/20 bg-slate-900/25 px-3 py-3">
-        <div>
-          <div className="text-xs font-semibold text-slate-200">How much water are you making?</div>
-          <div className="mt-1 text-[10px] text-slate-500">This controls the recipe amounts and drop count below.</div>
-        </div>
-        <label className="flex items-center gap-2 text-xs text-slate-300">
-          <span className="sr-only">Batch volume</span>
-          <input
-            type="number"
-            inputMode="decimal"
-            min="0"
-            step="0.1"
-            value={volumeInput}
-            onChange={event => onVolumeChange(event.target.value)}
-            placeholder="1"
-            className="w-24 rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-            aria-label="Final batch volume in liters"
-          />
-          <span>liters</span>
-        </label>
-      </div>
-      {prepMethod === 'dropper' && stocksReady ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {activeSimpleSalts.map(salt => (
-            <div key={`active-drop-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-violet-400/25 bg-violet-500/10 px-3 py-2.5">
-              <div>
-                <div className="text-sm font-medium text-slate-100">{salt.label} stock</div>
-                <div className="text-[10px] text-slate-400">{salt.note}</div>
+      {prepMethod === 'dropper' && (
+        <div className="mt-4 rounded-2xl border border-violet-300/30 bg-gradient-to-br from-violet-500/15 via-slate-900/25 to-sky-500/10 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-sm font-semibold text-violet-100">
+                <FlaskConical className="h-4 w-4 text-violet-300" />
+                Build your Mineral Pantry
               </div>
-              <span className="shrink-0 font-mono text-base font-semibold text-violet-200">{dropperDropsForBatch} drops</span>
+              <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
+                One-time quest: make four shared stock bottles, then every new recipe is just a fresh drop count.
+              </p>
             </div>
-          ))}
-        </div>
-      ) : (
-        <>
+            <span className="rounded-full border border-violet-300/25 bg-violet-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-violet-200">
+              {stocksReady ? 'Pantry unlocked' : 'One-time setup'}
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
+            <span className="rounded-full border border-slate-600/60 bg-slate-900/40 px-2 py-1">Standard bottle: {dropperBottleMl} mL</span>
+            <span className="rounded-full border border-slate-600/60 bg-slate-900/40 px-2 py-1">Strength: {UNIVERSAL_STOCK_PERCENT}% w/v</span>
+            <span className="rounded-full border border-slate-600/60 bg-slate-900/40 px-2 py-1">~{universalPantryBrews || '—'} brews from the current recipe</span>
+          </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {simpleSalts.map(salt => (
-              <div key={salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2.5">
+            {pantrySalts.map(salt => (
+              <div key={`pantry-${salt.id}`} className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-900/35 px-3 py-2.5">
                 <div>
-                  <div className="text-sm font-medium text-slate-200">{salt.label}</div>
-                  <div className="text-[10px] text-slate-500">{salt.note}</div>
+                  <div className="text-xs font-medium text-slate-200">{salt.label}</div>
+                  <div className="mt-0.5 text-[10px] text-slate-500">{salt.note} · {dropperBottleMl} mL bottle</div>
                 </div>
-                <span className="shrink-0 font-mono text-sm text-emerald-300">{getMassLabel(salt.id)}</span>
+                <span className="shrink-0 font-mono text-sm font-semibold text-violet-200">{universalStockMassLabel()}</span>
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[10px] text-slate-500">
-            Epsom salt, baking soda, and table salt are the beginner defaults. Advanced levels show the full mineral and hydration details.
-          </p>
-        </>
-      )}
-      {concentrateOn && (
-        <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-[10px] leading-relaxed text-amber-200/80">
-          For a stable concentrate, keep Epsom salt and calcium chloride in separate stock bottles. Do not combine them, since sulfate and calcium can form gypsum.
-        </div>
-      )}
-      <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/5 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">Concentrate vault</div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-              Craft once with a 0.1 g scale, then dose by drops without weighing dry salts again.
-            </p>
+          <div className="mt-3 rounded-xl border border-sky-400/20 bg-sky-500/5 px-3 py-2.5 text-[11px] leading-relaxed text-sky-100/80">
+            Use a 0.1 g scale once: add <strong>{universalStockMassLabel()}</strong> of the named salt to each bottle, then add distilled or RO water to {dropperBottleMl} mL. Keep Epsom salt and calcium chloride in separate bottles.
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-[11px] text-slate-300">
-              <span>Bottle</span>
-              <input
-                type="number"
-                min="10"
-                max="500"
-                step="1"
-                inputMode="numeric"
-                value={dropperBottleMl}
-                onChange={event => setDropperBottleMl(event.target.value)}
-                className="w-16 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2 py-1.5 text-right text-xs text-slate-100 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
-                aria-label="Dropper bottle volume in milliliters"
-              />
-              <span>mL</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-[11px] text-violet-100">
-              <input
-                type="checkbox"
-                checked={stocksReady}
-                onChange={event => {
-                  setStocksReady(event.target.checked);
-                  if (event.target.checked) setPrepMethod('dropper');
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <details className="min-w-[15rem] flex-1 rounded-lg border border-slate-700/50 bg-slate-900/30 px-3 py-2">
+              <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-violet-200">
+                Pantry prep quest
+              </summary>
+              <ol className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-slate-400">
+                <li><span className="font-semibold text-slate-300">1.</span> Label four clean dropper bottles.</li>
+                <li><span className="font-semibold text-slate-300">2.</span> Add the displayed salt mass to each matching bottle.</li>
+                <li><span className="font-semibold text-slate-300">3.</span> Fill each bottle with distilled or RO water to the marked volume, cap, and shake.</li>
+                <li><span className="font-semibold text-slate-300">4.</span> Keep the bottles for every future recipe; only the drop counts will change.</li>
+              </ol>
+            </details>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-[11px] text-slate-300">
+                <span>Bottle</span>
+                <input
+                  type="number"
+                  min="50"
+                  max="500"
+                  step="10"
+                  inputMode="numeric"
+                  value={dropperBottleMl}
+                  onChange={event => setDropperBottleMl(event.target.value)}
+                  className="w-16 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2 py-1.5 text-right text-xs text-slate-100 focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+                  aria-label="Mineral pantry bottle volume in milliliters"
+                />
+                <span>mL</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setStocksReady(prev => !prev);
+                  setPrepMethod('dropper');
                 }}
-                className="h-3.5 w-3.5 accent-violet-400"
-              />
-              <span>I have these stocks ready</span>
-            </label>
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                  stocksReady
+                    ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-100'
+                    : 'border-violet-300/40 bg-violet-400/20 text-violet-50 hover:bg-violet-400/30'
+                }`}
+              >
+                {stocksReady ? 'Pantry ready' : 'I built my pantry'}
+              </button>
+            </div>
           </div>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {activeSimpleSalts.map(salt => (
-            <div key={`dropper-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2">
-              <div>
-                <div className="text-xs font-medium text-slate-200">{salt.label} stock</div>
-                <div className="text-[10px] text-slate-500">{dropperDropsForBatch} drops for this batch</div>
-              </div>
-              <span className="shrink-0 font-mono text-xs text-violet-200">{getDropperMassLabel(salt.id)}</span>
-            </div>
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
-          <span>{dropperDropsPer500} drops / 500 mL per bottle</span>
-          <span>·</span>
-          <span>{dropperDropsForBatch} drops for {liters || 1} L</span>
-          <span>·</span>
-          <span>Bottle status: ~{dropperBatchCount} brews</span>
-        </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-          Mix each bottle separately with distilled water to the selected final volume. Assumes 20 drops/mL—verify your dropper once. Smaller bottles use the same strength and simply last for fewer brews.
-        </p>
-        <details className="mt-3 rounded-lg border border-slate-700/50 bg-slate-900/30 px-3 py-2">
-          <summary className="cursor-pointer text-[10px] font-semibold uppercase tracking-wider text-violet-200">
-            How to prepare your stock bottles
-          </summary>
-          <ol className="mt-2 space-y-1.5 text-[11px] leading-relaxed text-slate-400">
-            <li><span className="font-semibold text-slate-300">1.</span> Label one bottle for each active salt and place it on a 0.1 g scale.</li>
-            <li><span className="font-semibold text-slate-300">2.</span> Tare the bottle, add the displayed salt mass, then add distilled or RO water to the selected final bottle volume.</li>
-            <li><span className="font-semibold text-slate-300">3.</span> Cap, shake well, and wait until the solution is clear before dosing.</li>
-            <li><span className="font-semibold text-slate-300">4.</span> Add the drops to your measured brew water, swirl, and then heat or brew.</li>
-          </ol>
-          <p className="mt-2 text-[10px] leading-relaxed text-amber-200/70">
-            Keep Epsom salt and calcium chloride in separate bottles. Do not combine sulfate and calcium stocks.
-          </p>
-        </details>
-      </div>
+      )}
     </div>
   );
 }
