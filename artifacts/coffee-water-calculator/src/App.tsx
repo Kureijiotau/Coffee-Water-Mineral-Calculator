@@ -5,7 +5,7 @@ import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
-  computeIonTotals, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
+  computeIonTotals, findIonOvershoots, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -510,6 +510,10 @@ function App() {
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
+  );
+  const finalRecipeOvershoots = useMemo(
+    () => findIonOvershoots(suggestedIonTotals, saltOnlyIons),
+    [suggestedIonTotals, saltOnlyIons],
   );
   const ionProfileIons = ionProfileView === 'final-mixture'
     ? suggestedIonTotals
@@ -2205,21 +2209,7 @@ function App() {
                     ));
                   })()}
                 </div>
-                 {(() => {
-                    const overshoots = ACTIVE_ION_IDS
-                      // Bicarbonate has its own hard-stop message below; it
-                      // is not an acceptable "unavoidable co-ion" warning.
-                      .filter(id => id !== 'bicarbonate')
-                      .map(id => {
-                       const target = saltOnlyIons[id] ?? 0;
-                       const actual = suggestedIonTotals[id] ?? 0;
-                       return { id, amount: actual - target };
-                     })
-                     .filter(item => item.amount > 0.05);
-
-                   if (overshoots.length === 0) return null;
-
-                   return (
+                 {finalRecipeOvershoots.length > 0 && (
                      <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
                        <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
                          Final recipe overshoot
@@ -2228,7 +2218,7 @@ function App() {
                           Mineral water and unavoidable salt co-ions can take other ions above the recipe target.
                        </p>
                        <div className="mt-2 flex flex-wrap gap-2">
-                         {overshoots.map(({ id, amount }) => (
+                         {finalRecipeOvershoots.map(({ id, amount }) => (
                            <span
                              key={id}
                              className="rounded-md border border-rose-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-rose-200"
@@ -2238,8 +2228,7 @@ function App() {
                          ))}
                        </div>
                      </div>
-                   );
-                 })()}
+                 )}
                   {bicarbonateWaterOvershoot && (
                     <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-amber-300">

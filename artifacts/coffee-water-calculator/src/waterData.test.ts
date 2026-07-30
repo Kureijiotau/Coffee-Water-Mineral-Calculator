@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   computeSaltMg,
   computeIonTotals,
+  findIonOvershoots,
   computeGH,
   computeKH,
   SALTS,
@@ -102,6 +103,39 @@ describe('computeIonTotals', () => {
   it('clamps dilution contributions when dilution is 0 (no bottled water)', () => {
     const totals = computeIonTotals({}, { calcium: 99 }, 0);
     expect(totals.calcium).toBe(0);
+  });
+});
+
+// ─── findIonOvershoots ───────────────────────────────────────────────────────
+
+describe('findIonOvershoots', () => {
+  it('reports chloride even when the original recipe target is zero', () => {
+    const overshoots = findIonOvershoots(
+      { chloride: 8 },
+      { chloride: 0 },
+    );
+
+    expect(overshoots).toEqual([{ id: 'chloride', amount: 8 }]);
+  });
+
+  it('reports every overshooting ion rather than only the first one', () => {
+    const overshoots = findIonOvershoots(
+      { chloride: 8, sulfate: 12, sodium: 4 },
+      { chloride: 0, sulfate: 5, sodium: 5 },
+    );
+
+    expect(overshoots).toEqual([
+      { id: 'sodium', amount: 0 },
+      { id: 'chloride', amount: 8 },
+      { id: 'sulfate', amount: 7 },
+    ].filter(item => item.amount > 0));
+  });
+
+  it('ignores differences within the display tolerance', () => {
+    expect(findIonOvershoots(
+      { chloride: 0.05, sulfate: 1.04 },
+      { chloride: 0, sulfate: 1 },
+    )).toEqual([]);
   });
 });
 

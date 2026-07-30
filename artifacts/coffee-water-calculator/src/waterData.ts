@@ -302,6 +302,29 @@ export function computeIonTotals(
   return totals;
 }
 
+export interface IonOvershoot {
+  id: IonId;
+  amount: number;
+}
+
+/**
+ * Find every modeled ion whose final concentration exceeds the original
+ * salt-only recipe target. Zero-target ions are intentionally included so
+ * unavoidable co-ions such as chloride are still reported.
+ */
+export function findIonOvershoots(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+  tolerance = 0.05,
+): IonOvershoot[] {
+  return IONS
+    .map(({ id }) => ({
+      id,
+      amount: (actual[id] ?? 0) - (target[id] ?? 0),
+    }))
+    .filter(item => item.amount > tolerance);
+}
+
 export interface SaltRecipeEntry {
   target: string;
   formIdx: number;
