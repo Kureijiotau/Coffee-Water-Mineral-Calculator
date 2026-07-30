@@ -5,3 +5,4 @@
 - [Ion overshoot reporting](ion-overshoot-reporting.md) — report every modeled final-ion excess, including zero-target co-ions
 - [Ion deviation reporting](ion-deviation-reporting.md) — show final under/over-target ions without changing suggested salt calculations
 - [Sodium NaCl correction](sodium-nacl-correction.md) — optionally close a sodium gap with NaCl while recomputing coupled chloride
+- [Builder research boundary](builder-research-boundary.md) — evolve builder UX from research without replacing the established chemistry engine

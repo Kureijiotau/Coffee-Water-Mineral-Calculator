@@ -2886,6 +2886,11 @@ function BrewerSimpleRecipeCard({
       <p className="mt-3 text-[10px] text-slate-500">
         Epsom salt, baking soda, and table salt are the beginner defaults. Advanced levels show the full mineral and hydration details.
       </p>
+      {concentrateOn && (
+        <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/5 px-3 py-2 text-[10px] leading-relaxed text-amber-200/80">
+          For a stable concentrate, keep Epsom salt and calcium chloride in separate stock bottles. Do not combine them, since sulfate and calcium can form gypsum.
+        </div>
+      )}
     </div>
   );
 }
@@ -3443,6 +3448,16 @@ function BrewerFlavorPanel({
     : flavor.body >= 60
       ? 'Round, full, and structured'
       : 'Balanced and approachable';
+  const magnesium = suggestedIons.magnesium ?? 0;
+  const calcium = suggestedIons.calcium ?? 0;
+  const hardnessTotal = magnesium + calcium;
+  const magnesiumShare = hardnessTotal > 0 ? Math.round((magnesium / hardnessTotal) * 100) : 0;
+  const calciumShare = hardnessTotal > 0 ? 100 - magnesiumShare : 0;
+  const bufferCue = suggestedIons.bicarbonate < 35
+    ? 'Light buffer keeps acidity vivid'
+    : suggestedIons.bicarbonate > 60
+      ? 'More buffer rounds sharp acidity'
+      : 'Balanced buffer for a versatile cup';
 
   return (
     <div className="border-b border-slate-700/40 bg-sky-500/5 px-4 py-4 sm:px-6">
@@ -3450,11 +3465,12 @@ function BrewerFlavorPanel({
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
           <p className="mt-1 text-xs text-slate-400">
-            Tune the cup you want. Drag the star and the recipe below updates instantly.
+            Click anywhere in the pyramid or drag the star. Your recipe updates instantly.
           </p>
         </div>
       </div>
       <BrewerFlavorPyramid flavor={flavor} onChange={onChange} />
+      <BrewerFlavorRadar flavor={flavor} suggestedIons={suggestedIons} />
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
         {([
           ['brightness', 'Brightness / acidity', 'Soft', 'Bright'],
@@ -3489,11 +3505,18 @@ function BrewerFlavorPanel({
           <div className="mt-1 font-mono text-sm text-cyan-300">{kh.toFixed(0)} ppm</div>
         </div>
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-slate-500">Key ions</div>
+          <div className="text-[10px] uppercase tracking-wider text-slate-500">Hardness balance</div>
           <div className="mt-1 font-mono text-xs text-slate-300">
-            Mg {suggestedIons.magnesium.toFixed(0)} · Ca {suggestedIons.calcium.toFixed(0)}
+            Mg:Ca {magnesiumShare}:{calciumShare}
           </div>
+          <div className="mt-0.5 text-[9px] text-slate-600">{magnesium.toFixed(0)} · {calcium.toFixed(0)} ppm</div>
         </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-slate-700/40 bg-slate-900/25 px-3 py-2 text-[10px]">
+        <span className="font-semibold uppercase tracking-wider text-slate-500">Water read</span>
+        <span className="text-sky-200">{bufferCue}</span>
+        <span className="text-slate-600">·</span>
+        <span className="text-slate-400">Mg pulls intensity; Ca adds focus and roundness</span>
       </div>
       <p className="mt-2 text-[10px] text-slate-500">
         0–60 stays within Aiki’s safe band · 60–75 is elevated · 75–100 is out of range. Use the steps button for a simple preparation guide.
