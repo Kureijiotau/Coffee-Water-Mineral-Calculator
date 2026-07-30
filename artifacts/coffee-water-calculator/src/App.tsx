@@ -30,6 +30,7 @@ type BrewerFlavorInput = {
   sweetness: number;
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
+type IonProfileView = 'salt-only' | 'final-mixture';
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -270,6 +271,7 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState(false);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
+  const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
@@ -509,6 +511,9 @@ function App() {
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
   );
+  const ionProfileIons = ionProfileView === 'final-mixture'
+    ? suggestedIonTotals
+    : saltOnlyIons;
   const preferredMagnesiumSaltId = magnesiumPreference === 'sulfates'
     ? 'mgso4'
     : magnesiumPreference === 'chlorides'
@@ -2546,6 +2551,36 @@ function App() {
               <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
             </div>
             <div className="flex items-center gap-2">
+              <div
+                className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5"
+                role="group"
+                aria-label="Ion profile calculation"
+              >
+                <button
+                  type="button"
+                  onClick={() => setIonProfileView('salt-only')}
+                  aria-pressed={ionProfileView === 'salt-only'}
+                  className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
+                    ionProfileView === 'salt-only'
+                      ? 'bg-slate-700 text-slate-100 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Salt only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIonProfileView('final-mixture')}
+                  aria-pressed={ionProfileView === 'final-mixture'}
+                  className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
+                    ionProfileView === 'final-mixture'
+                      ? 'bg-sky-500/20 text-sky-200 shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Base water + salts
+                </button>
+              </div>
               <button
                 onClick={() => setShowSettings(true)}
                 className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
@@ -2558,7 +2593,7 @@ function App() {
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {ACTIVE_ION_IDS.map((id, idx) => {
               const ion = ION_MAP[id];
-              const ppm = ionTotals[id];
+              const ppm = ionProfileIons[id];
               const level = classifyIon(ppm, activeRanges[id]);
               const s = TRAFFIC_STYLES[level];
               const r = activeRanges[id];
