@@ -7,3 +7,4 @@
 - [Sodium NaCl correction](sodium-nacl-correction.md) — optionally close a sodium gap with NaCl while recomputing coupled chloride
 - [Builder research boundary](builder-research-boundary.md) — evolve builder UX from research without replacing the established chemistry engine
 - [Builder dropper strength](builder-dropper-strength.md) — use conservative 500× stocks so small bottles make fewer batches instead of stronger solutions
+- [Builder dosing methods](builder-dosing-methods.md) — keep dry-salt and dropper workflows as presentation choices over the shared chemistry engine
