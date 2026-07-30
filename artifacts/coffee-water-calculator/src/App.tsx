@@ -5,7 +5,7 @@ import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
@@ -2861,13 +2861,31 @@ function BrewerSimpleRecipeCard({
     { id: 'nacl', label: 'Table salt', note: 'sweetness & balance' },
   ];
   const calciumTarget = saltTargets.cacl2 ?? 0;
+  const effectiveSaltTargets = (() => {
+    if (calciumAvailable || calciumTarget <= 0.05) return saltTargets;
+
+    const calciumSalt = SALTS.find(salt => salt.id === 'cacl2');
+    const epsomSalt = SALTS.find(salt => salt.id === 'mgso4');
+    const calciumFraction = calciumSalt?.ions.find(ion => ion.ionId === 'calcium')?.fraction ?? 0;
+    const magnesiumFraction = epsomSalt?.ions.find(ion => ion.ionId === 'magnesium')?.fraction ?? 0;
+    const calciumHardness = calciumTarget * calciumFraction * (CACO3_FACTOR.calcium ?? 0);
+    const epsomTargetForSameGh = magnesiumFraction > 0
+      ? calciumHardness / ((CACO3_FACTOR.magnesium ?? 0) * magnesiumFraction)
+      : 0;
+
+    return {
+      ...saltTargets,
+      mgso4: (saltTargets.mgso4 ?? 0) + epsomTargetForSameGh,
+      cacl2: 0,
+    };
+  })();
   if (calciumTarget > 0.05) {
     simpleSalts.push({ id: 'cacl2', label: 'Calcium chloride', note: 'optional extra body' });
   }
 
   const getMassLabel = (id: string) => {
     const salt = SALTS.find(item => item.id === id);
-    const target = saltTargets[id] ?? 0;
+    const target = effectiveSaltTargets[id] ?? 0;
     if (!salt || target <= 0 || liters <= 0) return '—';
     const saltIndex = SALTS.findIndex(item => item.id === id);
     const formIndex = saltIndex >= 0
@@ -2880,7 +2898,7 @@ function BrewerSimpleRecipeCard({
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
   };
   const getUniversalDrops = (id: string) => {
-    const target = saltTargets[id] ?? 0;
+    const target = effectiveSaltTargets[id] ?? 0;
     if (target <= 0 || liters <= 0) return 0;
     const salt = SALTS.find(item => item.id === id);
     if (!salt) return 0;
@@ -2896,7 +2914,7 @@ function BrewerSimpleRecipeCard({
     const mass = Math.max(0, num(pantryBottleMl)) * UNIVERSAL_STOCK_MG_PER_ML / 1000;
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} kg` : `${mass.toFixed(1)} g`;
   };
-  const activeSimpleSalts = simpleSalts.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
+  const activeSimpleSalts = simpleSalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0);
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
@@ -2989,9 +3007,9 @@ function BrewerSimpleRecipeCard({
             </div>
           ))}
         </div>
-        {prepMethod === 'dropper' && !calciumAvailable && calciumTarget > 0.05 && (
+        {!calciumAvailable && calciumTarget > 0.05 && (
           <p className="mt-2 text-[10px] text-amber-200/75">
-            Calcium chloride skipped for this pantry — this recipe will have a lighter body.
+            Calcium chloride skipped — Epsom is increased to preserve GH, with a more magnesium-forward balance.
           </p>
         )}
         <button
