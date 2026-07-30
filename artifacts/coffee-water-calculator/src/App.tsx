@@ -3,9 +3,10 @@ import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, classifyIon, computeSaltMg,
-  computeIonTotals, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
+  computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -272,6 +273,7 @@ function App() {
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
+  const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
@@ -502,14 +504,30 @@ function App() {
     return targets;
   }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
 
-  // One dosing target map for every user-facing preparation surface. With
-  // source water, this is the final salt contribution still needed after
-  // water coverage and the bicarbonate ceiling; otherwise it is the recipe.
-  const dosingSaltTargets = hasMineralWater ? suggestedSaltTargets : saltTargets;
-
-  const suggestedIonTotals = useMemo(
+  const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
+  );
+  const sodiumCorrectionGap = Math.max(
+    (saltOnlyIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
+    0,
+  );
+  const sodiumCorrectionTarget = hasMineralWater && sodiumCorrectionOn
+    ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
+    : 0;
+  const effectiveSuggestedSaltTargets = useMemo<Record<string, number>>(() => ({
+    ...suggestedSaltTargets,
+    nacl: (suggestedSaltTargets.nacl ?? 0) + sodiumCorrectionTarget,
+  }), [suggestedSaltTargets, sodiumCorrectionTarget]);
+
+  // One dosing target map for every user-facing preparation surface. With
+  // source water, this is the final salt contribution still needed after
+  // water coverage, the bicarbonate ceiling, and any optional sodium correction.
+  const dosingSaltTargets = hasMineralWater ? effectiveSuggestedSaltTargets : saltTargets;
+
+  const suggestedIonTotals = useMemo(
+    () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
+    [effectiveSuggestedSaltTargets, combinedBottledIons, dil],
   );
   const finalRecipeOvershoots = useMemo(
     () => findIonOvershoots(suggestedIonTotals, saltOnlyIons),
@@ -565,8 +583,8 @@ function App() {
   const finalKh = computeKH(suggestedIonTotals);
   const finalTds = Object.values(suggestedIonTotals).reduce((total, ppm) => total + ppm, 0);
   const finalSaltIons = useMemo(
-    () => computeIonTotals(suggestedSaltTargets, {}, 1),
-    [suggestedSaltTargets],
+    () => computeIonTotals(effectiveSuggestedSaltTargets, {}, 1),
+    [effectiveSuggestedSaltTargets],
   );
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
@@ -577,12 +595,12 @@ function App() {
     && bicarbonateFromWater > bicarbonateTarget + 0.05;
   const tdsForRecipeSteps = useMemo(() => {
     const finalIons = computeIonTotals(
-      hasMineralWater ? suggestedSaltTargets : saltTargets,
+      hasMineralWater ? effectiveSuggestedSaltTargets : saltTargets,
       hasMineralWater ? combinedBottledIons : {},
       hasMineralWater ? dil : 1,
     );
     return Object.values(finalIons).reduce((total, ppm) => total + ppm, 0);
-  }, [hasMineralWater, saltTargets, suggestedSaltTargets, combinedBottledIons, dil]);
+  }, [hasMineralWater, saltTargets, effectiveSuggestedSaltTargets, combinedBottledIons, dil]);
   const waterChemistry = useMemo(() => {
     let pHWeighted = 0;
     let pHVolume = 0;
@@ -2152,7 +2170,7 @@ function App() {
                     const safe: { salt: typeof SALTS[0]; target: number; form: { molarMass: number }; mg: number; ghkhLabel: string; isChloride: boolean; isSulfate: boolean }[] = [];
                     for (let i = 0; i < SALTS.length; i++) {
                       const salt = SALTS[i];
-                      const tgt = suggestedSaltTargets[salt.id] ?? 0;
+                      const tgt = dosingSaltTargets[salt.id] ?? 0;
                       if (tgt <= 0) continue;
                       const form = salt.hydrationForms[rows[i].formIdx];
                       // Check if adding at full target would overshoot any ion
@@ -2213,14 +2231,42 @@ function App() {
                     ));
                   })()}
                 </div>
-                 {(finalRecipeOvershoots.length > 0 || finalRecipeUnderdoses.length > 0) && (
+                 {(finalRecipeOvershoots.length > 0
+                   || finalRecipeUnderdoses.length > 0
+                   || (hasMineralWater && sodiumCorrectionGap > 0.05)
+                   || sodiumCorrectionOn) && (
                      <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
-                       <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
-                         Final recipe deviation
-                       </span>
-                       <p className="mt-1 text-[11px] text-slate-400">
-                          Mineral water and suggested salts can leave some ions above or below the recipe target.
-                       </p>
+                       <div className="flex items-start justify-between gap-3">
+                         <div>
+                           <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
+                             Final recipe deviation
+                           </span>
+                           <p className="mt-1 text-[11px] text-slate-400">
+                              Mineral water and suggested salts can leave some ions above or below the recipe target.
+                           </p>
+                         </div>
+                         {hasMineralWater && sodiumCorrectionGap > 0.05 && (
+                           <button
+                             type="button"
+                             onClick={() => setSodiumCorrectionOn(current => !current)}
+                             aria-pressed={sodiumCorrectionOn}
+                             aria-label={sodiumCorrectionOn
+                               ? 'Turn off sodium chloride correction'
+                               : 'Add sodium chloride to close the sodium gap'}
+                             title={sodiumCorrectionOn
+                               ? 'Turn off sodium chloride correction'
+                               : `Add NaCl to close the ${sodiumCorrectionGap.toFixed(1)} ppm sodium gap`}
+                             className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                               sodiumCorrectionOn
+                                 ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
+                                 : 'border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
+                             }`}
+                           >
+                             <GiSaltShaker className="h-4 w-4" aria-hidden="true" />
+                             <span className="hidden sm:inline">{sodiumCorrectionOn ? 'NaCl on' : 'Add NaCl'}</span>
+                           </button>
+                         )}
+                       </div>
                        <div className="mt-2 flex flex-wrap gap-2">
                          {finalRecipeOvershoots.map(({ id, amount }) => (
                            <span
@@ -2239,6 +2285,11 @@ function App() {
                            </span>
                          ))}
                        </div>
+                       {sodiumCorrectionOn && sodiumCorrectionTarget > 0 && (
+                         <p className="mt-2 text-[11px] text-emerald-200/80">
+                           Adding {sodiumCorrectionTarget.toFixed(1)} ppm NaCl closes the sodium gap and includes its chloride contribution.
+                         </p>
+                       )}
                      </div>
                  )}
                   {bicarbonateWaterOvershoot && (
@@ -2685,7 +2736,7 @@ function App() {
           batchMl={batchMl}
           saltOnlyIons={saltOnlyIons}
           bottledIons={bottledIons}
-          suggestedSaltTargets={suggestedSaltTargets}
+          suggestedSaltTargets={effectiveSuggestedSaltTargets}
           bicarbonateWaterOvershoot={bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
           tdsTarget={tdsForRecipeSteps}

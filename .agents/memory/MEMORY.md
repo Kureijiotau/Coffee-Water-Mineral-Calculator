@@ -4,3 +4,4 @@
 - [Ion profile view model](ion-profile-view-model.md) — distinguish original salt-only ions from final configured-water ions with an explicit toggle
 - [Ion overshoot reporting](ion-overshoot-reporting.md) — report every modeled final-ion excess, including zero-target co-ions
 - [Ion deviation reporting](ion-deviation-reporting.md) — show final under/over-target ions without changing suggested salt calculations
+- [Sodium NaCl correction](sodium-nacl-correction.md) — optionally close a sodium gap with NaCl while recomputing coupled chloride

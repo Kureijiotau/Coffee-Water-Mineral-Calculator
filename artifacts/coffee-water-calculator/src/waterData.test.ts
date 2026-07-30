@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   computeSaltMg,
   computeIonTotals,
+  computeNaClTargetForSodiumGap,
   findIonOvershoots,
   findIonUnderdoses,
   computeGH,
@@ -104,6 +105,21 @@ describe('computeIonTotals', () => {
   it('clamps dilution contributions when dilution is 0 (no bottled water)', () => {
     const totals = computeIonTotals({}, { calcium: 99 }, 0);
     expect(totals.calcium).toBe(0);
+  });
+});
+
+describe('computeNaClTargetForSodiumGap', () => {
+  it('returns enough NaCl to supply the requested sodium gap', () => {
+    const target = computeNaClTargetForSodiumGap(4.3);
+    const totals = computeIonTotals({ nacl: target }, {}, 0);
+
+    expect(totals.sodium).toBeCloseTo(4.3, 5);
+    expect(totals.chloride).toBeCloseTo(target * (35.45 / 58.44), 5);
+  });
+
+  it('returns zero when there is no sodium gap', () => {
+    expect(computeNaClTargetForSodiumGap(0)).toBe(0);
+    expect(computeNaClTargetForSodiumGap(-2)).toBe(0);
   });
 });
 

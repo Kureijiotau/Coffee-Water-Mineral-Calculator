@@ -302,6 +302,18 @@ export function computeIonTotals(
   return totals;
 }
 
+/**
+ * Return the sodium-chloride salt target needed to supply a sodium gap.
+ * The result is expressed in ppm of NaCl, matching salt target units.
+ */
+export function computeNaClTargetForSodiumGap(sodiumGap: number): number {
+  const sodiumFraction = SALTS
+    .find(salt => salt.id === 'nacl')
+    ?.ions.find(contribution => contribution.ionId === 'sodium')
+    ?.fraction ?? 0;
+  return sodiumGap > 0 && sodiumFraction > 0 ? sodiumGap / sodiumFraction : 0;
+}
+
 export interface IonOvershoot {
   id: IonId;
   amount: number;
