@@ -276,9 +276,6 @@ function App() {
   const showAlchemist = nerdLevel !== 'brewer';
   const showWatermancer = nerdLevel === 'watermancer';
   const handleNerdLevelChange = (level: NerdLevel) => {
-    if (level === 'brewer') {
-      setMineralWaters([]);
-    }
     setNerdLevel(level);
   };
 
@@ -503,6 +500,11 @@ function App() {
     return targets;
   }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
 
+  // One dosing target map for every user-facing preparation surface. With
+  // source water, this is the final salt contribution still needed after
+  // water coverage and the bicarbonate ceiling; otherwise it is the recipe.
+  const dosingSaltTargets = hasMineralWater ? suggestedSaltTargets : saltTargets;
+
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
     [suggestedSaltTargets, combinedBottledIons, dil],
@@ -620,10 +622,10 @@ function App() {
   const concSaltTargets = useMemo(() => {
     const m: Record<string, number> = {};
     for (const salt of SALTS) {
-      m[salt.id] = num(rows[SALTS.indexOf(salt)].target);
+      m[salt.id] = dosingSaltTargets[salt.id] ?? 0;
     }
     return m;
-  }, [rows]);
+  }, [dosingSaltTargets]);
 
   const concWarnings: ConcentrateWarning[] = useMemo(
     () => concentrateOn ? checkConcentrate(concentrateStrength, concSaltTargets) : [],
@@ -642,7 +644,7 @@ function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
-    setBrewerFlavor({ brightness: 0, body: 0, juiciness: 0, sweetness: 0 });
+    setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
     setMineralWaters([]);
     setAdditionWaters([]);
     setLiters('1');
@@ -880,7 +882,7 @@ function App() {
     const saltLines = SALTS.map((salt, i) => {
       const row = rows[i];
       const form = salt.hydrationForms[row.formIdx];
-      const target = num(row.target);
+      const target = dosingSaltTargets[salt.id] ?? 0;
       if (target === 0) return null;
       const mg = L > 0
         ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
@@ -911,7 +913,7 @@ function App() {
       const concSaltLines = SALTS.map((salt, i) => {
         const row = rows[i];
         const form = salt.hydrationForms[row.formIdx];
-        const target = num(row.target);
+        const target = dosingSaltTargets[salt.id] ?? 0;
         if (target === 0) return null;
         const mg = concentrateStrength > 0 && stockL > 0
           ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * concentrateStrength
@@ -931,13 +933,14 @@ function App() {
         line(`    ${dosePerLiter.toFixed(1)} mL of stock per liter of brew water`);
         if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${liters} L)`);
       }
-    } else if (concentrateOn && splitMode && stockGroups.length > 0) {
+      } else if (concentrateOn && splitMode) {
       // Split stocks — one section per group
+        const exportStockGroups = splitIntoStockGroups(dosingSaltTargets);
       line('');
       divider();
       line('SPLIT STOCKS');
       divider();
-      for (const group of stockGroups) {
+        for (const group of exportStockGroups) {
         const strength = splitStrengths[group.id] ?? 100;
         const volumeMl = splitMls[group.id] ?? '500';
         const stockL = num(volumeMl) / 1000;
@@ -954,7 +957,7 @@ function App() {
           const saltIdx = SALTS.indexOf(salt);
           const row = rows[saltIdx];
           const form = salt.hydrationForms[row.formIdx];
-          const target = concSaltTargets[saltId] ?? 0;
+           const target = dosingSaltTargets[saltId] ?? 0;
           if (target === 0) continue;
           const mg = strength > 0 && stockL > 0
             ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * strength
@@ -1095,8 +1098,12 @@ function App() {
     }
     line('');
 
+    // The guide must describe what will actually be weighed for the final
+    // batch. When source water is configured, suggestedSaltTargets removes
+    // ions already supplied by that water and applies the bicarbonate ceiling.
+    const guideSaltTargets = dosingSaltTargets;
     const activeSalts = SALTS.map((s, i) => {
-      const tgt = num(rows[i].target);
+      const tgt = guideSaltTargets[s.id] ?? 0;
       if (tgt <= 0) return null;
       const form = s.hydrationForms[rows[i].formIdx];
       const mg = l > 0 ? computeSaltMg(tgt, l, form.molarMass, s.anhydrousMass) : 0;
@@ -1441,7 +1448,8 @@ function App() {
           )}
          {nerdLevel === 'brewer' ? (
            <BrewerSimpleRecipeCard
-             saltTargets={brewerSuggestedSaltTargets}
+              saltTargets={brewerSuggestedSaltTargets}
+              recipeRows={rows}
              liters={L}
              concentrateOn={concentrateOn}
              concentrateLiters={concL}
@@ -1458,7 +1466,7 @@ function App() {
           {SALTS.map((salt, i) => {
             const row = rows[i];
             const form = salt.hydrationForms[row.formIdx];
-            const target = num(row.target);
+            const target = dosingSaltTargets[salt.id] ?? 0;
             const mg = L > 0 && target > 0
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
@@ -2732,12 +2740,14 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
 
 function BrewerSimpleRecipeCard({
   saltTargets,
+  recipeRows,
   liters,
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
 }: {
   saltTargets: Record<string, number>;
+  recipeRows: SaltRow[];
   liters: number;
   concentrateOn: boolean;
   concentrateLiters: number;
@@ -2757,7 +2767,11 @@ function BrewerSimpleRecipeCard({
     const salt = SALTS.find(item => item.id === id);
     const target = saltTargets[id] ?? 0;
     if (!salt || target <= 0 || liters <= 0) return '—';
-    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const saltIndex = SALTS.findIndex(item => item.id === id);
+    const formIndex = saltIndex >= 0
+      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+      : salt.defaultFormIdx ?? 0;
+    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
     const mass = concentrateOn && concentrateLiters > 0
       ? computeSaltMg(target, concentrateLiters, form.molarMass, salt.anhydrousMass) * concentrateStrength
       : computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
@@ -2856,7 +2870,11 @@ function BrewerRecipeStepsModal({
   };
   const amount = (salt: typeof SALTS[number], targets = saltTargets) => {
     const target = targets[salt.id] ?? 0;
-    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+    const formIndex = saltIndex >= 0
+      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+      : salt.defaultFormIdx ?? 0;
+    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
     const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
     const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
       * (concentrateOn ? concentrateStrength : 1);
@@ -2941,7 +2959,11 @@ function BrewerRecipeStepsModal({
                 <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {suggestedSalts.map(salt => {
-                    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+                    const formIndex = saltIndex >= 0
+                      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+                      : salt.defaultFormIdx ?? 0;
+                    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
                     return (
                       <div key={salt.id} className="rounded-lg bg-slate-900/45 px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
@@ -2963,7 +2985,11 @@ function BrewerRecipeStepsModal({
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
                 <div className="mt-2 space-y-2">
                   {recipeSalts.map(salt => {
-                    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+                    const formIndex = saltIndex >= 0
+                      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+                      : salt.defaultFormIdx ?? 0;
+                    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
                     return (
                       <div key={salt.id} className="rounded-lg bg-slate-900/45 px-3 py-2">
                         <div className="flex items-center justify-between gap-2">
@@ -3092,6 +3118,7 @@ function BrewerRecipeStepsModal({
 
 function BrewStationMode({
   saltTargets,
+  recipeRows,
   liters,
   concentrateOn,
   concentrateLiters,
@@ -3099,6 +3126,7 @@ function BrewStationMode({
   onClose,
 }: {
   saltTargets: Record<string, number>;
+  recipeRows: SaltRow[];
   liters: number;
   concentrateOn: boolean;
   concentrateLiters: number;
@@ -3147,8 +3175,15 @@ function BrewStationMode({
     const salt = SALTS.find(item => item.id === step.id);
     const target = saltTargets[step.id] ?? 0;
     const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
+    const saltIndex = salt ? SALTS.findIndex(item => item.id === salt.id) : -1;
+    const formIndex = salt && saltIndex >= 0
+      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+      : salt?.defaultFormIdx ?? 0;
+    const form = salt
+      ? salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0]
+      : undefined;
     const massMg = salt && target > 0
-      ? computeSaltMg(target, volume || 1, salt.hydrationForms[salt.defaultFormIdx ?? 0].molarMass, salt.anhydrousMass)
+      ? computeSaltMg(target, volume || 1, form!.molarMass, salt.anhydrousMass)
         * (concentrateOn ? concentrateStrength : 1)
       : 0;
     return { ...step, grams: massMg / 1000 };

@@ -25,7 +25,26 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const allowedOrigins = new Set(
+  [
+    "https://www.watermancer.quest",
+    "https://watermancer.quest",
+    process.env.FRONTEND_ORIGIN,
+    process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : undefined,
+    "http://localhost:5173",
+  ].filter((origin): origin is string => Boolean(origin)),
+);
+
+app.use(cors({
+  origin(origin, callback) {
+    // Non-browser clients and same-origin requests do not send Origin.
+    if (!origin || allowedOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("Origin is not allowed"));
+  },
+}));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 

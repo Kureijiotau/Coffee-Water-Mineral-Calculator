@@ -20,3 +20,9 @@ Bicarbonate is a hard ceiling in the final mixture: source-water bicarbonate plu
 **Why:** Bicarbonate directly controls KH and acidity buffering; unlike unavoidable chloride or sulfate co-ions, extra bicarbonate is not acceptable for a target recipe.
 
 **How to apply:** After all source-water and magnesium-preference adjustments, scale the combined bicarbonate-salt contribution down to the remaining bicarbonate budget while preserving the NaHCO₃/KHCO₃ ratio. Flag source-water-only excess separately.
+
+All user-facing dosing surfaces must consume the same final target map: selected hydration form plus source-water-adjusted salt targets when configured water is present. This includes tables, simple Brewer cards, concentrate stocks, recipe steps, and text Brew Guide exports.
+
+**Why:** Divergent dosing paths can show or export original salt amounts while the final-mixture model correctly recommends reduced amounts, creating unsafe preparation instructions.
+
+**How to apply:** Centralize the effective dosing targets and always resolve each salt's form from the active recipe row, with a safe fallback only for missing/invalid row data.

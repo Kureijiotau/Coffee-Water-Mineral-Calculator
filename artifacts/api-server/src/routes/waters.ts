@@ -4,6 +4,7 @@ import { desc, eq } from "drizzle-orm";
 import { SHARED_WATERS } from "../data/sharedWaters";
 
 const router: IRouter = Router();
+const PUBLIC_WATER_ION_LIMIT = 100_000;
 
 function catalogName(name: string): string {
   return name
@@ -55,6 +56,27 @@ function getSafeDatabaseError(err: unknown): {
   return { code, message };
 }
 
+function parseWaterIons(value: unknown): Record<string, number> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const entries = Object.entries(value);
+  if (entries.length === 0 || entries.length > 32) return null;
+
+  const ions: Record<string, number> = {};
+  for (const [key, rawValue] of entries) {
+    if (!/^[a-z][a-z0-9_-]{0,31}$/i.test(key)) return null;
+    const parsed = typeof rawValue === "number" ? rawValue : Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > PUBLIC_WATER_ION_LIMIT) return null;
+    ions[key] = parsed;
+  }
+  return ions;
+}
+
+function hasAdminDeleteAccess(req: Request): boolean {
+  const configuredToken = process.env.COMMUNITY_WATERS_ADMIN_TOKEN;
+  const suppliedToken = req.header("x-community-waters-admin-token");
+  return Boolean(configuredToken && suppliedToken && suppliedToken === configuredToken);
+}
+
 /**
  * GET /api/waters
  * Returns all saved mineral water entries, newest first.
@@ -64,6 +86,7 @@ router.get("/waters", async (_req: Request, res: Response) => {
     const rows = await db
       .select()
       .from(watersTable)
+      .where(eq(watersTable.shared, "yes"))
       .orderBy(desc(watersTable.createdAt));
     const metadataByName = new Map(
       SHARED_WATERS
@@ -79,26 +102,32 @@ router.get("/waters", async (_req: Request, res: Response) => {
     console.error("Error fetching waters:", err);
     // The public catalog is bundled with the API so a missing Vercel
     // production schema cannot break the calculator's water selector.
-    res.json({ waters: SHARED_WATERS });
+    res.json({ waters: SHARED_WATERS.filter(water => water.shared === "yes") });
   }
 });
 
 /**
  * POST /api/waters
  * Save a new mineral water entry (auto-called on scan).
- * Body: { name?: string, ions: Record<string, number> }
+ * Body: { name?: string, ions: Record<string, number>, shared: "yes" }
  */
 router.post("/waters", async (req: Request, res: Response) => {
   try {
     const { name, ions, shared } = req.body;
-    if (!ions || typeof ions !== "object" || Object.keys(ions).length === 0) {
-      res.status(400).json({ error: "Missing or empty 'ions' field" });
+    const parsedIons = parseWaterIons(ions);
+    if (!parsedIons) {
+      res.status(400).json({ error: "Invalid 'ions' field" });
       return;
     }
+    if (shared !== "yes") {
+      res.status(400).json({ error: "Community water submissions must explicitly set shared to 'yes'" });
+      return;
+    }
+    const waterName = typeof name === "string" ? name.trim().slice(0, 160) : "";
 
     const [saved] = await db
       .insert(watersTable)
-      .values({ name: name ?? "", ions, shared: shared ?? 'no' })
+      .values({ name: waterName, ions: parsedIons, shared: "yes" })
       .returning();
 
     res.status(201).json({ water: saved });
@@ -114,12 +143,23 @@ router.post("/waters", async (req: Request, res: Response) => {
  */
 router.delete("/waters/:id", async (req: Request, res: Response) => {
   try {
+    if (!hasAdminDeleteAccess(req)) {
+      res.status(403).json({ error: "Deleting community waters requires administrator access" });
+      return;
+    }
     const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id)) {
       res.status(400).json({ error: "Invalid id" });
       return;
     }
-    await db.delete(watersTable).where(eq(watersTable.id, id));
+    const deleted = await db
+      .delete(watersTable)
+      .where(eq(watersTable.id, id))
+      .returning({ id: watersTable.id });
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "Water not found" });
+      return;
+    }
     res.json({ ok: true });
   } catch (err: any) {
     console.error("Error deleting water:", err);
