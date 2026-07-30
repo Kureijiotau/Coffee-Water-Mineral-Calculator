@@ -474,6 +474,32 @@ function App() {
         targets.mgcl2 = 0;
       }
     }
+
+    // Bicarbonate is a hard ceiling, not a co-ion that may overshoot. Both
+    // bicarbonate salts contribute to the same KH target, so cap their
+    // combined contribution after the individual source-water adjustments
+    // above. Preserve the remaining NaHCO3/KHCO3 ratio when scaling.
+    if (hasMineralWater) {
+      const bicarbonateContributions = ['nahco3', 'khco3'].map(saltId => {
+        const salt = SALTS.find(item => item.id === saltId);
+        const fraction = salt?.ions.find(contribution => contribution.ionId === 'bicarbonate')?.fraction ?? 0;
+        return { saltId, fraction, contribution: (targets[saltId] ?? 0) * fraction };
+      });
+      const saltBicarbonate = bicarbonateContributions.reduce((total, item) => total + item.contribution, 0);
+      const remainingBicarbonate = Math.max(
+        (saltOnlyIons.bicarbonate ?? 0) - (bottledIons.bicarbonate ?? 0),
+        0,
+      );
+
+      if (saltBicarbonate > remainingBicarbonate + 0.0001) {
+        const scale = saltBicarbonate > 0 ? remainingBicarbonate / saltBicarbonate : 0;
+        for (const item of bicarbonateContributions) {
+          targets[item.saltId] = item.fraction > 0
+            ? (item.contribution * scale) / item.fraction
+            : 0;
+        }
+      }
+    }
     return targets;
   }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
 
@@ -530,6 +556,10 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
+  const bicarbonateTarget = saltOnlyIons.bicarbonate ?? 0;
+  const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
+  const bicarbonateWaterOvershoot = hasMineralWater
+    && bicarbonateFromWater > bicarbonateTarget + 0.05;
   const tdsForRecipeSteps = useMemo(() => {
     const finalIons = computeIonTotals(
       hasMineralWater ? suggestedSaltTargets : saltTargets,
@@ -2163,8 +2193,11 @@ function App() {
                   })()}
                 </div>
                  {(() => {
-                   const overshoots = ACTIVE_ION_IDS
-                     .map(id => {
+                    const overshoots = ACTIVE_ION_IDS
+                      // Bicarbonate has its own hard-stop message below; it
+                      // is not an acceptable "unavoidable co-ion" warning.
+                      .filter(id => id !== 'bicarbonate')
+                      .map(id => {
                        const target = saltOnlyIons[id] ?? 0;
                        const actual = suggestedIonTotals[id] ?? 0;
                        return { id, amount: actual - target };
@@ -2179,7 +2212,7 @@ function App() {
                          Final recipe overshoot
                        </span>
                        <p className="mt-1 text-[11px] text-slate-400">
-                         Mineral water and unavoidable salt co-ions can take the finished batch above the recipe target.
+                          Mineral water and unavoidable salt co-ions can take other ions above the recipe target.
                        </p>
                        <div className="mt-2 flex flex-wrap gap-2">
                          {overshoots.map(({ id, amount }) => (
@@ -2194,6 +2227,18 @@ function App() {
                      </div>
                    );
                  })()}
+                  {bicarbonateWaterOvershoot && (
+                    <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                        Bicarbonate source-water stop
+                      </span>
+                      <p className="mt-1 text-[11px] text-slate-300">
+                        This water alone provides {bicarbonateFromWater.toFixed(1)} ppm HCO₃⁻,
+                        above the {bicarbonateTarget.toFixed(1)} ppm recipe target. No bicarbonate
+                        salts will be recommended; use less of this water or choose a lower-alkalinity source.
+                      </p>
+                    </div>
+                  )}
               </div>
             )}
           </div>
@@ -2597,6 +2642,7 @@ function App() {
           saltOnlyIons={saltOnlyIons}
           bottledIons={bottledIons}
           suggestedSaltTargets={suggestedSaltTargets}
+          bicarbonateWaterOvershoot={bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
           tdsTarget={tdsForRecipeSteps}
           onClose={() => setShowBrewerSteps(false)}
@@ -2760,6 +2806,7 @@ function BrewerRecipeStepsModal({
   saltOnlyIons,
   bottledIons,
   suggestedSaltTargets,
+  bicarbonateWaterOvershoot,
   nerdLevel,
   tdsTarget,
   onClose,
@@ -2777,6 +2824,7 @@ function BrewerRecipeStepsModal({
   saltOnlyIons: Record<IonId, number>;
   bottledIons: Record<IonId, number>;
   suggestedSaltTargets: Record<string, number>;
+  bicarbonateWaterOvershoot: boolean;
   nerdLevel: NerdLevel;
   tdsTarget: number;
   onClose: () => void;
@@ -2825,6 +2873,8 @@ function BrewerRecipeStepsModal({
       - configuredAdditionWaters.reduce((sum, water) => sum + water.volume, 0),
     0,
   );
+  const bicarbonateTarget = saltOnlyIons.bicarbonate ?? 0;
+  const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
   const stepSalts = hasBaseWater ? suggestedSalts : recipeSalts;
   const stepSaltTargets = hasBaseWater ? suggestedSaltTargets : saltTargets;
   const orderedRecipeSalts = [
@@ -2875,11 +2925,14 @@ function BrewerRecipeStepsModal({
                     if (target <= 0) return null;
                     const remaining = Math.max(target - (bottledIons[id] ?? 0), 0);
                     const covered = remaining <= 0.01;
+                    const bicarbonateBlocked = id === 'bicarbonate' && bicarbonateWaterOvershoot;
                     return (
                       <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
-                        <span className={`text-sm font-semibold tabular-nums ${covered ? 'text-emerald-300' : 'text-amber-300'}`}>
-                          {covered ? '✓ Covered' : `${remaining.toFixed(1)} ppm`}
+                        <span className={`text-sm font-semibold tabular-nums ${bicarbonateBlocked ? 'text-rose-300' : covered ? 'text-emerald-300' : 'text-amber-300'}`}>
+                          {bicarbonateBlocked
+                            ? `Blocked: ${bicarbonateFromWater.toFixed(1)} ppm`
+                            : covered ? '✓ Covered' : `${remaining.toFixed(1)} ppm`}
                         </span>
                       </div>
                     );
@@ -2926,6 +2979,16 @@ function BrewerRecipeStepsModal({
                     );
                   })}
                 </div>
+              </div>
+            )}
+            {bicarbonateWaterOvershoot && (
+              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">Stop before adding bicarbonate</div>
+                <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                  The selected source water already exceeds the recipe’s bicarbonate target
+                  ({bicarbonateFromWater.toFixed(1)} ppm HCO₃⁻ supplied vs {bicarbonateTarget.toFixed(1)} ppm allowed).
+                  Do not add baking soda or potassium bicarbonate. Reduce the source-water volume or choose a lower-alkalinity water.
+                </p>
               </div>
             )}
             {configuredBaseWaters.length > 0 && (

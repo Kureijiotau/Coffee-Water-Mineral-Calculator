@@ -14,3 +14,9 @@ The suggested magnesium-source control has three modes: Original recipe, Chlorid
 **Why:** Recipes may intentionally use both magnesium salts, so an exclusive one-salt swap changes the recipe more than necessary.
 
 **How to apply:** Treat the preference as a soft allocation choice, not a sort-only toggle or an exclusive replacement. Keep the selected row hydration forms for displayed weighing amounts.
+
+Bicarbonate is a hard ceiling in the final mixture: source-water bicarbonate plus NaHCO₃/KHCO₃ contributions must not exceed the original recipe bicarbonate target. If source water alone exceeds that target, the calculator must recommend no bicarbonate salts and clearly tell the user to change the water amount or source.
+
+**Why:** Bicarbonate directly controls KH and acidity buffering; unlike unavoidable chloride or sulfate co-ions, extra bicarbonate is not acceptable for a target recipe.
+
+**How to apply:** After all source-water and magnesium-preference adjustments, scale the combined bicarbonate-salt contribution down to the remaining bicarbonate budget while preserving the NaHCO₃/KHCO₃ ratio. Flag source-water-only excess separately.
