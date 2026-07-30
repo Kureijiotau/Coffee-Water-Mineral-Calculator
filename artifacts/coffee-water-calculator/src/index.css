@@ -1,3 +1,87 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* The sodium correction control is a tiny playful salt-shaker interaction:
+   resting upright when off, inverted when active, and shaking out grains on
+   hover without changing the toggle's actual click behavior. */
+.salt-shaker-visual {
+  transform-origin: 50% 50%;
+  transition: transform 180ms ease;
+}
+
+.salt-shaker-toggle.is-on .salt-shaker-visual {
+  transform: rotate(180deg);
+}
+
+.salt-shaker-toggle:hover .salt-shaker-visual {
+  animation: salt-shaker-rattle 480ms ease-in-out infinite;
+}
+
+.salt-grains {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.salt-shaker-toggle:hover .salt-grains {
+  opacity: 1;
+}
+
+.salt-grain {
+  position: absolute;
+  top: 13px;
+  width: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+}
+
+.salt-grain-one {
+  left: 7px;
+}
+
+.salt-grain-two {
+  left: 10px;
+  animation-delay: 90ms;
+}
+
+.salt-grain-three {
+  left: 13px;
+  animation-delay: 180ms;
+}
+
+.salt-shaker-toggle:hover .salt-grain {
+  animation: salt-fall 620ms ease-in infinite;
+}
+
+@keyframes salt-shaker-rattle {
+  0%, 100% { transform: rotate(180deg) translateX(0); }
+  25% { transform: rotate(174deg) translateX(-1px); }
+  75% { transform: rotate(186deg) translateX(1px); }
+}
+
+.salt-shaker-toggle.is-off:hover .salt-shaker-visual {
+  animation-name: salt-shaker-rattle-resting;
+}
+
+@keyframes salt-shaker-rattle-resting {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  25% { transform: rotate(-6deg) translateX(-1px); }
+  75% { transform: rotate(6deg) translateX(1px); }
+}
+
+@keyframes salt-fall {
+  0% { transform: translateY(-1px) scale(0.7); opacity: 0; }
+  25% { opacity: 1; }
+  100% { transform: translateY(8px) scale(1); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .salt-shaker-toggle:hover .salt-shaker-visual,
+  .salt-shaker-toggle:hover .salt-grain {
+    animation: none;
+  }
+}

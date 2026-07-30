@@ -2256,13 +2256,22 @@ function App() {
                              title={sodiumCorrectionOn
                                ? 'Turn off sodium chloride correction'
                                : `Add NaCl to close the ${sodiumCorrectionGap.toFixed(1)} ppm sodium gap`}
-                             className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                             className={`salt-shaker-toggle flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
+                               sodiumCorrectionOn ? 'is-on' : 'is-off'
+                             } ${
                                sodiumCorrectionOn
                                  ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
                                  : 'border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
                              }`}
                            >
-                             <GiSaltShaker className="h-4 w-4" aria-hidden="true" />
+                             <span className="salt-shaker-icon relative h-5 w-5" aria-hidden="true">
+                               <GiSaltShaker className="salt-shaker-visual h-5 w-5" />
+                               <span className="salt-grains">
+                                 <span className="salt-grain salt-grain-one" />
+                                 <span className="salt-grain salt-grain-two" />
+                                 <span className="salt-grain salt-grain-three" />
+                               </span>
+                             </span>
                              <span className="hidden sm:inline">{sodiumCorrectionOn ? 'NaCl on' : 'Add NaCl'}</span>
                            </button>
                          )}
