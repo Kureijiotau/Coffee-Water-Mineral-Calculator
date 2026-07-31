@@ -343,8 +343,36 @@ function App() {
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
-  const showAlchemist = nerdLevel !== 'brewer';
+  const showAlchemist = nerdLevel === 'alchemist';
   const showWatermancer = nerdLevel === 'watermancer';
+  const modeAccent = nerdLevel === 'alchemist'
+    ? 'from-emerald-600 to-teal-500'
+    : nerdLevel === 'watermancer'
+      ? 'from-indigo-600 to-cyan-500'
+      : 'from-sky-600 to-cyan-500';
+  const modeGuide = nerdLevel === 'alchemist'
+    ? {
+        eyebrow: 'Recipe lab',
+        title: 'Build a clean mineral recipe',
+        description: 'Start from 0-TDS water, tune the salt recipe, and prepare a reliable concentrate without source-water noise.',
+        tags: ['Salts first', 'GH / KH', 'Concentrate safety'],
+        tone: 'border-emerald-400/25 bg-emerald-500/[0.06] text-emerald-200',
+      }
+    : nerdLevel === 'watermancer'
+      ? {
+          eyebrow: 'Source-water studio',
+          title: 'Shape the water around your coffee',
+          description: 'Compare bottled and saved waters, see their ion coverage, then use salts only to close the remaining gaps.',
+          tags: ['Source matching', 'Ion balance', 'Final mixture'],
+          tone: 'border-indigo-400/25 bg-indigo-500/[0.07] text-indigo-200',
+        }
+      : {
+          eyebrow: 'Flavor builder',
+          title: 'Choose a starting direction',
+          description: 'Shape the cup with a simple flavor-first recipe using RO / distilled 0 TDS water.',
+          tags: ['Flavor first', 'Dropper stocks', 'Simple dosing'],
+          tone: 'border-sky-400/25 bg-sky-500/[0.06] text-sky-200',
+        };
   const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => {
     const seenProfiles = new Set<string>();
     const sources: WaterComparisonSource[] = [];
@@ -404,6 +432,12 @@ function App() {
       .sort((a, b) => a.distance - b.distance)[0];
   }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
+    if (nerdLevel === 'alchemist' && level !== 'alchemist') {
+      // Concentrate controls belong to the Alchemist recipe lab. Do not let
+      // their hidden state change Watermancer or Brewer salt amounts/labels.
+      setConcentrateOn(false);
+      setSplitMode(false);
+    }
     if (level === 'brewer' && nerdLevel !== 'brewer') {
       const currentRecipe: SaltRecipe = {
         id: 'current',
@@ -514,6 +548,10 @@ function App() {
   // water and addition water are both part of the final batch composition.
   const combinedBottledIons = useMemo(() => {
     const m = {} as Partial<Record<IonId, number>>;
+    if (!showWatermancer) {
+      for (const id of ACTIVE_ION_IDS) m[id] = 0;
+      return m;
+    }
     for (const id of ACTIVE_ION_IDS) {
       let weighted = 0, totalVol = 0;
       for (const entry of [...mineralWaters, ...additionWaters]) {
@@ -526,11 +564,11 @@ function App() {
       m[id] = totalVol > 0 ? weighted / totalVol : 0;
     }
     return m;
-  }, [mineralWaters, additionWaters]);
+  }, [mineralWaters, additionWaters, showWatermancer]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, combinedBottledIons, dil),
-    [saltTargets, combinedBottledIons, dil],
+    () => computeIonTotals(saltTargets, combinedBottledIons, showWatermancer ? dil : 1),
+    [saltTargets, combinedBottledIons, dil, showWatermancer],
   );
   // Brewer is intentionally a simple RO / distilled water workflow. Keep its
   // flavor-generated recipe independent from the advanced water-aware targets
@@ -542,8 +580,8 @@ function App() {
   const brewerModeTds = Object.values(brewerModeIonTotals).reduce((total, ppm) => total + ppm, 0);
 
   const hasMineralWater = useMemo(
-    () => [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
-    [mineralWaters, additionWaters],
+    () => showWatermancer && [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
+    [showWatermancer, mineralWaters, additionWaters],
   );
 
   // Full recipe contribution without base/addition water. These are the
@@ -1381,7 +1419,7 @@ function App() {
       <div className="w-full max-w-5xl space-y-4">
         {/* Header */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r from-sky-600 to-cyan-500">
+          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${modeAccent}`}>
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <Calculator className="w-6 h-6 text-white" />
               <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
@@ -1420,14 +1458,20 @@ function App() {
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Experience Level</div>
-                <div className="mt-0.5 text-xs text-slate-500">Choose how much calculator detail to show. Brewer mode uses salts only.</div>
+                <div className="mt-0.5 text-xs text-slate-500">
+                  {nerdLevel === 'alchemist'
+                    ? 'A focused salt and concentrate workspace built from 0-TDS water.'
+                    : nerdLevel === 'watermancer'
+                      ? 'A source-water and ion-balance workspace for refining the final mixture.'
+                      : 'Choose how much calculator detail to show. Brewer mode uses salts only.'}
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
               {([
-                ['brewer', 'Brewer', 'Core recipe'],
-                ['alchemist', 'Alchemist', 'GH / KH & stocks'],
-                ['watermancer', 'Watermancer', 'Full ion detail'],
+                ['brewer', 'Brewer', 'Flavor-first recipe'],
+                ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
+                ['watermancer', 'Watermancer', 'Source water & ions'],
               ] as const).map(([value, label, description]) => (
                 <button
                   key={value}
@@ -1437,7 +1481,11 @@ function App() {
                   title={description}
                   className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                     nerdLevel === value
-                      ? 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
+                      ? value === 'alchemist'
+                        ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
+                        : value === 'watermancer'
+                          ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40 shadow-sm'
+                          : 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
                       : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                   }`}
                 >
@@ -1448,12 +1496,32 @@ function App() {
           </div>
         </div>
 
+         {/* Mode guide */}
+         <div className={`rounded-2xl border px-4 py-3 shadow-xl backdrop-blur ${modeGuide.tone}`}>
+           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+             <div className="min-w-0">
+               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-75">{modeGuide.eyebrow}</div>
+               <div className="mt-1 text-sm font-semibold text-slate-100">{modeGuide.title}</div>
+               <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">{modeGuide.description}</p>
+             </div>
+             <div className="flex shrink-0 flex-wrap gap-1.5">
+               {modeGuide.tags.map(tag => (
+                 <span key={tag} className="rounded-full border border-white/10 bg-slate-950/20 px-2.5 py-1 text-[10px] font-medium text-slate-300">
+                   {tag}
+                 </span>
+               ))}
+             </div>
+           </div>
+         </div>
+
          {/* Mineral Table */}
-         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-cyan-500/20 overflow-hidden">
+         {(showAlchemist || showWatermancer) && <div className={`bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border ${showAlchemist ? 'border-emerald-400/20' : 'border-indigo-400/25'} overflow-hidden`}>
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <SaltSieveIcon />
-               <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">Mineral Salts</h2>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">
+                  {showAlchemist ? 'Mineral Recipe' : 'Target Mineral Profile'}
+                </h2>
                <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
               </span>
@@ -1561,6 +1629,15 @@ function App() {
               />
             </div>
           </div>
+            <div className={`border-b px-4 py-2.5 text-[11px] leading-relaxed sm:px-6 ${
+              showAlchemist
+                ? 'border-emerald-400/10 bg-emerald-500/[0.03] text-slate-400'
+                : 'border-indigo-400/10 bg-indigo-500/[0.03] text-slate-400'
+            }`}>
+              {showAlchemist
+                ? 'Build the recipe from 0-TDS water. Choose hydrated forms, then use the batch panel to prepare a safe concentrate.'
+                : 'Set the target recipe, then add a bottled or saved source below. Watermancer will reduce the salt dose to account for the ions already present.'}
+            </div>
            {selectedSourceRecipe && (
              <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
                <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1686,14 +1763,14 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-           {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
+           {(showAlchemist || showWatermancer) && <div className={`relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
-             title="Water Volume"
+              title={showAlchemist ? 'Batch & Concentrate' : 'Final Batch Volume'}
             after={
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+               showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
                  <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Concentrate</span>
                  <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
                   <input
@@ -1704,7 +1781,7 @@ function App() {
            />
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
-              </label>
+               </label> : undefined
             }
           />
             <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-transparent">
@@ -1721,7 +1798,7 @@ function App() {
                 <span className="text-sm text-cyan-200/80">liters</span>
             </div>
 
-            {concentrateOn && !splitMode && (
+             {showAlchemist && concentrateOn && !splitMode && (
                <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   <div className="flex items-center gap-2">
@@ -1838,7 +1915,7 @@ function App() {
             )}
 
             {/* ── Split stocks panels ── */}
-            {concentrateOn && splitMode && (
+             {showAlchemist && concentrateOn && splitMode && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -1899,7 +1976,7 @@ function App() {
           </div>
         </div>}
 
-        {showAlchemist && (
+        {showWatermancer && (
           /* Estimated pH / alkalinity */
           <WaterChemistryCard
             estimate={waterChemistry.estimate}
@@ -1917,7 +1994,7 @@ function App() {
         />
 
         {/* Mineral Water Base */}
-        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title="Mineral Water Base"
@@ -2560,8 +2637,8 @@ function App() {
           </div>
         </div>}
 
-        {showAlchemist && hasMineralWater && (
-          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
+        {showWatermancer && hasMineralWater && (
+          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
             <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
               Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
@@ -2586,7 +2663,7 @@ function App() {
         )}
 
         {/* Mineral Water Addition */}
-        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
           <SectionHeader
             icon={<PouringCarafeIcon />}
             title="Mineral Water Addition"
