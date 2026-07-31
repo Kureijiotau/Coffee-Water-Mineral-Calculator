@@ -2561,7 +2561,7 @@ function App() {
         {/* Mineral Water Addition */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
-            icon={<Droplet className="w-4 h-4" />}
+            icon={<PouringCarafeIcon />}
             title="Mineral Water Addition"
             after={<div className="flex items-center gap-2">
               <span className="text-[11px] text-slate-400">
@@ -3107,6 +3107,40 @@ function MineralWaterBeaker({ active }: { active: boolean }) {
         <path d="M5.55 12.25h8.9l1.05 2.1a2.15 2.15 0 0 1-1.93 3.15H6.43A2.15 2.15 0 0 1 4.5 14.35l1.05-2.1Z" fill="currentColor" fillOpacity={active ? 0.26 : 0.08} />
         <path className="mineral-water-liquid" d="M5.7 12.35c1.2-.65 2.1.65 3.25 0s2.05.65 3.25 0 2.05.65 3.15 0l.85 1.9a2.05 2.05 0 0 1-1.85 3H6.65a2.05 2.05 0 0 1-1.85-3l.9-1.9Z" fill="currentColor" fillOpacity={active ? 0.55 : 0.16} />
         <path d="M5.7 12.35c1.2-.65 2.1.65 3.25 0s2.05.65 3.25 0 2.05.65 3.15 0" stroke="currentColor" strokeOpacity={active ? 0.9 : 0.35} strokeWidth="0.85" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
+function PouringCarafeIcon() {
+  return (
+    <span className="inline-flex h-4 w-4 items-center justify-center text-sky-300" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 -rotate-[18deg]">
+        <path
+          d="M4.1 6.5 2.2 4.8c-.35-.32-.16-.9.31-.95l4.02-.43"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M7 5.6h4.15l2.3 9.3H5.35L7 5.6Z"
+          fill="currentColor"
+          fillOpacity="0.18"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinejoin="round"
+        />
+        <path d="M7.35 5.6V3.1h3.25v2.5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" />
+        <path
+          d="M11.4 7.4c2.75-.65 4.55.7 4.55 2.8 0 1.35-.75 2.45-1.95 2.95"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinecap="round"
+        />
+        <path d="M5.7 11.2h6.95" stroke="currentColor" strokeOpacity="0.8" strokeWidth="0.9" strokeLinecap="round" />
+        <path d="M2.15 3.35 1.25 2.55" stroke="currentColor" strokeOpacity="0.65" strokeWidth="0.9" strokeLinecap="round" />
+        <path d="M1.25 4.7 0.15 4.6" stroke="currentColor" strokeOpacity="0.65" strokeWidth="0.9" strokeLinecap="round" />
       </svg>
     </span>
   );
