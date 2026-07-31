@@ -1430,7 +1430,7 @@ function App() {
          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-cyan-500/20 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
-                 <FallingGrainsIcon />
+                <SaltSieveIcon />
                <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">Mineral Salts</h2>
                <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
@@ -3146,29 +3146,29 @@ function PouringCarafeIcon() {
   );
 }
 
-function FallingGrainsIcon() {
+function SaltSieveIcon() {
   return (
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.25]">
-        <g fill="currentColor">
-          <circle cx="3.8" cy="2.7" r="0.62" />
-          <circle cx="5.8" cy="4.3" r="0.42" opacity="0.8" />
-          <circle cx="8" cy="5.9" r="0.68" />
-          <circle cx="10.6" cy="7.2" r="0.4" opacity="0.72" />
-          <circle cx="12.3" cy="8.9" r="0.58" />
-          <circle cx="14.6" cy="10.3" r="0.42" opacity="0.8" />
-          <circle cx="16.5" cy="12" r="0.65" />
-          <circle cx="4.7" cy="6.5" r="0.36" opacity="0.72" />
-          <circle cx="6.8" cy="8.3" r="0.52" />
-          <circle cx="9.1" cy="9.7" r="0.36" opacity="0.78" />
-          <circle cx="10.4" cy="11.7" r="0.62" />
-          <circle cx="12.6" cy="13" r="0.4" opacity="0.72" />
-          <circle cx="14.5" cy="14.8" r="0.55" />
-          <circle cx="7.2" cy="12" r="0.34" opacity="0.72" />
-          <circle cx="8.5" cy="14.5" r="0.48" />
-          <circle cx="10.7" cy="16.7" r="0.35" opacity="0.74" />
-          <circle cx="12" cy="18" r="0.58" />
-        </g>
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path
+          d="M2.1 8.6C4.9 5.5 7.55 2.45 10 2.45s5.1 3.05 7.9 6.15c-2.65 2.25-5.25 3.35-7.9 3.35S4.75 10.85 2.1 8.6Z"
+          fill="currentColor"
+          fillOpacity="0.1"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="6.1" cy="7.7" r="0.75" fill="currentColor" />
+        <circle cx="8.6" cy="5.7" r="0.75" fill="currentColor" />
+        <circle cx="11.6" cy="5.65" r="0.75" fill="currentColor" />
+        <circle cx="14.1" cy="7.55" r="0.75" fill="currentColor" />
+        <circle cx="8.15" cy="8.65" r="0.7" fill="currentColor" />
+        <circle cx="10.45" cy="7.9" r="0.7" fill="currentColor" />
+        <circle cx="12.15" cy="9.15" r="0.7" fill="currentColor" />
+        <circle cx="4.2" cy="12.75" r="0.65" fill="currentColor" />
+        <circle cx="6.55" cy="14.55" r="0.7" fill="currentColor" />
+        <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
       </svg>
     </span>
   );
