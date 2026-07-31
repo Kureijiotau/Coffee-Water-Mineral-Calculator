@@ -3206,6 +3206,7 @@ function BrewerSimpleRecipeCard({
   const [makeWaterStage, setMakeWaterStage] = useState<'choice' | 'prep' | 'dose'>('choice');
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({});
   const [pantryBottleMl, setPantryBottleMl] = useState('60');
+  const [pantryCustomMl, setPantryCustomMl] = useState('150');
   const [calciumAvailable, setCalciumAvailable] = useState(true);
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
@@ -3464,8 +3465,42 @@ function BrewerSimpleRecipeCard({
                       {size} mL
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setPantryBottleMl(pantryCustomMl || '150')}
+                    className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition ${
+                      !['60', '100'].includes(pantryBottleMl)
+                        ? 'bg-violet-400/25 text-violet-100'
+                        : 'text-slate-500 hover:text-slate-200'
+                    }`}
+                  >
+                    Custom
+                  </button>
                 </div>
               </div>
+              {!['60', '100'].includes(pantryBottleMl) && (
+                <label className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-violet-400/20 bg-slate-950/20 px-3 py-2">
+                  <span className="text-[11px] text-slate-400">Capacity</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      max="5000"
+                      step="1"
+                      value={pantryBottleMl}
+                      onChange={event => {
+                        setPantryCustomMl(event.target.value);
+                        setPantryBottleMl(event.target.value);
+                      }}
+                      placeholder="150"
+                      aria-label="Custom bottle capacity in milliliters"
+                      className="w-24 rounded-md border border-violet-400/30 bg-slate-900/70 px-2 py-1 text-right text-xs text-slate-100 placeholder-slate-600 focus:border-violet-300 focus:outline-none focus:ring-1 focus:ring-violet-400/50"
+                    />
+                    <span className="text-[11px] text-slate-500">mL</span>
+                  </div>
+                </label>
+              )}
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {pantrySalts.filter(salt => calciumAvailable || salt.id !== 'cacl2').map(salt => (
                   <div key={`prep-${salt.id}`} className="flex items-center justify-between rounded-lg bg-slate-950/25 px-3 py-2">
