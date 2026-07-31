@@ -3115,7 +3115,7 @@ function MineralWaterBeaker({ active }: { active: boolean }) {
 function PouringCarafeIcon() {
   return (
     <span className="inline-flex h-4 w-4 items-center justify-center text-sky-300" aria-hidden="true">
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 -rotate-[18deg]">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.3] -rotate-[18deg]">
         <path
           d="M4.1 6.5 2.2 4.8c-.35-.32-.16-.9.31-.95l4.02-.43"
           stroke="currentColor"
