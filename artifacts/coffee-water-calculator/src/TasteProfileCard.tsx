@@ -211,6 +211,28 @@ function ProfileRow({ label, profile }: { label: React.ReactNode; profile: Profi
   );
 }
 
+function TasteProfileCup() {
+  return (
+    <span className="taste-profile-cup inline-flex h-4 w-4 items-center justify-center text-white" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path
+          d="M4 8.25h9.5v4.1A3.65 3.65 0 0 1 9.85 16H7.65A3.65 3.65 0 0 1 4 12.35v-4.1Z"
+          fill="currentColor"
+          fillOpacity="0.2"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinejoin="round"
+        />
+        <path d="M13.5 9.15h1.1a2.1 2.1 0 0 1 0 4.2h-1.1" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+        <path d="M3 16.5h11" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+        <path className="taste-profile-steam taste-profile-steam-one" d="M6.5 6.5c-1-1 .9-1.4 0-2.6" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1" strokeLinecap="round" />
+        <path className="taste-profile-steam taste-profile-steam-two" d="M9 6.5c-1-1 .9-1.4 0-2.6" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1" strokeLinecap="round" />
+        <path className="taste-profile-steam taste-profile-steam-three" d="M11.5 6.5c-1-1 .9-1.4 0-2.6" stroke="currentColor" strokeOpacity="0.9" strokeWidth="1" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
 // — Main component ————————————————————————————————————
 
 export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false }: Props) {
@@ -225,7 +247,7 @@ export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false 
     return (
       <details open={!collapsed} className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
         <summary className="flex list-none cursor-pointer items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-600 to-orange-500 [&::-webkit-details-marker]:hidden">
-          <Coffee className="w-4 h-4 text-white" />
+         <Coffee className="w-4 h-4 text-white" />
           <span className="text-sm font-semibold text-white">Taste Profile</span>
           <span className="ml-auto text-xs text-white/60 transition-transform group-open:rotate-180">⌄</span>
         </summary>
@@ -245,7 +267,7 @@ export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false 
   return (
     <details open={!collapsed} className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
       <summary className="flex list-none cursor-pointer items-center gap-2 px-5 py-3 bg-gradient-to-r from-amber-600 to-orange-500 [&::-webkit-details-marker]:hidden">
-        <Coffee className="w-4 h-4 text-white" />
+        <TasteProfileCup />
         <span className="text-sm font-semibold text-white">Taste Profile</span>
         <span className="ml-auto text-xs text-white/60 transition-transform group-open:rotate-180">⌄</span>
       </summary>

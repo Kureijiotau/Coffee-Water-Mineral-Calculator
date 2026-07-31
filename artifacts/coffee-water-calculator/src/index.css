@@ -79,9 +79,35 @@
   100% { transform: translateY(8px) scale(1); opacity: 0; }
 }
 
+.taste-profile-steam {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: taste-profile-steam-rise 2.4s ease-in-out infinite;
+}
+
+.taste-profile-steam-two {
+  animation-delay: 560ms;
+}
+
+.taste-profile-steam-three {
+  animation-delay: 1120ms;
+}
+
+@keyframes taste-profile-steam-rise {
+  0%, 100% {
+    opacity: 0.15;
+    transform: translateY(1px) scaleY(0.75);
+  }
+  35%, 65% {
+    opacity: 0.9;
+    transform: translateY(-1px) scaleY(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .salt-shaker-toggle.is-on:hover .salt-shaker-visual,
-  .salt-shaker-toggle.is-on:hover .salt-grain {
+  .salt-shaker-toggle.is-on:hover .salt-grain,
+  .taste-profile-steam {
     animation: none;
   }
 }
