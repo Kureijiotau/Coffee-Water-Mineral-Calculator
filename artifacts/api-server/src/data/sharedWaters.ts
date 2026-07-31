@@ -5,6 +5,7 @@ export interface SharedWater {
   metadata?: {
     tds?: number;
     ph?: number;
+    silica?: number;
   };
   shared: "yes" | "no";
   createdAt: string;
@@ -16,6 +17,14 @@ export interface SharedWater {
  * calculator reliable without requiring a Vercel database migration.
  */
 export const SHARED_WATERS: SharedWater[] = [
+  {
+    id: 24,
+    name: "Vichy Catalan",
+    ions: { sodium: 1097, calcium: 14, sulfate: 50, chloride: 584, magnesium: 6, potassium: 51, bicarbonate: 2081 },
+    metadata: { tds: 2900, ph: 8, silica: 15 },
+    shared: "yes",
+    createdAt: "2026-07-31T00:00:00.000Z",
+  },
   {
     id: 22,
     name: "Ilıca (Afyon Ilıca) — madensulari.com",
