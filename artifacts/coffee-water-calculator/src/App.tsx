@@ -1666,16 +1666,35 @@ function App() {
          {/* Water amount + Concentrate */}
            {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-14 overflow-hidden">
-              <img
-                src={`${import.meta.env.BASE_URL}water-volume-ocean.jpg`}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full object-cover object-[center_72%] opacity-45 saturate-125"
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 1200 26"
+              preserveAspectRatio="none"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-5 w-full opacity-55"
+            >
+              <path
+                d="M0 15 C48 7 92 7 140 15 S232 23 280 15 S372 7 420 15 S512 23 560 15 S652 7 700 15 S792 23 840 15 S932 7 980 15 S1072 23 1120 15 S1160 10 1200 15 V26 H0 Z"
+                fill="url(#water-wave-fill)"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/45 to-slate-900/10" />
-              <div className="absolute inset-x-0 top-0 h-px bg-cyan-100/20" />
-            </div>
+              <path
+                d="M0 15 C48 7 92 7 140 15 S232 23 280 15 S372 7 420 15 S512 23 560 15 S652 7 700 15 S792 23 840 15 S932 7 980 15 S1072 23 1120 15 S1160 10 1200 15"
+                fill="none"
+                stroke="url(#water-wave-stroke)"
+                strokeWidth="1.5"
+              />
+              <defs>
+                <linearGradient id="water-wave-fill" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.04" />
+                  <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="#2563eb" stopOpacity="0.04" />
+                </linearGradient>
+                <linearGradient id="water-wave-stroke" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.08" />
+                  <stop offset="50%" stopColor="#a5f3fc" stopOpacity="0.48" />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.08" />
+                </linearGradient>
+              </defs>
+            </svg>
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
