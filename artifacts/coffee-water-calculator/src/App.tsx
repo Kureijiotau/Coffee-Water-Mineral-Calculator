@@ -1857,9 +1857,9 @@ function App() {
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Base Salt Recipe Summary (as CaCO₃)" />
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" />
-            <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" />
-            <SimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" />
+             <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
+             <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
+             <SimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
             <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
               <span className="h-4 w-px bg-slate-700" />
@@ -4532,14 +4532,23 @@ function HardnessCard({ label, value, saltValue, bottledValue }: {
   );
 }
 
-function SimpleMetricCard({ label, value, unit }: {
-  label: string; value: number; unit: string;
+function SimpleMetricCard({ label, value, unit, tone = 'tds' }: {
+  label: string;
+  value: number;
+  unit: string;
+  tone?: 'hardness' | 'buffer' | 'tds';
 }) {
+  const valueTone = {
+    hardness: 'text-indigo-300',
+    buffer: 'text-amber-300',
+    tds: 'text-cyan-300',
+  }[tone];
+
   return (
     <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
       <div className="text-xs text-slate-400 mb-1">{label}</div>
       <div className="flex items-baseline gap-2">
-        <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
+        <span className={`text-2xl font-bold ${valueTone}`}>{value.toFixed(1)}</span>
         <span className="text-sm text-slate-400">{unit}</span>
       </div>
     </div>
