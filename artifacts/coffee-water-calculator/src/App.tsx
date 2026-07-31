@@ -1664,14 +1664,15 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-amber-500/20 overflow-hidden">
+           {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
+           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
           <SectionHeader
-            icon={<Droplet className="w-4 h-4" />}
-            title="Water Volume"
+             icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
+             title="Water Volume"
             after={
               <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                 <span className={`transition-colors ${concentrateOn ? 'text-amber-300' : 'text-slate-400'}`}>Concentrate</span>
-                 <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-amber-500' : 'bg-slate-600'}`}>
+                 <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Concentrate</span>
+                 <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
                   <input
                     type="checkbox"
                     checked={concentrateOn}
@@ -1683,18 +1684,19 @@ function App() {
               </label>
             }
           />
-           <div className="px-4 sm:px-6 py-4 space-y-4 bg-gradient-to-br from-amber-500/[0.035] via-transparent to-teal-500/[0.035]">
+            <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]">
+             <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full border border-cyan-300/10 shadow-[0_0_50px_-18px_rgba(34,211,238,0.8)]" />
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-               <label className="text-sm font-medium text-amber-100/90">Final batch volume:</label>
+                <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
                 type="number"
                 inputMode="decimal"
                 value={liters}
                 onChange={e => setLiters(e.target.value)}
                 placeholder="Liters"
-                 className="w-32 bg-amber-950/20 border border-amber-400/30 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-300 transition"
+                  className="w-32 bg-cyan-950/25 border border-cyan-300/35 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-200 transition"
               />
-               <span className="text-sm text-amber-200/70">liters</span>
+                <span className="text-sm text-cyan-200/80">liters</span>
             </div>
 
             {concentrateOn && !splitMode && (
