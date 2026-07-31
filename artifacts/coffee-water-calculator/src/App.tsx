@@ -1302,8 +1302,8 @@ function App() {
           </div>
         </div>
 
-        {/* Mineral Table */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+         {/* Mineral Table */}
+         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
             <div className="flex items-center gap-2">
               <FlaskConical className="w-4 h-4" />
@@ -1402,15 +1402,6 @@ function App() {
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Reset</span>
               </button>
-              <button
-                type="button"
-                onClick={() => setShowBrewerSteps(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-slate-700/40 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/70"
-                title="View step-by-step recipe instructions"
-              >
-                <ListChecks className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Recipe steps</span>
-              </button>
               <input
                 ref={importInputRef}
                 type="file"
@@ -1458,25 +1449,6 @@ function App() {
                </div>
              </div>
            )}
-          {nerdLevel === 'brewer' && (
-            <BrewerFlavorPanel
-              flavor={brewerFlavor}
-              suggestedIons={brewerSuggestedIons}
-              onChange={handleBrewerFlavorChange}
-            />
-          )}
-         {nerdLevel === 'brewer' ? (
-           <BrewerSimpleRecipeCard
-              saltTargets={brewerSuggestedSaltTargets}
-              recipeRows={rows}
-             liters={L}
-              volumeInput={liters}
-              onVolumeChange={value => setLiters(value)}
-             concentrateOn={concentrateOn}
-             concentrateLiters={concL}
-             concentrateStrength={concentrateStrength}
-           />
-         ) : (
          <>
          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
@@ -1544,9 +1516,28 @@ function App() {
               </div>
             );
          })}
-         </>
+          </>
+         </div>}
+         {nerdLevel === 'brewer' && (
+           <>
+             <BrewerFlavorPanel
+               flavor={brewerFlavor}
+               suggestedIons={brewerSuggestedIons}
+               onChange={handleBrewerFlavorChange}
+             />
+             <BrewerSimpleRecipeCard
+               saltTargets={brewerSuggestedSaltTargets}
+               recipeRows={rows}
+               liters={L}
+               volumeInput={liters}
+               onVolumeChange={value => setLiters(value)}
+               concentrateOn={concentrateOn}
+               concentrateLiters={concL}
+               concentrateStrength={concentrateStrength}
+               onOpenSteps={() => setShowBrewerSteps(true)}
+             />
+           </>
          )}
-        </div>
 
          {/* Water amount + Concentrate */}
          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
@@ -2833,6 +2824,7 @@ function BrewerSimpleRecipeCard({
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
+  onOpenSteps,
 }: {
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
@@ -2842,6 +2834,7 @@ function BrewerSimpleRecipeCard({
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
+  onOpenSteps: () => void;
 }) {
   const DROPS_PER_ML = 20;
   const UNIVERSAL_STOCK_PERCENT = 5;
@@ -3012,16 +3005,27 @@ function BrewerSimpleRecipeCard({
             Calcium chloride skipped — Epsom is increased to preserve GH, with a more magnesium-forward balance.
           </p>
         )}
-        <button
-          type="button"
-          onClick={openMakeWaterChecklist}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99]"
-        >
-          <Check className="h-4 w-4" />
-          Make this water
-        </button>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={openMakeWaterChecklist}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99]"
+          >
+            <Check className="h-4 w-4" />
+            Make this water
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSteps}
+            className="flex items-center justify-center gap-2 rounded-xl border border-slate-600/60 bg-slate-800/50 px-4 py-3 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/60 hover:text-slate-100"
+            title="View step-by-step recipe instructions"
+          >
+            <ListChecks className="h-4 w-4" />
+            Recipe steps
+          </button>
+        </div>
         <p className="mt-2 text-center text-[10px] text-slate-500">
-          Turn this recipe into a quick, satisfying checklist.
+          Make this water opens a quick dosing checklist.
         </p>
       </div>
       {makeWaterOpen && (
