@@ -3149,7 +3149,7 @@ function PouringCarafeIcon() {
 function SaltSieveIcon() {
   return (
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.4]">
         <path
           d="M2.1 8.6C4.9 5.5 7.55 2.45 10 2.45s5.1 3.05 7.9 6.15c-2.65 2.25-5.25 3.35-7.9 3.35S4.75 10.85 2.1 8.6Z"
           fill="currentColor"
@@ -3159,16 +3159,27 @@ function SaltSieveIcon() {
           strokeLinecap="round"
           strokeLinejoin="round"
         />
-        <circle cx="6.1" cy="7.7" r="0.75" fill="currentColor" />
-        <circle cx="8.6" cy="5.7" r="0.75" fill="currentColor" />
-        <circle cx="11.6" cy="5.65" r="0.75" fill="currentColor" />
-        <circle cx="14.1" cy="7.55" r="0.75" fill="currentColor" />
-        <circle cx="8.15" cy="8.65" r="0.7" fill="currentColor" />
-        <circle cx="10.45" cy="7.9" r="0.7" fill="currentColor" />
-        <circle cx="12.15" cy="9.15" r="0.7" fill="currentColor" />
-        <circle cx="4.2" cy="12.75" r="0.65" fill="currentColor" />
-        <circle cx="6.55" cy="14.55" r="0.7" fill="currentColor" />
-        <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
+        {/* Dense, varied grains make the icon read as powdered minerals. */}
+        <circle cx="5.5" cy="7.9" r="0.62" fill="currentColor" />
+        <circle cx="6.8" cy="6.5" r="0.42" fill="currentColor" />
+        <circle cx="8.25" cy="5.55" r="0.72" fill="currentColor" />
+        <circle cx="9.55" cy="6.7" r="0.43" fill="currentColor" />
+        <circle cx="10.75" cy="5.2" r="0.5" fill="currentColor" />
+        <circle cx="12.05" cy="6.35" r="0.76" fill="currentColor" />
+        <circle cx="13.45" cy="5.95" r="0.4" fill="currentColor" />
+        <circle cx="14.55" cy="7.8" r="0.66" fill="currentColor" />
+        <circle cx="7.1" cy="8.25" r="0.48" fill="currentColor" />
+        <circle cx="8.45" cy="7.55" r="0.6" fill="currentColor" />
+        <circle cx="9.8" cy="8.45" r="0.72" fill="currentColor" />
+        <circle cx="11.35" cy="7.65" r="0.42" fill="currentColor" />
+        <circle cx="12.65" cy="8.55" r="0.58" fill="currentColor" />
+        <circle cx="13.65" cy="9.1" r="0.38" fill="currentColor" />
+        <circle cx="4.35" cy="12.5" r="0.5" fill="currentColor" />
+        <circle cx="5.55" cy="13.65" r="0.34" fill="currentColor" />
+        <circle cx="6.75" cy="14.8" r="0.7" fill="currentColor" />
+        <circle cx="8.05" cy="13.25" r="0.43" fill="currentColor" />
+        <circle cx="9.2" cy="15.15" r="0.38" fill="currentColor" />
+        <circle cx="10.35" cy="13.85" r="0.55" fill="currentColor" />
       </svg>
     </span>
   );
