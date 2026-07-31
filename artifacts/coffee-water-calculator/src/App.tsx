@@ -3151,25 +3151,23 @@ function FallingGrainsIcon() {
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.25]">
         <g fill="currentColor">
-          <circle cx="4.3" cy="3.2" r="0.48" />
-          <circle cx="6.5" cy="4.8" r="0.32" opacity="0.8" />
-          <circle cx="8.2" cy="6.3" r="0.58" />
-          <circle cx="10.4" cy="7.1" r="0.28" opacity="0.72" />
-          <circle cx="11.9" cy="8.7" r="0.44" />
-          <circle cx="13.8" cy="9.8" r="0.3" opacity="0.8" />
-          <circle cx="15.1" cy="11.4" r="0.56" />
-          <circle cx="16.7" cy="12.9" r="0.27" opacity="0.68" />
-          <circle cx="5.2" cy="6.9" r="0.24" opacity="0.72" />
-          <circle cx="6.8" cy="8.5" r="0.4" />
-          <circle cx="8.9" cy="9.6" r="0.26" opacity="0.78" />
-          <circle cx="10.1" cy="11.1" r="0.52" />
-          <circle cx="12.2" cy="12.4" r="0.3" opacity="0.72" />
-          <circle cx="13.7" cy="14.2" r="0.45" />
-          <circle cx="15.3" cy="15.6" r="0.25" opacity="0.68" />
-          <circle cx="7.1" cy="12.5" r="0.25" opacity="0.72" />
-          <circle cx="8.4" cy="14.2" r="0.38" />
-          <circle cx="10.2" cy="15.7" r="0.24" opacity="0.74" />
-          <circle cx="11.2" cy="17.1" r="0.5" />
+          <circle cx="3.8" cy="2.7" r="0.62" />
+          <circle cx="5.8" cy="4.3" r="0.42" opacity="0.8" />
+          <circle cx="8" cy="5.9" r="0.68" />
+          <circle cx="10.6" cy="7.2" r="0.4" opacity="0.72" />
+          <circle cx="12.3" cy="8.9" r="0.58" />
+          <circle cx="14.6" cy="10.3" r="0.42" opacity="0.8" />
+          <circle cx="16.5" cy="12" r="0.65" />
+          <circle cx="4.7" cy="6.5" r="0.36" opacity="0.72" />
+          <circle cx="6.8" cy="8.3" r="0.52" />
+          <circle cx="9.1" cy="9.7" r="0.36" opacity="0.78" />
+          <circle cx="10.4" cy="11.7" r="0.62" />
+          <circle cx="12.6" cy="13" r="0.4" opacity="0.72" />
+          <circle cx="14.5" cy="14.8" r="0.55" />
+          <circle cx="7.2" cy="12" r="0.34" opacity="0.72" />
+          <circle cx="8.5" cy="14.5" r="0.48" />
+          <circle cx="10.7" cy="16.7" r="0.35" opacity="0.74" />
+          <circle cx="12" cy="18" r="0.58" />
         </g>
       </svg>
     </span>
