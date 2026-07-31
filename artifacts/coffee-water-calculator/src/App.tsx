@@ -3151,18 +3151,26 @@ function MineralCrystalsIcon() {
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.25]">
         <g stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round">
-          <path d="m1.7 8.1 1.55-2.35 2.3-.35 1.05 1.8-1.35 2.1-2.35.35-1.2-1.55Z" fill="currentColor" fillOpacity="0.14" />
-          <path d="m6.4 4.05 1.65-1.5 2.05.35.25 1.65-1.65 1.25-1.95-.4-.35-1.35Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="m10.9 3.9 1.7-1.15 1.65.55.15 1.55-1.5 1.05-1.8-.5-.2-1.5Z" fill="currentColor" fillOpacity="0.12" />
-          <path d="m13.7 6.05 1.55-1.05 2.2.65.45 1.65-1.55 1.25-2.3-.55-.35-1.95Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="m4.1 10.1 1.75-1.15 2.1.65.3 1.7-1.55 1.35-2.1-.5-.5-2.05Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="m8.45 8.15 1.55-1.25 2.3.3.65 1.65-1.45 1.4-2.25-.3-.8-1.8Z" fill="currentColor" fillOpacity="0.16" />
-          <path d="m12.7 9.8 1.35-1.05 2.05.5.35 1.55-1.45 1.15-1.95-.4-.35-1.75Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="m2.45 13.3 1.25-1.15 1.7.35.4 1.5-1.15 1.2-1.7-.35-.5-1.55Z" fill="currentColor" fillOpacity="0.16" />
-          <path d="m6.1 13.25 1.55-1.35 2.05.45.4 1.65-1.45 1.25-2.1-.35-.45-1.65Z" fill="currentColor" fillOpacity="0.22" />
-          <path d="m10.45 12.25 1.45-1.1 1.85.4.3 1.55-1.3 1.15-1.85-.35-.45-1.65Z" fill="currentColor" fillOpacity="0.14" />
-          <path d="m14.45 13.3 1.15-1.05 1.65.35.4 1.4-1.1 1.15-1.65-.3-.45-1.55Z" fill="currentColor" fillOpacity="0.2" />
-          <path d="m8.7 16 1.25-1.05 1.65.3.25 1.35-1.15 1.05-1.65-.3-.35-1.35Z" fill="currentColor" fillOpacity="0.18" />
+          <path d="m1.6 14.4 1.05-2.15 1.8-.35 1.2 1.45-.85 1.55-1.85.45-1.35-.95Z" fill="currentColor" fillOpacity="0.13" />
+          <path d="m3.25 12.7 1.05-2.2 1.8-.35 1.15 1.45-.8 1.55-1.85.45-1.35-.9Z" fill="currentColor" fillOpacity="0.18" />
+          <path d="m5.05 13.55 1.05-2.45 1.95-.5 1.3 1.55-.8 1.75-2.1.55-1.4-.9Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m7.1 12.2 1-2.25 1.8-.35 1.25 1.4-.75 1.65-1.9.5-1.4-.95Z" fill="currentColor" fillOpacity="0.15" />
+          <path d="m9.05 13.1 1-2.5 2-.45 1.3 1.55-.9 1.75-2.05.5-1.35-.85Z" fill="currentColor" fillOpacity="0.22" />
+          <path d="m11.15 12.25 1-2.2 1.8-.45 1.3 1.45-.8 1.65-1.95.5-1.35-.95Z" fill="currentColor" fillOpacity="0.16" />
+          <path d="m13.1 13.45.95-2.1 1.7-.35 1.25 1.4-.8 1.55-1.85.45-1.25-.95Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m4.45 11.05.95-2.2 1.75-.45 1.25 1.5-.8 1.55-1.9.45-1.25-.85Z" fill="currentColor" fillOpacity="0.17" />
+          <path d="m6.5 10.05 1.05-2.35 1.85-.4 1.25 1.5-.75 1.65-1.95.45-1.45-.85Z" fill="currentColor" fillOpacity="0.24" />
+          <path d="m8.65 10.65.95-2.35 1.9-.45 1.3 1.45-.8 1.7-2 .45-1.35-.8Z" fill="currentColor" fillOpacity="0.18" />
+          <path d="m10.8 9.8 1-2.25 1.8-.4 1.25 1.45-.75 1.6-1.9.45-1.4-.85Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m6.65 7.8.85-1.85 1.5-.35 1.05 1.15-.65 1.35-1.6.4-1.15-.7Z" fill="currentColor" fillOpacity="0.15" />
+          <path d="m8.45 6.65.8-1.75 1.45-.3 1 1.1-.6 1.3-1.5.35-1.15-.7Z" fill="currentColor" fillOpacity="0.22" />
+          <path d="m10.2 7.35.85-1.8 1.5-.3 1 1.1-.6 1.3-1.55.35-1.15-.65Z" fill="currentColor" fillOpacity="0.16" />
+          <path d="m12.05 8.15.75-1.7 1.45-.3 1.05 1.05-.55 1.3-1.55.4-1.15-.75Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m3.05 15.7.55-.8.9-.15.55.55-.4.7-.9.2-.7-.5Z" fill="currentColor" fillOpacity="0.24" />
+          <path d="m6.45 15.9.65-.9.95-.15.55.6-.4.7-.95.2-.8-.45Z" fill="currentColor" fillOpacity="0.18" />
+          <path d="m9.8 15.45.6-.8.9-.15.55.55-.35.7-.95.2-.75-.5Z" fill="currentColor" fillOpacity="0.22" />
+          <path d="m12.8 15.8.55-.75.85-.15.55.5-.35.7-.9.2-.7-.5Z" fill="currentColor" fillOpacity="0.16" />
+          <path d="m15.75 15.1.5-.65.8-.15.5.5-.3.6-.85.15-.65-.45Z" fill="currentColor" fillOpacity="0.2" />
         </g>
       </svg>
     </span>
