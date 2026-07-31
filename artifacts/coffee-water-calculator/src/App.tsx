@@ -4621,22 +4621,19 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
     <details className="group border-t border-indigo-400/15 bg-indigo-500/[0.035]">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs text-slate-300 hover:bg-indigo-500/[0.06] sm:px-6 [&::-webkit-details-marker]:hidden">
         <span
-          className="flex h-5 w-5 items-center justify-center gap-0.5 rounded-full border border-indigo-400/35 bg-indigo-500/10"
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-400/35 bg-indigo-500/10"
           aria-label={`Ion status: ${TRAFFIC_STYLES[watchLevel].label}`}
           title={`Ion status: ${TRAFFIC_STYLES[watchLevel].label}`}
         >
-          {(['green', 'yellow', 'red'] as const).map(level => (
-            <span
-              key={level}
-              className={`h-1.5 w-1.5 rounded-full transition ${
-                level === 'green'
-                  ? watchLevel === 'green' ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.9)]' : 'bg-emerald-900/70'
-                  : level === 'yellow'
-                    ? watchLevel === 'yellow' ? 'bg-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.9)]' : 'bg-amber-900/70'
-                    : watchLevel === 'red' ? 'bg-rose-400 shadow-[0_0_5px_rgba(251,113,133,0.9)]' : 'bg-rose-900/70'
-              }`}
-            />
-          ))}
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${
+              watchLevel === 'green'
+                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.95)]'
+                : watchLevel === 'yellow'
+                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)]'
+                  : 'bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.95)]'
+            }`}
+          />
         </span>
         <span className="font-semibold">Aiki&apos;s ion check</span>
         <span className="text-slate-500">
