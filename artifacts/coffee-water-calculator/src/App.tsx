@@ -1665,8 +1665,7 @@ function App() {
 
          {/* Water amount + Concentrate */}
            {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
-           <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
-           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-r from-blue-500/15 via-sky-500/10 to-cyan-400/15" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
@@ -1686,7 +1685,7 @@ function App() {
               </label>
             }
           />
-            <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]">
+            <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-transparent">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
