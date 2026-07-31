@@ -195,6 +195,59 @@ interface CommunityWater {
   metadata?: WaterMetadata;
 }
 
+type WaterComparisonSource = {
+  key: string;
+  name: string;
+  ions: Record<string, number>;
+  databaseId?: number;
+  metadata?: WaterMetadata;
+};
+
+const COMPARISON_ION_IDS: IonId[] = [
+  'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate',
+];
+
+const COMPARISON_ION_LABELS: Record<IonId, string> = {
+  sodium: 'Na',
+  potassium: 'K',
+  magnesium: 'Mg',
+  calcium: 'Ca',
+  chloride: 'Cl',
+  sulfate: 'SO₄',
+  bicarbonate: 'HCO₃',
+  carbonate: 'CO₃',
+  citrates: 'Cit',
+  bicitrates: 'BiCit',
+  biphosphates: 'BiPO₄',
+  phosphates: 'PO₄',
+};
+
+function numericIons(ions: Record<string, number | string | undefined>): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(ions).flatMap(([id, value]) => {
+      const parsed = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(parsed) && parsed >= 0 ? [[id, parsed]] : [];
+    }),
+  );
+}
+
+function waterIonDistance(source: Record<string, number>, candidate: Record<string, number>): number {
+  const distances = COMPARISON_ION_IDS.map(id => {
+    const sourceValue = source[id] ?? 0;
+    const candidateValue = candidate[id] ?? 0;
+    // Normalize each ion independently so sodium/bicarbonate do not dominate
+    // the comparison merely because their concentrations are larger.
+    return Math.abs(candidateValue - sourceValue) / Math.max(sourceValue, candidateValue, 10);
+  });
+  return distances.reduce((sum, value) => sum + value, 0) / distances.length;
+}
+
+function formatIonDeviation(value: number): string {
+  const rounded = Math.abs(value) >= 10 ? Math.round(Math.abs(value)) : Number(Math.abs(value).toFixed(1));
+  if (rounded === 0) return '0';
+  return `${value > 0 ? '+' : '−'}${rounded}`;
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -251,8 +304,10 @@ function App() {
   const [communityModalOpen, setCommunityModalOpen] = useState(false);
   const [communityWaters, setCommunityWaters] = useState<CommunityWater[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
-  const openCommunityModal = async () => {
-    setCommunityModalOpen(true);
+  const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
+  const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
+  const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
+  const loadCommunityWaters = async () => {
     setCommunityLoading(true);
     try {
       const resp = await fetch(`${API_BASE}/api/waters`);
@@ -261,7 +316,12 @@ function App() {
         setCommunityWaters(data.waters ?? []);
       }
     } catch { /* server may be down */ }
+    setCommunityWatersLoaded(true);
     setCommunityLoading(false);
+  };
+  const openCommunityModal = async () => {
+    setCommunityModalOpen(true);
+    if (!communityWatersLoaded) await loadCommunityWaters();
   };
 
   // Profile + settings state
@@ -279,6 +339,48 @@ function App() {
   const activeRanges: RangeSet = activeProfile.ranges;
   const showAlchemist = nerdLevel !== 'brewer';
   const showWatermancer = nerdLevel === 'watermancer';
+  const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => [
+    ...mineralWaters.map(entry => ({
+      key: `current:${entry.id}`,
+      name: entry.name.trim() || 'Current base water',
+      ions: numericIons(entry.ions),
+      metadata: metadataToNumbers(entry.metadata),
+    })),
+    ...localWaters.map(water => ({
+      key: `saved:${water.id}`,
+      name: water.name || 'Saved water',
+      ions: numericIons(water.ions),
+      databaseId: water.sourceId,
+      metadata: water.metadata,
+    })),
+    ...communityWaters
+      .filter(water => water.shared === 'yes')
+      .map(water => ({
+        key: `database:${water.id}`,
+        name: water.name || `Water #${water.id}`,
+        ions: numericIons(water.ions),
+        databaseId: water.id,
+        metadata: water.metadata,
+      })),
+  ], [mineralWaters, localWaters, communityWaters]);
+  const selectedWaterComparisonSource = useMemo(
+    () => waterComparisonSources.find(source => source.key === selectedWaterComparisonKey) ?? waterComparisonSources[0],
+    [selectedWaterComparisonKey, waterComparisonSources],
+  );
+  const closestWaterMatch = useMemo(() => {
+    if (!selectedWaterComparisonSource) return undefined;
+    return communityWaters
+      .filter(water => water.shared === 'yes' && water.id !== selectedWaterComparisonSource.databaseId)
+      .map(water => {
+        const ions = numericIons(water.ions);
+        return {
+          water,
+          ions,
+          distance: waterIonDistance(selectedWaterComparisonSource.ions, ions),
+        };
+      })
+      .sort((a, b) => a.distance - b.distance)[0];
+  }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
     setNerdLevel(level);
   };
@@ -1765,6 +1867,23 @@ function App() {
             icon={<FlaskConical className="w-4 h-4" />}
             title="Mineral Water Base"
             after={<div className="flex items-center gap-2">
+             {showWatermancer && (
+               <button
+                 onClick={() => {
+                   setWaterComparisonOpen(open => !open);
+                   if (!communityWatersLoaded && !communityLoading) void loadCommunityWaters();
+                 }}
+                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition ${
+                   waterComparisonOpen
+                     ? 'text-cyan-200 bg-cyan-500/15 border border-cyan-400/40'
+                     : 'text-slate-400 bg-slate-700/40 hover:bg-cyan-500/10 hover:text-cyan-200 border border-slate-600/50'
+                 }`}
+                 title="Find the closest database water by ion profile"
+               >
+                 <Gauge className="w-3.5 h-3.5" />
+                 Compare ions
+               </button>
+             )}
               <LabelScanner onExtracted={vals => {
               // Silently use existing local water if ionic profile matches
               const match = localWaters.find(w => {
@@ -1806,6 +1925,93 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
+             {showWatermancer && waterComparisonOpen && (
+               <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
+                 <div className="flex flex-wrap items-center justify-between gap-2">
+                   <div>
+                     <p className="text-xs font-semibold uppercase tracking-wider text-cyan-300">Closest database water</p>
+                     <p className="mt-0.5 text-[11px] text-slate-500">Compare modeled ions without changing your current base.</p>
+                   </div>
+                   {communityLoading && <span className="text-[11px] text-slate-500">Loading catalog…</span>}
+                 </div>
+
+                 {waterComparisonSources.length === 0 ? (
+                   <p className="rounded-lg border border-slate-700/50 bg-slate-900/30 px-3 py-2 text-xs text-slate-500 italic">
+                     Add or save a water first, then compare its ion profile with the database.
+                   </p>
+                 ) : (
+                   <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] md:items-start">
+                     <label className="block">
+                       <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Selected water</span>
+                       <select
+                         value={selectedWaterComparisonSource?.key ?? ''}
+                         onChange={e => setSelectedWaterComparisonKey(e.target.value)}
+                         className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                       >
+                         {waterComparisonSources.map(source => (
+                           <option key={source.key} value={source.key}>{source.name}</option>
+                         ))}
+                       </select>
+                       {selectedWaterComparisonSource && (
+                         <p className="mt-1.5 text-[10px] text-slate-500">
+                           {COMPARISON_ION_IDS.map(id => `${COMPARISON_ION_LABELS[id]} ${fmt(selectedWaterComparisonSource.ions[id] ?? 0)}`).join(' · ')}
+                         </p>
+                       )}
+                     </label>
+
+                     <div className="min-w-0 rounded-lg border border-slate-700/50 bg-slate-900/45 p-3">
+                       {!communityLoading && !closestWaterMatch ? (
+                         <p className="text-xs text-slate-500 italic">No database waters are available to compare yet.</p>
+                       ) : closestWaterMatch ? (
+                         <>
+                           <div className="flex flex-wrap items-start justify-between gap-2">
+                             <div className="min-w-0">
+                               <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Closest match</p>
+                               <p className="truncate text-sm font-medium text-slate-100">{closestWaterMatch.water.name || `Water #${closestWaterMatch.water.id}`}</p>
+                             </div>
+                             <button
+                               onClick={() => {
+                                 const vals: Partial<Record<IonId, string>> = {};
+                                 for (const [id, value] of Object.entries(closestWaterMatch.ions)) {
+                                   if (value > 0 && ACTIVE_ION_IDS.includes(id as IonId)) vals[id as IonId] = String(value);
+                                 }
+                                 addMineralWater({
+                                   name: closestWaterMatch.water.name || `Water #${closestWaterMatch.water.id}`,
+                                   ions: vals,
+                                   metadata: closestWaterMatch.water.metadata ? metadataToStrings(closestWaterMatch.water.metadata) : undefined,
+                                 });
+                               }}
+                               className="shrink-0 rounded-lg border border-cyan-400/35 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-medium text-cyan-200 transition hover:bg-cyan-500/20"
+                             >
+                               Use this water
+                             </button>
+                           </div>
+                           <p className="mt-2 text-[10px] uppercase tracking-wider text-slate-500">Match minus selected · mg/L</p>
+                           <div className="mt-1.5 flex flex-wrap gap-1.5">
+                             {COMPARISON_ION_IDS.map(id => {
+                               const deviation = (closestWaterMatch.ions[id] ?? 0) - (selectedWaterComparisonSource?.ions[id] ?? 0);
+                               const color = deviation > 0.05
+                                 ? 'text-amber-300 bg-amber-500/10 border-amber-500/20'
+                                 : deviation < -0.05
+                                   ? 'text-sky-300 bg-sky-500/10 border-sky-500/20'
+                                   : 'text-slate-400 bg-slate-700/30 border-slate-600/40';
+                               return (
+                                 <span key={id} className={`rounded-md border px-1.5 py-1 text-[11px] tabular-nums ${color}`}>
+                                   {formatIonDeviation(deviation)} mg {COMPARISON_ION_LABELS[id]}
+                                 </span>
+                               );
+                             })}
+                           </div>
+                         </>
+                       ) : (
+                         <p className="text-xs text-slate-500 italic">Finding the closest ion profile…</p>
+                       )}
+                     </div>
+                   </div>
+                 )}
+               </div>
+             )}
+
             {/* My waters picker (local) */}
             <div>
               <details className="group" open>
