@@ -1666,42 +1666,16 @@ function App() {
          {/* Water amount + Concentrate */}
            {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
-           <svg
-             aria-hidden="true"
-             viewBox="0 0 1200 36"
-             preserveAspectRatio="none"
-             className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-8 w-full opacity-65"
-           >
-             <path
-               d="M0 22 C60 7 120 7 180 22 S300 37 360 22 S480 7 540 22 S660 37 720 22 S840 7 900 22 S1020 37 1080 22 S1140 7 1200 22 V36 H0 Z"
-               fill="url(#water-wave-fill)"
-             />
-             <path
-               d="M0 22 C60 7 120 7 180 22 S300 37 360 22 S480 7 540 22 S660 37 720 22 S840 7 900 22 S1020 37 1080 22 S1140 7 1200 22"
-               fill="none"
-               stroke="url(#water-wave-stroke)"
-               strokeWidth="1.75"
-             />
-             <path
-               d="M0 29 C70 17 130 17 200 29 S330 41 400 29 S530 17 600 29 S730 41 800 29 S930 17 1000 29 S1130 41 1200 29"
-               fill="none"
-               stroke="#67e8f9"
-               strokeOpacity="0.2"
-               strokeWidth="1.25"
-             />
-             <defs>
-               <linearGradient id="water-wave-fill" x1="0" y1="0" x2="1" y2="0">
-                 <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.07" />
-                 <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.14" />
-                 <stop offset="100%" stopColor="#2563eb" stopOpacity="0.07" />
-               </linearGradient>
-               <linearGradient id="water-wave-stroke" x1="0" y1="0" x2="1" y2="0">
-                 <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.12" />
-                 <stop offset="50%" stopColor="#a5f3fc" stopOpacity="0.65" />
-                 <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.12" />
-               </linearGradient>
-             </defs>
-           </svg>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-14 overflow-hidden">
+              <img
+                src={`${import.meta.env.BASE_URL}water-volume-ocean.jpg`}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full object-cover object-[center_72%] opacity-45 saturate-125"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/45 to-slate-900/10" />
+              <div className="absolute inset-x-0 top-0 h-px bg-cyan-100/20" />
+            </div>
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
