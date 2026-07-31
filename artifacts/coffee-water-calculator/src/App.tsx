@@ -1427,12 +1427,12 @@ function App() {
         </div>
 
          {/* Mineral Table */}
-         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
+         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-cyan-500/20 overflow-hidden">
+           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
-              <FlaskConical className="w-4 h-4" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider">Mineral Salts</h2>
-              <span className="text-xs text-slate-400 font-normal normal-case">
+               <FlaskConical className="w-4 h-4 text-cyan-300" />
+               <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">Mineral Salts</h2>
+               <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
               </span>
               {concentrateOn && (() => {
@@ -1454,7 +1454,7 @@ function App() {
               <select
                 value={activeRecipeId}
                 onChange={e => applyRecipe(e.target.value)}
-                className="bg-slate-700/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                 className="bg-sky-950/40 border border-sky-400/30 rounded-lg px-2.5 py-1.5 text-xs text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
               >
                 <option value="custom">Custom</option>
                 <optgroup label="Built-in">
