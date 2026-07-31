@@ -3867,6 +3867,10 @@ function BrewerRecipeStepsModal({
                     );
                   })}
                 </div>
+                 <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
+                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Expected final TDS</span>
+                   <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
+                 </div>
               </div>
             ) : (
               <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
@@ -3893,6 +3897,10 @@ function BrewerRecipeStepsModal({
                     );
                   })}
                 </div>
+                 <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
+                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Expected final TDS</span>
+                   <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
+                 </div>
               </div>
             )}
             {bicarbonateWaterOvershoot && (
