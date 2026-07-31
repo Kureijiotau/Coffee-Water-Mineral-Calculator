@@ -1685,7 +1685,6 @@ function App() {
             }
           />
             <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]">
-             <div className="pointer-events-none absolute -right-12 -top-10 h-32 w-32 rounded-full border border-cyan-300/10 shadow-[0_0_50px_-18px_rgba(34,211,238,0.8)]" />
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
