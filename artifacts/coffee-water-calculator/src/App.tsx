@@ -1666,7 +1666,44 @@ function App() {
          {/* Water amount + Concentrate */}
            {nerdLevel !== 'brewer' && <div className="relative overflow-hidden rounded-2xl border border-cyan-400/35 bg-slate-800/75 shadow-xl shadow-cyan-950/20 backdrop-blur">
            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
-          <SectionHeader
+           <svg
+             aria-hidden="true"
+             viewBox="0 0 1200 90"
+             preserveAspectRatio="none"
+             className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-16 w-full opacity-70"
+           >
+             <path
+               d="M0 55 C120 20 220 20 340 53 S560 87 700 52 S940 18 1200 50 V90 H0 Z"
+               fill="url(#water-wave-fill)"
+             />
+             <path
+               d="M0 55 C120 20 220 20 340 53 S560 87 700 52 S940 18 1200 50"
+               fill="none"
+               stroke="url(#water-wave-stroke)"
+               strokeWidth="2"
+             />
+             <path
+               d="M0 68 C130 43 235 45 360 66 S580 88 730 64 S965 42 1200 64"
+               fill="none"
+               stroke="#67e8f9"
+               strokeOpacity="0.24"
+               strokeWidth="1.5"
+             />
+             <defs>
+               <linearGradient id="water-wave-fill" x1="0" y1="0" x2="1" y2="0">
+                 <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.07" />
+                 <stop offset="50%" stopColor="#38bdf8" stopOpacity="0.14" />
+                 <stop offset="100%" stopColor="#2563eb" stopOpacity="0.07" />
+               </linearGradient>
+               <linearGradient id="water-wave-stroke" x1="0" y1="0" x2="1" y2="0">
+                 <stop offset="0%" stopColor="#67e8f9" stopOpacity="0.12" />
+                 <stop offset="50%" stopColor="#a5f3fc" stopOpacity="0.65" />
+                 <stop offset="100%" stopColor="#60a5fa" stopOpacity="0.12" />
+               </linearGradient>
+             </defs>
+           </svg>
+           <div className="relative z-10">
+           <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
              title="Water Volume"
             after={
@@ -1678,7 +1715,7 @@ function App() {
                     checked={concentrateOn}
                     onChange={e => setConcentrateOn(e.target.checked)}
                     className="sr-only"
-                  />
+           />
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
               </label>
@@ -1849,7 +1886,8 @@ function App() {
               </div>
             )}
           </div>
-         </div>}
+           </div>
+           </div>}
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
