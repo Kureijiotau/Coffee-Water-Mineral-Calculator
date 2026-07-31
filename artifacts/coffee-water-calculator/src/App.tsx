@@ -89,7 +89,7 @@ function brewerFlavorFromRecipe(recipe: SaltRecipe): BrewerFlavorInput | null {
   const activeSaltIds = Object.entries(recipe.salts)
     .filter(([, entry]) => num(entry.target) > 0)
     .map(([saltId]) => saltId);
-  if (!activeSaltIds.every(saltId => BREWER_SALT_IDS.has(saltId))) return null;
+  if (activeSaltIds.length === 0 || !activeSaltIds.every(saltId => BREWER_SALT_IDS.has(saltId))) return null;
 
   const targets = Object.fromEntries(
     activeSaltIds.map(saltId => [saltId, num(recipe.salts[saltId].target)]),
@@ -404,6 +404,30 @@ function App() {
       .sort((a, b) => a.distance - b.distance)[0];
   }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
+    if (level === 'brewer' && nerdLevel !== 'brewer') {
+      const currentRecipe: SaltRecipe = {
+        id: 'current',
+        name: 'Current recipe',
+        salts: Object.fromEntries(
+          SALTS.flatMap((salt, index) => num(rows[index]?.target) > 0
+            ? [[salt.id, { target: rows[index].target, formIdx: rows[index].formIdx }]]
+            : []),
+        ),
+      };
+      const currentFlavor = brewerFlavorFromRecipe(currentRecipe);
+      if (currentFlavor) {
+        setBrewerFlavor(currentFlavor);
+      } else {
+        const defaultTargets = brewerSaltSuggestion(DEFAULT_BREWER_FLAVOR);
+        setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
+        setActiveRecipeId('custom');
+        setExternalRecipeId('custom');
+        setRows(SALTS.map(salt => ({
+          target: defaultTargets[salt.id] ? String(defaultTargets[salt.id]) : '',
+          formIdx: salt.defaultFormIdx ?? 0,
+        })));
+      }
+    }
     setNerdLevel(level);
   };
 
@@ -508,6 +532,14 @@ function App() {
     () => computeIonTotals(saltTargets, combinedBottledIons, dil),
     [saltTargets, combinedBottledIons, dil],
   );
+  // Brewer is intentionally a simple RO / distilled water workflow. Keep its
+  // flavor-generated recipe independent from the advanced water-aware targets
+  // used by Alchemist and Watermancer.
+  const brewerModeSaltTargets = nerdLevel === 'brewer' ? brewerSuggestedSaltTargets : saltTargets;
+  const brewerModeIonTotals = nerdLevel === 'brewer' ? brewerSuggestedIons : ionTotals;
+  const brewerModeGh = computeGH(brewerModeIonTotals);
+  const brewerModeKh = computeKH(brewerModeIonTotals);
+  const brewerModeTds = Object.values(brewerModeIonTotals).reduce((total, ppm) => total + ppm, 0);
 
   const hasMineralWater = useMemo(
     () => [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
@@ -846,7 +878,7 @@ function App() {
     // Brewer sliders are the active recipe source, so the header badge should
     // respond in the same render as the live flavor preview.
     const badgeIons = nerdLevel === 'brewer'
-      ? computeIonTotals(brewerSuggestedSaltTargets, combinedBottledIons, dil)
+      ? brewerSuggestedIons
       : ionTotals;
     const badgeRanges = nerdLevel === 'brewer' ? AIKI_DEFAULT_PROFILE.ranges : activeRanges;
     let worst: TrafficLevel = 'green';
@@ -856,7 +888,7 @@ function App() {
       if (lvl === 'yellow') worst = 'yellow';
     }
     return worst;
-  }, [nerdLevel, brewerSuggestedSaltTargets, combinedBottledIons, dil, ionTotals, activeRanges]);
+  }, [nerdLevel, brewerSuggestedIons, ionTotals, activeRanges]);
 
   // Recipe state
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -1134,9 +1166,10 @@ function App() {
     divider();
     line('ION TOTALS  (mg/L)');
     divider();
+    const guideIonTotals = nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals;
     for (const id of ACTIVE_ION_IDS) {
       const ion = ION_MAP[id];
-      const ppm = ionTotals[id];
+      const ppm = guideIonTotals[id];
       const level = classifyIon(ppm, activeRanges[id]);
       const flag = level === 'green' ? '✓' : level === 'yellow' ? '△' : '✗';
       line(`  ${flag} ${ion.name.padEnd(16)} ${ppm.toFixed(1).padStart(6)} ppm`);
@@ -1146,9 +1179,11 @@ function App() {
     divider();
     line('HARDNESS  (ppm as CaCO₃)');
     divider();
-    line(`  GH (General)   : ${gh.toFixed(1)} ppm  (salts: ${ghSalt.toFixed(1)}, mineral: ${ghBottled.toFixed(1)})`);
-    line(`  KH (Carbonate) : ${kh.toFixed(1)} ppm  (salts: ${khSalt.toFixed(1)}, mineral: ${khBottled.toFixed(1)})`);
-    if (kh > 0) line(`  GH:KH ratio    : ${(gh / kh).toFixed(2)} : 1`);
+    const guideGh = computeGH(guideIonTotals);
+    const guideKh = computeKH(guideIonTotals);
+    line(`  GH (General)   : ${guideGh.toFixed(1)} ppm  (salts: ${guideGh.toFixed(1)}, mineral: ${nerdLevel === 'brewer' ? '0.0' : ghBottled.toFixed(1)})`);
+    line(`  KH (Carbonate) : ${guideKh.toFixed(1)} ppm  (salts: ${guideKh.toFixed(1)}, mineral: ${nerdLevel === 'brewer' ? '0.0' : khBottled.toFixed(1)})`);
+    if (guideKh > 0) line(`  GH:KH ratio    : ${(guideGh / guideKh).toFixed(2)} : 1`);
 
     if (additionWaters.length > 0 && totalMineralMl > 0) {
       line('');
@@ -1256,7 +1291,7 @@ function App() {
     // The guide must describe what will actually be weighed for the final
     // batch. When source water is configured, suggestedSaltTargets removes
     // ions already supplied by that water and applies the bicarbonate ceiling.
-    const guideSaltTargets = dosingSaltTargets;
+    const guideSaltTargets = nerdLevel === 'brewer' ? brewerModeSaltTargets : dosingSaltTargets;
     const activeSalts = SALTS.map((s, i) => {
       const tgt = guideSaltTargets[s.id] ?? 0;
       if (tgt <= 0) return null;
@@ -1359,19 +1394,6 @@ function App() {
               >
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Find My Water</span>
-              </button>
-              <button
-                onClick={handleBrewGuideExport}
-                disabled={batchMl <= 0}
-                className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition-all duration-300 shadow-lg ${
-                  batchMl > 0
-                    ? 'text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 border border-emerald-400/50 hover:shadow-emerald-400/30 hover:shadow-xl hover:scale-105 active:scale-95'
-                    : 'text-slate-500 bg-slate-700/40 border border-slate-600/40 cursor-not-allowed opacity-50'
-                }`}
-                title={batchMl > 0 ? 'Generate step-by-step brewing guide' : 'Set a water volume first'}
-              >
-                <ListChecks className="w-4 h-4" />
-                <span className="hidden sm:inline">Brew Guide</span>
               </button>
             </div>
             <div className="group/badge flex shrink-0 items-center gap-1">
@@ -1887,7 +1909,12 @@ function App() {
         )}
 
         {/* Taste Profile */}
-        <TasteProfileCard ionTotals={ionTotals} gh={gh} kh={kh} collapsed={showAlchemist} />
+        <TasteProfileCard
+          ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
+          gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
+          kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
+          collapsed={showAlchemist}
+        />
 
         {/* Mineral Water Base */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
@@ -2948,22 +2975,22 @@ function App() {
 
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
-          saltTargets={saltTargets}
+          saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
           recipeRows={rows}
           liters={L}
           concentrateOn={concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
-          baseWaters={mineralWaters}
-          additionWaters={additionWaters}
+          baseWaters={nerdLevel === 'brewer' ? [] : mineralWaters}
+          additionWaters={nerdLevel === 'brewer' ? [] : additionWaters}
           baseWaterScale={sourceScale}
           batchMl={batchMl}
-          saltOnlyIons={saltOnlyIons}
-          bottledIons={bottledIons}
-          suggestedSaltTargets={effectiveSuggestedSaltTargets}
-          bicarbonateWaterOvershoot={bicarbonateWaterOvershoot}
+          saltOnlyIons={nerdLevel === 'brewer' ? brewerModeIonTotals : saltOnlyIons}
+          bottledIons={nerdLevel === 'brewer' ? {} as Record<IonId, number> : bottledIons}
+          suggestedSaltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : effectiveSuggestedSaltTargets}
+          bicarbonateWaterOvershoot={nerdLevel === 'brewer' ? false : bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
-          tdsTarget={tdsForRecipeSteps}
+          tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
           dosingMethod={showBrewerSteps}
           onClose={() => setShowBrewerSteps(null)}
         />
@@ -3323,10 +3350,10 @@ function BrewerSimpleRecipeCard({
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
               <Sparkles className="h-4 w-4 text-emerald-300" />
-              Your recipe is ready
+              Your starting recipe
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              {liters || 1} L batch · {prepMethod === 'dropper' ? 'Dropper stocks' : 'Dry salt direct'}
+              {liters || 1} L batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Dropper stocks' : 'Dry salt direct'}
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs text-slate-300">
@@ -3385,7 +3412,7 @@ function BrewerSimpleRecipeCard({
           </button>
         </div>
         <p className="mt-2 text-center text-[10px] text-slate-500">
-          Make this water opens a quick dosing checklist.
+          Make this water opens a quick dosing checklist. Start with RO / distilled 0 TDS water.
         </p>
       </div>
       {makeWaterOpen && (
@@ -3512,6 +3539,9 @@ function BrewerSimpleRecipeCard({
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
                 Put <strong className="text-slate-200">{universalStockMassLabel()}</strong> of each listed salt into its own bottle, then fill each to <strong className="text-slate-200">{pantryBottleMl} mL</strong> with distilled or RO water. Cap and shake.
               </p>
+              <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                Label each bottle with the salt, {pantryBottleMl} mL, and the date. For consistent dosing, verify that your dropper delivers about 20 drops per mL.
+              </p>
               {calciumTarget > 0.05 && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
                   <input
@@ -3576,7 +3606,7 @@ function BrewerSimpleRecipeCard({
           {waterReady && (
             <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-100">
               <Sparkles className="h-4 w-4 text-emerald-300" />
-              Everything is in — brew away.
+              Everything is in for {liters || 1} L — brew away.
             </div>
           )}
         </div>
@@ -4169,7 +4199,7 @@ function BrewerFlavorPanel({
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
           <p className="mt-1 text-xs text-slate-400">
-            Click anywhere in the pyramid or drag the star. Your recipe updates instantly.
+            RO / distilled 0 TDS water · Click anywhere in the pyramid or drag the star. Your starting recipe updates instantly.
           </p>
         </div>
       </div>
