@@ -1708,8 +1708,8 @@ function App() {
             );
          })}
           </>
-          {showWatermancer && (
-            <IonWatchDisclosure ions={suggestedIonTotals} />
+          {(showAlchemist || showWatermancer) && (
+            <IonWatchDisclosure ions={showWatermancer ? suggestedIonTotals : saltOnlyIons} />
           )}
           </div>}
          {nerdLevel === 'brewer' && (
