@@ -1486,7 +1486,7 @@ function App() {
               {activeRecipeId === 'custom' && (
                 <button
                   onClick={handleSaveRecipe}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                   className="flex items-center gap-1.5 text-xs text-violet-200 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/25 hover:border-violet-300/45 rounded-lg px-2.5 py-1.5 transition"
                   title="Save the current salts as a named recipe on this device"
                 >
                   <Save className="w-3.5 h-3.5" />
@@ -1496,7 +1496,7 @@ function App() {
               {isSavedRecipeActive && (
                 <button
                   onClick={handleDeleteRecipe}
-                  className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2.5 py-1.5 transition"
+                   className="flex items-center gap-1.5 text-xs text-rose-300 hover:text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/25 hover:border-rose-300/45 rounded-lg px-2.5 py-1.5 transition"
                   title="Delete this saved recipe"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1504,7 +1504,7 @@ function App() {
               )}
               <button
                 onClick={handleExportRecipe}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                 className="flex items-center gap-1.5 text-xs text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45 rounded-lg px-2.5 py-1.5 transition"
                 title="Export this recipe as a shareable file"
               >
                 <Share2 className="w-3.5 h-3.5" />
@@ -1512,7 +1512,7 @@ function App() {
               </button>
               <button
                 onClick={() => importInputRef.current?.click()}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+                 className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
                 title="Import a shared recipe file"
               >
                 <Upload className="w-3.5 h-3.5" />
@@ -1520,7 +1520,7 @@ function App() {
               </button>
               <button
                 onClick={() => setShowResetConfirm(true)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-rose-300 bg-slate-700/40 hover:bg-rose-500/20 rounded-lg px-2.5 py-1.5 transition"
+                 className="flex items-center gap-1.5 text-xs text-amber-200 hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 hover:border-amber-300/45 rounded-lg px-2.5 py-1.5 transition"
                 title="Reset all inputs to defaults"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
