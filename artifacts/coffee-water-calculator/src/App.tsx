@@ -1664,14 +1664,14 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-         {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-amber-500/20 overflow-hidden">
           <SectionHeader
             icon={<Droplet className="w-4 h-4" />}
             title="Water Volume"
             after={
               <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                <span className={`transition-colors ${concentrateOn ? 'text-sky-300' : ''}`}>Concentrate</span>
-                <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-sky-500' : 'bg-slate-600'}`}>
+                 <span className={`transition-colors ${concentrateOn ? 'text-amber-300' : 'text-slate-400'}`}>Concentrate</span>
+                 <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-amber-500' : 'bg-slate-600'}`}>
                   <input
                     type="checkbox"
                     checked={concentrateOn}
@@ -1683,22 +1683,22 @@ function App() {
               </label>
             }
           />
-          <div className="px-4 sm:px-6 py-4 space-y-4">
+           <div className="px-4 sm:px-6 py-4 space-y-4 bg-gradient-to-br from-amber-500/[0.035] via-transparent to-teal-500/[0.035]">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-              <label className="text-sm text-slate-300">Final batch volume:</label>
+               <label className="text-sm font-medium text-amber-100/90">Final batch volume:</label>
               <input
                 type="number"
                 inputMode="decimal"
                 value={liters}
                 onChange={e => setLiters(e.target.value)}
                 placeholder="Liters"
-                className="w-32 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                 className="w-32 bg-amber-950/20 border border-amber-400/30 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-300 transition"
               />
-              <span className="text-sm text-slate-400">liters</span>
+               <span className="text-sm text-amber-200/70">liters</span>
             </div>
 
             {concentrateOn && !splitMode && (
-              <div className="space-y-3 border border-sky-500/30 bg-sky-500/5 rounded-xl px-4 py-3">
+               <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                   <div className="flex items-center gap-2">
                     <label className="text-xs text-slate-300">Stock strength:</label>
@@ -1708,7 +1708,7 @@ function App() {
                         const v = Number(e.target.value);
                         setConcentrateStrength(v === 0 ? concentrateStrength : v);
                       }}
-                      className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                       className="bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
                     >
                       {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
                       <option value={0}>Custom</option>
@@ -1721,7 +1721,7 @@ function App() {
                         value={concentrateStrength || ''}
                         onChange={e => setConcentrateStrength(Number(e.target.value) || 0)}
                         placeholder="×"
-                        className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                         className="w-20 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
                       />
                     )}
                   </div>
@@ -1733,7 +1733,7 @@ function App() {
                       value={concentrateMl}
                       onChange={e => setConcentrateMl(e.target.value)}
                       placeholder="500"
-                      className="w-24 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                       className="w-24 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
                     />
                     <span className="text-xs text-slate-400">mL</span>
                   </div>
