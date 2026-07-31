@@ -3824,7 +3824,7 @@ function BrewerRecipeStepsModal({
           <div className="space-y-4 p-4 sm:p-5">
             {hasBaseWater ? (
               <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Still needed from salts</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Missing ions</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {ACTIVE_ION_IDS.map(id => {
                     const target = saltOnlyIons[id] ?? 0;
