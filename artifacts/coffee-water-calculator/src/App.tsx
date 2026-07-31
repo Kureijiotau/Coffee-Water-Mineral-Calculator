@@ -231,6 +231,12 @@ function numericIons(ions: Record<string, number | string | undefined>): Record<
   );
 }
 
+function waterIonSignature(ions: Record<string, number>): string {
+  return COMPARISON_ION_IDS
+    .map(id => `${id}:${(ions[id] ?? 0).toFixed(4)}`)
+    .join('|');
+}
+
 function waterIonDistance(source: Record<string, number>, candidate: Record<string, number>): number {
   const distances = COMPARISON_ION_IDS.map(id => {
     const sourceValue = source[id] ?? 0;
@@ -339,36 +345,51 @@ function App() {
   const activeRanges: RangeSet = activeProfile.ranges;
   const showAlchemist = nerdLevel !== 'brewer';
   const showWatermancer = nerdLevel === 'watermancer';
-  const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => [
-    ...mineralWaters.map(entry => ({
+  const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => {
+    const seenProfiles = new Set<string>();
+    const sources: WaterComparisonSource[] = [];
+    const addUnique = (source: WaterComparisonSource) => {
+      const signature = waterIonSignature(source.ions);
+      if (seenProfiles.has(signature)) return;
+      seenProfiles.add(signature);
+      sources.push(source);
+    };
+
+    // Prefer the water currently in the base, then saved waters, then the
+    // database catalog. This keeps adding a water from creating duplicate
+    // selector options for the same modeled ion profile.
+    mineralWaters.forEach(entry => addUnique({
       key: `current:${entry.id}`,
       name: entry.name.trim() || 'Current base water',
       ions: numericIons(entry.ions),
       metadata: metadataToNumbers(entry.metadata),
-    })),
-    ...localWaters.map(water => ({
+    }));
+    localWaters.forEach(water => addUnique({
       key: `saved:${water.id}`,
       name: water.name || 'Saved water',
       ions: numericIons(water.ions),
       databaseId: water.sourceId,
       metadata: water.metadata,
-    })),
-    ...communityWaters
+    }));
+    communityWaters
       .filter(water => water.shared === 'yes')
-      .map(water => ({
+      .forEach(water => addUnique({
         key: `database:${water.id}`,
         name: water.name || `Water #${water.id}`,
         ions: numericIons(water.ions),
         databaseId: water.id,
         metadata: water.metadata,
-      })),
-  ], [mineralWaters, localWaters, communityWaters]);
+      }));
+
+    return sources;
+  }, [mineralWaters, localWaters, communityWaters]);
   const selectedWaterComparisonSource = useMemo(
     () => waterComparisonSources.find(source => source.key === selectedWaterComparisonKey) ?? waterComparisonSources[0],
     [selectedWaterComparisonKey, waterComparisonSources],
   );
   const closestWaterMatch = useMemo(() => {
     if (!selectedWaterComparisonSource) return undefined;
+    const selectedSignature = waterIonSignature(selectedWaterComparisonSource.ions);
     return communityWaters
       .filter(water => water.shared === 'yes' && water.id !== selectedWaterComparisonSource.databaseId)
       .map(water => {
@@ -379,6 +400,7 @@ function App() {
           distance: waterIonDistance(selectedWaterComparisonSource.ions, ions),
         };
       })
+      .filter(match => waterIonSignature(match.ions) !== selectedSignature)
       .sort((a, b) => a.distance - b.distance)[0];
   }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
