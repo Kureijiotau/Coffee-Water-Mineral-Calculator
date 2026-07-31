@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -18,7 +18,7 @@ import LabelScanner from '@/LabelScanner';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
-  loadIndicatorOn, saveIndicatorOn, loadNerdLevel, saveNerdLevel, createProfile,
+  loadNerdLevel, saveNerdLevel, createProfile,
   type NerdLevel,
 } from '@/profiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
@@ -336,7 +336,6 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
-  const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -468,7 +467,6 @@ function App() {
   // Persist on changes
   useEffect(() => { saveProfiles(profiles); }, [profiles]);
   useEffect(() => { saveActiveProfileId(activeProfileId); }, [activeProfileId]);
-  useEffect(() => { saveIndicatorOn(indicatorOn); }, [indicatorOn]);
   useEffect(() => { saveNerdLevel(nerdLevel); }, [nerdLevel]);
 
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
@@ -911,22 +909,6 @@ function App() {
 
   const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
-
-  const overallLevel: TrafficLevel = useMemo(() => {
-    // Brewer sliders are the active recipe source, so the header badge should
-    // respond in the same render as the live flavor preview.
-    const badgeIons = nerdLevel === 'brewer'
-      ? brewerSuggestedIons
-      : ionTotals;
-    const badgeRanges = nerdLevel === 'brewer' ? AIKI_DEFAULT_PROFILE.ranges : activeRanges;
-    let worst: TrafficLevel = 'green';
-    for (const id of ACTIVE_ION_IDS) {
-      const lvl = classifyIon(badgeIons[id], badgeRanges[id]);
-      if (lvl === 'red') return 'red';
-      if (lvl === 'yellow') worst = 'yellow';
-    }
-    return worst;
-  }, [nerdLevel, brewerSuggestedIons, ionTotals, activeRanges]);
 
   // Recipe state
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -1418,7 +1400,7 @@ function App() {
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
       <div className="w-full max-w-5xl space-y-4">
         {/* Header */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
+         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
           <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${modeAccent}`}>
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <Calculator className="w-6 h-6 text-white" />
@@ -1432,20 +1414,6 @@ function App() {
               >
                 <Sparkles className="w-4 h-4" />
                 <span className="hidden sm:inline">Find My Water</span>
-              </button>
-            </div>
-            <div className="group/badge flex shrink-0 items-center gap-1">
-              {indicatorOn && <OverallBadge level={overallLevel} />}
-              <button
-                onClick={() => setIndicatorOn(prev => !prev)}
-                className={`flex items-center gap-1 text-xs text-slate-100/70 hover:text-white hover:bg-white/20 rounded-lg px-2 py-1.5 transition-all focus:opacity-100 ${
-                  indicatorOn
-                    ? 'opacity-0 group-hover/badge:opacity-100'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
-                title={indicatorOn ? 'Hide status badge' : 'Show status badge'}
-              >
-                {indicatorOn ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
@@ -1740,7 +1708,10 @@ function App() {
             );
          })}
           </>
-         </div>}
+          {showWatermancer && (
+            <IonWatchDisclosure ions={suggestedIonTotals} />
+          )}
+          </div>}
          {nerdLevel === 'brewer' && (
            <>
              <BrewerFlavorPanel
@@ -1990,7 +1961,7 @@ function App() {
           ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
           gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
           kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
-          collapsed={showAlchemist}
+          collapsed={showAlchemist || showWatermancer}
         />
 
         {/* Mineral Water Base */}
@@ -4631,18 +4602,59 @@ function WaterMetadataFields({
   );
 }
 
-function OverallBadge({ level }: { level: TrafficLevel }) {
-  const s = TRAFFIC_STYLES[level];
-  const text = level === 'green'
-    ? 'Suggestion: safe'
-    : level === 'yellow'
-      ? 'Suggestion: elevated'
-      : 'Suggestion: out of range';
+function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) {
+  const flaggedIons = ACTIVE_ION_IDS
+    .map(id => {
+      const ion = ION_MAP[id];
+      const ppm = ions[id] ?? 0;
+      const level = classifyIon(ppm, AIKI_DEFAULT_PROFILE.ranges[id]);
+      return { id, ion, ppm, level };
+    })
+    .filter(item => item.level !== 'green');
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${s.bg} border ${s.border}`}>
-      <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-      <span className={`text-xs font-medium ${s.text}`}>{text}</span>
-    </div>
+    <details className="group border-t border-indigo-400/15 bg-indigo-500/[0.035]">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs text-slate-300 hover:bg-indigo-500/[0.06] sm:px-6 [&::-webkit-details-marker]:hidden">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-400/35 bg-indigo-500/10 text-[11px] text-indigo-200">i</span>
+        <span className="font-semibold">Aiki&apos;s ion check</span>
+        <span className="text-slate-500">
+          {flaggedIons.length === 0
+            ? 'All monitored ions in range'
+            : `${flaggedIons.length} ion${flaggedIons.length === 1 ? '' : 's'} to review`}
+        </span>
+        <span className="ml-auto text-slate-500 transition-transform group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="space-y-2 border-t border-indigo-400/10 px-4 py-3 sm:px-6">
+        <p className="text-[11px] leading-relaxed text-slate-500">
+          Based on the final source-water-plus-salts mixture and Aiki&apos;s light-roast pourover ranges.
+        </p>
+        {flaggedIons.length === 0 ? (
+          <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-[11px] text-emerald-200">
+            No elevated or out-of-range ions detected.
+          </p>
+        ) : (
+          flaggedIons.map(({ id, ion, ppm, level }) => {
+            const style = TRAFFIC_STYLES[level];
+            const range = AIKI_DEFAULT_PROFILE.ranges[id];
+            return (
+              <div key={id} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className={`text-xs font-semibold ${style.text}`}>
+                    {ion.name} · {style.label}
+                  </span>
+                  <span className={`font-mono text-[11px] ${style.text}`}>
+                    {ppm.toFixed(1)} ppm · preferred &lt;{range.greenMax}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                  {ion.flagNotes[level]}
+                </p>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </details>
   );
 }
 
