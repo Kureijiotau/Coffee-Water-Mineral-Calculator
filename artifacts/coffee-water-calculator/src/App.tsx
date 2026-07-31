@@ -3149,7 +3149,7 @@ function PouringCarafeIcon() {
 function MineralCrystalsIcon() {
   return (
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
-      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.4]">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.25]">
         <g stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round">
           <path d="m1.7 8.1 1.55-2.35 2.3-.35 1.05 1.8-1.35 2.1-2.35.35-1.2-1.55Z" fill="currentColor" fillOpacity="0.14" />
           <path d="m6.4 4.05 1.65-1.5 2.05.35.25 1.65-1.65 1.25-1.95-.4-.35-1.35Z" fill="currentColor" fillOpacity="0.2" />
