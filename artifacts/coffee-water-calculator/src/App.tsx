@@ -1430,7 +1430,7 @@ function App() {
          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-cyan-500/20 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
-               <FlaskConical className="w-4 h-4 text-cyan-300" />
+                <SaltSieveIcon />
                <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">Mineral Salts</h2>
                <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
@@ -3141,6 +3141,34 @@ function PouringCarafeIcon() {
         <path d="M5.7 11.2h6.95" stroke="currentColor" strokeOpacity="0.8" strokeWidth="0.9" strokeLinecap="round" />
         <path d="M2.15 3.35 1.25 2.55" stroke="currentColor" strokeOpacity="0.65" strokeWidth="0.9" strokeLinecap="round" />
         <path d="M1.25 4.7 0.15 4.6" stroke="currentColor" strokeOpacity="0.65" strokeWidth="0.9" strokeLinecap="round" />
+      </svg>
+    </span>
+  );
+}
+
+function SaltSieveIcon() {
+  return (
+    <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
+      <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+        <path
+          d="M2.1 8.6C4.9 5.5 7.55 2.45 10 2.45s5.1 3.05 7.9 6.15c-2.65 2.25-5.25 3.35-7.9 3.35S4.75 10.85 2.1 8.6Z"
+          fill="currentColor"
+          fillOpacity="0.1"
+          stroke="currentColor"
+          strokeWidth="1.15"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="6.1" cy="7.7" r="0.75" fill="currentColor" />
+        <circle cx="8.6" cy="5.7" r="0.75" fill="currentColor" />
+        <circle cx="11.6" cy="5.65" r="0.75" fill="currentColor" />
+        <circle cx="14.1" cy="7.55" r="0.75" fill="currentColor" />
+        <circle cx="8.15" cy="8.65" r="0.7" fill="currentColor" />
+        <circle cx="10.45" cy="7.9" r="0.7" fill="currentColor" />
+        <circle cx="12.15" cy="9.15" r="0.7" fill="currentColor" />
+        <circle cx="4.2" cy="12.75" r="0.65" fill="currentColor" />
+        <circle cx="6.55" cy="14.55" r="0.7" fill="currentColor" />
+        <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
       </svg>
     </span>
   );
