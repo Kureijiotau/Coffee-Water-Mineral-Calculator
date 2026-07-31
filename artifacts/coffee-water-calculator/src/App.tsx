@@ -1430,7 +1430,7 @@ function App() {
          {nerdLevel !== 'brewer' && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-cyan-500/20 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
-                <SaltSieveIcon />
+                 <MineralCrystalsIcon />
                <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">Mineral Salts</h2>
                <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
@@ -3146,40 +3146,24 @@ function PouringCarafeIcon() {
   );
 }
 
-function SaltSieveIcon() {
+function MineralCrystalsIcon() {
   return (
     <span className="inline-flex h-4 w-4 items-center justify-center text-cyan-300" aria-hidden="true">
       <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 scale-[1.4]">
-        <path
-          d="M2.1 8.6C4.9 5.5 7.55 2.45 10 2.45s5.1 3.05 7.9 6.15c-2.65 2.25-5.25 3.35-7.9 3.35S4.75 10.85 2.1 8.6Z"
-          fill="currentColor"
-          fillOpacity="0.1"
-          stroke="currentColor"
-          strokeWidth="1.15"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* Dense, varied grains make the icon read as powdered minerals. */}
-        <circle cx="5.5" cy="7.9" r="0.62" fill="currentColor" />
-        <circle cx="6.8" cy="6.5" r="0.42" fill="currentColor" />
-        <circle cx="8.25" cy="5.55" r="0.72" fill="currentColor" />
-        <circle cx="9.55" cy="6.7" r="0.43" fill="currentColor" />
-        <circle cx="10.75" cy="5.2" r="0.5" fill="currentColor" />
-        <circle cx="12.05" cy="6.35" r="0.76" fill="currentColor" />
-        <circle cx="13.45" cy="5.95" r="0.4" fill="currentColor" />
-        <circle cx="14.55" cy="7.8" r="0.66" fill="currentColor" />
-        <circle cx="7.1" cy="8.25" r="0.48" fill="currentColor" />
-        <circle cx="8.45" cy="7.55" r="0.6" fill="currentColor" />
-        <circle cx="9.8" cy="8.45" r="0.72" fill="currentColor" />
-        <circle cx="11.35" cy="7.65" r="0.42" fill="currentColor" />
-        <circle cx="12.65" cy="8.55" r="0.58" fill="currentColor" />
-        <circle cx="13.65" cy="9.1" r="0.38" fill="currentColor" />
-        <circle cx="4.35" cy="12.5" r="0.5" fill="currentColor" />
-        <circle cx="5.55" cy="13.65" r="0.34" fill="currentColor" />
-        <circle cx="6.75" cy="14.8" r="0.7" fill="currentColor" />
-        <circle cx="8.05" cy="13.25" r="0.43" fill="currentColor" />
-        <circle cx="9.2" cy="15.15" r="0.38" fill="currentColor" />
-        <circle cx="10.35" cy="13.85" r="0.55" fill="currentColor" />
+        <g stroke="currentColor" strokeWidth="0.85" strokeLinejoin="round">
+          <path d="m1.7 8.1 1.55-2.35 2.3-.35 1.05 1.8-1.35 2.1-2.35.35-1.2-1.55Z" fill="currentColor" fillOpacity="0.14" />
+          <path d="m6.4 4.05 1.65-1.5 2.05.35.25 1.65-1.65 1.25-1.95-.4-.35-1.35Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m10.9 3.9 1.7-1.15 1.65.55.15 1.55-1.5 1.05-1.8-.5-.2-1.5Z" fill="currentColor" fillOpacity="0.12" />
+          <path d="m13.7 6.05 1.55-1.05 2.2.65.45 1.65-1.55 1.25-2.3-.55-.35-1.95Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m4.1 10.1 1.75-1.15 2.1.65.3 1.7-1.55 1.35-2.1-.5-.5-2.05Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m8.45 8.15 1.55-1.25 2.3.3.65 1.65-1.45 1.4-2.25-.3-.8-1.8Z" fill="currentColor" fillOpacity="0.16" />
+          <path d="m12.7 9.8 1.35-1.05 2.05.5.35 1.55-1.45 1.15-1.95-.4-.35-1.75Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m2.45 13.3 1.25-1.15 1.7.35.4 1.5-1.15 1.2-1.7-.35-.5-1.55Z" fill="currentColor" fillOpacity="0.16" />
+          <path d="m6.1 13.25 1.55-1.35 2.05.45.4 1.65-1.45 1.25-2.1-.35-.45-1.65Z" fill="currentColor" fillOpacity="0.22" />
+          <path d="m10.45 12.25 1.45-1.1 1.85.4.3 1.55-1.3 1.15-1.85-.35-.45-1.65Z" fill="currentColor" fillOpacity="0.14" />
+          <path d="m14.45 13.3 1.15-1.05 1.65.35.4 1.4-1.1 1.15-1.65-.3-.45-1.55Z" fill="currentColor" fillOpacity="0.2" />
+          <path d="m8.7 16 1.25-1.05 1.65.3.25 1.35-1.15 1.05-1.65-.3-.35-1.35Z" fill="currentColor" fillOpacity="0.18" />
+        </g>
       </svg>
     </span>
   );
