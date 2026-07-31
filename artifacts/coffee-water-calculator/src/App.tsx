@@ -269,7 +269,7 @@ function App() {
   const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
   const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
-  const [showBrewerSteps, setShowBrewerSteps] = useState(false);
+  const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [indicatorOn, setIndicatorOn] = useState<boolean>(() => loadIndicatorOn());
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
@@ -1534,7 +1534,7 @@ function App() {
                concentrateOn={concentrateOn}
                concentrateLiters={concL}
                concentrateStrength={concentrateStrength}
-               onOpenSteps={() => setShowBrewerSteps(true)}
+               onOpenSteps={method => setShowBrewerSteps(method)}
              />
            </>
          )}
@@ -2730,7 +2730,8 @@ function App() {
           bicarbonateWaterOvershoot={bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
           tdsTarget={tdsForRecipeSteps}
-          onClose={() => setShowBrewerSteps(false)}
+          dosingMethod={showBrewerSteps}
+          onClose={() => setShowBrewerSteps(null)}
         />
       )}
 
@@ -2834,7 +2835,7 @@ function BrewerSimpleRecipeCard({
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
-  onOpenSteps: () => void;
+  onOpenSteps: (method: 'dry' | 'dropper') => void;
 }) {
   const DROPS_PER_ML = 20;
   const UNIVERSAL_STOCK_PERCENT = 5;
@@ -3016,7 +3017,7 @@ function BrewerSimpleRecipeCard({
           </button>
           <button
             type="button"
-            onClick={onOpenSteps}
+            onClick={() => onOpenSteps(prepMethod)}
             className="flex items-center justify-center gap-2 rounded-xl border border-slate-600/60 bg-slate-800/50 px-4 py-3 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/60 hover:text-slate-100"
             title="View step-by-step recipe instructions"
           >
@@ -3208,6 +3209,7 @@ function BrewerRecipeStepsModal({
   bicarbonateWaterOvershoot,
   nerdLevel,
   tdsTarget,
+  dosingMethod,
   onClose,
 }: {
   saltTargets: Record<string, number>;
@@ -3226,6 +3228,7 @@ function BrewerRecipeStepsModal({
   bicarbonateWaterOvershoot: boolean;
   nerdLevel: NerdLevel;
   tdsTarget: number;
+  dosingMethod: 'dry' | 'dropper';
   onClose: () => void;
 }) {
   const configuredBaseWaters = baseWaters
@@ -3264,6 +3267,18 @@ function BrewerRecipeStepsModal({
     const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
       * (concentrateOn ? concentrateStrength : 1);
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
+  };
+  const amountLabel = (salt: typeof SALTS[number], targets = saltTargets) => {
+    if (dosingMethod === 'dry') return amount(salt, targets);
+    const target = targets[salt.id] ?? 0;
+    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+    const formIndex = saltIndex >= 0
+      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+      : salt.defaultFormIdx ?? 0;
+    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const physicalSaltMg = computeSaltMg(target, liters || 1, form.molarMass, salt.anhydrousMass);
+    const drops = Math.max(1, Math.round(physicalSaltMg / 2.5));
+    return `${drops} drops`;
   };
   const volumeLabel = concentrateOn
     ? `${concentrateLiters || 0} L stock`
@@ -3355,7 +3370,7 @@ function BrewerRecipeStepsModal({
                           <span className="text-xs font-medium text-slate-200">
                             {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                           </span>
-                          <span className="font-mono text-xs text-emerald-300">{amount(salt, suggestedSaltTargets)}</span>
+                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, suggestedSaltTargets)}</span>
                         </div>
                         {nerdLevel !== 'brewer' && (
                           <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
@@ -3381,7 +3396,7 @@ function BrewerRecipeStepsModal({
                           <span className="text-xs font-medium text-slate-200">
                             {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                           </span>
-                          <span className="font-mono text-xs text-emerald-300">{amount(salt)}</span>
+                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt)}</span>
                         </div>
                         {nerdLevel !== 'brewer' && (
                           <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
@@ -3461,7 +3476,7 @@ function BrewerRecipeStepsModal({
                                 {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
                               </div>
                             </div>
-                            <span className="shrink-0 font-mono text-xs text-emerald-300">{amount(salt, stepSaltTargets)}</span>
+                             <span className="shrink-0 font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
                           </div>
                         </div>
                       );
