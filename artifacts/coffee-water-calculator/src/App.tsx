@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Scale, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -1855,7 +1855,7 @@ function App() {
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Gauge className="w-4 h-4" />} title="Base Salt Recipe Summary (as CaCO₃)" />
+          <SectionHeader icon={<Scale className="w-4 h-4 text-indigo-300" />} title="Base Salt Recipe Summary (as CaCO₃)" />
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
              <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
              <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
