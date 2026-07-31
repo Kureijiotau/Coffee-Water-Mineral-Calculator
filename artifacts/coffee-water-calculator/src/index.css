@@ -104,10 +104,34 @@
   }
 }
 
+.mineral-water-beaker {
+  color: rgb(103 232 249 / 0.75);
+}
+
+.mineral-water-beaker.is-active {
+  color: rgb(103 232 249);
+}
+
+.mineral-water-beaker.is-active .mineral-water-liquid {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mineral-water-swirl 2.2s ease-in-out infinite;
+}
+
+@keyframes mineral-water-swirl {
+  0%, 100% {
+    transform: translateX(-0.35px) rotate(-1deg);
+  }
+  50% {
+    transform: translateX(0.45px) rotate(1.5deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .salt-shaker-toggle.is-on:hover .salt-shaker-visual,
   .salt-shaker-toggle.is-on:hover .salt-grain,
-  .taste-profile-steam {
+  .taste-profile-steam,
+  .mineral-water-beaker.is-active .mineral-water-liquid {
     animation: none;
   }
 }

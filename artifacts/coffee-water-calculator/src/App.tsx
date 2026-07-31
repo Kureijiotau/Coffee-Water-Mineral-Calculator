@@ -1892,7 +1892,7 @@ function App() {
         {/* Mineral Water Base */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
-            icon={<FlaskConical className="w-4 h-4" />}
+            icon={<MineralWaterBeaker active={hasMineralWater} />}
             title="Mineral Water Base"
             after={<div className="flex items-center gap-2">
              {showWatermancer && (
@@ -3090,6 +3090,23 @@ function HardnessBalanceScale({ gh, kh }: { gh: number; kh: number }) {
           <path d="M1.4 10.5c.35 1.25 1.05 1.8 1.6 1.8s1.25-.55 1.6-1.8M15.4 10.5c.35 1.25 1.05 1.8 1.6 1.8s1.25-.55 1.6-1.8" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" />
         </g>
         <circle cx="10" cy="5" r="1.35" fill="currentColor" />
+      </svg>
+    </span>
+  );
+}
+
+function MineralWaterBeaker({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`mineral-water-beaker inline-flex h-4 w-4 items-center justify-center ${active ? 'is-active' : ''}`}
+      title={active ? 'Mineral water is contributing to this recipe' : 'No mineral water added yet'}
+      aria-label={active ? 'Mineral water is contributing to this recipe' : 'No mineral water added yet'}
+    >
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+        <path d="M7 2.5h6M8 2.5v3.1L4.5 14a2.5 2.5 0 0 0 2.25 3.5h6.5A2.5 2.5 0 0 0 15.5 14L12 5.6V2.5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M5.55 12.25h8.9l1.05 2.1a2.15 2.15 0 0 1-1.93 3.15H6.43A2.15 2.15 0 0 1 4.5 14.35l1.05-2.1Z" fill="currentColor" fillOpacity={active ? 0.26 : 0.08} />
+        <path className="mineral-water-liquid" d="M5.7 12.35c1.2-.65 2.1.65 3.25 0s2.05.65 3.25 0 2.05.65 3.15 0l.85 1.9a2.05 2.05 0 0 1-1.85 3H6.65a2.05 2.05 0 0 1-1.85-3l.9-1.9Z" fill="currentColor" fillOpacity={active ? 0.55 : 0.16} />
+        <path d="M5.7 12.35c1.2-.65 2.1.65 3.25 0s2.05.65 3.25 0 2.05.65 3.15 0" stroke="currentColor" strokeOpacity={active ? 0.9 : 0.35} strokeWidth="0.85" strokeLinecap="round" />
       </svg>
     </span>
   );
