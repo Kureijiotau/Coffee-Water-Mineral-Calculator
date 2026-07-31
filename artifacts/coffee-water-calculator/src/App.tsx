@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Scale, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Eye, EyeOff, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -1855,7 +1855,10 @@ function App() {
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader icon={<Scale className="w-4 h-4 text-indigo-300" />} title="Base Salt Recipe Summary (as CaCO₃)" />
+          <SectionHeader
+            icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
+            title="Base Salt Recipe Summary (as CaCO₃)"
+          />
           <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
              <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
              <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
@@ -3044,6 +3047,51 @@ function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: s
       </div>
       {after}
     </div>
+  );
+}
+
+function HardnessBalanceScale({ gh, kh }: { gh: number; kh: number }) {
+  const totalHardness = gh + kh;
+  const khShare = totalHardness > 0 ? kh / totalHardness : 0.4;
+  const angle = Math.max(-12, Math.min(12, (khShare - 0.4) * 45));
+  const balanceLabel = angle < -1
+    ? 'GH-heavy balance, tipped left'
+    : angle > 1
+      ? 'KH-heavy balance, tipped right'
+      : 'Balanced around a 60% GH and 40% KH mix';
+
+  return (
+    <span
+      className="inline-flex h-4 w-4 items-center justify-center text-indigo-300"
+      title={balanceLabel}
+      aria-label={balanceLabel}
+    >
+      <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-4 w-4">
+        <path d="M10 5.5v10" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        <path d="M7.25 17h5.5" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+        <path
+          d="M10 15.5 8.2 17.8h3.6L10 15.5Z"
+          fill="currentColor"
+          fillOpacity="0.28"
+          stroke="currentColor"
+          strokeWidth="0.8"
+          strokeLinejoin="round"
+        />
+        <g
+          style={{
+            transformOrigin: '10px 5px',
+            transform: `rotate(${angle}deg)`,
+            transition: 'transform 500ms ease-out',
+          }}
+        >
+          <path d="M3 5h14" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+          <path d="M3.8 5.5 2.4 10.5M16.2 5.5l1.4 5" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+          <path d="M1.4 10.5h3.2M15.4 10.5h3.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M1.4 10.5c.35 1.25 1.05 1.8 1.6 1.8s1.25-.55 1.6-1.8M15.4 10.5c.35 1.25 1.05 1.8 1.6 1.8s1.25-.55 1.6-1.8" stroke="currentColor" strokeWidth="0.85" strokeLinecap="round" />
+        </g>
+        <circle cx="10" cy="5" r="1.35" fill="currentColor" />
+      </svg>
+    </span>
   );
 }
 
