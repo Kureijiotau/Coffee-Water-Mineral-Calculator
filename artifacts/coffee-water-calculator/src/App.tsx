@@ -1668,26 +1668,26 @@ function App() {
            <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-r from-cyan-400/15 via-sky-500/10 to-blue-500/15" />
            <svg
              aria-hidden="true"
-             viewBox="0 0 1200 90"
+             viewBox="0 0 1200 36"
              preserveAspectRatio="none"
-             className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-16 w-full opacity-70"
+             className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-8 w-full opacity-65"
            >
              <path
-               d="M0 55 C120 20 220 20 340 53 S560 87 700 52 S940 18 1200 50 V90 H0 Z"
+               d="M0 22 C60 7 120 7 180 22 S300 37 360 22 S480 7 540 22 S660 37 720 22 S840 7 900 22 S1020 37 1080 22 S1140 7 1200 22 V36 H0 Z"
                fill="url(#water-wave-fill)"
              />
              <path
-               d="M0 55 C120 20 220 20 340 53 S560 87 700 52 S940 18 1200 50"
+               d="M0 22 C60 7 120 7 180 22 S300 37 360 22 S480 7 540 22 S660 37 720 22 S840 7 900 22 S1020 37 1080 22 S1140 7 1200 22"
                fill="none"
                stroke="url(#water-wave-stroke)"
-               strokeWidth="2"
+               strokeWidth="1.75"
              />
              <path
-               d="M0 68 C130 43 235 45 360 66 S580 88 730 64 S965 42 1200 64"
+               d="M0 29 C70 17 130 17 200 29 S330 41 400 29 S530 17 600 29 S730 41 800 29 S930 17 1000 29 S1130 41 1200 29"
                fill="none"
                stroke="#67e8f9"
-               strokeOpacity="0.24"
-               strokeWidth="1.5"
+               strokeOpacity="0.2"
+               strokeWidth="1.25"
              />
              <defs>
                <linearGradient id="water-wave-fill" x1="0" y1="0" x2="1" y2="0">
