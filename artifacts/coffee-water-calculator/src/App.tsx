@@ -1894,12 +1894,7 @@ function App() {
                 ions={ionProfileIons}
                 targetIons={watermancerIonTargets}
                 targetSource={watermancerTargetSource}
-                hasSaltRecipeTargets={hasSaltRecipeTargets}
                 targetSourceLabel={watermancerTargetSourceLabel}
-                allRecipes={allRecipes}
-                externalRecipes={ROBERT_ASAMI_RECIPES}
-                onTargetSourceChange={setWatermancerTargetSource}
-                onImportRecipe={() => importInputRef.current?.click()}
               />
               <SettingsModal
                 profiles={profiles}
@@ -3665,24 +3660,14 @@ function WatermancerIonProfileCard({
   ions,
   targetIons,
   targetSource,
-  hasSaltRecipeTargets,
   targetSourceLabel,
-  allRecipes,
-  externalRecipes,
-  onTargetSourceChange,
-  onImportRecipe,
 }: {
   activeProfile: WaterProfile;
   activeRanges: RangeSet;
   ions: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetSource: WatermancerTargetSourceId;
-  hasSaltRecipeTargets: boolean;
   targetSourceLabel: string;
-  allRecipes: SaltRecipe[];
-  externalRecipes: ExternalRecipe[];
-  onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
-  onImportRecipe: () => void;
 }) {
   return (
     <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
@@ -3692,56 +3677,10 @@ function WatermancerIonProfileCard({
           <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
           <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={targetSource}
-            onChange={event => onTargetSourceChange(event.target.value as WatermancerTargetSourceId)}
-            aria-label="Ion profile target source"
-            className="max-w-[250px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-            title="Choose what Watermancer should use as the ion target profile"
-          >
-            <option value="safe-profile">Safe profile — recommended limits</option>
-            <option value="salt-table" disabled={!hasSaltRecipeTargets}>
-              Current salt table → ions{hasSaltRecipeTargets ? '' : ' (empty)'}
-            </option>
-            <optgroup label="Built-in recipes">
-              {allRecipes.filter(recipe => RECIPES.some(builtIn => builtIn.id === recipe.id)).map(recipe => (
-                <option key={`recipe:${recipe.id}`} value={`recipe:${recipe.id}`}>
-                  {recipe.name} → ions
-                </option>
-              ))}
-            </optgroup>
-            {allRecipes.some(recipe => !RECIPES.some(builtIn => builtIn.id === recipe.id)) && (
-              <optgroup label="My recipes">
-                {allRecipes.filter(recipe => !RECIPES.some(builtIn => builtIn.id === recipe.id)).map(recipe => (
-                  <option key={`recipe:${recipe.id}`} value={`recipe:${recipe.id}`}>
-                    {recipe.name} → ions
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label="Robert Asami’s Watering Hole">
-              {externalRecipes.map(recipe => (
-                <option key={`external:${recipe.id}`} value={`external:${recipe.id}`}>
-                  {recipe.name} → ions
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          <button
-            type="button"
-            onClick={onImportRecipe}
-            className="flex items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-200 transition hover:bg-sky-500/20"
-            title="Import a salt recipe and translate its targets into ions"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            Import recipe
-          </button>
-        </div>
       </div>
       <div className="border-b border-indigo-400/10 bg-indigo-500/[0.035] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
         {targetSource === 'safe-profile'
-          ? `Using ${targetSourceLabel}. Choose a recipe or the current salt table to create a recipe-based ion profile.`
+          ? `Using ${targetSourceLabel}. Ionic targets will guide the mineral-water and addition-salt recommendations below.`
           : `Using ${targetSourceLabel}: salt chemistry is translated into ion targets without changing the salt table.`}
       </div>
       <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
