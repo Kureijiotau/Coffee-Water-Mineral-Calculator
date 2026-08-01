@@ -3214,56 +3214,8 @@ function App() {
                       option Used feeds that salt dose into the final chemistry
                       while leaving the editable recipe rows unchanged. */}
                  <div className="mt-3 space-y-3">
-                   <div className="flex flex-wrap items-center justify-between gap-2">
-                     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
-                          {([
-                            {
-                              value: 'sulfates' as const,
-                              label: 'Sulfate leaning',
-                              explanation: 'Favor magnesium sulfate to add more sulfate and a brighter, crisper mineral balance.',
-                            },
-                            {
-                              value: 'chlorides' as const,
-                              label: 'Chloride leaning',
-                              explanation: 'Favor magnesium chloride to add more chloride and a rounder, fuller mineral balance.',
-                            },
-                            {
-                              value: 'original' as const,
-                              label: 'Original',
-                              explanation: 'Keep the original sulfate-to-chloride balance from this recipe.',
-                            },
-                          ]).map(option => {
-                            const selected = magnesiumPreference === option.value;
-                            return (
-                              <span key={option.value} className="group relative">
-                                <button
-                                  type="button"
-                                  onClick={() => setMagnesiumPreference(option.value)}
-                                  aria-pressed={selected}
-                                  className={`rounded-md border px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                    selected
-                                      ? 'border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,0.55)]'
-                                      : 'border-slate-700/70 bg-slate-900/40 text-slate-400 hover:border-violet-400/45 hover:bg-violet-500/10 hover:text-violet-200'
-                                  }`}
-                                >
-                                  {option.label}
-                                </button>
-                                <span
-                                  role="tooltip"
-                                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-56 rounded-md border border-violet-400/25 bg-slate-950 px-2.5 py-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:hidden group-focus-visible:block"
-                                >
-                                  {option.explanation}
-                                </span>
-                              </span>
-                            );
-                          })}
-                        </div>
-                        <span className="text-[10px] text-slate-500">
-                          Used choices update the final chemistry
-                       </span>
-                     </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
                    </div>
                    {ACTIVE_ION_IDS.map(id => {
                      const gap = watermancerIonGaps[id] ?? 0;
