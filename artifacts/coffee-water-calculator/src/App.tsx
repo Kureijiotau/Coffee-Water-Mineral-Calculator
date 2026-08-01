@@ -163,6 +163,27 @@ const num = (s: string): number => {
   return !Number.isFinite(v) || v < 0 ? 0 : v;
 };
 
+export function translateSaltTargetsToIonTargets(
+  saltTargets: Record<string, number>,
+): Partial<Record<IonId, number>> {
+  return computeIonTotals(saltTargets, {}, 1);
+}
+
+export function computeSaltGapOptionPpm(
+  salt: typeof SALTS[number],
+  ionGaps: Partial<Record<IonId, number>>,
+): number {
+  const relevantContributions = salt.ions.filter(
+    contribution => (ionGaps[contribution.ionId] ?? 0) > 0,
+  );
+  if (relevantContributions.length === 0) return 0;
+  const targetPpm = Math.min(...relevantContributions.map(contribution => {
+    const gap = ionGaps[contribution.ionId] ?? 0;
+    return contribution.fraction > 0 ? gap / contribution.fraction : 0;
+  }));
+  return Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0;
+}
+
 const normalizeSaltTarget = (value: string | number): string => {
   const raw = String(value);
   if (!raw.trim()) return '';
@@ -616,6 +637,10 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
+  const [watermancerIonTargetMode, setWatermancerIonTargetMode] = useState<'safe-profile' | 'recipe'>('safe-profile');
+  const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
+  const [alchemistRecipeOpen, setAlchemistRecipeOpen] = useState(false);
+  const [alchemistBatchOpen, setAlchemistBatchOpen] = useState(false);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
@@ -1200,6 +1225,7 @@ function App() {
     r => r.id === externalRecipeId,
   );
   const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
+  const hasSaltRecipeTargets = Object.values(saltTargets).some(target => target > 0);
   const selectedSourceRecipe = selectedExternalRecipe ?? (
     activeRecipe?.sourceUrl ? activeRecipe : undefined
   );
@@ -1209,6 +1235,29 @@ function App() {
         ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
       ) as Partial<Record<IonId, number>>
     : saltOnlyIons;
+  const watermancerIonTargets = watermancerIonTargetMode === 'recipe' && hasSaltRecipeTargets
+    ? saltOnlyIons
+    : Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+      ) as Partial<Record<IonId, number>>;
+  const watermancerIonGaps = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [
+      id,
+      Math.max((watermancerIonTargets[id] ?? 0) - (bottledIons[id] ?? 0), 0),
+    ]),
+  ) as Partial<Record<IonId, number>>;
+  const watermancerSaltOptions = useMemo(() => SALTS.map((salt, index) => {
+    const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+    const targetPpm = computeSaltGapOptionPpm(salt, watermancerIonGaps);
+    return {
+      salt,
+      form,
+      targetPpm: Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0,
+      mg: Number.isFinite(targetPpm) && targetPpm > 0
+        ? computeSaltMg(targetPpm, L, form.molarMass, salt.anhydrousMass)
+        : 0,
+    };
+  }), [L, rows, watermancerIonGaps]);
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
@@ -1335,6 +1384,7 @@ function App() {
     }
     setSavedRecipes(prev => [...prev, recipe]);
     applyRecipeObject(recipe);
+    if (showWatermancer) setWatermancerIonTargetMode('recipe');
   };
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
@@ -1769,6 +1819,23 @@ function App() {
            </div>
          </div>
 
+         {showWatermancer && (
+           <WatermancerIonProfileCard
+             activeProfile={activeProfile}
+             activeRanges={activeRanges}
+             ions={ionProfileIons}
+             targetIons={watermancerIonTargets}
+             ionProfileView={ionProfileView}
+             onIonProfileViewChange={setIonProfileView}
+             onOpenSettings={() => setShowSettings(true)}
+             targetMode={watermancerIonTargetMode}
+             hasSaltRecipeTargets={hasSaltRecipeTargets}
+             translatedTargetName={displayedRecipeName}
+             onTargetModeChange={setWatermancerIonTargetMode}
+             onImportRecipe={() => importInputRef.current?.click()}
+           />
+         )}
+
          {/* Mineral Table */}
          {(showAlchemist || showWatermancer) && <div className={`bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border ${showAlchemist ? 'border-emerald-400/20' : 'border-indigo-400/25'} overflow-hidden`}>
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
@@ -1796,6 +1863,17 @@ function App() {
               })()}
             </div>
              <div className="flex flex-wrap items-center justify-end gap-2">
+               {showAlchemist && (
+                 <button
+                   type="button"
+                   onClick={() => setAlchemistRecipeOpen(open => !open)}
+                   aria-expanded={alchemistRecipeOpen}
+                   className="flex items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
+                 >
+                   <span>{alchemistRecipeOpen ? 'Collapse' : 'Expand'}</span>
+                   <span aria-hidden="true">{alchemistRecipeOpen ? '⌃' : '⌄'}</span>
+                 </button>
+               )}
               <select
                 value={activeRecipeId}
                 onChange={e => applyRecipe(e.target.value)}
@@ -1884,7 +1962,8 @@ function App() {
               />
             </div>
           </div>
-            <div className={`border-b px-4 py-2.5 text-[11px] leading-relaxed sm:px-6 ${
+            {(!showAlchemist || alchemistRecipeOpen) && <>
+             <div className={`border-b px-4 py-2.5 text-[11px] leading-relaxed sm:px-6 ${
               showAlchemist
                 ? 'border-emerald-400/10 bg-emerald-500/[0.03] text-slate-400'
                 : 'border-indigo-400/10 bg-indigo-500/[0.03] text-slate-400'
@@ -1999,10 +2078,15 @@ function App() {
             );
          })}
           </>
-          {(showAlchemist || showWatermancer) && (
-            <IonWatchDisclosure ions={showWatermancer ? suggestedIonTotals : saltOnlyIons} />
-          )}
-          </div>}
+           {showWatermancer && <IonWatchDisclosure ions={suggestedIonTotals} />}
+           </>}
+           {showAlchemist && !alchemistRecipeOpen && (
+             <div className="px-4 py-3 text-xs text-slate-500">
+               Recipe controls are collapsed. Expand to edit salts, hydration forms, and preparation details.
+             </div>
+           )}
+           </div>}
+          {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
          {nerdLevel === 'brewer' && (
            <>
              <BrewerFlavorPanel
@@ -2031,8 +2115,19 @@ function App() {
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
               title={showAlchemist ? 'Batch & Concentrate' : 'Final Batch Volume'}
-            after={
-               showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+             after={
+               <div className="flex items-center gap-2">
+                {showAlchemist && (
+                  <button
+                    type="button"
+                    onClick={() => setAlchemistBatchOpen(open => !open)}
+                    aria-expanded={alchemistBatchOpen}
+                    className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
+                  >
+                    {alchemistBatchOpen ? 'Collapse' : 'Expand'} <span aria-hidden="true">{alchemistBatchOpen ? '⌃' : '⌄'}</span>
+                  </button>
+                )}
+                {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
                  <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Concentrate</span>
                  <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
                   <input
@@ -2043,10 +2138,11 @@ function App() {
            />
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
-               </label> : undefined
+               </label> : undefined}
+               </div>
             }
           />
-            <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-transparent">
+             <div className={`relative px-4 sm:px-6 py-4 space-y-4 bg-transparent ${showAlchemist && !alchemistBatchOpen ? 'hidden' : ''}`}>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
@@ -2099,7 +2195,12 @@ function App() {
                        className="w-24 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
                     />
                     <span className="text-xs text-slate-400">mL</span>
-                  </div>
+            </div>
+            {showAlchemist && !alchemistBatchOpen && (
+              <div className="px-4 py-3 text-xs text-slate-500">
+                Batch and concentrate controls are collapsed. Expand to edit volume, stock strength, or preparation warnings.
+              </div>
+            )}
                 </div>
 
                 {concentrateStrength > 0 && concL > 0 && (
@@ -2899,17 +3000,24 @@ function App() {
               </div>
             )}
 
-            {/* Remaining gaps — what the salt recipe still needs */}
+             {/* Remaining gaps — what the active Watermancer target still needs */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Still needed from salts</span>
+                 <div className="flex flex-wrap items-center justify-between gap-2">
+                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                     Still needed from salts
+                   </span>
+                   <span className="text-[10px] text-slate-500">
+                     {watermancerIonTargetMode === 'recipe' ? `Translated from ${displayedRecipeName}` : `${activeProfile.name} safe limits`}
+                   </span>
+                 </div>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {ACTIVE_ION_IDS.map(id => {
-                    const target = saltOnlyIons[id] ?? 0;
+                     const target = watermancerIonTargets[id] ?? 0;
                     const covered = bottledIons[id] ?? 0;
                     const remaining = Math.max(target - covered, 0);
                      const coveredTarget = covered >= target - 0.01;
-                    if (target <= 0) return null;
+                     if (target <= 0 && covered <= 0) return null;
                     return (
                       <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
@@ -2926,87 +3034,86 @@ function App() {
                     );
                   })}
                 </div>
-                {/* Salt powder amounts — safe salts only, sorted by GH/KH neutrality */}
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
-                  <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
-                    Salts: {magnesiumPreferenceLabel}
-                    {' '}
-                    <button
-                      onClick={cycleMagnesiumPreference}
-                      className="text-violet-300/70 hover:text-violet-200 underline transition-colors"
-                    >
-                      (change)
-                    </button>
-                  </span>
-                </div>
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {(() => {
-                    // Gather salts that are safe to add at full target
-                    const safe: { salt: typeof SALTS[0]; target: number; form: { molarMass: number }; mg: number; ghkhLabel: string; isChloride: boolean; isSulfate: boolean }[] = [];
-                    for (let i = 0; i < SALTS.length; i++) {
-                      const salt = SALTS[i];
-                      const tgt = dosingSaltTargets[salt.id] ?? 0;
-                      if (tgt <= 0) continue;
-                      const form = salt.hydrationForms[rows[i].formIdx];
-                      // Check if adding at full target would overshoot any ion
-                      let overshoots = false;
-                      for (const c of salt.ions) {
-                        const total = saltOnlyIons[c.ionId] ?? 0;
-                        const covered = bottledIons[c.ionId] ?? 0;
-                        if (total > 0 && covered >= total * (1 - 1e-9)) {
-                          overshoots = true;
-                          break;
-                        }
-                      }
-                       // Keep the selected magnesium source visible even when
-                       // its coupled ion is the reason for a final overshoot.
-                       if (overshoots && preferredMagnesiumSaltId && salt.id !== preferredMagnesiumSaltId) continue;
-                      const caMgIds: IonId[] = ['calcium', 'magnesium'];
-                      const affectsGH = salt.ions.some(c => (caMgIds as string[]).includes(c.ionId));
-                      const affectsKH = salt.ions.some(c => c.ionId === 'bicarbonate');
-                      const ghkhLabel = !affectsGH && !affectsKH ? 'Neutral' : affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'GH' : 'KH';
-                      const isChloride = salt.id === 'mgcl2' || salt.id === 'cacl2' || salt.id === 'nacl';
-                      const isSulfate = salt.id === 'mgso4';
-                      safe.push({
-                        salt, target: tgt, form,
-                        mg: computeSaltMg(tgt, L, form.molarMass, salt.anhydrousMass),
-                        ghkhLabel, isChloride, isSulfate,
-                      });
-                    }
-                    // Sort: neutral first, then honor the active preference.
-                    safe.sort((a, b) => {
-                      const aNeutral = a.ghkhLabel === 'Neutral' ? 0 : 1;
-                      const bNeutral = b.ghkhLabel === 'Neutral' ? 0 : 1;
-                      if (aNeutral !== bNeutral) return aNeutral - bNeutral;
-                      if (magnesiumPreference === 'sulfates') {
-                        if (a.isSulfate && !b.isSulfate) return -1;
-                        if (!a.isSulfate && b.isSulfate) return 1;
-                        if (a.isChloride && !b.isChloride) return 1;
-                        if (!a.isChloride && b.isChloride) return -1;
-                      } else if (magnesiumPreference === 'chlorides') {
-                        if (a.isChloride && !b.isChloride) return -1;
-                        if (!a.isChloride && b.isChloride) return 1;
-                        if (a.isSulfate && !b.isSulfate) return 1;
-                        if (!a.isSulfate && b.isSulfate) return -1;
-                      }
-                      return 0;
-                    });
-                    return safe.map(item => (
-                      <div key={item.salt.id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-slate-500">{item.salt.formula}</span>
-                           <span className={`text-[10px] font-medium ${item.salt.id === preferredMagnesiumSaltId ? 'text-violet-300' : item.ghkhLabel === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'}`}>
-                             {item.salt.id === preferredMagnesiumSaltId ? 'Preferred' : item.ghkhLabel}
-                          </span>
-                        </div>
-                        <span className="text-sm font-semibold tabular-nums text-sky-300">
-                          {item.mg.toFixed(1)} mg
-                        </span>
-                      </div>
-                    ));
-                  })()}
-                </div>
+                 {/* Every gap gets every compatible salt option. Selection is
+                     intentionally presentation-only; recipe rows and forms stay
+                     unchanged until the user edits the recipe above. */}
+                 <div className="mt-3 space-y-3">
+                   <div className="flex flex-wrap items-center justify-between gap-2">
+                     <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
+                     <div className="flex flex-wrap items-center gap-2">
+                       <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
+                         Salts: {magnesiumPreferenceLabel}
+                         {' '}
+                         <button
+                           type="button"
+                           onClick={cycleMagnesiumPreference}
+                           className="text-violet-300/70 hover:text-violet-200 underline transition-colors"
+                         >
+                           (change)
+                         </button>
+                       </span>
+                       <span className="text-[10px] text-slate-500">
+                         Click an option to mark it used
+                       </span>
+                     </div>
+                   </div>
+                   {ACTIVE_ION_IDS.map(id => {
+                     const gap = watermancerIonGaps[id] ?? 0;
+                     if (gap <= 0.05) return null;
+                     const options = watermancerSaltOptions.filter(option =>
+                       option.targetPpm > 0 && option.salt.ions.some(contribution => contribution.ionId === id),
+                     );
+                     if (options.length === 0) return null;
+                     return (
+                       <div key={id} className="rounded-xl border border-slate-700/50 bg-slate-900/25 p-3">
+                         <div className="mb-2 flex items-center justify-between gap-2">
+                           <span className="text-xs font-semibold text-amber-200">
+                             {ION_MAP[id].name} gap · {gap.toFixed(1)} ppm
+                           </span>
+                           <span className="text-[10px] text-slate-500">{options.length} option{options.length === 1 ? '' : 's'}</span>
+                         </div>
+                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                           {options.map(option => {
+                             const used = watermancerUsedSaltIds.includes(option.salt.id);
+                             const toggleUsed = () => setWatermancerUsedSaltIds(current =>
+                               used ? current.filter(id => id !== option.salt.id) : [...current, option.salt.id],
+                             );
+                             return (
+                               <button
+                                 key={option.salt.id}
+                                 type="button"
+                                 onClick={toggleUsed}
+                                 aria-pressed={used}
+                                 className={`rounded-lg border px-3 py-2 text-left transition ${
+                                   used
+                                     ? 'border-emerald-400/60 bg-emerald-500/15 shadow-[0_0_12px_-4px_rgba(52,211,153,0.65)]'
+                                     : 'border-slate-700/50 bg-slate-950/30 opacity-55 hover:border-sky-400/40 hover:bg-sky-500/10 hover:opacity-100'
+                                 }`}
+                               >
+                                 <div className="flex items-center justify-between gap-2">
+                                   <span className={`text-xs font-semibold ${used ? 'text-emerald-200' : 'text-slate-400'}`}>
+                                     {option.salt.name}
+                                   </span>
+                                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                                     used ? 'bg-emerald-400/20 text-emerald-200' : 'bg-slate-700/60 text-slate-500'
+                                   }`}>
+                                     {used ? 'Used' : 'Unused'}
+                                   </span>
+                                 </div>
+                                 <div className="mt-1 text-[10px] text-slate-500">
+                                   {option.salt.formula} · {option.form.label}
+                                 </div>
+                                 <div className={`mt-1 text-sm font-semibold tabular-nums ${used ? 'text-emerald-300' : 'text-slate-500'}`}>
+                                   {option.mg.toFixed(1)} mg
+                                 </div>
+                               </button>
+                             );
+                           })}
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
                  {(finalRecipeOvershoots.length > 0
                    || finalRecipeUnderdoses.length > 0
                    || (hasMineralWater && sodiumCorrectionGap > 0.05)
@@ -3363,88 +3470,6 @@ function App() {
           </div>
         </div>}
 
-        {/* Ion Profile */}
-        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
-            <div className="flex items-center gap-2">
-              <Gauge className="w-4 h-4" />
-              <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
-              <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div
-                className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5"
-                role="group"
-                aria-label="Ion profile calculation"
-              >
-                <button
-                  type="button"
-                  onClick={() => setIonProfileView('salt-only')}
-                  aria-pressed={ionProfileView === 'salt-only'}
-                  className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
-                    ionProfileView === 'salt-only'
-                      ? 'bg-slate-700 text-slate-100 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Salt only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIonProfileView('final-mixture')}
-                  aria-pressed={ionProfileView === 'final-mixture'}
-                  className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
-                    ionProfileView === 'final-mixture'
-                      ? 'bg-sky-500/20 text-sky-200 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Base water + salts
-                </button>
-              </div>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
-              >
-                <Settings className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Settings</span>
-              </button>
-            </div>
-          </div>
-          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {ACTIVE_ION_IDS.map((id, idx) => {
-              const ion = ION_MAP[id];
-              const ppm = ionProfileIons[id];
-              const level = classifyIon(ppm, activeRanges[id]);
-              const s = TRAFFIC_STYLES[level];
-              const r = activeRanges[id];
-              const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
-              return (
-                <div
-                  key={id}
-                  className={`group/ion relative rounded-xl border ${s.border} ${s.bg} px-4 py-3`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
-                    <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span className={`text-lg font-bold ${s.text}`}>{ppm.toFixed(1)}</span>
-                    <span className="text-xs text-slate-400">ppm</span>
-                  </div>
-                  <div className={`text-xs ${s.text} mt-0.5`}>
-                    {s.label} · &lt;{formatIonThreshold(r.greenMax)} / {formatIonThreshold(r.greenMax)}–{formatIonThreshold(r.yellowMax)} / &gt;{formatIonThreshold(r.yellowMax)}
-                  </div>
-                  <span className={`pointer-events-none absolute left-0 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl ${
-                    tooltipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
-                  }`}>
-                    {ion.tasteNote}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>}
       </div>
 
       {(showAlchemist || showWatermancer) && (
@@ -3601,6 +3626,148 @@ function App() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function WatermancerIonProfileCard({
+  activeProfile,
+  activeRanges,
+  ions,
+  targetIons,
+  ionProfileView,
+  onIonProfileViewChange,
+  onOpenSettings,
+  targetMode,
+  hasSaltRecipeTargets,
+  translatedTargetName,
+  onTargetModeChange,
+  onImportRecipe,
+}: {
+  activeProfile: WaterProfile;
+  activeRanges: RangeSet;
+  ions: Partial<Record<IonId, number>>;
+  targetIons: Partial<Record<IonId, number>>;
+  ionProfileView: IonProfileView;
+  onIonProfileViewChange: (view: IonProfileView) => void;
+  onOpenSettings: () => void;
+  targetMode: 'safe-profile' | 'recipe';
+  hasSaltRecipeTargets: boolean;
+  translatedTargetName: string;
+  onTargetModeChange: (mode: 'safe-profile' | 'recipe') => void;
+  onImportRecipe: () => void;
+}) {
+  return (
+    <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-indigo-400/15 text-slate-300">
+        <div className="flex items-center gap-2">
+          <Gauge className="w-4 h-4 text-indigo-300" />
+          <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
+          <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5" role="group" aria-label="Watermancer ion target source">
+            <button
+              type="button"
+              onClick={() => onTargetModeChange('safe-profile')}
+              aria-pressed={targetMode === 'safe-profile'}
+              className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
+                targetMode === 'safe-profile' ? 'bg-indigo-500/20 text-indigo-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Safe profile
+            </button>
+            <button
+              type="button"
+              onClick={() => hasSaltRecipeTargets && onTargetModeChange('recipe')}
+              aria-pressed={targetMode === 'recipe'}
+              disabled={!hasSaltRecipeTargets}
+              className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
+                targetMode === 'recipe' ? 'bg-amber-500/20 text-amber-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              } disabled:cursor-not-allowed disabled:opacity-40`}
+              title={hasSaltRecipeTargets ? `Use ${translatedTargetName} as the ion target profile` : 'Choose or import a salt recipe first'}
+            >
+              Recipe → ions
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={onImportRecipe}
+            className="flex items-center gap-1.5 rounded-lg border border-sky-400/25 bg-sky-500/10 px-2.5 py-1.5 text-[11px] text-sky-200 transition hover:bg-sky-500/20"
+            title="Import a salt recipe and translate its targets into ions"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Import recipe
+          </button>
+          <button
+            type="button"
+            onClick={onOpenSettings}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
+        </div>
+      </div>
+      <div className="border-b border-indigo-400/10 bg-indigo-500/[0.035] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
+        {targetMode === 'recipe'
+          ? `Translated from ${translatedTargetName}: salt chemistry is converted to ion targets, while hydration forms and coupled-ion warnings remain available below.`
+          : `Using ${activeProfile.name} safe limits as the ion target profile. Choose a salt recipe to translate its modeled ions into targets.`}
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/40 px-4 py-2.5 sm:px-6">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Displayed calculation</span>
+        <div className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5" role="group" aria-label="Ion profile calculation">
+          <button
+            type="button"
+            onClick={() => onIonProfileViewChange('salt-only')}
+            aria-pressed={ionProfileView === 'salt-only'}
+            className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${ionProfileView === 'salt-only' ? 'bg-slate-700 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+          >
+            Salt only
+          </button>
+          <button
+            type="button"
+            onClick={() => onIonProfileViewChange('final-mixture')}
+            aria-pressed={ionProfileView === 'final-mixture'}
+            className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${ionProfileView === 'final-mixture' ? 'bg-sky-500/20 text-sky-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
+          >
+            Base water + salts
+          </button>
+        </div>
+      </div>
+      <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {ACTIVE_ION_IDS.map((id, idx) => {
+          const ion = ION_MAP[id];
+          const ppm = ions[id] ?? 0;
+          const level = classifyIon(ppm, activeRanges[id]);
+          const s = TRAFFIC_STYLES[level];
+          const r = activeRanges[id];
+          const target = targetIons[id] ?? 0;
+          const gap = Math.max(target - ppm, 0);
+          const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
+          return (
+            <div key={id} className={`group/ion relative rounded-xl border ${s.border} ${s.bg} px-4 py-3`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
+                <span className={`w-2.5 h-2.5 rounded-full ${s.dot}`} />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-lg font-bold ${s.text}`}>{ppm.toFixed(1)}</span>
+                <span className="text-xs text-slate-400">ppm</span>
+              </div>
+              <div className={`text-xs ${s.text} mt-0.5`}>
+                {s.label} · &lt;{formatIonThreshold(r.greenMax)} / {formatIonThreshold(r.greenMax)}–{formatIonThreshold(r.yellowMax)} / &gt;{formatIonThreshold(r.yellowMax)}
+              </div>
+              <div className="mt-1 text-[10px] text-slate-500">
+                Target {target.toFixed(1)} · {gap > 0.05 ? `${gap.toFixed(1)} needed` : 'covered'}
+              </div>
+              <span className={`pointer-events-none absolute left-0 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl ${tooltipAbove ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
+                {ion.tasteNote}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

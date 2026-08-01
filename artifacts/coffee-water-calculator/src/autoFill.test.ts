@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { autoFillWaterVolumes, type MineralWaterEntry } from './App';
+import {
+  autoFillWaterVolumes,
+  computeSaltGapOptionPpm,
+  translateSaltTargetsToIonTargets,
+  type MineralWaterEntry,
+} from './App';
+import { SALTS } from './waterData';
 
 const water = (
   id: string,
@@ -64,5 +70,26 @@ describe('autoFillWaterVolumes', () => {
     );
 
     expect(filled[0].volumeMl).toBe('1000');
+  });
+});
+
+describe('Watermancer salt-to-ion helpers', () => {
+  it('translates a salt recipe into its modeled ion target profile', () => {
+    const targets = translateSaltTargetsToIonTargets({ mgso4: 10 });
+    const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;
+
+    expect(targets.magnesium).toBeCloseTo(10 * mgso4.ions[0].fraction, 5);
+    expect(targets.sulfate).toBeCloseTo(10 * mgso4.ions[1].fraction, 5);
+  });
+
+  it('sizes a salt option from the tightest coupled-ion gap', () => {
+    const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;
+    const magnesiumGap = 5;
+    const sulfateGap = 100;
+    const expected = magnesiumGap / (mgso4.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 1);
+
+    expect(computeSaltGapOptionPpm(mgso4, { magnesium: magnesiumGap, sulfate: sulfateGap }))
+      .toBeCloseTo(expected, 5);
+    expect(computeSaltGapOptionPpm(mgso4, {})).toBe(0);
   });
 });
