@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
+  computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
   type MineralWaterEntry,
@@ -172,5 +173,27 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect((targets.khco3 ?? 0) * (khco3.ions.find(c => c.ionId === 'potassium')?.fraction ?? 0))
       .toBeCloseTo(5.1, 1);
     expect(targets.nacl).toBeUndefined();
+  });
+
+  it('computes added-water ions using batch dilution and overfill scaling', () => {
+    const filled = computeWatermancerBottledIons([
+      water('source-a', { calcium: 20 }),
+      water('source-b', { calcium: 10 }),
+    ].map((entry, index) => ({ ...entry, volumeMl: index === 0 ? '750' : '750' })), 1000);
+
+    expect(filled.calcium).toBeCloseTo(15, 5);
+  });
+
+  it('supports the GH:KH harmony preset without changing the selected salt boundary', () => {
+    const targets = autoCraftSaltTargets(
+      ['mgso4', 'nahco3'],
+      {},
+      { magnesium: 10, sulfate: 20, bicarbonate: 20 },
+      {},
+      'gh-kh-harmony',
+    );
+
+    expect((targets.mgso4 ?? 0) + (targets.nahco3 ?? 0)).toBeGreaterThan(0);
+    expect(Object.keys(targets).sort()).toEqual(['mgso4', 'nahco3']);
   });
 });

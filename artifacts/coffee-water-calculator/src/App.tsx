@@ -36,6 +36,7 @@ type BrewerFlavorInput = {
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}`;
+export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -194,11 +195,37 @@ export function computeSaltGapOptionPpm(
   return Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0;
 }
 
+const completeIonTotals = (values: Partial<Record<IonId, number>>): Record<IonId, number> => (
+  Object.fromEntries(
+    IONS.map(ion => [ion.id, values[ion.id] ?? 0]),
+  ) as Record<IonId, number>
+);
+
+export function computeWatermancerBottledIons(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+): Record<IonId, number> {
+  const rawVolume = entries.reduce((total, entry) => total + num(entry.volumeMl), 0);
+  const sourceScale = batchMl > 0 ? Math.min(1, batchMl / rawVolume || 0) : 0;
+  return Object.fromEntries(
+    IONS.map(ion => [
+      ion.id,
+      batchMl > 0
+        ? entries.reduce(
+          (total, entry) => total + (num(entry.ions[ion.id] ?? '') * num(entry.volumeMl) * sourceScale) / batchMl,
+          0,
+        )
+        : 0,
+    ]),
+  ) as Record<IonId, number>;
+}
+
 export function autoCraftSaltTargets(
   selectedSaltIds: string[],
   waterIons: Partial<Record<IonId, number>>,
   targetIons: Partial<Record<IonId, number>>,
   fixedSaltTargets: Record<string, number> = {},
+  preset: AutoCraftPreset = 'closest-match',
 ): Record<string, number> {
   const selectedSalts = SALTS.filter(salt => selectedSaltIds.includes(salt.id));
   if (selectedSalts.length === 0) return {};
@@ -206,18 +233,55 @@ export function autoCraftSaltTargets(
   const targets = Object.fromEntries(
     selectedSalts.map(salt => [salt.id, 0]),
   ) as Record<string, number>;
+  if (preset === 'gh-kh-harmony') {
+    Object.assign(
+      targets,
+      autoCraftSaltTargets(selectedSaltIds, waterIons, targetIons, fixedSaltTargets, 'closest-match'),
+    );
+  }
   const fixedIonTotals = computeIonTotals(fixedSaltTargets, waterIons, 1);
+  const completeTargets = completeIonTotals(targetIons);
+  const targetGh = computeGH(completeTargets);
+  const targetKh = computeKH(completeTargets);
+  const harmonyWeight = preset === 'gh-kh-harmony' ? 8 : 0;
+  const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
+    let value = fixedIonTotals[ionId] ?? 0;
+    for (const otherSalt of selectedSalts) {
+      if (otherSalt.id === salt.id) continue;
+      value += (targets[otherSalt.id] ?? 0)
+        * (otherSalt.ions.find(item => item.ionId === ionId)?.fraction ?? 0);
+    }
+    return value;
+  };
+  const saltIonTotals = (salt: typeof SALTS[number]): Record<IonId, number> => (
+    Object.fromEntries(
+      IONS.map(ion => [
+        ion.id,
+        salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0,
+      ]),
+    ) as Record<IonId, number>
+  );
   const residualFor = (salt: typeof SALTS[number], candidate: number): number => {
+    const actualIons = { ...fixedIonTotals } as Record<IonId, number>;
     let score = 0;
     for (const ion of IONS) {
       const saltContribution = salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0;
-      const actual = fixedIonTotals[ion.id]
-        + selectedSalts.reduce((total, otherSalt) => (
-          total + (otherSalt.id === salt.id ? 0 : (targets[otherSalt.id] ?? 0)
-            * (otherSalt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0))
-        ), 0)
-        + candidate * saltContribution;
+      const actual = ionValueWithoutSalt(salt, ion.id) + candidate * saltContribution;
+      actualIons[ion.id] = actual;
       score += Math.abs(actual - (targetIons[ion.id] ?? 0));
+    }
+    if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
+      const actualGh = computeGH(actualIons);
+      const actualKh = computeKH(actualIons);
+      const ghFraction = actualGh / targetGh;
+      const khFraction = actualKh / targetKh;
+      const hardnessFraction = (actualGh + actualKh) / (targetGh + targetKh);
+      score += harmonyWeight
+        * (
+          Math.abs(ghFraction - khFraction)
+          + 0.5 * Math.abs(1 - hardnessFraction)
+        )
+        * ((targetGh + targetKh) / 2);
     }
     return score;
   };
@@ -232,7 +296,7 @@ export function autoCraftSaltTargets(
       const candidates = [0];
       for (const contribution of salt.ions) {
         if (contribution.fraction <= 0) continue;
-        let actualWithoutSalt = waterIons[contribution.ionId] ?? 0;
+        let actualWithoutSalt = fixedIonTotals[contribution.ionId] ?? 0;
         for (const otherSalt of selectedSalts) {
           if (otherSalt.id === salt.id) continue;
           actualWithoutSalt += (targets[otherSalt.id] ?? 0)
@@ -242,6 +306,27 @@ export function autoCraftSaltTargets(
           0,
           Math.min(5000, ((targetIons[contribution.ionId] ?? 0) - actualWithoutSalt) / contribution.fraction),
         ));
+      }
+      if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
+        const ionsWithoutSalt = Object.fromEntries(IONS.map(ion => [
+          ion.id,
+          ionValueWithoutSalt(salt, ion.id),
+        ])) as Record<IonId, number>;
+        const ghWithoutSalt = computeGH(ionsWithoutSalt);
+        const khWithoutSalt = computeKH(ionsWithoutSalt);
+        const saltIons = saltIonTotals(salt);
+        const ghContribution = computeGH(saltIons);
+        const khContribution = computeKH(saltIons);
+        const ratioDenominator = ghContribution / targetGh - khContribution / targetKh;
+        if (Math.abs(ratioDenominator) > 1e-10) {
+          candidates.push(Math.max(
+            0,
+            Math.min(
+              5000,
+              (khWithoutSalt / targetKh - ghWithoutSalt / targetGh) / ratioDenominator,
+            ),
+          ));
+        }
       }
       const next = candidates.reduce((best, candidate) => {
         const bestScore = residualFor(salt, best);
@@ -788,6 +873,7 @@ function App() {
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
+  const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerCraft, setWatermancerCraft] = useState<{
     signature: string;
     targets: Record<string, number>;
@@ -1150,8 +1236,9 @@ function App() {
       salts: [...watermancerUsedSaltIds].sort(),
       water: ACTIVE_ION_IDS.map(id => Number((bottledIons[id] ?? 0).toFixed(6))),
       target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
+      preset: autoCraftPreset,
     }),
-    [bottledIons, watermancerIonTargets, watermancerUsedSaltIds],
+    [autoCraftPreset, bottledIons, watermancerIonTargets, watermancerUsedSaltIds],
   );
   const activeWatermancerSaltTargets = useMemo(
     () => watermancerCraft?.signature === watermancerCraftSignature
@@ -1160,12 +1247,21 @@ function App() {
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
   );
   const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
+  const makeWatermancerCraftSignature = (
+    waterIons: Partial<Record<IonId, number>>,
+    preset = autoCraftPreset,
+  ) => JSON.stringify({
+    salts: [...watermancerUsedSaltIds].sort(),
+    water: ACTIVE_ION_IDS.map(id => Number((waterIons[id] ?? 0).toFixed(6))),
+    target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
+    preset,
+  });
 
-   // Build the salt recommendation shown below the calculator. The sulfate /
-   // chloride preference is a real source selection for magnesium, not merely
-   // a sort order. Keep the user's actual recipe rows unchanged until they
-   // choose to edit or apply the recommendation.
-  const suggestedSaltTargets = useMemo(() => {
+    // Build the salt recommendation shown below the calculator. The sulfate /
+    // chloride preference is a real source selection for magnesium, not merely
+    // a sort order. Keep the user's actual recipe rows unchanged until they
+    // choose to edit or apply the recommendation.
+   const buildSuggestedSaltTargets = (currentBottledIons: Record<IonId, number>, waterIsPresent = hasMineralWater) => {
     const targets: Record<string, number> = {};
     SALTS.forEach((salt, i) => { targets[salt.id] = num(rows[i].target); });
 
@@ -1179,10 +1275,10 @@ function App() {
       if (fraction <= 0) return;
       const originalTarget = targets[saltId] ?? 0;
       const originalIon = originalTarget * fraction;
-      targets[saltId] = Math.max(originalIon - (bottledIons[ionId] ?? 0), 0) / fraction;
+       targets[saltId] = Math.max(originalIon - (currentBottledIons[ionId] ?? 0), 0) / fraction;
     };
 
-    if (hasMineralWater) {
+     if (waterIsPresent) {
       reduceForIon('cacl2', 'calcium');
       reduceForIon('nahco3', 'bicarbonate');
       reduceForIon('khco3', 'potassium');
@@ -1191,7 +1287,7 @@ function App() {
 
     const magnesiumSulfate = SALTS.find(s => s.id === 'mgso4');
     const magnesiumChloride = SALTS.find(s => s.id === 'mgcl2');
-    if (hasMineralWater && magnesiumSulfate && magnesiumChloride) {
+    if (waterIsPresent && magnesiumSulfate && magnesiumChloride) {
       const sulfateFraction = magnesiumSulfate.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
       const chlorideFraction = magnesiumChloride.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0;
       const originalSulfateTarget = num(rows[SALTS.findIndex(s => s.id === 'mgso4')]?.target);
@@ -1200,7 +1296,7 @@ function App() {
       const originalChlorideMg = originalChlorideTarget * chlorideFraction;
       const originalMgTotal = originalSulfateMg + originalChlorideMg;
       const remainingMagnesium = Math.max(
-        (saltOnlyIons?.magnesium ?? 0) - (bottledIons?.magnesium ?? 0),
+        (saltOnlyIons?.magnesium ?? 0) - (currentBottledIons?.magnesium ?? 0),
         0,
       );
 
@@ -1228,7 +1324,7 @@ function App() {
     // bicarbonate salts contribute to the same KH target, so cap their
     // combined contribution after the individual source-water adjustments
     // above. Preserve the remaining NaHCO3/KHCO3 ratio when scaling.
-    if (hasMineralWater) {
+     if (waterIsPresent) {
       const bicarbonateContributions = ['nahco3', 'khco3'].map(saltId => {
         const salt = SALTS.find(item => item.id === saltId);
         const fraction = salt?.ions.find(contribution => contribution.ionId === 'bicarbonate')?.fraction ?? 0;
@@ -1236,7 +1332,7 @@ function App() {
       });
       const saltBicarbonate = bicarbonateContributions.reduce((total, item) => total + item.contribution, 0);
       const remainingBicarbonate = Math.max(
-        (saltOnlyIons.bicarbonate ?? 0) - (bottledIons.bicarbonate ?? 0),
+         (saltOnlyIons.bicarbonate ?? 0) - (currentBottledIons.bicarbonate ?? 0),
         0,
       );
 
@@ -1250,22 +1346,73 @@ function App() {
       }
     }
     return targets;
-  }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
+   };
+   const suggestedSaltTargets = useMemo(
+     () => buildSuggestedSaltTargets(bottledIons),
+     [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater],
+   );
 
   const handleAutoCraft = () => {
     if (watermancerUsedSaltIds.length === 0 || batchMl <= 0) return;
+    let craftedMineralWaters = mineralWaters;
+    let craftedAdditionWaters = additionWaters;
+    let craftedWaterIons = bottledIons;
+
+    if (autoCraftPreset === 'water-first') {
+      craftedMineralWaters = mineralWaters.length > 0
+        ? autoFillWaterVolumes(
+          mineralWaters,
+          batchMl,
+          watermancerIonTargets,
+          additionWaters,
+          activeAutoFillPriority,
+          0,
+          true,
+          false,
+          1,
+          0,
+        )
+        : mineralWaters;
+      craftedAdditionWaters = additionWaters.length > 0
+        ? autoFillWaterVolumes(
+          additionWaters,
+          batchMl,
+          watermancerIonTargets,
+          craftedMineralWaters,
+          activeAutoFillPriority,
+          0,
+          true,
+          false,
+          1,
+          0,
+        )
+        : additionWaters;
+      craftedWaterIons = computeWatermancerBottledIons(
+        [...craftedMineralWaters, ...craftedAdditionWaters],
+        batchMl,
+      );
+      setMineralWaters(craftedMineralWaters);
+      setAdditionWaters(craftedAdditionWaters);
+    }
+
     const selectedIds = new Set(watermancerUsedSaltIds);
+    const craftedHasWater = hasMineralWater
+      || Object.values(craftedWaterIons).some(value => value > 0.000001);
+    const craftedSuggestedSaltTargets = autoCraftPreset === 'water-first'
+      ? buildSuggestedSaltTargets(craftedWaterIons, craftedHasWater)
+      : suggestedSaltTargets;
     const fixedSaltTargets = Object.fromEntries(
-      Object.entries(suggestedSaltTargets).filter(([saltId]) => !selectedIds.has(saltId)),
+      Object.entries(craftedSuggestedSaltTargets).filter(([saltId]) => !selectedIds.has(saltId)),
     );
     const targets = autoCraftSaltTargets(
       watermancerUsedSaltIds,
-      bottledIons,
+      craftedWaterIons,
       watermancerIonTargets,
       fixedSaltTargets,
+      autoCraftPreset,
     );
     setWatermancerCraft({
-      signature: watermancerCraftSignature,
+      signature: makeWatermancerCraftSignature(craftedWaterIons),
       targets,
     });
   };
@@ -1462,6 +1609,7 @@ function App() {
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
     setMagnesiumPreference('original');
     setWatermancerUsedSaltIds([]);
+    setAutoCraftPreset('closest-match');
     setWatermancerCraft(null);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
@@ -3449,7 +3597,7 @@ function App() {
                     <div className="min-w-0">
                       <span className="block text-xs font-semibold text-cyan-100">Auto-craft selected salts</span>
                       <span className="mt-0.5 block text-[10px] leading-relaxed text-slate-400">
-                        Optimize the Used salts against all ions in the selected profile using every added water source.
+                        Choose how the Used salts and added waters should close the selected ion profile.
                       </span>
                       {watermancerCraftIsCurrent && (
                         <span className="mt-1 block text-[10px] font-medium text-emerald-300">
@@ -3457,18 +3605,35 @@ function App() {
                         </span>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAutoCraft}
-                      disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
-                      className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
-                      title={watermancerUsedSaltIds.length === 0
-                        ? 'Mark at least one salt Used before auto-crafting'
-                        : 'Optimize the selected salt doses against the active ion profile'}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Auto-craft
-                    </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <label className="sr-only" htmlFor="watermancer-auto-craft-preset">Auto-craft strategy</label>
+                      <select
+                        id="watermancer-auto-craft-preset"
+                        value={autoCraftPreset}
+                        onChange={event => {
+                          setAutoCraftPreset(event.target.value as AutoCraftPreset);
+                          setWatermancerCraft(null);
+                        }}
+                        className="max-w-[190px] rounded-lg border border-cyan-300/30 bg-slate-950/70 px-2.5 py-2 text-[11px] font-medium text-cyan-100 outline-none transition focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-400/20"
+                        title="Choose the Auto-craft optimization strategy"
+                      >
+                        <option value="closest-match">Closest match</option>
+                        <option value="water-first">Water first</option>
+                        <option value="gh-kh-harmony">GH:KH harmony</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAutoCraft}
+                        disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
+                        className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+                        title={watermancerUsedSaltIds.length === 0
+                          ? 'Mark at least one salt Used before auto-crafting'
+                          : 'Optimize the selected salt doses against the active ion profile'}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Auto-craft
+                      </button>
+                    </div>
                   </div>
                  {(finalMixtureOvershoots.length > 0
                    || finalMixtureUnderdoses.length > 0

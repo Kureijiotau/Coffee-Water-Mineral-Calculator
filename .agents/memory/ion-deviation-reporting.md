@@ -14,3 +14,9 @@ Watermancer Auto-craft should optimize only salts explicitly marked Used, while 
 **Why:** Auto-craft is a user-directed refinement of the selected salt choices, not permission to rewrite the recipe or silently introduce new salts.
 
 **How to apply:** Minimize total absolute ppm deviation across the active ion profile, including coupled co-ions, and invalidate the crafted result when the selected salts, waters, or target profile changes.
+
+Auto-craft supports three distinct strategies: closest-match optimizes total ion deviation with current waters fixed; water-first fills added waters toward the active profile before optimizing Used salts; GH:KH harmony adds hardness-balance and total-hardness coverage to the ion objective.
+
+**Why:** These are user-facing tradeoffs, so changing one preset must not silently change the behavior or semantics of another.
+
+**How to apply:** Keep all strategies limited to added water entries and salts marked Used; preserve non-selected salt recommendations and editable recipe rows.
