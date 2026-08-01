@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   autoFillWaterVolumes,
+  autoCraftSaltTargets,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
   type MineralWaterEntry,
@@ -143,5 +144,33 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(computeSaltGapOptionPpm(mgso4, { magnesium: magnesiumGap, sulfate: sulfateGap }))
       .toBeCloseTo(expected, 5);
     expect(computeSaltGapOptionPpm(mgso4, {})).toBe(0);
+  });
+
+  it('auto-crafts a selected salt to minimize its coupled ion deviation', () => {
+    const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;
+    const targets = autoCraftSaltTargets(
+      ['mgso4'],
+      {},
+      { magnesium: 5, sulfate: 20 },
+    );
+    const crafted = targets.mgso4 ?? 0;
+    const magnesium = crafted * (mgso4.ions.find(c => c.ionId === 'magnesium')?.fraction ?? 0);
+    const sulfate = crafted * (mgso4.ions.find(c => c.ionId === 'sulfate')?.fraction ?? 0);
+    expect(magnesium).toBeCloseTo(5.06, 1);
+    expect(sulfate).toBeCloseTo(20, 1);
+  });
+
+  it('includes water and preserves fixed salt chemistry while crafting selected salts', () => {
+    const targets = autoCraftSaltTargets(
+      ['khco3'],
+      { bicarbonate: 2 },
+      { potassium: 3, bicarbonate: 10 },
+      { nacl: 4 },
+    );
+    const khco3 = SALTS.find(salt => salt.id === 'khco3')!;
+    expect(targets.khco3).toBeGreaterThan(0);
+    expect((targets.khco3 ?? 0) * (khco3.ions.find(c => c.ionId === 'potassium')?.fraction ?? 0))
+      .toBeCloseTo(5.1, 1);
+    expect(targets.nacl).toBeUndefined();
   });
 });
