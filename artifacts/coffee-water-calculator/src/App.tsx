@@ -524,7 +524,6 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
-  const [autoFillSettingsOpen, setAutoFillSettingsOpen] = useState(false);
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
@@ -652,9 +651,6 @@ function App() {
     ? autoFillCustomPriority
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
   const effectiveAutoFillDeviationPpm = showAlchemist ? 0 : autoFillDeviationPpm;
-  const autoFillPriorityLabel = effectiveAutoFillPreset === 'custom'
-    ? 'Custom'
-    : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].label;
   const modeAccent = nerdLevel === 'alchemist'
     ? 'from-emerald-600 to-teal-500'
     : nerdLevel === 'watermancer'
@@ -2403,156 +2399,7 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-              {showWatermancer && <div className="rounded-xl border border-indigo-400/25 bg-indigo-950/15 p-3">
-               <div className="flex flex-wrap items-center justify-between gap-2">
-                 <div>
-                   <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Auto-fill settings</p>
-                   <p className="mt-0.5 text-[11px] text-slate-500">
-                     Priority: {autoFillPriorityLabel} · Deviation: +{autoFillDeviationPpm} ppm
-                   </p>
-                 </div>
-                 <button
-                   type="button"
-                   onClick={() => setAutoFillSettingsOpen(open => !open)}
-                   className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition ${
-                     autoFillSettingsOpen
-                       ? 'border-indigo-400/50 bg-indigo-500/20 text-indigo-100'
-                       : 'border-slate-600/60 bg-slate-900/50 text-slate-300 hover:border-indigo-400/40 hover:text-indigo-100'
-                   }`}
-                 >
-                   {autoFillSettingsOpen ? 'Hide settings' : 'Set auto-fill priority'}
-                 </button>
-               </div>
-               {autoFillSettingsOpen && (
-                 <div className="mt-3 space-y-3 border-t border-indigo-400/15 pt-3">
-                   <label className="block">
-                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
-                     <select
-                       value={autoFillPriorityPreset}
-                       onChange={event => setAutoFillPriorityPreset(event.target.value as AutoFillPriorityPreset)}
-                       className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                     >
-                       {Object.entries(AUTO_FILL_PRIORITY_PRESETS).map(([value, preset]) => (
-                         <option key={value} value={value}>{preset.label}</option>
-                       ))}
-                       <option value="custom">Custom</option>
-                     </select>
-                   </label>
-
-                   <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2">
-                     <div>
-                       <p className="text-xs font-medium text-slate-200">Set deviation value</p>
-                       <p className="text-[10px] text-slate-500">Allowed deviation from each protected recipe target</p>
-                     </div>
-                     <div className="flex items-center gap-1.5">
-                       <button
-                         type="button"
-                         onClick={() => setAutoFillDeviationPpm(value => Math.max(0, value - 1))}
-                         className="flex h-7 w-7 items-center justify-center rounded-md border border-indigo-400/35 bg-indigo-500/10 text-base text-indigo-200 hover:bg-indigo-500/20"
-                         aria-label="Decrease auto-fill deviation by 1 ppm"
-                       >
-                         −
-                       </button>
-                       <span className="min-w-12 text-center text-sm font-semibold tabular-nums text-indigo-200">
-                         {autoFillDeviationPpm} ppm
-                       </span>
-                       <button
-                         type="button"
-                         onClick={() => setAutoFillDeviationPpm(value => Math.min(100, value + 1))}
-                         className="flex h-7 w-7 items-center justify-center rounded-md border border-indigo-400/35 bg-indigo-500/10 text-base text-indigo-200 hover:bg-indigo-500/20"
-                         aria-label="Increase auto-fill deviation by 1 ppm"
-                       >
-                         +
-                       </button>
-                     </div>
-                   </div>
-
-                   {autoFillPriorityPreset === 'custom' && (
-                     <div>
-                       <div className="mb-1.5 flex items-center justify-between">
-                         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Custom ion order</span>
-                         <button
-                           type="button"
-                           onClick={() => setAutoFillCustomPriority([...AUTO_FILL_SOURCE_PRIORITY])}
-                           className="text-[10px] text-indigo-300 hover:text-indigo-100"
-                         >
-                           Reset
-                         </button>
-                       </div>
-                       <div className="grid gap-1.5 sm:grid-cols-2">
-                         {autoFillCustomPriority.map((id, index) => (
-                            <div
-                              key={id}
-                              draggable
-                              onDragStart={event => {
-                                setAutoFillDraggedIndex(index);
-                                event.dataTransfer.effectAllowed = 'move';
-                                event.dataTransfer.setData('text/plain', id);
-                              }}
-                              onDragEnd={() => setAutoFillDraggedIndex(null)}
-                              onDragOver={event => event.preventDefault()}
-                              onDrop={event => {
-                                event.preventDefault();
-                                if (autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
-                                setAutoFillCustomPriority(current => {
-                                  const next = [...current];
-                                  const [moved] = next.splice(autoFillDraggedIndex, 1);
-                                  next.splice(index, 0, moved);
-                                  return next;
-                                });
-                                setAutoFillDraggedIndex(null);
-                              }}
-                              className={`flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 transition active:cursor-grabbing ${
-                                autoFillDraggedIndex === index
-                                  ? 'border-indigo-300/60 bg-indigo-500/20 opacity-60'
-                                  : 'border-slate-700/50 bg-slate-900/35 hover:border-indigo-400/40 hover:bg-indigo-500/10'
-                              }`}
-                              aria-label={`Priority ${index + 1}: ${ION_MAP[id].name}. Drag to reorder.`}
-                            >
-                              <span
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-indigo-300/50 bg-indigo-500/20 text-sm font-bold tabular-nums text-indigo-100 shadow-sm shadow-indigo-950/40"
-                                aria-label={`Priority ${index + 1}`}
-                              >
-                                {index + 1}
-                              </span>
-                              <span className="flex-1 text-xs font-medium text-slate-100">{ION_MAP[id].name}</span>
-                             <button
-                               type="button"
-                               onPointerDown={event => event.stopPropagation()}
-                               disabled={index === 0}
-                               onClick={() => setAutoFillCustomPriority(current => {
-                                 const next = [...current];
-                                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                                 return next;
-                               })}
-                               className="rounded px-1.5 text-xs text-slate-400 hover:bg-slate-700/60 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-25"
-                               aria-label={`Move ${ION_MAP[id].name} up`}
-                             >
-                               ↑
-                             </button>
-                             <button
-                               type="button"
-                               onPointerDown={event => event.stopPropagation()}
-                               disabled={index === autoFillCustomPriority.length - 1}
-                               onClick={() => setAutoFillCustomPriority(current => {
-                                 const next = [...current];
-                                 [next[index], next[index + 1]] = [next[index + 1], next[index]];
-                                 return next;
-                               })}
-                               className="rounded px-1.5 text-xs text-slate-400 hover:bg-slate-700/60 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-25"
-                               aria-label={`Move ${ION_MAP[id].name} down`}
-                             >
-                               ↓
-                             </button>
-                           </div>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                 </div>
-               )}
-              </div>}
-             {showWatermancer && waterComparisonOpen && (
+            {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">
                    <div>
