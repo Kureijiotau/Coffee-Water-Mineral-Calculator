@@ -639,8 +639,6 @@ function App() {
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
   const [watermancerIonTargetMode, setWatermancerIonTargetMode] = useState<'safe-profile' | 'recipe'>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
-  const [alchemistRecipeOpen, setAlchemistRecipeOpen] = useState(false);
-  const [alchemistBatchOpen, setAlchemistBatchOpen] = useState(false);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
@@ -1735,7 +1733,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
-      <div className="w-full max-w-5xl space-y-4">
+      <div className="flex w-full max-w-5xl flex-col space-y-4">
         {/* Header */}
          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
           <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${modeAccent}`}>
@@ -1837,7 +1835,7 @@ function App() {
          )}
 
          {/* Mineral Table */}
-         {(showAlchemist || showWatermancer) && <div className={`bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border ${showAlchemist ? 'border-emerald-400/20' : 'border-indigo-400/25'} overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div className={`order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border ${showAlchemist ? 'border-emerald-400/20' : 'border-indigo-400/25'} overflow-hidden`}>
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <SaltSieveIcon />
@@ -1862,18 +1860,7 @@ function App() {
                 );
               })()}
             </div>
-             <div className="flex flex-wrap items-center justify-end gap-2">
-               {showAlchemist && (
-                 <button
-                   type="button"
-                   onClick={() => setAlchemistRecipeOpen(open => !open)}
-                   aria-expanded={alchemistRecipeOpen}
-                   className="flex items-center gap-1.5 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
-                 >
-                   <span>{alchemistRecipeOpen ? 'Collapse' : 'Expand'}</span>
-                   <span aria-hidden="true">{alchemistRecipeOpen ? '⌃' : '⌄'}</span>
-                 </button>
-               )}
+              <div className="flex flex-wrap items-center justify-end gap-2">
               <select
                 value={activeRecipeId}
                 onChange={e => applyRecipe(e.target.value)}
@@ -1962,7 +1949,7 @@ function App() {
               />
             </div>
           </div>
-            {(!showAlchemist || alchemistRecipeOpen) && <>
+            <>
              <div className={`border-b px-4 py-2.5 text-[11px] leading-relaxed sm:px-6 ${
               showAlchemist
                 ? 'border-emerald-400/10 bg-emerald-500/[0.03] text-slate-400'
@@ -2079,12 +2066,7 @@ function App() {
          })}
           </>
            {showWatermancer && <IonWatchDisclosure ions={suggestedIonTotals} />}
-           </>}
-           {showAlchemist && !alchemistRecipeOpen && (
-             <div className="px-4 py-3 text-xs text-slate-500">
-               Recipe controls are collapsed. Expand to edit salts, hydration forms, and preparation details.
-             </div>
-           )}
+            </>
            </div>}
           {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
          {nerdLevel === 'brewer' && (
@@ -2109,7 +2091,7 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-           {(showAlchemist || showWatermancer) && <div className={`relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+            {(showAlchemist || showWatermancer) && <div className={`order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
@@ -2117,16 +2099,6 @@ function App() {
               title={showAlchemist ? 'Batch & Concentrate' : 'Final Batch Volume'}
              after={
                <div className="flex items-center gap-2">
-                {showAlchemist && (
-                  <button
-                    type="button"
-                    onClick={() => setAlchemistBatchOpen(open => !open)}
-                    aria-expanded={alchemistBatchOpen}
-                    className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200 transition hover:bg-emerald-500/20"
-                  >
-                    {alchemistBatchOpen ? 'Collapse' : 'Expand'} <span aria-hidden="true">{alchemistBatchOpen ? '⌃' : '⌄'}</span>
-                  </button>
-                )}
                 {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
                  <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Concentrate</span>
                  <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
@@ -2142,7 +2114,7 @@ function App() {
                </div>
             }
           />
-             <div className={`relative px-4 sm:px-6 py-4 space-y-4 bg-transparent ${showAlchemist && !alchemistBatchOpen ? 'hidden' : ''}`}>
+              <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-transparent">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
@@ -2196,11 +2168,6 @@ function App() {
                     />
                     <span className="text-xs text-slate-400">mL</span>
             </div>
-            {showAlchemist && !alchemistBatchOpen && (
-              <div className="px-4 py-3 text-xs text-slate-500">
-                Batch and concentrate controls are collapsed. Expand to edit volume, stock strength, or preparation warnings.
-              </div>
-            )}
                 </div>
 
                 {concentrateStrength > 0 && concL > 0 && (
@@ -2316,7 +2283,7 @@ function App() {
            </div>}
 
         {/* GH / KH Summary */}
-        {showAlchemist && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showAlchemist && <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
             title="Base Salt Recipe Summary (as CaCO₃)"
@@ -2340,24 +2307,27 @@ function App() {
         </div>}
 
         {showWatermancer && (
-          /* Estimated pH / alkalinity */
-          <WaterChemistryCard
-            estimate={waterChemistry.estimate}
-            basePH={waterChemistry.basePH}
-            baseAlkalinity={waterChemistry.baseAlkalinity}
-          />
+          <div className="order-4">
+            <WaterChemistryCard
+              estimate={waterChemistry.estimate}
+              basePH={waterChemistry.basePH}
+              baseAlkalinity={waterChemistry.baseAlkalinity}
+            />
+          </div>
         )}
 
         {/* Taste Profile */}
-        <TasteProfileCard
-          ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
-          gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
-          kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
-          collapsed={showAlchemist || showWatermancer}
-        />
+        <div className="order-5">
+          <TasteProfileCard
+            ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
+            gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
+            kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
+            collapsed={showAlchemist || showWatermancer}
+          />
+        </div>
 
         {/* Mineral Water Base */}
-        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+        {(showAlchemist || showWatermancer) && <div className={`${showAlchemist ? 'order-3 border-emerald-400/25' : 'order-6 border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title="Mineral Water Base"
