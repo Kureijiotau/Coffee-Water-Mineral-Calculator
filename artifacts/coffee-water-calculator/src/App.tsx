@@ -33,6 +33,7 @@ type BrewerFlavorInput = {
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type IonProfileView = 'salt-only' | 'final-mixture';
+type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `recipe:${string}` | `external:${string}`;
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -54,6 +55,13 @@ function brewerSliderStatus(value: number): { label: string; className: string }
   if (value <= 60) return { label: 'Safe', className: 'text-emerald-300' };
   if (value <= 75) return { label: 'Elevated', className: 'text-amber-300' };
   return { label: 'Out of range', className: 'text-rose-300' };
+}
+
+function ionTotalsForSaltRecipe(recipe: SaltRecipe): Record<IonId, number> {
+  const saltTargets = Object.fromEntries(
+    Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
+  );
+  return computeIonTotals(saltTargets, {}, 1);
 }
 
 const BREWER_SALT_IDS = new Set(['mgso4', 'cacl2', 'nahco3', 'nacl']);
@@ -680,7 +688,7 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
-  const [watermancerIonTargetMode, setWatermancerIonTargetMode] = useState<'safe-profile' | 'recipe'>('safe-profile');
+  const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
 
@@ -1275,11 +1283,30 @@ function App() {
       ) as Partial<Record<IonId, number>>
     : saltOnlyIons;
   const autoFillUsesRecipeTargets = showAlchemist && hasSaltRecipeTargets;
-  const watermancerIonTargets = watermancerIonTargetMode === 'recipe' && hasSaltRecipeTargets
-    ? saltOnlyIons
-    : Object.fromEntries(
-        ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
-      ) as Partial<Record<IonId, number>>;
+  const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
+    if (watermancerTargetSource === 'salt-table') return saltOnlyIons;
+    if (watermancerTargetSource.startsWith('recipe:')) {
+      const recipeId = watermancerTargetSource.slice('recipe:'.length);
+      const recipe = allRecipes.find(item => item.id === recipeId);
+      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
+    }
+    if (watermancerTargetSource.startsWith('external:')) {
+      const recipeId = watermancerTargetSource.slice('external:'.length);
+      const recipe = ROBERT_ASAMI_RECIPES.find(item => item.id === recipeId);
+      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
+    }
+    return Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+    ) as Partial<Record<IonId, number>>;
+  }, [activeRanges, allRecipes, saltOnlyIons, watermancerTargetSource]);
+  const watermancerTargetSourceLabel = useMemo(() => {
+    if (watermancerTargetSource === 'safe-profile') return `${activeProfile.name} safe profile`;
+    if (watermancerTargetSource === 'salt-table') return 'Current salt table';
+    if (watermancerTargetSource.startsWith('recipe:')) {
+      return allRecipes.find(item => item.id === watermancerTargetSource.slice('recipe:'.length))?.name ?? 'Selected recipe';
+    }
+    return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
+  }, [activeProfile.name, allRecipes, watermancerTargetSource]);
   const watermancerIonGaps = Object.fromEntries(
     ACTIVE_ION_IDS.map(id => [
       id,
@@ -1423,8 +1450,13 @@ function App() {
       return;
     }
     setSavedRecipes(prev => [...prev, recipe]);
+    if (showWatermancer) {
+      setWatermancerTargetSource(`recipe:${recipe.id}`);
+      setActiveRecipeId('custom');
+      setExternalRecipeId('custom');
+      return;
+    }
     applyRecipeObject(recipe);
-    if (showWatermancer) setWatermancerIonTargetMode('recipe');
   };
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
@@ -1868,16 +1900,18 @@ function App() {
              ionProfileView={ionProfileView}
              onIonProfileViewChange={setIonProfileView}
              onOpenSettings={() => setShowSettings(true)}
-             targetMode={watermancerIonTargetMode}
+              targetSource={watermancerTargetSource}
              hasSaltRecipeTargets={hasSaltRecipeTargets}
-             translatedTargetName={displayedRecipeName}
-             onTargetModeChange={setWatermancerIonTargetMode}
+              targetSourceLabel={watermancerTargetSourceLabel}
+              allRecipes={allRecipes}
+              externalRecipes={ROBERT_ASAMI_RECIPES}
+              onTargetSourceChange={setWatermancerTargetSource}
              onImportRecipe={() => importInputRef.current?.click()}
            />
          )}
 
          {/* Mineral Table */}
-          {(showAlchemist || showWatermancer) && <div className={`order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border ${showAlchemist ? 'border-emerald-400/20' : 'border-indigo-400/25'} overflow-hidden`}>
+           {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <SaltSieveIcon />
@@ -1992,14 +2026,8 @@ function App() {
             </div>
           </div>
             <>
-             <div className={`border-b px-4 py-2.5 text-[11px] leading-relaxed sm:px-6 ${
-              showAlchemist
-                ? 'border-emerald-400/10 bg-emerald-500/[0.03] text-slate-400'
-                : 'border-indigo-400/10 bg-indigo-500/[0.03] text-slate-400'
-            }`}>
-              {showAlchemist
-                ? 'Build the recipe from 0-TDS water. Choose hydrated forms, then use the batch panel to prepare a safe concentrate.'
-                : 'Set the target recipe, then add a bottled or saved source below. Watermancer will reduce the salt dose to account for the ions already present.'}
+            <div className="border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
+               Build the recipe from 0-TDS water. Choose hydrated forms, then use the batch panel to prepare a safe concentrate.
             </div>
            {selectedSourceRecipe && (
              <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
@@ -2107,7 +2135,6 @@ function App() {
             );
          })}
           </>
-           {showWatermancer && <IonWatchDisclosure ions={suggestedIonTotals} />}
             {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
             </>
            </div>}
@@ -2986,7 +3013,7 @@ function App() {
                      Still needed from salts
                    </span>
                    <span className="text-[10px] text-slate-500">
-                     {watermancerIonTargetMode === 'recipe' ? `Translated from ${displayedRecipeName}` : `${activeProfile.name} safe limits`}
+                      Using {watermancerTargetSourceLabel} as the ion target source
                    </span>
                  </div>
                 <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -3647,10 +3674,12 @@ function WatermancerIonProfileCard({
   ionProfileView,
   onIonProfileViewChange,
   onOpenSettings,
-  targetMode,
+  targetSource,
   hasSaltRecipeTargets,
-  translatedTargetName,
-  onTargetModeChange,
+  targetSourceLabel,
+  allRecipes,
+  externalRecipes,
+  onTargetSourceChange,
   onImportRecipe,
 }: {
   activeProfile: WaterProfile;
@@ -3660,10 +3689,12 @@ function WatermancerIonProfileCard({
   ionProfileView: IonProfileView;
   onIonProfileViewChange: (view: IonProfileView) => void;
   onOpenSettings: () => void;
-  targetMode: 'safe-profile' | 'recipe';
+  targetSource: WatermancerTargetSourceId;
   hasSaltRecipeTargets: boolean;
-  translatedTargetName: string;
-  onTargetModeChange: (mode: 'safe-profile' | 'recipe') => void;
+  targetSourceLabel: string;
+  allRecipes: SaltRecipe[];
+  externalRecipes: ExternalRecipe[];
+  onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onImportRecipe: () => void;
 }) {
   return (
@@ -3675,30 +3706,41 @@ function WatermancerIonProfileCard({
           <span className="text-xs text-slate-400 font-normal normal-case">— {activeProfile.name}</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5" role="group" aria-label="Watermancer ion target source">
-            <button
-              type="button"
-              onClick={() => onTargetModeChange('safe-profile')}
-              aria-pressed={targetMode === 'safe-profile'}
-              className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
-                targetMode === 'safe-profile' ? 'bg-indigo-500/20 text-indigo-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Safe profile
-            </button>
-            <button
-              type="button"
-              onClick={() => hasSaltRecipeTargets && onTargetModeChange('recipe')}
-              aria-pressed={targetMode === 'recipe'}
-              disabled={!hasSaltRecipeTargets}
-              className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${
-                targetMode === 'recipe' ? 'bg-amber-500/20 text-amber-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'
-              } disabled:cursor-not-allowed disabled:opacity-40`}
-              title={hasSaltRecipeTargets ? `Use ${translatedTargetName} as the ion target profile` : 'Choose or import a salt recipe first'}
-            >
-              Recipe → ions
-            </button>
-          </div>
+          <select
+            value={targetSource}
+            onChange={event => onTargetSourceChange(event.target.value as WatermancerTargetSourceId)}
+            aria-label="Ion profile target source"
+            className="max-w-[250px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+            title="Choose what Watermancer should use as the ion target profile"
+          >
+            <option value="safe-profile">Safe profile — recommended limits</option>
+            <option value="salt-table" disabled={!hasSaltRecipeTargets}>
+              Current salt table → ions{hasSaltRecipeTargets ? '' : ' (empty)'}
+            </option>
+            <optgroup label="Built-in recipes">
+              {allRecipes.filter(recipe => RECIPES.some(builtIn => builtIn.id === recipe.id)).map(recipe => (
+                <option key={`recipe:${recipe.id}`} value={`recipe:${recipe.id}`}>
+                  {recipe.name} → ions
+                </option>
+              ))}
+            </optgroup>
+            {allRecipes.some(recipe => !RECIPES.some(builtIn => builtIn.id === recipe.id)) && (
+              <optgroup label="My recipes">
+                {allRecipes.filter(recipe => !RECIPES.some(builtIn => builtIn.id === recipe.id)).map(recipe => (
+                  <option key={`recipe:${recipe.id}`} value={`recipe:${recipe.id}`}>
+                    {recipe.name} → ions
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <optgroup label="Robert Asami’s Watering Hole">
+              {externalRecipes.map(recipe => (
+                <option key={`external:${recipe.id}`} value={`external:${recipe.id}`}>
+                  {recipe.name} → ions
+                </option>
+              ))}
+            </optgroup>
+          </select>
           <button
             type="button"
             onClick={onImportRecipe}
@@ -3719,9 +3761,9 @@ function WatermancerIonProfileCard({
         </div>
       </div>
       <div className="border-b border-indigo-400/10 bg-indigo-500/[0.035] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
-        {targetMode === 'recipe'
-          ? `Translated from ${translatedTargetName}: salt chemistry is converted to ion targets, while hydration forms and coupled-ion warnings remain available below.`
-          : `Using ${activeProfile.name} safe limits as the ion target profile. Choose a salt recipe to translate its modeled ions into targets.`}
+        {targetSource === 'safe-profile'
+          ? `Using ${targetSourceLabel}. Choose a recipe or the current salt table to create a recipe-based ion profile.`
+          : `Using ${targetSourceLabel}: salt chemistry is translated into ion targets without changing the salt table.`}
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/40 px-4 py-2.5 sm:px-6">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Displayed calculation</span>
