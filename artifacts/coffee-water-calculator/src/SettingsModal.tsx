@@ -13,6 +13,7 @@ interface Props {
   onSelectProfile: (id: string) => void;
   onSaveProfile: (profile: WaterProfile) => void;
   onDeleteProfile: (id: string) => void;
+  inline?: boolean;
 }
 
 const num = (s: string): number => {
@@ -23,6 +24,7 @@ const num = (s: string): number => {
 export function SettingsModal({
   profiles, activeProfileId, onClose,
   onSelectProfile, onSaveProfile, onDeleteProfile,
+  inline = false,
 }: Props) {
   const active = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const isLocked = active.locked;
@@ -66,24 +68,29 @@ export function SettingsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-3xl max-h-[85vh] overflow-hidden bg-slate-800 rounded-2xl shadow-2xl border border-slate-700/60 flex flex-col">
+    <div className={inline ? 'w-full' : 'fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'}>
+      <div className={inline
+        ? 'w-full overflow-hidden rounded-2xl border border-indigo-400/25 bg-slate-800/70 shadow-xl'
+        : 'w-full max-w-3xl max-h-[85vh] overflow-hidden bg-slate-800 rounded-2xl shadow-2xl border border-slate-700/60 flex flex-col'
+      }>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/40">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold text-slate-100">Ion Range Settings</h2>
+            <h2 className="text-base font-semibold text-slate-100">{inline ? 'Ion profile ranges' : 'Ion Range Settings'}</h2>
             {isLocked && (
               <span className="flex items-center gap-1 text-xs text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-0.5">
                 <Lock className="w-3 h-3" /> Locked
               </span>
             )}
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition">
-            <X className="w-5 h-5" />
-          </button>
+          {!inline && (
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        <div className="overflow-y-auto px-6 py-4 space-y-5">
+        <div className={`${inline ? '' : 'overflow-y-auto max-h-[70vh]'} px-6 py-4 space-y-5`}>
           {/* Profile selector */}
           <div>
             <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">Profile</label>
@@ -217,12 +224,14 @@ export function SettingsModal({
           >
             <RotateCcw className="w-3.5 h-3.5" /> Reset editor to Aiki's defaults
           </button>
-          <button
-            onClick={onClose}
-            className="text-sm text-slate-300 bg-slate-700/60 hover:bg-slate-700 rounded-lg px-4 py-2 transition"
-          >
-            Done
-          </button>
+          {!inline && (
+            <button
+              onClick={onClose}
+              className="text-sm text-slate-300 bg-slate-700/60 hover:bg-slate-700 rounded-lg px-4 py-2 transition"
+            >
+              Done
+            </button>
+          )}
         </div>
       </div>
     </div>

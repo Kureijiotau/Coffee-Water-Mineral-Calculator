@@ -3,8 +3,8 @@ name: Ion profile view model
 description: Ion Profile must distinguish the original salt recipe from the final mixture with configured base water.
 ---
 
-The Ion Profile offers two explicit views: Salt only uses the original salt targets, while Base water + salts uses source-water-adjusted salt targets plus diluted configured-water ions. When configured water exists, the final-mixture view is the default.
+The Watermancer Ion Profile shows the final configured-water mixture as its single visible calculation. Salt-only totals remain an internal chemistry baseline for recipe comparisons, gap calculations, and disclosures, but are not exposed as a user-facing toggle.
 
-**Why:** Users need to compare the recipe they designed with the chemistry they will actually brew; showing only one model makes base-water ion totals misleading.
+**Why:** Watermancer is focused on shaping source water, so showing one final-mixture profile avoids an obsolete presentation toggle while preserving the separate salt-only baseline needed by the chemistry engine.
 
-**How to apply:** Keep the toggle local to the Ion Profile and source its final view from the shared adjusted-target/final-mixture calculation rather than recomputing a separate approximation.
+**How to apply:** Keep the Ion Profile sourced from the shared adjusted-target/final-mixture calculation. Use the salt-only model only where calculations or explanatory disclosures explicitly require the original recipe baseline.

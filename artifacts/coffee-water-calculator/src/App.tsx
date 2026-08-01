@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Settings, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -32,7 +32,6 @@ type BrewerFlavorInput = {
   sweetness: number;
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
-type IonProfileView = 'salt-only' | 'final-mixture';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `recipe:${string}` | `external:${string}`;
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
@@ -683,11 +682,9 @@ function App() {
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
   const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
-  const [showSettings, setShowSettings] = useState(false);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
-  const [ionProfileView, setIonProfileView] = useState<IonProfileView>('final-mixture');
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -1088,9 +1085,7 @@ function App() {
     () => findIonUnderdoses(suggestedIonTotals, saltOnlyIons),
     [suggestedIonTotals, saltOnlyIons],
   );
-  const ionProfileIons = ionProfileView === 'final-mixture'
-    ? suggestedIonTotals
-    : saltOnlyIons;
+  const ionProfileIons = suggestedIonTotals;
   const preferredMagnesiumSaltId = magnesiumPreference === 'sulfates'
     ? 'mgso4'
     : magnesiumPreference === 'chlorides'
@@ -1892,22 +1887,30 @@ function App() {
          </div>
 
          {showWatermancer && (
-           <WatermancerIonProfileCard
-             activeProfile={activeProfile}
-             activeRanges={activeRanges}
-             ions={ionProfileIons}
-             targetIons={watermancerIonTargets}
-             ionProfileView={ionProfileView}
-             onIonProfileViewChange={setIonProfileView}
-             onOpenSettings={() => setShowSettings(true)}
-              targetSource={watermancerTargetSource}
-             hasSaltRecipeTargets={hasSaltRecipeTargets}
-              targetSourceLabel={watermancerTargetSourceLabel}
-              allRecipes={allRecipes}
-              externalRecipes={ROBERT_ASAMI_RECIPES}
-              onTargetSourceChange={setWatermancerTargetSource}
-             onImportRecipe={() => importInputRef.current?.click()}
-           />
+            <>
+              <WatermancerIonProfileCard
+                activeProfile={activeProfile}
+                activeRanges={activeRanges}
+                ions={ionProfileIons}
+                targetIons={watermancerIonTargets}
+                targetSource={watermancerTargetSource}
+                hasSaltRecipeTargets={hasSaltRecipeTargets}
+                targetSourceLabel={watermancerTargetSourceLabel}
+                allRecipes={allRecipes}
+                externalRecipes={ROBERT_ASAMI_RECIPES}
+                onTargetSourceChange={setWatermancerTargetSource}
+                onImportRecipe={() => importInputRef.current?.click()}
+              />
+              <SettingsModal
+                profiles={profiles}
+                activeProfileId={activeProfileId}
+                inline
+                onClose={() => undefined}
+                onSelectProfile={handleSelectProfile}
+                onSaveProfile={handleSaveProfile}
+                onDeleteProfile={handleDeleteProfile}
+              />
+            </>
          )}
 
          {/* Mineral Table */}
@@ -3554,16 +3557,6 @@ function App() {
           </div>
         </div>
       )}
-      {showSettings && (
-        <SettingsModal
-          profiles={profiles}
-          activeProfileId={activeProfileId}
-          onClose={() => setShowSettings(false)}
-          onSelectProfile={handleSelectProfile}
-          onSaveProfile={handleSaveProfile}
-          onDeleteProfile={handleDeleteProfile}
-        />
-      )}
       {showTastePreference && (
         <TastePreferenceModal
           onClose={() => setShowTastePreference(false)}
@@ -3671,9 +3664,6 @@ function WatermancerIonProfileCard({
   activeRanges,
   ions,
   targetIons,
-  ionProfileView,
-  onIonProfileViewChange,
-  onOpenSettings,
   targetSource,
   hasSaltRecipeTargets,
   targetSourceLabel,
@@ -3686,9 +3676,6 @@ function WatermancerIonProfileCard({
   activeRanges: RangeSet;
   ions: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
-  ionProfileView: IonProfileView;
-  onIonProfileViewChange: (view: IonProfileView) => void;
-  onOpenSettings: () => void;
   targetSource: WatermancerTargetSourceId;
   hasSaltRecipeTargets: boolean;
   targetSourceLabel: string;
@@ -3750,41 +3737,12 @@ function WatermancerIonProfileCard({
             <Upload className="w-3.5 h-3.5" />
             Import recipe
           </button>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 bg-slate-700/40 hover:bg-slate-700/60 rounded-lg px-2.5 py-1.5 transition"
-          >
-            <Settings className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
         </div>
       </div>
       <div className="border-b border-indigo-400/10 bg-indigo-500/[0.035] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
         {targetSource === 'safe-profile'
           ? `Using ${targetSourceLabel}. Choose a recipe or the current salt table to create a recipe-based ion profile.`
           : `Using ${targetSourceLabel}: salt chemistry is translated into ion targets without changing the salt table.`}
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/40 px-4 py-2.5 sm:px-6">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Displayed calculation</span>
-        <div className="flex items-center rounded-lg border border-slate-700/60 bg-slate-900/50 p-0.5" role="group" aria-label="Ion profile calculation">
-          <button
-            type="button"
-            onClick={() => onIonProfileViewChange('salt-only')}
-            aria-pressed={ionProfileView === 'salt-only'}
-            className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${ionProfileView === 'salt-only' ? 'bg-slate-700 text-slate-100 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            Salt only
-          </button>
-          <button
-            type="button"
-            onClick={() => onIonProfileViewChange('final-mixture')}
-            aria-pressed={ionProfileView === 'final-mixture'}
-            className={`rounded-md px-2.5 py-1.5 text-[11px] font-medium transition ${ionProfileView === 'final-mixture' ? 'bg-sky-500/20 text-sky-200 shadow-sm' : 'text-slate-400 hover:text-slate-200'}`}
-          >
-            Base water + salts
-          </button>
-        </div>
       </div>
       <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {ACTIVE_ION_IDS.map((id, idx) => {
