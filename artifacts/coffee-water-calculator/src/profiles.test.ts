@@ -45,6 +45,7 @@ import {
   saveActiveProfileId,
   createProfile,
   emptyRangeSet,
+  EMPIRICAL_PROFILES,
 } from './profiles';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -68,10 +69,18 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     expect(profiles[0].locked).toBe(true);
   });
 
-  it('returns only the Aiki default when localStorage is empty', () => {
+  it('returns Aiki and the built-in Empirical profiles when localStorage is empty', () => {
     const profiles = loadProfiles();
-    expect(profiles).toHaveLength(1);
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
+    expect(profiles.slice(1).map(p => p.id)).toEqual(EMPIRICAL_PROFILES.map(p => p.id));
+    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
+  });
+
+  it('uses published Empirical values for Good and 20% for Elevated', () => {
+    const glacial = EMPIRICAL_PROFILES.find(p => p.id === 'empirical-glacial-ionic-profile')!;
+    expect(glacial.locked).toBe(true);
+    expect(glacial.ranges.calcium).toEqual({ greenMax: 9.25, yellowMax: 1.85 });
+    expect(glacial.ranges.bicarbonate).toEqual({ greenMax: 29.201, yellowMax: 5.8402 });
   });
 
   it('round-trips a custom profile through save then load', () => {
@@ -80,10 +89,10 @@ describe('loadProfiles / saveProfiles round-trip', () => {
 
     const loaded = loadProfiles();
     // Aiki default is re-injected from code, not from storage
-    expect(loaded).toHaveLength(2);
+    expect(loaded).toHaveLength(2 + EMPIRICAL_PROFILES.length);
     expect(loaded[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
-    expect(loaded[1].id).toBe(custom.id);
-    expect(loaded[1].name).toBe('My Profile');
+    expect(loaded[EMPIRICAL_PROFILES.length + 1].id).toBe(custom.id);
+    expect(loaded[EMPIRICAL_PROFILES.length + 1].name).toBe('My Profile');
   });
 
   it('never persists the Aiki default profile to storage', () => {
@@ -102,7 +111,7 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     const profiles = loadProfiles();
     // The authoritative in-code version should win
     expect(profiles[0].name).toBe(AIKI_DEFAULT_PROFILE.name);
-    expect(profiles).toHaveLength(1); // stale copy stripped, not duplicated
+    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length); // stale copy stripped, not duplicated
   });
 
   it('migrates a stored profile that is missing newly added ion keys', () => {
@@ -128,15 +137,15 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     saveProfiles([AIKI_DEFAULT_PROFILE, a, b]);
 
     const loaded = loadProfiles();
-    expect(loaded).toHaveLength(3);
+    expect(loaded).toHaveLength(3 + EMPIRICAL_PROFILES.length);
     expect(loaded.map(p => p.id)).toContain(a.id);
     expect(loaded.map(p => p.id)).toContain(b.id);
   });
 
-  it('handles corrupt JSON in storage gracefully, returning only Aiki default', () => {
+  it('handles corrupt JSON in storage gracefully, returning built-in profiles', () => {
     localStorageMock.setItem('cwm.profiles', '{NOT_VALID_JSON');
     const profiles = loadProfiles();
-    expect(profiles).toHaveLength(1);
+    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
   });
 });
@@ -282,7 +291,7 @@ describe('deleting the active profile falls back to Aiki default', () => {
     // Delete all custom
     saveProfiles([AIKI_DEFAULT_PROFILE]);
     const profiles = loadProfiles();
-    expect(profiles).toHaveLength(1);
+    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
   });
 });

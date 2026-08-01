@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Lock, Save, Trash2, Copy, RotateCcw, X, Plus, Check } from 'lucide-react';
 import {
   ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE,
@@ -29,6 +29,10 @@ export function SettingsModal({
   const [draftRanges, setDraftRanges] = useState<RangeSet>(structuredClone(active.ranges));
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState('');
+
+  useEffect(() => {
+    setDraftRanges(structuredClone(active.ranges));
+  }, [activeProfileId, active.ranges]);
 
   const updateRange = (id: IonId, field: 'greenMax' | 'yellowMax', value: string) => {
     setDraftRanges(prev => ({

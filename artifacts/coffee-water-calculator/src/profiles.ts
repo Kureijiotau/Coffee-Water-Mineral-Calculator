@@ -2,6 +2,7 @@ import {
   AIKI_DEFAULT_PROFILE, ACTIVE_ION_IDS, ION_MAP, IONS,
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
+import { EMPIRICAL_WATERS } from './empiricalWaters';
 
 const PROFILES_KEY = 'cwm.profiles';
 const ACTIVE_KEY = 'cwm.activeProfileId';
@@ -9,6 +10,27 @@ const INDICATOR_KEY = 'cwm.indicatorOn';
 const NERD_LEVEL_KEY = 'cwm.nerdLevel';
 
 export type NerdLevel = 'brewer' | 'alchemist' | 'watermancer';
+
+export const EMPIRICAL_PROFILES: WaterProfile[] = EMPIRICAL_WATERS.map(water => ({
+  id: `${water.id}-ionic-profile`,
+  name: `${water.name} ionic profile`,
+  locked: true,
+  description: `Published Empirical Water profile. Good ceilings use the published ion values; Elevated ceilings use 20% of those values. Source: ${water.sourceUrl}`,
+  ranges: Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => {
+      const publishedValue = water.ions[id] ?? 0;
+      return [id, {
+        greenMax: publishedValue,
+        yellowMax: publishedValue * 0.2,
+      }];
+    }),
+  ) as RangeSet,
+}));
+
+const BUILT_IN_PROFILE_IDS = new Set([
+  AIKI_DEFAULT_PROFILE.id,
+  ...EMPIRICAL_PROFILES.map(profile => profile.id),
+]);
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
@@ -30,10 +52,10 @@ function writeJSON(key: string, value: unknown): void {
 
 export function loadProfiles(): WaterProfile[] {
   const stored = readJSON<WaterProfile[]>(PROFILES_KEY, []);
-  // Always ensure Aiki's default is present and up to date
-  const withoutAiki = stored.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id);
+  // Always ensure built-in profiles are present and up to date
+  const withoutBuiltIns = stored.filter(p => !BUILT_IN_PROFILE_IDS.has(p.id));
   // Migrate stored profiles that are missing any ions (e.g. newly added citrates)
-  const migrated = withoutAiki.map(p => {
+  const migrated = withoutBuiltIns.map(p => {
     const missing = IONS.filter(i => !(i.id in p.ranges));
     if (missing.length === 0) return p;
     const ranges = { ...p.ranges };
@@ -42,12 +64,12 @@ export function loadProfiles(): WaterProfile[] {
     }
     return { ...p, ranges };
   });
-  return [AIKI_DEFAULT_PROFILE, ...migrated];
+  return [AIKI_DEFAULT_PROFILE, ...EMPIRICAL_PROFILES, ...migrated];
 }
 
 export function saveProfiles(profiles: WaterProfile[]): void {
-  // Never persist Aiki's locked default — it's always re-injected from code
-  writeJSON(PROFILES_KEY, profiles.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id));
+  // Never persist built-in locked profiles — they are always re-injected from code
+  writeJSON(PROFILES_KEY, profiles.filter(p => !BUILT_IN_PROFILE_IDS.has(p.id)));
 }
 
 export function loadActiveProfileId(): string {
