@@ -2066,9 +2066,9 @@ function App() {
          })}
           </>
            {showWatermancer && <IonWatchDisclosure ions={suggestedIonTotals} />}
+            {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
             </>
            </div>}
-          {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
          {nerdLevel === 'brewer' && (
            <>
              <BrewerFlavorPanel
