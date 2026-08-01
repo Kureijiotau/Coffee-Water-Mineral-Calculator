@@ -162,6 +162,71 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
+const AUTO_FILL_MAX_ML = 2000;
+
+function autoFillWaterVolumes(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+  targets: Partial<Record<IonId, number>>,
+): MineralWaterEntry[] {
+  if (batchMl <= 0 || entries.length === 0) return entries;
+
+  const volumes = entries.map(() => 0);
+  const remaining = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [id, Math.max(targets[id] ?? 0, 0) * batchMl]),
+  ) as Record<IonId, number>;
+
+  // Fill one source at a time to the first ion target it can reach without
+  // overshooting another target, then recalculate with the remaining ions.
+  // Candidate scoring favors the source that covers the most target ions.
+  for (let pass = 0; pass < entries.length * ACTIVE_ION_IDS.length + 1; pass++) {
+    let best: { index: number; amount: number; gain: number } | null = null;
+
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index];
+      const room = AUTO_FILL_MAX_ML - volumes[index];
+      if (room <= 0.01) continue;
+
+      let amount = room;
+      let hasUsefulIon = false;
+      ACTIVE_ION_IDS.forEach(id => {
+        const concentration = num(entry.ions[id] ?? '');
+        if (concentration <= 0 || remaining[id] <= 0.01) return;
+        hasUsefulIon = true;
+        amount = Math.min(amount, remaining[id] / concentration);
+      });
+      if (!hasUsefulIon || amount <= 0.01) continue;
+
+      let gain = 0;
+      ACTIVE_ION_IDS.forEach(id => {
+        const concentration = num(entry.ions[id] ?? '');
+        const target = Math.max(targets[id] ?? 0, 0);
+        if (concentration <= 0 || target <= 0) return;
+        gain += Math.min(amount * concentration, remaining[id]) / (target * batchMl);
+      });
+
+      if (!best || gain > best.gain + 0.000001) {
+        best = { index, amount, gain };
+      }
+    }
+
+    if (!best) break;
+    volumes[best.index] += best.amount;
+    const entry = entries[best.index];
+    ACTIVE_ION_IDS.forEach(id => {
+      const concentration = num(entry.ions[id] ?? '');
+      if (concentration > 0) {
+        remaining[id] = Math.max(remaining[id] - best.amount * concentration, 0);
+      }
+    });
+  }
+
+  return entries.map((entry, index) => ({
+    ...entry,
+    volumeMl: String(Math.min(AUTO_FILL_MAX_ML, Math.floor(volumes[index]))),
+  }));
+}
+
 const WATER_METADATA_FIELDS: { key: keyof WaterMetadata; label: string; unit: string }[] = [
   { key: 'silica', label: 'Silica (SiO₂)', unit: 'mg/L' },
   { key: 'ph', label: 'pH', unit: '' },
@@ -176,6 +241,85 @@ function metadataToStrings(metadata?: WaterMetadata): Partial<Record<keyof Water
       .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
       .map(([key, value]) => [key, String(value)]),
   ) as Partial<Record<keyof WaterMetadata, string>>;
+}
+
+function WaterVolumeStepper({
+  value,
+  onChange,
+  accent = 'sky',
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  accent?: 'sky' | 'indigo';
+}) {
+  const repeatTimeoutRef = useRef<number | null>(null);
+  const repeatIntervalRef = useRef<number | null>(null);
+  const currentValue = Math.max(0, Math.round(num(value)));
+  const currentValueRef = useRef(currentValue);
+  useEffect(() => {
+    currentValueRef.current = currentValue;
+  }, [currentValue]);
+
+  const stopRepeating = useCallback(() => {
+    if (repeatTimeoutRef.current !== null) window.clearTimeout(repeatTimeoutRef.current);
+    if (repeatIntervalRef.current !== null) window.clearInterval(repeatIntervalRef.current);
+    repeatTimeoutRef.current = null;
+    repeatIntervalRef.current = null;
+  }, []);
+
+  const adjust = useCallback((delta: number) => {
+    const nextValue = Math.max(0, currentValueRef.current + delta);
+    currentValueRef.current = nextValue;
+    onChange(String(nextValue));
+  }, [onChange]);
+
+  const startRepeating = useCallback((delta: number) => {
+    stopRepeating();
+    adjust(delta);
+    repeatTimeoutRef.current = window.setTimeout(() => {
+      repeatIntervalRef.current = window.setInterval(() => adjust(delta), 100);
+    }, 350);
+  }, [adjust, stopRepeating]);
+
+  useEffect(() => stopRepeating, [stopRepeating]);
+
+  const buttonTone = accent === 'indigo'
+    ? 'border-indigo-400/40 bg-indigo-500/10 text-indigo-200 hover:bg-indigo-500/25'
+    : 'border-sky-400/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/25';
+
+  return (
+    <div className="flex items-center gap-2" aria-label="Water volume adjustment">
+      <button
+        type="button"
+        onPointerDown={event => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          startRepeating(-1);
+        }}
+        onPointerUp={stopRepeating}
+        onPointerCancel={stopRepeating}
+        className={`flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
+        aria-label="Decrease water volume by 1 mL"
+        title="Decrease by 1 mL (hold to repeat)"
+      >
+        −
+      </button>
+      <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-slate-300">{fmt(currentValue)} mL</span>
+      <button
+        type="button"
+        onPointerDown={event => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          startRepeating(1);
+        }}
+        onPointerUp={stopRepeating}
+        onPointerCancel={stopRepeating}
+        className={`flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
+        aria-label="Increase water volume by 1 mL"
+        title="Increase by 1 mL (hold to repeat)"
+      >
+        +
+      </button>
+    </div>
+  );
 }
 
 function metadataToNumbers(metadata: Partial<Record<keyof WaterMetadata, string>>): WaterMetadata | undefined {
@@ -2209,50 +2353,12 @@ function App() {
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {/* Volume slider */}
+                {/* Precise volume stepper */}
                 <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={0}
-                    max={2000}
-                    step={1}
-                    value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
-                    onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
-                    className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer
-                      bg-slate-700/60 accent-sky-400
-                      [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                      [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
-                      [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
-                      [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
-                      [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
-                      [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
+                  <WaterVolumeStepper
+                    value={entry.volumeMl}
+                    onChange={volumeMl => updateMineralWater(entry.id, { volumeMl })}
                   />
-                  <span className="text-xs tabular-nums text-slate-400 w-10 text-right shrink-0">
-                    {fmt(Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000))} mL
-                  </span>
-                  {batchMl > 0 && (() => {
-                    // Calculate optimal volume to hit the nearest ion target
-                    const vols: { ion: string; ml: number }[] = [];
-                    for (const id of ACTIVE_ION_IDS) {
-                      const conc = parseFloat(entry.ions[id] ?? '0');
-                      if (conc <= 0) continue;
-                      const needed = saltOnlyIons[id] ?? 0;
-                      if (needed <= 0) continue;
-                      const ml = (needed * batchMl) / conc;
-                      if (ml > 0 && ml <= 2000) vols.push({ ion: ION_MAP[id].formula, ml });
-                    }
-                    if (vols.length === 0) return null;
-                    const best = vols.reduce((a, b) => a.ml < b.ml ? a : b);
-                    return (
-                      <button
-                        onClick={() => updateMineralWater(entry.id, { volumeMl: String(Math.round(best.ml)) })}
-                        className="text-[10px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg px-2 py-1 transition shrink-0"
-                        title={`Fill to ${Math.round(best.ml)} mL — hits ${best.ion} target exactly`}
-                      >
-                        Auto-fill ({Math.round(best.ml)} mL)
-                      </button>
-                    );
-                  })()}
                 </div>
                 {/* Ion inputs */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -2347,7 +2453,18 @@ function App() {
               </div>
             ))}
 
-          {/* Add button */}
+             {mineralWaters.length > 0 && batchMl > 0 && (
+               <button
+                 type="button"
+                 onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons))}
+                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                 title="Use all base waters to cover as much of the recipe's ion targets as possible"
+               >
+                 Auto-fill all base waters
+               </button>
+             )}
+
+             {/* Add button */}
             <button
               onClick={() => addMineralWater()}
               className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
@@ -2749,49 +2866,12 @@ function App() {
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  {/* Volume slider */}
+                  {/* Precise volume stepper */}
                   <div className="flex items-center gap-3">
-                    <input
-                      type="range"
-                      min={0}
-                      max={2000}
-                      step={1}
-                      value={Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000)}
-                      onChange={e => updateAdditionWater(entry.id, { volumeMl: e.target.value })}
-                      className="flex-1 h-1.5 rounded-full appearance-none cursor-pointer
-                        bg-slate-700/60 accent-sky-400
-                        [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3
-                        [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400
-                        [&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:shadow-sky-500/40
-                        [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:active:cursor-grabbing
-                        [&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full
-                        [&::-moz-range-thumb]:bg-sky-400 [&::-moz-range-thumb]:border-0"
+                    <WaterVolumeStepper
+                      value={entry.volumeMl}
+                      onChange={volumeMl => updateAdditionWater(entry.id, { volumeMl })}
                     />
-                    <span className="text-xs tabular-nums text-slate-400 w-10 text-right shrink-0">
-                      {fmt(Math.min(parseFloat(entry.volumeMl || '0') || 0, 2000))} mL
-                    </span>
-                    {batchMl > 0 && (() => {
-                      const vols: { ion: string; ml: number }[] = [];
-                      for (const id of ACTIVE_ION_IDS) {
-                        const conc = parseFloat(entry.ions[id] ?? '0');
-                        if (conc <= 0) continue;
-                        const needed = saltOnlyIons[id] ?? 0;
-                        if (needed <= 0) continue;
-                        const ml = (needed * batchMl) / conc;
-                        if (ml > 0 && ml <= 2000) vols.push({ ion: ION_MAP[id].formula, ml });
-                      }
-                      if (vols.length === 0) return null;
-                      const best = vols.reduce((a, b) => a.ml < b.ml ? a : b);
-                      return (
-                        <button
-                          onClick={() => updateAdditionWater(entry.id, { volumeMl: String(Math.round(best.ml)) })}
-                          className="text-[10px] font-medium text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg px-2 py-1 transition shrink-0"
-                          title={`Fill to ${Math.round(best.ml)} mL — hits ${best.ion} target exactly`}
-                        >
-                          Auto-fill ({Math.round(best.ml)} mL)
-                        </button>
-                      );
-                    })()}
                   </div>
                   {/* Ion inputs */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -2882,7 +2962,18 @@ function App() {
                 </div>
               ))
             )}
-            {/* Addition add button */}
+             {additionWaters.length > 0 && batchMl > 0 && (
+               <button
+                 type="button"
+                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons))}
+                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                 title="Use all addition waters to cover as much of the recipe's ion targets as possible"
+               >
+                 Auto-fill all addition waters
+               </button>
+             )}
+
+             {/* Addition add button */}
             <button
               onClick={() => addAdditionWater()}
               className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
