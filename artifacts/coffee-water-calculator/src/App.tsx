@@ -715,10 +715,10 @@ function App() {
       }
     : nerdLevel === 'watermancer'
       ? {
-          eyebrow: 'Source-water studio',
-          title: 'Shape the water around your coffee',
-          description: 'Compare bottled and saved waters, see their ion coverage, then use salts only to close the remaining gaps.',
-          tags: ['Source matching', 'Ion balance', 'Final mixture'],
+          eyebrow: 'Ionic target studio',
+          title: 'Craft water around your ionic targets',
+          description: 'Set the ions you want in the finished water, then use mineral waters for coverage and addition salts to close the remaining gaps.',
+          tags: ['Set ion targets', 'Mineral waters', 'Addition salts'],
           tone: 'border-indigo-400/25 bg-indigo-500/[0.07] text-indigo-200',
         }
       : {
