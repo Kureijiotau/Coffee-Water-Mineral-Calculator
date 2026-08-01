@@ -645,6 +645,7 @@ function App() {
   const activeAutoFillPriority = effectiveAutoFillPreset === 'custom'
     ? autoFillCustomPriority
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
+  const effectiveAutoFillDeviationPpm = showAlchemist ? 0 : autoFillDeviationPpm;
   const autoFillPriorityLabel = effectiveAutoFillPreset === 'custom'
     ? 'Custom'
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].label;
@@ -850,7 +851,7 @@ function App() {
   // water and addition water are both part of the final batch composition.
   const combinedBottledIons = useMemo(() => {
     const m = {} as Partial<Record<IonId, number>>;
-    if (!showWatermancer) {
+    if (!showAlchemist && !showWatermancer) {
       for (const id of ACTIVE_ION_IDS) m[id] = 0;
       return m;
     }
@@ -866,11 +867,11 @@ function App() {
       m[id] = totalVol > 0 ? weighted / totalVol : 0;
     }
     return m;
-  }, [mineralWaters, additionWaters, showWatermancer]);
+  }, [mineralWaters, additionWaters, showAlchemist, showWatermancer]);
 
   const ionTotals = useMemo(
-    () => computeIonTotals(saltTargets, combinedBottledIons, showWatermancer ? dil : 1),
-    [saltTargets, combinedBottledIons, dil, showWatermancer],
+    () => computeIonTotals(saltTargets, combinedBottledIons, showAlchemist || showWatermancer ? dil : 1),
+    [saltTargets, combinedBottledIons, dil, showAlchemist, showWatermancer],
   );
   // Brewer is intentionally a simple RO / distilled water workflow. Keep its
   // flavor-generated recipe independent from the advanced water-aware targets
@@ -882,8 +883,8 @@ function App() {
   const brewerModeTds = Object.values(brewerModeIonTotals).reduce((total, ppm) => total + ppm, 0);
 
   const hasMineralWater = useMemo(
-    () => showWatermancer && [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
-    [showWatermancer, mineralWaters, additionWaters],
+    () => (showAlchemist || showWatermancer) && [...mineralWaters, ...additionWaters].some(entry => num(entry.volumeMl) > 0),
+    [showAlchemist, showWatermancer, mineralWaters, additionWaters],
   );
 
   // Full recipe contribution without base/addition water. These are the
@@ -1231,7 +1232,9 @@ function App() {
     activeRecipe?.sourceUrl ? activeRecipe : undefined
   );
   const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
-  const autoFillTargets = noRecipeSelected
+  const autoFillTargets = showAlchemist && hasSaltRecipeTargets
+    ? saltOnlyIons
+    : noRecipeSelected
     ? Object.fromEntries(
         ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
       ) as Partial<Record<IonId, number>>
@@ -2889,11 +2892,13 @@ function App() {
                       autoFillTargets,
                       additionWaters,
                       activeAutoFillPriority,
-                      autoFillDeviationPpm,
-                      noRecipeSelected,
+                       effectiveAutoFillDeviationPpm,
+                       showAlchemist || noRecipeSelected,
                     ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                  title={noRecipeSelected
+                  title={showAlchemist
+                    ? 'Fill from the base water to cover as many ions in the original recipe as possible without overshooting any target.'
+                    : noRecipeSelected
                     ? 'Fill base waters up to the active ion profile safe limits'
                     : "Use all base waters to cover as much of the recipe's ion targets as possible"}
                >
@@ -2973,8 +2978,82 @@ function App() {
               </div>
             )}
 
+             {/* Alchemist recommendation — simple recipe completion view */}
+             {showAlchemist && batchMl > 0 && (
+               <div className="border-t border-slate-700/40 pt-4">
+                 <div className="flex flex-wrap items-center justify-between gap-2">
+                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                     Still needed from salts
+                   </span>
+                   <span className="text-[10px] text-slate-500">
+                     {activeProfile.name} safe limits
+                   </span>
+                 </div>
+                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                   {ACTIVE_ION_IDS.map(id => {
+                     const target = saltOnlyIons[id] ?? 0;
+                     const covered = bottledIons[id] ?? 0;
+                     const remaining = Math.max(target - covered, 0);
+                     if (target <= 0) return null;
+                     return (
+                       <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
+                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
+                         {covered >= target - 0.01 ? (
+                           <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
+                         ) : (
+                           <span className="text-sm font-semibold tabular-nums text-amber-300">
+                             {remaining.toFixed(1)} ppm
+                           </span>
+                         )}
+                       </div>
+                     );
+                   })}
+                 </div>
+                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
+                   <span className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[10px] font-medium text-violet-300">
+                     Salts: {magnesiumPreferenceLabel}
+                     {' '}
+                     <button
+                       type="button"
+                       onClick={cycleMagnesiumPreference}
+                       className="text-violet-300/70 underline transition-colors hover:text-violet-200"
+                     >
+                       (change)
+                     </button>
+                   </span>
+                 </div>
+                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                   {SALTS.map((salt, index) => {
+                     const target = dosingSaltTargets[salt.id] ?? 0;
+                     if (target <= 0) return null;
+                     const form = salt.hydrationForms[rows[index].formIdx];
+                     const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
+                     const affectsGH = salt.ions.some(contribution => contribution.ionId === 'calcium' || contribution.ionId === 'magnesium');
+                     const affectsKH = salt.ions.some(contribution => contribution.ionId === 'bicarbonate');
+                     const role = affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'GH' : affectsKH ? 'KH' : 'Neutral';
+                     return (
+                       <div key={salt.id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
+                         <div className="flex items-center justify-between gap-2">
+                           <span className="text-[10px] text-slate-500">{salt.formula} · {form.label}</span>
+                           <span className={`text-[10px] font-medium ${
+                             role === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'
+                           }`}>
+                             {role}
+                           </span>
+                         </div>
+                         <span className="text-sm font-semibold tabular-nums text-sky-300">
+                           {mg.toFixed(1)} mg
+                         </span>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+             )}
+
              {/* Remaining gaps — what the active Watermancer target still needs */}
-            {batchMl > 0 && (
+             {showWatermancer && batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4">
                  <div className="flex flex-wrap items-center justify-between gap-2">
                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
@@ -3417,14 +3496,16 @@ function App() {
                   onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(
                     prev,
                     batchMl,
-                    autoFillTargets,
+                     showAlchemist ? saltOnlyIons : autoFillTargets,
                     mineralWaters,
                     activeAutoFillPriority,
-                    autoFillDeviationPpm,
-                    noRecipeSelected,
+                     effectiveAutoFillDeviationPpm,
+                     showAlchemist || noRecipeSelected,
                   ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                  title={noRecipeSelected
+                  title={showAlchemist
+                    ? 'Fill from the base water to cover as many ions in the original recipe as possible without overshooting any target.'
+                    : noRecipeSelected
                     ? 'Fill addition waters up to the active ion profile safe limits'
                     : "Use all addition waters to cover as much of the recipe's ion targets as possible"}
                >

@@ -7,6 +7,8 @@ Alchemist should open as a focused recipe lab: salt-recipe editing, batch/concen
 
 Alchemist Auto-fill uses the Balanced GH / KH priority internally and does not expose the Auto-fill settings menu. Watermancer retains the configurable Auto-fill preset and deviation controls.
 
+Alchemist base-water completion uses strict zero-deviation, all-ion ceiling protection and shows simple recipe-relative ion gaps plus recommended salt amounts; used/unused salt option cards remain Watermancer-only.
+
 Watermancer should lead with the ion profile. A salt recipe can be translated into an ion target profile through the existing `computeIonTotals` chemistry path; this is a target-selection view, not a second chemistry engine.
 
 Watermancer salt-gap choices are presentation selections only. They may show used/unused salt options and preserve the selected hydration form, but they must not silently overwrite the user's recipe rows. Existing coupled-ion, bicarbonate-ceiling, and final-deviation warnings remain authoritative.
