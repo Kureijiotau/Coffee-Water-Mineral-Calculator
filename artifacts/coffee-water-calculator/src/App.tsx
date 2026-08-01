@@ -1055,7 +1055,7 @@ function App() {
     (saltOnlyIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
     0,
   );
-  const sodiumCorrectionTarget = hasMineralWater && sodiumCorrectionOn
+  const sodiumCorrectionTarget = hasMineralWater && (showAlchemist || sodiumCorrectionOn)
     ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
     : 0;
   const effectiveSuggestedSaltTargets = useMemo<Record<string, number>>(() => ({
@@ -2950,6 +2950,10 @@ function App() {
                      );
                    })}
                  </div>
+                  <IonDeviationDisclosure
+                    actual={suggestedIonTotals}
+                    target={saltOnlyIons}
+                  />
                </div>
              )}
 
@@ -5292,6 +5296,89 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
                 </div>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
                   {ion.flagNotes[level]}
+                </p>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </details>
+  );
+}
+
+function IonDeviationDisclosure({
+  actual,
+  target,
+}: {
+  actual: Partial<Record<IonId, number>>;
+  target: Partial<Record<IonId, number>>;
+}) {
+  const deviations = IONS
+    .map(({ id }) => ({
+      id,
+      actual: actual[id] ?? 0,
+      target: target[id] ?? 0,
+      delta: (actual[id] ?? 0) - (target[id] ?? 0),
+    }))
+    .filter(item => Math.abs(item.delta) > 0.05);
+  const overshoots = deviations.filter(item => item.delta > 0);
+  const underdoses = deviations.filter(item => item.delta < 0);
+  const status: TrafficLevel = overshoots.length > 0
+    ? 'red'
+    : underdoses.length > 0
+      ? 'yellow'
+      : 'green';
+
+  return (
+    <details className="group mt-3 border-t border-indigo-400/15 bg-indigo-500/[0.035]">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-3 text-xs text-slate-300 hover:bg-indigo-500/[0.06] [&::-webkit-details-marker]:hidden">
+        <span
+          className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-400/35 bg-indigo-500/10"
+          aria-label={`Ion deviation status: ${TRAFFIC_STYLES[status].label}`}
+          title={`Ion deviation status: ${TRAFFIC_STYLES[status].label}`}
+        >
+          <span
+            className={`h-2.5 w-2.5 rounded-full ${
+              status === 'green'
+                ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.95)]'
+                : status === 'yellow'
+                  ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.95)]'
+                  : 'bg-rose-400 shadow-[0_0_6px_rgba(251,113,133,0.95)]'
+            }`}
+          />
+        </span>
+        <span className="font-semibold">Ion deviation from original recipe</span>
+        <span className="text-slate-500">
+          {deviations.length === 0
+            ? 'No meaningful deviation'
+            : `${overshoots.length} over · ${underdoses.length} under`}
+        </span>
+        <span className="ml-auto text-slate-500 transition-transform group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="space-y-2 border-t border-indigo-400/10 px-3 py-3">
+        <p className="text-[11px] leading-relaxed text-slate-500">
+          Final source-water-plus-salts mixture compared with the original salt-only recipe. Small differences are hidden.
+        </p>
+        {deviations.length === 0 ? (
+          <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-[11px] text-emerald-200">
+            No meaningful ion deviation detected.
+          </p>
+        ) : (
+          deviations.map(({ id, actual: actualPpm, target: targetPpm, delta }) => {
+            const over = delta > 0;
+            const style = over ? TRAFFIC_STYLES.red : TRAFFIC_STYLES.yellow;
+            return (
+              <div key={id} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}>
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className={`text-xs font-semibold ${style.text}`}>
+                    {ION_MAP[id].name} · {over ? 'Over target' : 'Under target'}
+                  </span>
+                  <span className={`font-mono text-[11px] ${style.text}`}>
+                    {over ? '+' : '−'}{Math.abs(delta).toFixed(1)} ppm
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                  Final {actualPpm.toFixed(1)} ppm vs original {targetPpm.toFixed(1)} ppm.
                 </p>
               </div>
             );

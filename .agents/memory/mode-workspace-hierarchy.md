@@ -15,6 +15,8 @@ Alchemist Auto-fill uses tenth-of-a-milliliter source volumes to reduce safe und
 
 Alchemist Auto-fill may use up to +0.5 ppm on a positive target only when that extra volume gains at least 0.5 ppm on another still-under-target positive recipe ion; zero-target co-ions remain hard ceilings.
 
+Alchemist source-water recommendations automatically add enough NaCl to close a sodium gap even when chloride overshoots; the final ion deviation disclosure makes that tradeoff visible below Suggested salts.
+
 Watermancer should lead with the ion profile. A salt recipe can be translated into an ion target profile through the existing `computeIonTotals` chemistry path; this is a target-selection view, not a second chemistry engine.
 
 Watermancer salt-gap choices are presentation selections only. They may show used/unused salt options and preserve the selected hydration form, but they must not silently overwrite the user's recipe rows. Existing coupled-ion, bicarbonate-ceiling, and final-deviation warnings remain authoritative.
