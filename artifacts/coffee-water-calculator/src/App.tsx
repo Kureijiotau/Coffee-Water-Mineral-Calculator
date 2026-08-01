@@ -269,6 +269,8 @@ export function autoFillWaterVolumes(
   deviationPpm = DEFAULT_AUTO_FILL_DEVIATION_PPM,
   enforceAllIonCeilings = false,
   ignoreZeroTargetCeilings = false,
+  volumeStepMl = 1,
+  positiveTargetWigglePpm = 0,
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
@@ -279,6 +281,10 @@ export function autoFillWaterVolumes(
   const deviationAmount = enforceAllIonCeilings ? 0 : Math.max(0, deviationPpm) * batchMl;
   const bicarbonateLimit = bicarbonateTarget + deviationAmount;
   const priorityIonIds: IonId[] = ['calcium', 'magnesium', 'sodium'];
+  const safePositiveTargetWigglePpm = Number.isFinite(positiveTargetWigglePpm)
+    ? Math.max(0, positiveTargetWigglePpm)
+    : 0;
+  const positiveTargetWiggleAmount = safePositiveTargetWigglePpm * batchMl;
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
   const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
   const fixedContributions = Object.fromEntries(
@@ -293,7 +299,11 @@ export function autoFillWaterVolumes(
       : ACTIVE_ION_IDS
     : ['bicarbonate' as IonId];
   const fixedWaterAlreadyExceedsLimit = ceilingIonIds
-    .some(id => fixedContributions[id] > (enforceAllIonCeilings ? targetAmounts[id] ?? 0 : bicarbonateLimit) + 1e-8);
+    .some(id => fixedContributions[id] > (
+      enforceAllIonCeilings
+        ? (targetAmounts[id] ?? 0) + ((targetAmounts[id] ?? 0) > 0 ? positiveTargetWiggleAmount : 0)
+        : bicarbonateLimit
+    ) + 1e-8);
   if (variableVolumeLimit <= 0 || fixedWaterAlreadyExceedsLimit) {
     return entries.map(entry => ({ ...entry, volumeMl: '0' }));
   }
@@ -310,29 +320,63 @@ export function autoFillWaterVolumes(
   const volumes = entries.map(() => 0);
   const covered = { ...fixedContributions };
   let remainingVolume = variableVolumeLimit;
+  const safeVolumeStepMl = Number.isFinite(volumeStepMl) && volumeStepMl > 0 ? volumeStepMl : 1;
+  const volumePrecision = safeVolumeStepMl < 1
+    ? Math.ceil(-Math.log10(safeVolumeStepMl))
+    : 0;
 
   // Deterministic priority fill: prefer source waters by the requested ion
   // order. Recipe mode protects bicarbonate and the three GH mineral
   // priorities; no-recipe mode protects every active ion at its safe ceiling.
   for (const { entry, index } of sortedEntries) {
     if (remainingVolume <= 0.01) break;
-    let amount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
     const limitingIds: IonId[] = enforceAllIonCeilings
       ? ceilingIonIds
       : ['bicarbonate', ...priorityIonIds];
-    for (const id of limitingIds) {
-      const concentration = num(entry.ions[id] ?? '');
-      if (concentration <= 0) continue;
-      const ceiling = enforceAllIonCeilings
-        ? targetAmounts[id] ?? 0
-        : id === 'bicarbonate'
-        ? bicarbonateLimit
-        : (targetAmounts[id] ?? 0) + deviationAmount;
-      const remaining = Math.max(ceiling - covered[id], 0);
-      amount = Math.min(amount, remaining / concentration);
+    const availableAmount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
+    const amountToCeiling = (allowPositiveTargetWiggle: boolean): number => {
+      let candidateAmount = availableAmount;
+      for (const id of limitingIds) {
+        const concentration = num(entry.ions[id] ?? '');
+        if (concentration <= 0) continue;
+        const target = targetAmounts[id] ?? 0;
+        const ceiling = enforceAllIonCeilings
+          ? target + (
+            allowPositiveTargetWiggle && target > 0
+              ? positiveTargetWiggleAmount
+              : 0
+          )
+          : id === 'bicarbonate'
+          ? bicarbonateLimit
+          : target + deviationAmount;
+        const remaining = Math.max(ceiling - covered[id], 0);
+        candidateAmount = Math.min(candidateAmount, remaining / concentration);
+      }
+      return candidateAmount;
+    };
+
+    const strictAmount = amountToCeiling(false);
+    let amount = strictAmount;
+    if (enforceAllIonCeilings && positiveTargetWiggleAmount > 0) {
+      const wiggleAmount = amountToCeiling(true);
+      const extraVolume = wiggleAmount - strictAmount;
+      const earnsMeaningfulCoverage = extraVolume > 0.01
+        && ceilingIonIds.some(id => {
+          const concentration = num(entry.ions[id] ?? '');
+          const target = targetAmounts[id] ?? 0;
+          const currentAfterStrictFill = covered[id] + strictAmount * concentration;
+          const extraPpm = extraVolume * concentration / batchMl;
+          return target > 0
+            && currentAfterStrictFill < target - 1e-8
+            && extraPpm >= 0.5;
+        });
+      if (earnsMeaningfulCoverage) amount = wiggleAmount;
     }
     if (amount <= 0.01) continue;
-    volumes[index] = Math.floor(amount);
+    volumes[index] = Number((
+      Math.floor((amount + 1e-9) / safeVolumeStepMl) * safeVolumeStepMl
+    ).toFixed(volumePrecision));
+    if (volumes[index] <= 0) continue;
     remainingVolume -= volumes[index];
     for (const id of ACTIVE_ION_IDS) {
       covered[id] += num(entry.ions[id] ?? '') * volumes[index];
@@ -341,7 +385,7 @@ export function autoFillWaterVolumes(
 
   return entries.map((entry, index) => ({
     ...entry,
-    volumeMl: String(Math.min(AUTO_FILL_MAX_ML, volumes[index])),
+    volumeMl: volumes[index].toFixed(volumePrecision),
   }));
 }
 
@@ -2749,6 +2793,8 @@ function App() {
                        effectiveAutoFillDeviationPpm,
                        showAlchemist || noRecipeSelected,
                        autoFillUsesRecipeTargets,
+                       showAlchemist ? 0.1 : 1,
+                       showAlchemist ? 0.5 : 0,
                     ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                   title={showAlchemist
@@ -3357,6 +3403,8 @@ function App() {
                      effectiveAutoFillDeviationPpm,
                      showAlchemist || noRecipeSelected,
                      autoFillUsesRecipeTargets,
+                     showAlchemist ? 0.1 : 1,
+                     showAlchemist ? 0.5 : 0,
                   ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                   title={showAlchemist

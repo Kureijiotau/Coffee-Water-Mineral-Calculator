@@ -11,6 +11,10 @@ Alchemist base-water completion uses strict zero-deviation, all-ion ceiling prot
 
 Alchemist Auto-fill must ignore zero-target co-ions while enforcing exact ceilings for positive recipe ions; Watermancer keeps zero-target ion protection.
 
+Alchemist Auto-fill uses tenth-of-a-milliliter source volumes to reduce safe underfill near tight ion ceilings; Watermancer retains whole-milliliter fill steps.
+
+Alchemist Auto-fill may use up to +0.5 ppm on a positive target only when that extra volume gains at least 0.5 ppm on another still-under-target positive recipe ion; zero-target co-ions remain hard ceilings.
+
 Watermancer should lead with the ion profile. A salt recipe can be translated into an ion target profile through the existing `computeIonTotals` chemistry path; this is a target-selection view, not a second chemistry engine.
 
 Watermancer salt-gap choices are presentation selections only. They may show used/unused salt options and preserve the selected hydration form, but they must not silently overwrite the user's recipe rows. Existing coupled-ion, bicarbonate-ceiling, and final-deviation warnings remain authoritative.

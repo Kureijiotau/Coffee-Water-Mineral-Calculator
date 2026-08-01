@@ -86,6 +86,43 @@ describe('autoFillWaterVolumes', () => {
 
     expect(filled[0].volumeMl).toBe('1000');
   });
+
+  it('uses finer volume precision for a tight Alchemist recipe fill', () => {
+    const filled = autoFillWaterVolumes(
+      [water('candidate', { calcium: 10, bicarbonate: 12.3 })],
+      1000,
+      { calcium: 10, bicarbonate: 12.2 },
+      [],
+      ['calcium', 'bicarbonate'],
+      0,
+      true,
+      true,
+      0.1,
+    );
+
+    expect(Number(filled[0].volumeMl)).toBeCloseTo(991.8, 5);
+    expect(Number(filled[0].volumeMl) * 12.3).toBeLessThanOrEqual(12_200);
+  });
+
+  it('allows a small positive-target wiggle when it improves Alchemist coverage', () => {
+    const filled = autoFillWaterVolumes(
+      [water('candidate', { calcium: 100, bicarbonate: 12.3 })],
+      1000,
+      { calcium: 100, bicarbonate: 12.2 },
+      [],
+      ['calcium', 'bicarbonate'],
+      0,
+      true,
+      true,
+      0.1,
+      0.5,
+    );
+
+    const volume = Number(filled[0].volumeMl);
+    expect(volume).toBeCloseTo(1000, 5);
+    expect(volume * 12.3 / 1000).toBeCloseTo(12.3, 4);
+    expect(volume * 12.3 / 1000).toBeLessThanOrEqual(12.7);
+  });
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
