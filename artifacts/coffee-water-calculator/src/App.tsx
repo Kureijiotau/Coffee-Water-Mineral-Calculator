@@ -239,13 +239,14 @@ function loadAutoFillSettings(): {
   }
 }
 
-function autoFillWaterVolumes(
+export function autoFillWaterVolumes(
   entries: MineralWaterEntry[],
   batchMl: number,
   targets: Partial<Record<IonId, number>>,
   fixedEntries: MineralWaterEntry[] = [],
   sourcePriority: IonId[] = AUTO_FILL_SOURCE_PRIORITY,
   deviationPpm = DEFAULT_AUTO_FILL_DEVIATION_PPM,
+  enforceAllIonCeilings = false,
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
@@ -253,7 +254,7 @@ function autoFillWaterVolumes(
     ACTIVE_ION_IDS.map(id => [id, Math.max(targets[id] ?? 0, 0) * batchMl]),
   ) as Record<IonId, number>;
   const bicarbonateTarget = targetAmounts.bicarbonate ?? 0;
-  const deviationAmount = Math.max(0, deviationPpm) * batchMl;
+  const deviationAmount = enforceAllIonCeilings ? 0 : Math.max(0, deviationPpm) * batchMl;
   const bicarbonateLimit = bicarbonateTarget + deviationAmount;
   const priorityIonIds: IonId[] = ['calcium', 'magnesium', 'sodium'];
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
@@ -264,9 +265,9 @@ function autoFillWaterVolumes(
       fixedEntries.reduce((total, entry) => total + num(entry.ions[id] ?? '') * num(entry.volumeMl), 0),
     ]),
   ) as Record<IonId, number>;
-  const fixedWaterAlreadyOvershootsBicarbonate =
-    fixedContributions.bicarbonate > bicarbonateLimit + 1e-8;
-  if (variableVolumeLimit <= 0 || fixedWaterAlreadyOvershootsBicarbonate) {
+  const fixedWaterAlreadyExceedsLimit = (enforceAllIonCeilings ? ACTIVE_ION_IDS : ['bicarbonate' as IonId])
+    .some(id => fixedContributions[id] > (enforceAllIonCeilings ? targetAmounts[id] ?? 0 : bicarbonateLimit) + 1e-8);
+  if (variableVolumeLimit <= 0 || fixedWaterAlreadyExceedsLimit) {
     return entries.map(entry => ({ ...entry, volumeMl: '0' }));
   }
 
@@ -284,17 +285,20 @@ function autoFillWaterVolumes(
   let remainingVolume = variableVolumeLimit;
 
   // Deterministic priority fill: prefer source waters by the requested ion
-  // order. Only bicarbonate and the three GH mineral priorities cap the fill;
-  // lower-priority coupled ions remain reportable but do not block a useful
-  // water mix when they overshoot.
+  // order. Recipe mode protects bicarbonate and the three GH mineral
+  // priorities; no-recipe mode protects every active ion at its safe ceiling.
   for (const { entry, index } of sortedEntries) {
     if (remainingVolume <= 0.01) break;
     let amount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
-    const limitingIds: IonId[] = ['bicarbonate', ...priorityIonIds];
+    const limitingIds: IonId[] = enforceAllIonCeilings
+      ? ACTIVE_ION_IDS
+      : ['bicarbonate', ...priorityIonIds];
     for (const id of limitingIds) {
       const concentration = num(entry.ions[id] ?? '');
       if (concentration <= 0) continue;
-      const ceiling = id === 'bicarbonate'
+      const ceiling = enforceAllIonCeilings
+        ? targetAmounts[id] ?? 0
+        : id === 'bicarbonate'
         ? bicarbonateLimit
         : (targetAmounts[id] ?? 0) + deviationAmount;
       const remaining = Math.max(ceiling - covered[id], 0);
@@ -1195,10 +1199,16 @@ function App() {
   const selectedExternalRecipe: ExternalRecipe | undefined = ROBERT_ASAMI_RECIPES.find(
     r => r.id === externalRecipeId,
   );
+  const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
   const selectedSourceRecipe = selectedExternalRecipe ?? (
     activeRecipe?.sourceUrl ? activeRecipe : undefined
   );
   const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
+  const autoFillTargets = noRecipeSelected
+    ? Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+      ) as Partial<Record<IonId, number>>
+    : saltOnlyIons;
 
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
@@ -2799,9 +2809,19 @@ function App() {
              {mineralWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                   onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, additionWaters, activeAutoFillPriority, autoFillDeviationPpm))}
+                    onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
+                      prev,
+                      batchMl,
+                      autoFillTargets,
+                      additionWaters,
+                      activeAutoFillPriority,
+                      autoFillDeviationPpm,
+                      noRecipeSelected,
+                    ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                 title="Use all base waters to cover as much of the recipe's ion targets as possible"
+                  title={noRecipeSelected
+                    ? 'Fill base waters up to the active ion profile safe limits'
+                    : "Use all base waters to cover as much of the recipe's ion targets as possible"}
                >
                  Auto-fill all base waters
                </button>
@@ -3308,9 +3328,19 @@ function App() {
              {additionWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, mineralWaters, activeAutoFillPriority, autoFillDeviationPpm))}
+                  onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(
+                    prev,
+                    batchMl,
+                    autoFillTargets,
+                    mineralWaters,
+                    activeAutoFillPriority,
+                    autoFillDeviationPpm,
+                    noRecipeSelected,
+                  ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                 title="Use all addition waters to cover as much of the recipe's ion targets as possible"
+                  title={noRecipeSelected
+                    ? 'Fill addition waters up to the active ion profile safe limits'
+                    : "Use all addition waters to cover as much of the recipe's ion targets as possible"}
                >
                  Auto-fill all addition waters
                </button>
