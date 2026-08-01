@@ -11,3 +11,4 @@
 - [API health route](api-health-route.md) — use `/api/healthz` for API checks; `/api/health` is not a valid route
 - [Water auto-fill constraints](water-auto-fill-constraints.md) — solve selected waters together under every ion ceiling, including zero-target ions
 - [Saved water picker](saved-water-picker.md) — clicking an already-added saved water must not append another mineral-water entry
+- [Empirical reference waters](empirical-reference-waters.md) — published final-water profiles belong in Watermancer, not the salt-dose recipe selector
