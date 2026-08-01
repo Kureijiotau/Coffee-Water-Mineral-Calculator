@@ -2836,13 +2836,17 @@ function App() {
               Add water source
             </button>
 
-            {/* Coverage bars — how the salt recipe hits the target */}
+             {/* Coverage bars — recipe targets or active profile safe limits */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Mineral water coverage of {activeRecipe?.name ?? 'Custom'}</span>
+                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                   {noRecipeSelected
+                     ? `Mineral water coverage of ${activeProfile.name} safe limits`
+                     : `Mineral water coverage of ${activeRecipe?.name ?? 'Custom'}`}
+                 </span>
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
-                  const target = saltOnlyIons[id] ?? 0;
+                   const target = autoFillTargets[id] ?? 0;
                   const covered = bottledIons[id] ?? 0;
                   const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
                   // Coverage is displayed to one decimal place, so classify
@@ -2859,12 +2863,14 @@ function App() {
                   const label = level === 'overshoot'
                     ? `⚠ Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
                     : level === 'full'
-                    ? `${covered.toFixed(1)} ppm — salt target of ${target.toFixed(1)} reached`
+                     ? `${covered.toFixed(1)} ppm — ${noRecipeSelected ? 'safe limit' : 'salt target'} of ${target.toFixed(1)} reached`
                     : level === 'partial'
-                    ? `${covered.toFixed(1)} ppm of ${target.toFixed(1)} target covered from mineral water`
+                     ? `${covered.toFixed(1)} ppm of ${target.toFixed(1)} ${noRecipeSelected ? 'safe limit' : 'target'} covered from mineral water`
                     : target > 0
-                    ? `Needs ${target.toFixed(1)} ppm from salts — none from mineral water`
-                    : 'No salt target set';
+                     ? noRecipeSelected
+                       ? `Safe limit: ${target.toFixed(1)} ppm — none from mineral water`
+                       : `Needs ${target.toFixed(1)} ppm from salts — none from mineral water`
+                     : noRecipeSelected ? 'No safe limit set' : 'No salt target set';
                   return (
                     <div key={id} className="flex items-center gap-3">
                       <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
