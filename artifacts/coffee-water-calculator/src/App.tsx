@@ -1004,6 +1004,20 @@ function App() {
     }
     return m;
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
+  const baseWaterIons = useMemo(() => {
+    const m = {} as Record<IonId, number>;
+    for (const ion of IONS) {
+      let total = 0;
+      for (const entry of mineralWaters) {
+        const vol = num(entry.volumeMl) * sourceScale;
+        if (vol > 0 && batchMl > 0) {
+          total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
+        }
+      }
+      m[ion.id] = total;
+    }
+    return m;
+  }, [mineralWaters, batchMl, sourceScale]);
   const watermancerIonGaps = Object.fromEntries(
     ACTIVE_ION_IDS.map(id => [
       id,
@@ -1139,6 +1153,10 @@ function App() {
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
     () => computeIonTotals(selectedSuggestedSaltTargets, combinedBottledIons, dil),
     [selectedSuggestedSaltTargets, combinedBottledIons, dil],
+  );
+  const watermancerSelectedSaltIonTotals = useMemo(
+    () => computeIonTotals(selectedWatermancerSaltTargets, {}, 1),
+    [selectedWatermancerSaltTargets],
   );
   const sodiumCorrectionGap = Math.max(
     (finalMixtureTargetIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
@@ -1955,6 +1973,14 @@ function App() {
               onSaveWmProfile={handleSaveWmProfile}
             />
          )}
+          {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
+            <WatermancerIonCoverageBars
+              baseWaterIons={baseWaterIons}
+              selectedSaltIons={watermancerSelectedSaltIonTotals}
+              targetIons={watermancerIonTargets}
+              targetLabel={watermancerTargetSourceLabel}
+            />
+          )}
 
          {/* Mineral Table */}
            {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
@@ -4038,6 +4064,93 @@ function WatermancerIonProfileCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function WatermancerIonCoverageBars({
+  baseWaterIons,
+  selectedSaltIons,
+  targetIons,
+  targetLabel,
+}: {
+  baseWaterIons: Partial<Record<IonId, number>>;
+  selectedSaltIons: Partial<Record<IonId, number>>;
+  targetIons: Partial<Record<IonId, number>>;
+  targetLabel: string;
+}) {
+  return (
+    <div className="sticky top-3 z-20 overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md">
+      <div className="border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
+            Base water + selected salts
+          </h2>
+          <span className="text-[10px] uppercase tracking-wider text-slate-500">
+            {targetLabel} ion targets
+          </span>
+        </div>
+        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+          Combined contribution toward the selected Watermancer profile.
+        </p>
+      </div>
+      <div className="space-y-3 px-4 py-4 sm:px-6">
+        {ACTIVE_ION_IDS.map(id => {
+          const ion = ION_MAP[id];
+          const baseWater = baseWaterIons[id] ?? 0;
+          const selectedSalts = selectedSaltIons[id] ?? 0;
+          const actual = baseWater + selectedSalts;
+          const target = Math.max(targetIons[id] ?? 0, 0);
+          const tolerance = 0.05;
+          const overshoot = target > 0
+            ? actual > target + tolerance
+            : actual > tolerance;
+          const covered = target > 0 && actual >= target - tolerance;
+          const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+          const barColor = overshoot
+            ? 'bg-rose-400'
+            : covered
+              ? 'bg-emerald-400'
+              : actual > 0
+                ? 'bg-cyan-400'
+                : 'bg-slate-700';
+          const valueColor = overshoot
+            ? 'text-rose-300'
+            : covered
+              ? 'text-emerald-300'
+              : actual > 0
+                ? 'text-cyan-300'
+                : 'text-slate-500';
+          const status = target <= 0
+            ? actual > tolerance ? 'above target' : 'no target set'
+            : overshoot
+              ? `${(actual - target).toFixed(1)} ppm above target`
+              : covered
+                ? `${actual.toFixed(1)} ppm — target reached`
+                : `${actual.toFixed(1)} ppm of ${target.toFixed(1)} ppm covered`;
+
+          return (
+            <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
+              <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
+              <div className="min-w-0">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-700/70">
+                  <div
+                    className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
+                <div className={`mt-1 text-[10px] ${valueColor}`}>
+                  {status}
+                </div>
+              </div>
+              <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
+                {actual.toFixed(1)}
+                <span className="font-normal text-slate-500"> / {target.toFixed(1)}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
