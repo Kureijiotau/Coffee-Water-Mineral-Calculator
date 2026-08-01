@@ -143,6 +143,7 @@ export type MineralWaterEntry = {
   ions: Partial<Record<IonId, string>>;
   metadata: Partial<Record<keyof WaterMetadata, string>>;
   volumeMl: string;
+  sourceLocalId?: string;
 };
 let _mwId = 0;
 const newMwId = () => `mw_${++_mwId}_${Date.now()}`;
@@ -495,15 +496,28 @@ function App() {
   const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
-  const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
+  const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
       ions: partial?.ions ?? {},
       metadata: partial?.metadata ?? {},
       volumeMl: partial?.volumeMl ?? '0',
+      sourceLocalId: partial?.sourceLocalId,
     };
-    setMineralWaters(prev => [...prev, entry]);
+    setMineralWaters(prev => {
+      const duplicateSourceWater = entry.sourceLocalId && prev.some(existing =>
+        existing.sourceLocalId === entry.sourceLocalId
+        || (
+          existing.name.trim() === entry.name.trim()
+          && ACTIVE_ION_IDS.every(id => Math.abs(num(existing.ions[id] ?? '') - num(entry.ions[id] ?? '')) < 0.5)
+        )
+      );
+      if (duplicateSourceWater) {
+        return prev;
+      }
+      return [...prev, entry];
+    });
     return entry;
   };
   const updateMineralWater = (id: string, patch: Partial<MineralWaterEntry>) => {
@@ -2544,7 +2558,12 @@ function App() {
                           for (const [k, v] of Object.entries(w.ions)) {
                             if (v > 0) vals[k as IonId] = String(v);
                           }
-                          addMineralWater({ name: w.name || undefined, ions: vals, metadata: w.metadata ? metadataToStrings(w.metadata) : undefined });
+                           addMineralWater({
+                             name: w.name || undefined,
+                             ions: vals,
+                             metadata: w.metadata ? metadataToStrings(w.metadata) : undefined,
+                             sourceLocalId: String(w.id),
+                           });
                         }}
                       >
                         <div className="min-w-0 flex-1">
@@ -3451,7 +3470,12 @@ function App() {
                             for (const [k, v] of Object.entries(w.ions)) {
                               if (v > 0) vals[k as IonId] = String(v);
                             }
-                            addMineralWater({ name: w.name || undefined, ions: vals, metadata: w.metadata ? metadataToStrings(w.metadata) : undefined });
+                           addMineralWater({
+                             name: w.name || undefined,
+                             ions: vals,
+                             metadata: w.metadata ? metadataToStrings(w.metadata) : undefined,
+                             sourceLocalId: String(w.id),
+                           });
                           }}
                           disabled={alreadyAdded}
                           className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
