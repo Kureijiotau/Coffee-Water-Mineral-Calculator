@@ -1088,17 +1088,6 @@ function App() {
     : magnesiumPreference === 'chlorides'
       ? 'mgcl2'
       : null;
-  const magnesiumPreferenceLabel = magnesiumPreference === 'sulfates'
-    ? 'Sulfates preferred'
-    : magnesiumPreference === 'chlorides'
-      ? 'Chlorides preferred'
-      : 'Original recipe';
-  const cycleMagnesiumPreference = () => {
-    setMagnesiumPreference(current =>
-      current === 'original' ? 'chlorides' : current === 'chlorides' ? 'sulfates' : 'original',
-    );
-  };
-
   const gh = computeGH(ionTotals);
   const kh = computeKH(ionTotals);
   const baseSaltGh = computeGH(saltOnlyIons);
@@ -2910,19 +2899,51 @@ function App() {
                      );
                    })}
                  </div>
-                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
-                   <span className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-2.5 py-1.5 text-[10px] font-medium text-violet-300">
-                     Salts: {magnesiumPreferenceLabel}
-                     {' '}
-                     <button
-                       type="button"
-                       onClick={cycleMagnesiumPreference}
-                       className="text-violet-300/70 underline transition-colors hover:text-violet-200"
-                     >
-                       (change)
-                     </button>
-                   </span>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
+                    <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
+                      {([
+                        {
+                          value: 'sulfates' as const,
+                          label: 'Sulfate leaning',
+                          explanation: 'Favor magnesium sulfate to add more sulfate and a brighter, crisper mineral balance.',
+                        },
+                        {
+                          value: 'chlorides' as const,
+                          label: 'Chloride leaning',
+                          explanation: 'Favor magnesium chloride to add more chloride and a rounder, fuller mineral balance.',
+                        },
+                        {
+                          value: 'original' as const,
+                          label: 'Original',
+                          explanation: 'Keep the original sulfate-to-chloride balance from this recipe.',
+                        },
+                      ]).map(option => {
+                        const selected = magnesiumPreference === option.value;
+                        return (
+                          <span key={option.value} className="group relative">
+                            <button
+                              type="button"
+                              onClick={() => setMagnesiumPreference(option.value)}
+                              aria-pressed={selected}
+                              className={`rounded-md border px-2.5 py-1.5 text-[10px] font-medium transition-all ${
+                                selected
+                                  ? 'border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,0.55)]'
+                                  : 'border-slate-700/70 bg-slate-900/40 text-slate-400 hover:border-violet-400/45 hover:bg-violet-500/10 hover:text-violet-200'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                            <span
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-56 rounded-md border border-violet-400/25 bg-slate-950 px-2.5 py-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
+                            >
+                              {option.explanation}
+                            </span>
+                          </span>
+                        );
+                      })}
+                    </div>
                  </div>
                  <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                    {SALTS.map((salt, index) => {
@@ -2997,18 +3018,50 @@ function App() {
                  <div className="mt-3 space-y-3">
                    <div className="flex flex-wrap items-center justify-between gap-2">
                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
-                     <div className="flex flex-wrap items-center gap-2">
-                       <span className="text-[10px] font-medium rounded-lg px-2.5 py-1.5 border text-violet-300 bg-violet-500/10 border-violet-500/30">
-                         Salts: {magnesiumPreferenceLabel}
-                         {' '}
-                         <button
-                           type="button"
-                           onClick={cycleMagnesiumPreference}
-                           className="text-violet-300/70 hover:text-violet-200 underline transition-colors"
-                         >
-                           (change)
-                         </button>
-                       </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
+                          {([
+                            {
+                              value: 'sulfates' as const,
+                              label: 'Sulfate leaning',
+                              explanation: 'Favor magnesium sulfate to add more sulfate and a brighter, crisper mineral balance.',
+                            },
+                            {
+                              value: 'chlorides' as const,
+                              label: 'Chloride leaning',
+                              explanation: 'Favor magnesium chloride to add more chloride and a rounder, fuller mineral balance.',
+                            },
+                            {
+                              value: 'original' as const,
+                              label: 'Original',
+                              explanation: 'Keep the original sulfate-to-chloride balance from this recipe.',
+                            },
+                          ]).map(option => {
+                            const selected = magnesiumPreference === option.value;
+                            return (
+                              <span key={option.value} className="group relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setMagnesiumPreference(option.value)}
+                                  aria-pressed={selected}
+                                  className={`rounded-md border px-2.5 py-1.5 text-[10px] font-medium transition-all ${
+                                    selected
+                                      ? 'border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,0.55)]'
+                                      : 'border-slate-700/70 bg-slate-900/40 text-slate-400 hover:border-violet-400/45 hover:bg-violet-500/10 hover:text-violet-200'
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                                <span
+                                  role="tooltip"
+                                  className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-56 rounded-md border border-violet-400/25 bg-slate-950 px-2.5 py-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:block"
+                                >
+                                  {option.explanation}
+                                </span>
+                              </span>
+                            );
+                          })}
+                        </div>
                        <span className="text-[10px] text-slate-500">
                          Click an option to mark it used
                        </span>
