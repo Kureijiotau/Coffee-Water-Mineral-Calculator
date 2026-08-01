@@ -172,6 +172,16 @@ const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
 const AUTO_FILL_MAX_ML = 2000;
 const AUTO_FILL_BICARBONATE_OVERSHOOT_PPM = 1;
+const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
+  'calcium',
+  'magnesium',
+  'sodium',
+  'potassium',
+  'chloride',
+  'sulfate',
+  'citrates',
+  'bicarbonate',
+];
 
 function autoFillWaterVolumes(
   entries: MineralWaterEntry[],
@@ -204,23 +214,20 @@ function autoFillWaterVolumes(
   const sortedEntries = entries
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => {
-      const comparePriority = (id: IonId, direction: 'asc' | 'desc') => {
-        const difference = num(a.entry.ions[id] ?? '') - num(b.entry.ions[id] ?? '');
-        return direction === 'asc' ? difference : -difference;
-      };
-      return comparePriority('bicarbonate', 'asc')
-        || comparePriority('calcium', 'desc')
-        || comparePriority('magnesium', 'desc')
-        || comparePriority('sodium', 'desc');
+      for (const id of AUTO_FILL_SOURCE_PRIORITY) {
+        const difference = num(b.entry.ions[id] ?? '') - num(a.entry.ions[id] ?? '');
+        if (Math.abs(difference) > 1e-8) return difference;
+      }
+      return 0;
     });
   const volumes = entries.map(() => 0);
   const covered = { ...fixedContributions };
   let remainingVolume = variableVolumeLimit;
 
-  // Deterministic priority fill: use low-alkalinity water first, then prefer
-  // calcium-, magnesium-, and sodium-rich sources. Only bicarbonate and the
-  // three priority minerals cap the fill; coupled ions remain reportable but
-  // do not prevent a useful water mix.
+  // Deterministic priority fill: prefer source waters by the requested ion
+  // order. Only bicarbonate and the three GH mineral priorities cap the fill;
+  // lower-priority coupled ions remain reportable but do not block a useful
+  // water mix when they overshoot.
   for (const { entry, index } of sortedEntries) {
     if (remainingVolume <= 0.01) break;
     let amount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
