@@ -158,6 +158,14 @@ const num = (s: string): number => {
   return !Number.isFinite(v) || v < 0 ? 0 : v;
 };
 
+const normalizeSaltTarget = (value: string | number): string => {
+  const raw = String(value);
+  if (!raw.trim()) return '';
+  const parsed = parseFloat(raw);
+  if (!Number.isFinite(parsed)) return '';
+  return String(Math.max(0, parsed));
+};
+
 const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
@@ -633,7 +641,7 @@ function App() {
     setRows(SALTS.map(salt => {
       const entry = inference.recipe.salts[salt.id];
       return entry
-        ? { target: entry.target, formIdx: entry.formIdx }
+        ? { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx }
         : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
     }));
     setShowTastePreference(false);
@@ -1080,7 +1088,7 @@ function App() {
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
     setRows(SALTS.map(salt => {
       const entry = recipe.salts[salt.id];
-      if (entry) return { target: entry.target, formIdx: entry.formIdx };
+      if (entry) return { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx };
       return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
     }));
     // Restore split stocks state — missing fields default to off/100/'500'
@@ -1111,7 +1119,7 @@ function App() {
     setRows(SALTS.map(salt => {
       const entry = recipe.salts[salt.id];
       return entry
-        ? { target: entry.target, formIdx: entry.formIdx }
+        ? { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx }
         : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
     }));
   };
@@ -1200,7 +1208,10 @@ function App() {
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
-    setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+    const safePatch = patch.target === undefined
+      ? patch
+      : { ...patch, target: normalizeSaltTarget(patch.target) };
+    setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...safePatch } : r)));
   };
 
   // Export recipe card
@@ -1817,9 +1828,13 @@ function App() {
                     id={`salt-target-${salt.id}`}
                     type="number"
                     inputMode="decimal"
+                    min="0"
                     aria-label={`${salt.name} target ppm`}
                     value={row.target}
                     onChange={e => updateRow(i, { target: e.target.value })}
+                    onKeyDown={e => {
+                      if (e.key === '-') e.preventDefault();
+                    }}
                     placeholder="0"
                     className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                   />
