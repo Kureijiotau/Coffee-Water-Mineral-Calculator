@@ -71,6 +71,21 @@ describe('autoFillWaterVolumes', () => {
 
     expect(filled[0].volumeMl).toBe('1000');
   });
+
+  it('lets recipe mode fill past non-target co-ions without overshooting recipe ions', () => {
+    const filled = autoFillWaterVolumes(
+      [water('candidate', { calcium: 10, sulfate: 30 })],
+      1000,
+      { calcium: 10, sulfate: 0 },
+      [],
+      ['calcium'],
+      0,
+      true,
+      true,
+    );
+
+    expect(filled[0].volumeMl).toBe('1000');
+  });
 });
 
 describe('Watermancer salt-to-ion helpers', () => {

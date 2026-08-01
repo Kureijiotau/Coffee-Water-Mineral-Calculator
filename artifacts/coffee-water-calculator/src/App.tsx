@@ -268,6 +268,7 @@ export function autoFillWaterVolumes(
   sourcePriority: IonId[] = AUTO_FILL_SOURCE_PRIORITY,
   deviationPpm = DEFAULT_AUTO_FILL_DEVIATION_PPM,
   enforceAllIonCeilings = false,
+  ignoreZeroTargetCeilings = false,
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
@@ -286,7 +287,12 @@ export function autoFillWaterVolumes(
       fixedEntries.reduce((total, entry) => total + num(entry.ions[id] ?? '') * num(entry.volumeMl), 0),
     ]),
   ) as Record<IonId, number>;
-  const fixedWaterAlreadyExceedsLimit = (enforceAllIonCeilings ? ACTIVE_ION_IDS : ['bicarbonate' as IonId])
+  const ceilingIonIds = enforceAllIonCeilings
+    ? ignoreZeroTargetCeilings
+      ? ACTIVE_ION_IDS.filter(id => (targetAmounts[id] ?? 0) > 0)
+      : ACTIVE_ION_IDS
+    : ['bicarbonate' as IonId];
+  const fixedWaterAlreadyExceedsLimit = ceilingIonIds
     .some(id => fixedContributions[id] > (enforceAllIonCeilings ? targetAmounts[id] ?? 0 : bicarbonateLimit) + 1e-8);
   if (variableVolumeLimit <= 0 || fixedWaterAlreadyExceedsLimit) {
     return entries.map(entry => ({ ...entry, volumeMl: '0' }));
@@ -312,7 +318,7 @@ export function autoFillWaterVolumes(
     if (remainingVolume <= 0.01) break;
     let amount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
     const limitingIds: IonId[] = enforceAllIonCeilings
-      ? ACTIVE_ION_IDS
+      ? ceilingIonIds
       : ['bicarbonate', ...priorityIonIds];
     for (const id of limitingIds) {
       const concentration = num(entry.ions[id] ?? '');
@@ -1239,6 +1245,7 @@ function App() {
         ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
       ) as Partial<Record<IonId, number>>
     : saltOnlyIons;
+  const autoFillUsesRecipeTargets = showAlchemist && hasSaltRecipeTargets;
   const watermancerIonTargets = watermancerIonTargetMode === 'recipe' && hasSaltRecipeTargets
     ? saltOnlyIons
     : Object.fromEntries(
@@ -2894,6 +2901,7 @@ function App() {
                       activeAutoFillPriority,
                        effectiveAutoFillDeviationPpm,
                        showAlchemist || noRecipeSelected,
+                       autoFillUsesRecipeTargets,
                     ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                   title={showAlchemist
@@ -3501,6 +3509,7 @@ function App() {
                     activeAutoFillPriority,
                      effectiveAutoFillDeviationPpm,
                      showAlchemist || noRecipeSelected,
+                     autoFillUsesRecipeTargets,
                   ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                   title={showAlchemist
