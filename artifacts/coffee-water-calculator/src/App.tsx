@@ -171,7 +171,7 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
 const AUTO_FILL_MAX_ML = 2000;
-const AUTO_FILL_BICARBONATE_OVERSHOOT_PPM = 1;
+const DEFAULT_AUTO_FILL_DEVIATION_PPM = 1;
 const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
   'calcium',
   'magnesium',
@@ -182,12 +182,65 @@ const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
   'citrates',
   'bicarbonate',
 ];
+type AutoFillPriorityPreset = 'mineral-first' | 'bicarbonate-first' | 'balanced-gh-kh' | 'custom';
+
+const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }> = {
+  'mineral-first': {
+    label: 'Mineral-first',
+    ions: AUTO_FILL_SOURCE_PRIORITY,
+  },
+  'bicarbonate-first': {
+    label: 'Bicarbonate-first',
+    ions: ['bicarbonate', 'calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'citrates'],
+  },
+  'balanced-gh-kh': {
+    label: 'Balanced GH / KH',
+    ions: ['calcium', 'magnesium', 'bicarbonate', 'sodium', 'potassium', 'chloride', 'sulfate', 'citrates'],
+  },
+};
+const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
+
+function normalizeAutoFillPriority(priority: unknown): IonId[] {
+  const valid = Array.isArray(priority)
+    ? priority.filter((id): id is IonId => typeof id === 'string' && ACTIVE_ION_IDS.includes(id as IonId))
+    : [];
+  return [...new Set([...valid, ...AUTO_FILL_SOURCE_PRIORITY])];
+}
+
+function loadAutoFillSettings(): {
+  preset: AutoFillPriorityPreset;
+  customPriority: IonId[];
+  deviationPpm: number;
+} {
+  const fallback = {
+    preset: 'mineral-first' as AutoFillPriorityPreset,
+    customPriority: [...AUTO_FILL_SOURCE_PRIORITY],
+    deviationPpm: DEFAULT_AUTO_FILL_DEVIATION_PPM,
+  };
+  try {
+    const stored = JSON.parse(localStorage.getItem(AUTO_FILL_SETTINGS_STORAGE_KEY) ?? 'null') as Partial<typeof fallback> | null;
+    if (!stored) return fallback;
+    const preset = stored.preset === 'bicarbonate-first' || stored.preset === 'balanced-gh-kh' || stored.preset === 'custom'
+      ? stored.preset
+      : fallback.preset;
+    const parsedDeviation = Number(stored.deviationPpm);
+    return {
+      preset,
+      customPriority: normalizeAutoFillPriority(stored.customPriority),
+      deviationPpm: Number.isFinite(parsedDeviation) ? Math.max(0, Math.min(100, Math.round(parsedDeviation))) : fallback.deviationPpm,
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 function autoFillWaterVolumes(
   entries: MineralWaterEntry[],
   batchMl: number,
   targets: Partial<Record<IonId, number>>,
   fixedEntries: MineralWaterEntry[] = [],
+  sourcePriority: IonId[] = AUTO_FILL_SOURCE_PRIORITY,
+  deviationPpm = DEFAULT_AUTO_FILL_DEVIATION_PPM,
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
@@ -195,7 +248,8 @@ function autoFillWaterVolumes(
     ACTIVE_ION_IDS.map(id => [id, Math.max(targets[id] ?? 0, 0) * batchMl]),
   ) as Record<IonId, number>;
   const bicarbonateTarget = targetAmounts.bicarbonate ?? 0;
-  const bicarbonateLimit = bicarbonateTarget + AUTO_FILL_BICARBONATE_OVERSHOOT_PPM * batchMl;
+  const deviationAmount = Math.max(0, deviationPpm) * batchMl;
+  const bicarbonateLimit = bicarbonateTarget + deviationAmount;
   const priorityIonIds: IonId[] = ['calcium', 'magnesium', 'sodium'];
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
   const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
@@ -214,7 +268,7 @@ function autoFillWaterVolumes(
   const sortedEntries = entries
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => {
-      for (const id of AUTO_FILL_SOURCE_PRIORITY) {
+      for (const id of sourcePriority) {
         const difference = num(b.entry.ions[id] ?? '') - num(a.entry.ions[id] ?? '');
         if (Math.abs(difference) > 1e-8) return difference;
       }
@@ -237,7 +291,7 @@ function autoFillWaterVolumes(
       if (concentration <= 0) continue;
       const ceiling = id === 'bicarbonate'
         ? bicarbonateLimit
-        : targetAmounts[id] ?? 0;
+        : (targetAmounts[id] ?? 0) + deviationAmount;
       const remaining = Math.max(ceiling - covered[id], 0);
       amount = Math.min(amount, remaining / concentration);
     }
@@ -434,6 +488,10 @@ function App() {
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
+  const [autoFillSettingsOpen, setAutoFillSettingsOpen] = useState(false);
+  const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
+  const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
+  const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
@@ -470,6 +528,19 @@ function App() {
   const removeAdditionWater = (id: string) => {
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
+  const activeAutoFillPriority = autoFillPriorityPreset === 'custom'
+    ? autoFillCustomPriority
+    : AUTO_FILL_PRIORITY_PRESETS[autoFillPriorityPreset].ions;
+  const autoFillPriorityLabel = autoFillPriorityPreset === 'custom'
+    ? 'Custom'
+    : AUTO_FILL_PRIORITY_PRESETS[autoFillPriorityPreset].label;
+  useEffect(() => {
+    localStorage.setItem(AUTO_FILL_SETTINGS_STORAGE_KEY, JSON.stringify({
+      preset: autoFillPriorityPreset,
+      customPriority: autoFillCustomPriority,
+      deviationPpm: autoFillDeviationPpm,
+    }));
+  }, [autoFillPriorityPreset, autoFillCustomPriority, autoFillDeviationPpm]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -2207,6 +2278,121 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
+             <div className="rounded-xl border border-indigo-400/25 bg-indigo-950/15 p-3">
+               <div className="flex flex-wrap items-center justify-between gap-2">
+                 <div>
+                   <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Auto-fill settings</p>
+                   <p className="mt-0.5 text-[11px] text-slate-500">
+                     Priority: {autoFillPriorityLabel} · Deviation: +{autoFillDeviationPpm} ppm
+                   </p>
+                 </div>
+                 <button
+                   type="button"
+                   onClick={() => setAutoFillSettingsOpen(open => !open)}
+                   className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium transition ${
+                     autoFillSettingsOpen
+                       ? 'border-indigo-400/50 bg-indigo-500/20 text-indigo-100'
+                       : 'border-slate-600/60 bg-slate-900/50 text-slate-300 hover:border-indigo-400/40 hover:text-indigo-100'
+                   }`}
+                 >
+                   {autoFillSettingsOpen ? 'Hide settings' : 'Set auto-fill priority'}
+                 </button>
+               </div>
+               {autoFillSettingsOpen && (
+                 <div className="mt-3 space-y-3 border-t border-indigo-400/15 pt-3">
+                   <label className="block">
+                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
+                     <select
+                       value={autoFillPriorityPreset}
+                       onChange={event => setAutoFillPriorityPreset(event.target.value as AutoFillPriorityPreset)}
+                       className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                     >
+                       {Object.entries(AUTO_FILL_PRIORITY_PRESETS).map(([value, preset]) => (
+                         <option key={value} value={value}>{preset.label}</option>
+                       ))}
+                       <option value="custom">Custom</option>
+                     </select>
+                   </label>
+
+                   <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/35 px-3 py-2">
+                     <div>
+                       <p className="text-xs font-medium text-slate-200">Set deviation value</p>
+                       <p className="text-[10px] text-slate-500">Allowed deviation from each protected recipe target</p>
+                     </div>
+                     <div className="flex items-center gap-1.5">
+                       <button
+                         type="button"
+                         onClick={() => setAutoFillDeviationPpm(value => Math.max(0, value - 1))}
+                         className="flex h-7 w-7 items-center justify-center rounded-md border border-indigo-400/35 bg-indigo-500/10 text-base text-indigo-200 hover:bg-indigo-500/20"
+                         aria-label="Decrease auto-fill deviation by 1 ppm"
+                       >
+                         −
+                       </button>
+                       <span className="min-w-12 text-center text-sm font-semibold tabular-nums text-indigo-200">
+                         {autoFillDeviationPpm} ppm
+                       </span>
+                       <button
+                         type="button"
+                         onClick={() => setAutoFillDeviationPpm(value => Math.min(100, value + 1))}
+                         className="flex h-7 w-7 items-center justify-center rounded-md border border-indigo-400/35 bg-indigo-500/10 text-base text-indigo-200 hover:bg-indigo-500/20"
+                         aria-label="Increase auto-fill deviation by 1 ppm"
+                       >
+                         +
+                       </button>
+                     </div>
+                   </div>
+
+                   {autoFillPriorityPreset === 'custom' && (
+                     <div>
+                       <div className="mb-1.5 flex items-center justify-between">
+                         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Custom ion order</span>
+                         <button
+                           type="button"
+                           onClick={() => setAutoFillCustomPriority([...AUTO_FILL_SOURCE_PRIORITY])}
+                           className="text-[10px] text-indigo-300 hover:text-indigo-100"
+                         >
+                           Reset
+                         </button>
+                       </div>
+                       <div className="grid gap-1.5 sm:grid-cols-2">
+                         {autoFillCustomPriority.map((id, index) => (
+                           <div key={id} className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/35 px-2.5 py-1.5">
+                             <span className="w-4 text-[10px] tabular-nums text-slate-600">{index + 1}</span>
+                             <span className="flex-1 text-xs text-slate-200">{ION_MAP[id].name}</span>
+                             <button
+                               type="button"
+                               disabled={index === 0}
+                               onClick={() => setAutoFillCustomPriority(current => {
+                                 const next = [...current];
+                                 [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                 return next;
+                               })}
+                               className="rounded px-1.5 text-xs text-slate-400 hover:bg-slate-700/60 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-25"
+                               aria-label={`Move ${ION_MAP[id].name} up`}
+                             >
+                               ↑
+                             </button>
+                             <button
+                               type="button"
+                               disabled={index === autoFillCustomPriority.length - 1}
+                               onClick={() => setAutoFillCustomPriority(current => {
+                                 const next = [...current];
+                                 [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                 return next;
+                               })}
+                               className="rounded px-1.5 text-xs text-slate-400 hover:bg-slate-700/60 hover:text-indigo-200 disabled:cursor-not-allowed disabled:opacity-25"
+                               aria-label={`Move ${ION_MAP[id].name} down`}
+                             >
+                               ↓
+                             </button>
+                           </div>
+                         ))}
+                       </div>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
              {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2491,7 +2677,7 @@ function App() {
              {mineralWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                  onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, additionWaters))}
+                   onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, additionWaters, activeAutoFillPriority, autoFillDeviationPpm))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                  title="Use all base waters to cover as much of the recipe's ion targets as possible"
                >
@@ -3000,7 +3186,7 @@ function App() {
              {additionWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, mineralWaters))}
+                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, mineralWaters, activeAutoFillPriority, autoFillDeviationPpm))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                  title="Use all addition waters to cover as much of the recipe's ion targets as possible"
                >
