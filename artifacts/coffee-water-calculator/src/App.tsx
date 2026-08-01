@@ -155,6 +155,9 @@ const TRAFFIC_STYLES: Record<TrafficLevel, { dot: string; text: string; border: 
   red:    { dot: 'bg-rose-400',    text: 'text-rose-300',    border: 'border-rose-500/40',    bg: 'bg-rose-500/10',    label: 'Too high' },
 };
 
+const formatIonThreshold = (value: number): string =>
+  value.toFixed(2).replace(/\.?0+$/, '');
+
 const num = (s: string): number => {
   const v = parseFloat(s);
   return !Number.isFinite(v) || v < 0 ? 0 : v;
@@ -3394,7 +3397,7 @@ function App() {
                     <span className="text-xs text-slate-400">ppm</span>
                   </div>
                   <div className={`text-xs ${s.text} mt-0.5`}>
-                    {s.label} · &lt;{r.greenMax} / {r.greenMax}–{r.yellowMax} / &gt;{r.yellowMax}
+                    {s.label} · &lt;{formatIonThreshold(r.greenMax)} / {formatIonThreshold(r.greenMax)}–{formatIonThreshold(r.yellowMax)} / &gt;{formatIonThreshold(r.yellowMax)}
                   </div>
                   <span className={`pointer-events-none absolute left-0 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl ${
                     tooltipAbove ? 'bottom-full mb-2' : 'top-full mt-2'
