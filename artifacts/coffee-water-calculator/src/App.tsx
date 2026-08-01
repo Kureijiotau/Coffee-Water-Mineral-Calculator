@@ -172,66 +172,202 @@ const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
 const AUTO_FILL_MAX_ML = 2000;
 
+type AutoFillEquality = {
+  coefficients: number[];
+  value: number;
+};
+
+function solveAutoFillLinearSystem(
+  equations: AutoFillEquality[],
+  variableCount: number,
+): number[] | null {
+  const matrix = equations.map(equation => [...equation.coefficients, equation.value]);
+  const tolerance = 1e-8;
+
+  for (let column = 0; column < variableCount; column++) {
+    let pivotRow = column;
+    for (let row = column + 1; row < variableCount; row++) {
+      if (Math.abs(matrix[row][column]) > Math.abs(matrix[pivotRow][column])) {
+        pivotRow = row;
+      }
+    }
+    if (Math.abs(matrix[pivotRow][column]) <= tolerance) return null;
+    [matrix[column], matrix[pivotRow]] = [matrix[pivotRow], matrix[column]];
+
+    const pivot = matrix[column][column];
+    for (let entry = column; entry <= variableCount; entry++) {
+      matrix[column][entry] /= pivot;
+    }
+    for (let row = 0; row < variableCount; row++) {
+      if (row === column) continue;
+      const factor = matrix[row][column];
+      if (Math.abs(factor) <= tolerance) continue;
+      for (let entry = column; entry <= variableCount; entry++) {
+        matrix[row][entry] -= factor * matrix[column][entry];
+      }
+    }
+  }
+
+  return matrix.map(row => row[variableCount]);
+}
+
 function autoFillWaterVolumes(
   entries: MineralWaterEntry[],
   batchMl: number,
   targets: Partial<Record<IonId, number>>,
+  fixedEntries: MineralWaterEntry[] = [],
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
-  const volumes = entries.map(() => 0);
-  const remaining = Object.fromEntries(
+  const targetAmounts = Object.fromEntries(
     ACTIVE_ION_IDS.map(id => [id, Math.max(targets[id] ?? 0, 0) * batchMl]),
   ) as Record<IonId, number>;
+  const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
+  const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
+  const fixedContributions = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [
+      id,
+      fixedEntries.reduce((total, entry) => total + num(entry.ions[id] ?? '') * num(entry.volumeMl), 0),
+    ]),
+  ) as Record<IonId, number>;
+  const constrainedIonIds = ACTIVE_ION_IDS.filter(
+    id => fixedContributions[id] <= targetAmounts[id] + 1e-8,
+  );
+  const fixedWaterAlreadyOvershoots = ACTIVE_ION_IDS.some(
+    id => fixedContributions[id] > targetAmounts[id] + 1e-8,
+  );
+  const remainingTargets = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [id, Math.max(targetAmounts[id] - fixedContributions[id], 0)]),
+  ) as Record<IonId, number>;
 
-  // Fill one source at a time to the first ion target it can reach without
-  // overshooting another target, then recalculate with the remaining ions.
-  // Candidate scoring favors the source that covers the most target ions.
-  for (let pass = 0; pass < entries.length * ACTIVE_ION_IDS.length + 1; pass++) {
-    let best: { index: number; amount: number; gain: number } | null = null;
+  if (variableVolumeLimit <= 0 || fixedWaterAlreadyOvershoots) {
+    return entries.map(entry => ({ ...entry, volumeMl: '0' }));
+  }
 
+  const isFeasible = (volumes: number[]): boolean => {
+    if (volumes.some(volume => volume < -1e-6 || volume > AUTO_FILL_MAX_ML + 1e-6)) return false;
+    const totalVolume = volumes.reduce((total, volume) => total + volume, 0);
+    if (totalVolume > variableVolumeLimit + 1e-6) return false;
+    return ACTIVE_ION_IDS.every(id => {
+      const contribution = fixedContributions[id] + entries.reduce(
+        (total, entry, index) => total + num(entry.ions[id] ?? '') * volumes[index],
+        0,
+      );
+      return contribution <= targetAmounts[id] + 1e-6;
+    });
+  };
+
+  const score = (volumes: number[]): { total: number; minimum: number; volume: number } => {
+    const coverage = ACTIVE_ION_IDS
+      .filter(id => targetAmounts[id] > 0)
+      .map(id => {
+        const contribution = fixedContributions[id] + entries.reduce(
+          (total, entry, index) => total + num(entry.ions[id] ?? '') * volumes[index],
+          0,
+        );
+        return Math.min(contribution / Math.max(targetAmounts[id], 1e-8), 1);
+      });
+    return {
+      total: coverage.reduce((total, value) => total + value, 0),
+      minimum: coverage.length > 0 ? Math.min(...coverage) : 0,
+      volume: volumes.reduce((total, volume) => total + volume, 0),
+    };
+  };
+
+  let bestVolumes: number[] | null = null;
+  let bestScore = { total: -Infinity, minimum: -Infinity, volume: Infinity };
+  const consider = (volumes: number[]) => {
+    if (!isFeasible(volumes)) return;
+    const candidateScore = score(volumes);
+    const better = candidateScore.total > bestScore.total + 1e-8
+      || (Math.abs(candidateScore.total - bestScore.total) <= 1e-8
+        && candidateScore.minimum > bestScore.minimum + 1e-8)
+      || (Math.abs(candidateScore.total - bestScore.total) <= 1e-8
+        && Math.abs(candidateScore.minimum - bestScore.minimum) <= 1e-8
+        && candidateScore.volume < bestScore.volume - 1e-6);
+    if (better) {
+      bestVolumes = volumes;
+      bestScore = candidateScore;
+    }
+  };
+
+  // A small linear-programming vertex search gives the exact maximum coverage
+  // for the normal 1–6 water-source case. Every optimum of this bounded
+  // linear problem occurs where n constraints meet: a zero/max volume,
+  // the batch-volume limit, or an ion target.
+  if (entries.length <= 6) {
+    const equalities: AutoFillEquality[] = [];
     for (let index = 0; index < entries.length; index++) {
-      const entry = entries[index];
-      const room = AUTO_FILL_MAX_ML - volumes[index];
-      if (room <= 0.01) continue;
-
-      let amount = room;
-      let hasUsefulIon = false;
-      ACTIVE_ION_IDS.forEach(id => {
-        const concentration = num(entry.ions[id] ?? '');
-        if (concentration <= 0 || remaining[id] <= 0.01) return;
-        hasUsefulIon = true;
-        amount = Math.min(amount, remaining[id] / concentration);
+      const coefficients = entries.map((_, candidateIndex) => candidateIndex === index ? 1 : 0);
+      equalities.push({ coefficients, value: 0 });
+      equalities.push({ coefficients, value: AUTO_FILL_MAX_ML });
+    }
+    equalities.push({ coefficients: entries.map(() => 1), value: variableVolumeLimit });
+    for (const id of constrainedIonIds) {
+      equalities.push({
+        coefficients: entries.map(entry => num(entry.ions[id] ?? '')),
+        value: remainingTargets[id],
       });
-      if (!hasUsefulIon || amount <= 0.01) continue;
-
-      let gain = 0;
-      ACTIVE_ION_IDS.forEach(id => {
-        const concentration = num(entry.ions[id] ?? '');
-        const target = Math.max(targets[id] ?? 0, 0);
-        if (concentration <= 0 || target <= 0) return;
-        gain += Math.min(amount * concentration, remaining[id]) / (target * batchMl);
-      });
-
-      if (!best || gain > best.gain + 0.000001) {
-        best = { index, amount, gain };
-      }
     }
 
-    if (!best) break;
-    volumes[best.index] += best.amount;
-    const entry = entries[best.index];
-    ACTIVE_ION_IDS.forEach(id => {
-      const concentration = num(entry.ions[id] ?? '');
-      if (concentration > 0) {
-        remaining[id] = Math.max(remaining[id] - best.amount * concentration, 0);
+    const selected: AutoFillEquality[] = [];
+    const visit = (start: number) => {
+      if (selected.length === entries.length) {
+        const solution = solveAutoFillLinearSystem(selected, entries.length);
+        if (solution) consider(solution);
+        return;
       }
-    });
+      for (let index = start; index < equalities.length; index++) {
+        selected.push(equalities[index]);
+        visit(index + 1);
+        selected.pop();
+      }
+    };
+    visit(0);
+  }
+
+  // Keep a bounded fallback for unusually large source lists. It applies all
+  // target constraints to every step, including ions already reached, so it
+  // remains safe even when exact vertex enumeration is not used.
+  if (!bestVolumes) {
+    const volumes = entries.map(() => 0);
+    const covered = { ...fixedContributions };
+    for (let pass = 0; pass < entries.length * (ACTIVE_ION_IDS.length + 1) + 1; pass++) {
+      let best: { index: number; amount: number; gain: number } | null = null;
+      for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index];
+        let amount = Math.min(
+          AUTO_FILL_MAX_ML - volumes[index],
+          variableVolumeLimit - volumes.reduce((total, volume) => total + volume, 0),
+        );
+        if (amount <= 0.01) continue;
+        let useful = false;
+        for (const id of constrainedIonIds) {
+          const concentration = num(entry.ions[id] ?? '');
+          const remaining = Math.max(targetAmounts[id] - covered[id], 0);
+          if (concentration > 0 && remaining > 0.01) useful = true;
+          if (concentration > 0) amount = Math.min(amount, remaining / concentration);
+        }
+        if (!useful || amount <= 0.01) continue;
+        const gain = constrainedIonIds.reduce((total, id) => {
+          const concentration = num(entry.ions[id] ?? '');
+          return total + Math.min(amount * concentration, Math.max(targetAmounts[id] - covered[id], 0))
+            / Math.max(targetAmounts[id], 1e-8);
+        }, 0);
+        if (!best || gain > best.gain + 1e-8) best = { index, amount, gain };
+      }
+      if (!best) break;
+      volumes[best.index] += best.amount;
+      for (const id of constrainedIonIds) {
+        covered[id] += num(entries[best.index].ions[id] ?? '') * best.amount;
+      }
+    }
+    bestVolumes = volumes;
   }
 
   return entries.map((entry, index) => ({
     ...entry,
-    volumeMl: String(Math.min(AUTO_FILL_MAX_ML, Math.floor(volumes[index]))),
+    volumeMl: String(Math.min(AUTO_FILL_MAX_ML, Math.floor(bestVolumes?.[index] ?? 0))),
   }));
 }
 
@@ -2471,7 +2607,7 @@ function App() {
              {mineralWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                 onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons))}
+                  onClick={() => setMineralWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, additionWaters))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                  title="Use all base waters to cover as much of the recipe's ion targets as possible"
                >
@@ -2980,7 +3116,7 @@ function App() {
              {additionWaters.length > 0 && batchMl > 0 && (
                <button
                  type="button"
-                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons))}
+                 onClick={() => setAdditionWaters(prev => autoFillWaterVolumes(prev, batchMl, saltOnlyIons, mineralWaters))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                  title="Use all addition waters to cover as much of the recipe's ion targets as possible"
                >
