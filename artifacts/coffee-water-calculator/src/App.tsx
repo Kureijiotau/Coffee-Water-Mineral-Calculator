@@ -1134,13 +1134,14 @@ function App() {
       ...selectedWatermancerSaltTargets,
     };
   }, [selectedWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
+  const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
     () => computeIonTotals(selectedSuggestedSaltTargets, combinedBottledIons, dil),
     [selectedSuggestedSaltTargets, combinedBottledIons, dil],
   );
   const sodiumCorrectionGap = Math.max(
-    (saltOnlyIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
+    (finalMixtureTargetIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
     0,
   );
   const sodiumCorrectionTarget = hasMineralWater && (showAlchemist || sodiumCorrectionOn)
@@ -1162,13 +1163,13 @@ function App() {
     () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
     [effectiveSuggestedSaltTargets, combinedBottledIons, dil],
   );
-  const finalRecipeOvershoots = useMemo(
-    () => findIonOvershoots(suggestedIonTotals, saltOnlyIons),
-    [suggestedIonTotals, saltOnlyIons],
+  const finalMixtureOvershoots = useMemo(
+    () => findIonOvershoots(suggestedIonTotals, finalMixtureTargetIons),
+    [finalMixtureTargetIons, suggestedIonTotals],
   );
-  const finalRecipeUnderdoses = useMemo(
-    () => findIonUnderdoses(suggestedIonTotals, saltOnlyIons),
-    [suggestedIonTotals, saltOnlyIons],
+  const finalMixtureUnderdoses = useMemo(
+    () => findIonUnderdoses(suggestedIonTotals, finalMixtureTargetIons),
+    [finalMixtureTargetIons, suggestedIonTotals],
   );
   const ionProfileIons = suggestedIonTotals;
   const preferredMagnesiumSaltId = magnesiumPreference === 'sulfates'
@@ -1209,7 +1210,7 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
-  const bicarbonateTarget = saltOnlyIons.bicarbonate ?? 0;
+  const bicarbonateTarget = finalMixtureTargetIons.bicarbonate ?? 0;
   const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
   const bicarbonateWaterOvershoot = hasMineralWater
     && bicarbonateFromWater > bicarbonateTarget + 0.05;
@@ -3274,18 +3275,18 @@ function App() {
                      );
                    })}
                  </div>
-                 {(finalRecipeOvershoots.length > 0
-                   || finalRecipeUnderdoses.length > 0
+                 {(finalMixtureOvershoots.length > 0
+                   || finalMixtureUnderdoses.length > 0
                    || (hasMineralWater && sodiumCorrectionGap > 0.05)
                    || sodiumCorrectionOn) && (
                      <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
                        <div className="flex items-start justify-between gap-3">
                          <div>
                            <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
-                             Final recipe deviation
+                              Final profile deviation
                            </span>
                            <p className="mt-1 text-[11px] text-slate-400">
-                              Mineral water and suggested salts can leave some ions above or below the recipe target.
+                               Mineral water and suggested salts can leave some ions above or below the selected ion target.
                            </p>
                          </div>
                          {hasMineralWater && sodiumCorrectionGap > 0.05 && (
@@ -3320,7 +3321,7 @@ function App() {
                          )}
                        </div>
                        <div className="mt-2 flex flex-wrap gap-2">
-                         {finalRecipeOvershoots.map(({ id, amount }) => (
+                          {finalMixtureOvershoots.map(({ id, amount }) => (
                            <span
                              key={id}
                              className="rounded-md border border-rose-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-rose-200"
@@ -3328,7 +3329,7 @@ function App() {
                              {ION_MAP[id].formula} +{amount.toFixed(1)} ppm
                            </span>
                          ))}
-                         {finalRecipeUnderdoses.map(({ id, amount }) => (
+                          {finalMixtureUnderdoses.map(({ id, amount }) => (
                            <span
                              key={id}
                              className="rounded-md border border-amber-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-amber-200"
@@ -3351,7 +3352,7 @@ function App() {
                       </span>
                       <p className="mt-1 text-[11px] text-slate-300">
                         This water alone provides {bicarbonateFromWater.toFixed(1)} ppm HCO₃⁻,
-                        above the {bicarbonateTarget.toFixed(1)} ppm recipe target. No bicarbonate
+                         above the {bicarbonateTarget.toFixed(1)} ppm selected ion target. No bicarbonate
                         salts will be recommended; use less of this water or choose a lower-alkalinity source.
                       </p>
                     </div>
