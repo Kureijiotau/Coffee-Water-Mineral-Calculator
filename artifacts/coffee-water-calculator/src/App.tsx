@@ -584,12 +584,6 @@ function App() {
   const removeAdditionWater = (id: string) => {
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
-  const activeAutoFillPriority = autoFillPriorityPreset === 'custom'
-    ? autoFillCustomPriority
-    : AUTO_FILL_PRIORITY_PRESETS[autoFillPriorityPreset].ions;
-  const autoFillPriorityLabel = autoFillPriorityPreset === 'custom'
-    ? 'Custom'
-    : AUTO_FILL_PRIORITY_PRESETS[autoFillPriorityPreset].label;
   useEffect(() => {
     localStorage.setItem(AUTO_FILL_SETTINGS_STORAGE_KEY, JSON.stringify({
       preset: autoFillPriorityPreset,
@@ -645,6 +639,15 @@ function App() {
   const activeRanges: RangeSet = activeProfile.ranges;
   const showAlchemist = nerdLevel === 'alchemist';
   const showWatermancer = nerdLevel === 'watermancer';
+  const effectiveAutoFillPreset: AutoFillPriorityPreset = showAlchemist
+    ? 'balanced-gh-kh'
+    : autoFillPriorityPreset;
+  const activeAutoFillPriority = effectiveAutoFillPreset === 'custom'
+    ? autoFillCustomPriority
+    : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
+  const autoFillPriorityLabel = effectiveAutoFillPreset === 'custom'
+    ? 'Custom'
+    : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].label;
   const modeAccent = nerdLevel === 'alchemist'
     ? 'from-emerald-600 to-teal-500'
     : nerdLevel === 'watermancer'
@@ -2390,7 +2393,7 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-             <div className="rounded-xl border border-indigo-400/25 bg-indigo-950/15 p-3">
+              {showWatermancer && <div className="rounded-xl border border-indigo-400/25 bg-indigo-950/15 p-3">
                <div className="flex flex-wrap items-center justify-between gap-2">
                  <div>
                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Auto-fill settings</p>
@@ -2538,7 +2541,7 @@ function App() {
                    )}
                  </div>
                )}
-             </div>
+              </div>}
              {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">

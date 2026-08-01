@@ -5,6 +5,8 @@ description: Durable UX boundaries for the Alchemist and Watermancer workspaces
 
 Alchemist should open as a focused recipe lab: salt-recipe editing, batch/concentrate controls, and the base mineral-water panel are visible together, while Aiki's ion check stays visible.
 
+Alchemist Auto-fill uses the Balanced GH / KH priority internally and does not expose the Auto-fill settings menu. Watermancer retains the configurable Auto-fill preset and deviation controls.
+
 Watermancer should lead with the ion profile. A salt recipe can be translated into an ion target profile through the existing `computeIonTotals` chemistry path; this is a target-selection view, not a second chemistry engine.
 
 Watermancer salt-gap choices are presentation selections only. They may show used/unused salt options and preserve the selected hydration form, but they must not silently overwrite the user's recipe rows. Existing coupled-ion, bicarbonate-ceiling, and final-deviation warnings remain authoritative.
