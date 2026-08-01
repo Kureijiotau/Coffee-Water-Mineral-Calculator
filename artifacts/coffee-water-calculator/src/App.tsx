@@ -2900,7 +2900,7 @@ function App() {
                    })}
                  </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt additions still needed after mineral-water coverage</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salts needed to finish the recipe</span>
                     <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
                       {([
                         {
@@ -3486,7 +3486,6 @@ function App() {
         </div>}
 
       </div>
-
       {(showAlchemist || showWatermancer) && (
         <button
           type="button"
@@ -3503,7 +3502,6 @@ function App() {
           <span>Recipe steps</span>
         </button>
       )}
-
       {/* Reset confirmation */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
@@ -3529,7 +3527,6 @@ function App() {
           </div>
         </div>
       )}
-
       {showSettings && (
         <SettingsModal
           profiles={profiles}
@@ -3540,14 +3537,12 @@ function App() {
           onDeleteProfile={handleDeleteProfile}
         />
       )}
-
       {showTastePreference && (
         <TastePreferenceModal
           onClose={() => setShowTastePreference(false)}
           onApply={handleApplyTasteInference}
         />
       )}
-
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
           saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
@@ -3570,7 +3565,6 @@ function App() {
           onClose={() => setShowBrewerSteps(null)}
         />
       )}
-
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCommunityModalOpen(false)}>
