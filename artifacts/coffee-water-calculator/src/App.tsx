@@ -692,6 +692,9 @@ function App() {
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
+  const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
+  const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
+  useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
@@ -956,7 +959,35 @@ function App() {
     () => computeIonTotals(saltTargets, {}, 1),
     [saltTargets],
   );
-
+  const allRecipesForWatermancer = [...RECIPES, ...savedRecipes];
+  const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
+    if (watermancerTargetSource === 'salt-table') return saltOnlyIons;
+    if (watermancerTargetSource.startsWith('profile:')) {
+      const pId = watermancerTargetSource.slice('profile:'.length);
+      const p = profiles.find(item => item.id === pId);
+      if (p) return Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [id, p.ranges[id].greenMax]),
+      ) as Partial<Record<IonId, number>>;
+    }
+    if (watermancerTargetSource.startsWith('recipe:')) {
+      const recipeId = watermancerTargetSource.slice('recipe:'.length);
+      const recipe = allRecipesForWatermancer.find(item => item.id === recipeId);
+      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
+    }
+    if (watermancerTargetSource.startsWith('external:')) {
+      const recipeId = watermancerTargetSource.slice('external:'.length);
+      const recipe = ROBERT_ASAMI_RECIPES.find(item => item.id === recipeId);
+      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
+    }
+    if (watermancerTargetSource.startsWith('saved:')) {
+      const pId = watermancerTargetSource.slice('saved:'.length);
+      const p = wmProfiles.find(item => item.id === pId);
+      if (p) return p.targets;
+    }
+    return Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+    ) as Partial<Record<IonId, number>>;
+  }, [activeRanges, allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetSource, wmProfiles]);
   // Combined contribution from all bottled waters (base + addition, already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
@@ -972,11 +1003,37 @@ function App() {
     }
     return m;
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
+  const watermancerIonGaps = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [
+      id,
+      Math.max((watermancerIonTargets[id] ?? 0) - (bottledIons[id] ?? 0), 0),
+    ]),
+  ) as Partial<Record<IonId, number>>;
+  const watermancerSaltOptions = useMemo(() => SALTS.map((salt, index) => {
+    const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+    const targetPpm = computeSaltGapOptionPpm(salt, watermancerIonGaps);
+    return {
+      salt,
+      form,
+      targetPpm: Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0,
+      mg: Number.isFinite(targetPpm) && targetPpm > 0
+        ? computeSaltMg(targetPpm, L, form.molarMass, salt.anhydrousMass)
+        : 0,
+    };
+  }), [L, rows, watermancerIonGaps]);
+  const selectedWatermancerSaltTargets = useMemo(() => {
+    const selected = new Set(watermancerUsedSaltIds);
+    return Object.fromEntries(
+      watermancerSaltOptions
+        .filter(option => selected.has(option.salt.id) && option.targetPpm > 0)
+        .map(option => [option.salt.id, option.targetPpm]),
+    ) as Record<string, number>;
+  }, [watermancerSaltOptions, watermancerUsedSaltIds]);
 
-  // Build the salt recommendation shown below the calculator. The sulfate /
-  // chloride preference is a real source selection for magnesium, not merely
-  // a sort order. Keep the user's actual recipe rows unchanged until they
-  // choose to edit or apply the recommendation.
+   // Build the salt recommendation shown below the calculator. The sulfate /
+   // chloride preference is a real source selection for magnesium, not merely
+   // a sort order. Keep the user's actual recipe rows unchanged until they
+   // choose to edit or apply the recommendation.
   const suggestedSaltTargets = useMemo(() => {
     const targets: Record<string, number> = {};
     SALTS.forEach((salt, i) => { targets[salt.id] = num(rows[i].target); });
@@ -1064,9 +1121,22 @@ function App() {
     return targets;
   }, [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater]);
 
+  // A Watermancer salt marked "Used" represents the user's chosen salt
+  // option for that gap. Replace that salt's automatic recommendation with
+  // the selected option dose so final chemistry and all dosing surfaces agree.
+  const selectedSuggestedSaltTargets = useMemo(() => {
+    if (!showWatermancer || Object.keys(selectedWatermancerSaltTargets).length === 0) {
+      return suggestedSaltTargets;
+    }
+    return {
+      ...suggestedSaltTargets,
+      ...selectedWatermancerSaltTargets,
+    };
+  }, [selectedWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
+
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
-    () => computeIonTotals(suggestedSaltTargets, combinedBottledIons, dil),
-    [suggestedSaltTargets, combinedBottledIons, dil],
+    () => computeIonTotals(selectedSuggestedSaltTargets, combinedBottledIons, dil),
+    [selectedSuggestedSaltTargets, combinedBottledIons, dil],
   );
   const sodiumCorrectionGap = Math.max(
     (saltOnlyIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
@@ -1076,14 +1146,16 @@ function App() {
     ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
     : 0;
   const effectiveSuggestedSaltTargets = useMemo<Record<string, number>>(() => ({
-    ...suggestedSaltTargets,
-    nacl: (suggestedSaltTargets.nacl ?? 0) + sodiumCorrectionTarget,
-  }), [suggestedSaltTargets, sodiumCorrectionTarget]);
+    ...selectedSuggestedSaltTargets,
+    nacl: (selectedSuggestedSaltTargets.nacl ?? 0) + sodiumCorrectionTarget,
+  }), [selectedSuggestedSaltTargets, sodiumCorrectionTarget]);
 
   // One dosing target map for every user-facing preparation surface. With
   // source water, this is the final salt contribution still needed after
   // water coverage, the bicarbonate ceiling, and any optional sodium correction.
-  const dosingSaltTargets = hasMineralWater ? effectiveSuggestedSaltTargets : saltTargets;
+  const dosingSaltTargets = (hasMineralWater || showWatermancer)
+    ? effectiveSuggestedSaltTargets
+    : saltTargets;
 
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
@@ -1235,6 +1307,8 @@ function App() {
     setSplitStrengths({ hardness: 100, alkalinity: 100, citrate: 50 });
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
     setMagnesiumPreference('original');
+    setWatermancerUsedSaltIds([]);
+    setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
 
@@ -1265,11 +1339,6 @@ function App() {
   const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
 
-  // Recipe state
-  const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
-  const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
-  useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
-
   const allRecipes = [...RECIPES, ...savedRecipes];
   const activeRecipe = allRecipes.find(r => r.id === activeRecipeId);
   const isSavedRecipeActive = savedRecipes.some(r => r.id === activeRecipeId);
@@ -1290,34 +1359,6 @@ function App() {
       ) as Partial<Record<IonId, number>>
     : saltOnlyIons;
   const autoFillUsesRecipeTargets = showAlchemist && hasSaltRecipeTargets;
-  const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
-    if (watermancerTargetSource === 'salt-table') return saltOnlyIons;
-    if (watermancerTargetSource.startsWith('profile:')) {
-      const pId = watermancerTargetSource.slice('profile:'.length);
-      const p = profiles.find(item => item.id === pId);
-      if (p) return Object.fromEntries(
-        ACTIVE_ION_IDS.map(id => [id, p.ranges[id].greenMax]),
-      ) as Partial<Record<IonId, number>>;
-    }
-    if (watermancerTargetSource.startsWith('recipe:')) {
-      const recipeId = watermancerTargetSource.slice('recipe:'.length);
-      const recipe = allRecipes.find(item => item.id === recipeId);
-      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
-    }
-    if (watermancerTargetSource.startsWith('external:')) {
-      const recipeId = watermancerTargetSource.slice('external:'.length);
-      const recipe = ROBERT_ASAMI_RECIPES.find(item => item.id === recipeId);
-      return recipe ? ionTotalsForSaltRecipe(recipe) : {};
-    }
-    if (watermancerTargetSource.startsWith('saved:')) {
-      const pId = watermancerTargetSource.slice('saved:'.length);
-      const p = wmProfiles.find(item => item.id === pId);
-      if (p) return p.targets;
-    }
-    return Object.fromEntries(
-      ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
-    ) as Partial<Record<IonId, number>>;
-  }, [activeRanges, allRecipes, profiles, saltOnlyIons, watermancerTargetSource, wmProfiles]);
   const watermancerTargetSourceLabel = useMemo(() => {
     if (watermancerTargetSource === 'safe-profile') return `${activeProfile.name} safe profile`;
     if (watermancerTargetSource === 'salt-table') return 'Current salt table';
@@ -1332,25 +1373,6 @@ function App() {
     }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
   }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
-  const watermancerIonGaps = Object.fromEntries(
-    ACTIVE_ION_IDS.map(id => [
-      id,
-      Math.max((watermancerIonTargets[id] ?? 0) - (bottledIons[id] ?? 0), 0),
-    ]),
-  ) as Partial<Record<IonId, number>>;
-  const watermancerSaltOptions = useMemo(() => SALTS.map((salt, index) => {
-    const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
-    const targetPpm = computeSaltGapOptionPpm(salt, watermancerIonGaps);
-    return {
-      salt,
-      form,
-      targetPpm: Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0,
-      mg: Number.isFinite(targetPpm) && targetPpm > 0
-        ? computeSaltMg(targetPpm, L, form.molarMass, salt.anhydrousMass)
-        : 0,
-    };
-  }), [L, rows, watermancerIonGaps]);
-
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setActiveRecipeId(recipe.id);
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
@@ -3061,9 +3083,9 @@ function App() {
                     );
                   })}
                 </div>
-                 {/* Every gap gets every compatible salt option. Selection is
-                     intentionally presentation-only; recipe rows and forms stay
-                     unchanged until the user edits the recipe above. */}
+                  {/* Every gap gets every compatible salt option. Marking an
+                      option Used feeds that salt dose into the final chemistry
+                      while leaving the editable recipe rows unchanged. */}
                  <div className="mt-3 space-y-3">
                    <div className="flex flex-wrap items-center justify-between gap-2">
                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
@@ -3111,8 +3133,8 @@ function App() {
                             );
                           })}
                         </div>
-                       <span className="text-[10px] text-slate-500">
-                         Click an option to mark it used
+                        <span className="text-[10px] text-slate-500">
+                          Used choices update the final chemistry
                        </span>
                      </div>
                    </div>
