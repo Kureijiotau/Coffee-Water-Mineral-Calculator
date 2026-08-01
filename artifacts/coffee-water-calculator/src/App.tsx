@@ -492,6 +492,7 @@ function App() {
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
+  const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
@@ -2356,11 +2357,44 @@ function App() {
                        </div>
                        <div className="grid gap-1.5 sm:grid-cols-2">
                          {autoFillCustomPriority.map((id, index) => (
-                           <div key={id} className="flex items-center gap-2 rounded-lg border border-slate-700/50 bg-slate-900/35 px-2.5 py-1.5">
-                             <span className="w-4 text-[10px] tabular-nums text-slate-600">{index + 1}</span>
-                             <span className="flex-1 text-xs text-slate-200">{ION_MAP[id].name}</span>
+                            <div
+                              key={id}
+                              draggable
+                              onDragStart={event => {
+                                setAutoFillDraggedIndex(index);
+                                event.dataTransfer.effectAllowed = 'move';
+                                event.dataTransfer.setData('text/plain', id);
+                              }}
+                              onDragEnd={() => setAutoFillDraggedIndex(null)}
+                              onDragOver={event => event.preventDefault()}
+                              onDrop={event => {
+                                event.preventDefault();
+                                if (autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
+                                setAutoFillCustomPriority(current => {
+                                  const next = [...current];
+                                  const [moved] = next.splice(autoFillDraggedIndex, 1);
+                                  next.splice(index, 0, moved);
+                                  return next;
+                                });
+                                setAutoFillDraggedIndex(null);
+                              }}
+                              className={`flex cursor-grab items-center gap-2 rounded-lg border px-2.5 py-2 transition active:cursor-grabbing ${
+                                autoFillDraggedIndex === index
+                                  ? 'border-indigo-300/60 bg-indigo-500/20 opacity-60'
+                                  : 'border-slate-700/50 bg-slate-900/35 hover:border-indigo-400/40 hover:bg-indigo-500/10'
+                              }`}
+                              aria-label={`Priority ${index + 1}: ${ION_MAP[id].name}. Drag to reorder.`}
+                            >
+                              <span
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-indigo-300/50 bg-indigo-500/20 text-sm font-bold tabular-nums text-indigo-100 shadow-sm shadow-indigo-950/40"
+                                aria-label={`Priority ${index + 1}`}
+                              >
+                                {index + 1}
+                              </span>
+                              <span className="flex-1 text-xs font-medium text-slate-100">{ION_MAP[id].name}</span>
                              <button
                                type="button"
+                               onPointerDown={event => event.stopPropagation()}
                                disabled={index === 0}
                                onClick={() => setAutoFillCustomPriority(current => {
                                  const next = [...current];
@@ -2374,6 +2408,7 @@ function App() {
                              </button>
                              <button
                                type="button"
+                               onPointerDown={event => event.stopPropagation()}
                                disabled={index === autoFillCustomPriority.length - 1}
                                onClick={() => setAutoFillCustomPriority(current => {
                                  const next = [...current];
