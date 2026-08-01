@@ -14,3 +14,9 @@ The sticky Watermancer ion bars are a separate progress view: once base-water vo
 **Why:** The user needs a persistent readout of how the selected base water and explicit salt choices are closing the active profile, without conflating that decision surface with the broader final-batch chemistry summary.
 
 **How to apply:** Keep this bar view Watermancer-only, sticky near the profile, and render zero-target ions as diagnostic overshoots rather than normal progress toward a target.
+
+The sticky bar panel's position and size are user-adjustable and persisted locally; keep it in normal document flow with `position: sticky` rather than converting it to a fixed overlay.
+
+**Why:** Users may need to move the summary out of the way or make it taller/wider while still following it during long Watermancer workflows.
+
+**How to apply:** Preserve the drag handle, resize corner, keyboard movement affordance, and reset action when changing this panel.

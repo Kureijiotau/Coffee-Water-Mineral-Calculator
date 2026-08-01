@@ -235,6 +235,37 @@ const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom
   },
 };
 const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
+const WATERMANCER_COVERAGE_LAYOUT_STORAGE_KEY = 'coffee-water-watermancer-coverage-layout';
+const DEFAULT_WATERMANCER_COVERAGE_LAYOUT = {
+  left: 0,
+  top: 12,
+  width: 100,
+  height: 0,
+};
+
+type WatermancerCoverageLayout = typeof DEFAULT_WATERMANCER_COVERAGE_LAYOUT;
+
+function loadWatermancerCoverageLayout(): WatermancerCoverageLayout {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(WATERMANCER_COVERAGE_LAYOUT_STORAGE_KEY) ?? 'null',
+    ) as Partial<WatermancerCoverageLayout> | null;
+    if (!stored) return DEFAULT_WATERMANCER_COVERAGE_LAYOUT;
+    const width = Number(stored.width);
+    const left = Number(stored.left);
+    const top = Number(stored.top);
+    const height = Number(stored.height);
+    const safeWidth = Number.isFinite(width) ? Math.max(55, Math.min(100, width)) : 100;
+    return {
+      left: Number.isFinite(left) ? Math.max(0, Math.min(100 - safeWidth, left)) : 0,
+      top: Number.isFinite(top) ? Math.max(0, Math.min(240, top)) : 12,
+      width: safeWidth,
+      height: Number.isFinite(height) ? Math.max(0, Math.min(760, height)) : 0,
+    };
+  } catch {
+    return DEFAULT_WATERMANCER_COVERAGE_LAYOUT;
+  }
+}
 
 function normalizeAutoFillPriority(priority: unknown): IonId[] {
   const valid = Array.isArray(priority)
@@ -4079,22 +4110,142 @@ function WatermancerIonCoverageBars({
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
 }) {
+  const [layout, setLayout] = useState<WatermancerCoverageLayout>(() => loadWatermancerCoverageLayout());
+  const panelRef = useRef<HTMLDivElement>(null);
+  const interactionRef = useRef<{
+    kind: 'move' | 'resize';
+    pointerId: number;
+    startX: number;
+    startY: number;
+    startLeft: number;
+    startTop: number;
+    startWidth: number;
+    startHeight: number;
+    parentWidth: number;
+    startRectHeight: number;
+  } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(WATERMANCER_COVERAGE_LAYOUT_STORAGE_KEY, JSON.stringify(layout));
+  }, [layout]);
+
+  const beginInteraction = (kind: 'move' | 'resize', event: React.PointerEvent<HTMLElement>) => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const parentWidth = panel.parentElement?.getBoundingClientRect().width ?? panel.getBoundingClientRect().width;
+    const rect = panel.getBoundingClientRect();
+    interactionRef.current = {
+      kind,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startLeft: layout.left,
+      startTop: layout.top,
+      startWidth: layout.width,
+      startHeight: layout.height,
+      parentWidth,
+      startRectHeight: rect.height,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  };
+
+  const handleInteractionMove = (event: React.PointerEvent<HTMLElement>) => {
+    const interaction = interactionRef.current;
+    if (!interaction || interaction.pointerId !== event.pointerId) return;
+    const deltaXPercent = (event.clientX - interaction.startX) / Math.max(interaction.parentWidth, 1) * 100;
+    if (interaction.kind === 'move') {
+      setLayout(current => {
+        const left = Math.max(
+          0,
+          Math.min(100 - current.width, interaction.startLeft + deltaXPercent),
+        );
+        const top = Math.max(0, Math.min(240, interaction.startTop + event.clientY - interaction.startY));
+        return { ...current, left, top };
+      });
+    } else {
+      setLayout(current => ({
+        ...current,
+        width: Math.max(
+          55,
+          Math.min(100 - current.left, interaction.startWidth + deltaXPercent),
+        ),
+        height: Math.max(
+          260,
+          Math.min(760, (interaction.startHeight || interaction.startRectHeight) + event.clientY - interaction.startY),
+        ),
+      }));
+    }
+  };
+
+  const endInteraction = (event: React.PointerEvent<HTMLElement>) => {
+    if (interactionRef.current?.pointerId === event.pointerId) {
+      interactionRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    }
+  };
+
+  const resetLayout = () => setLayout(DEFAULT_WATERMANCER_COVERAGE_LAYOUT);
+
   return (
-    <div className="sticky top-3 z-20 overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md">
-      <div className="border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
+    <div
+      ref={panelRef}
+      className="relative sticky z-20 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
+      style={{
+        top: `${layout.top}px`,
+        width: `${layout.width}%`,
+        marginLeft: `${layout.left}%`,
+        height: layout.height > 0 ? `${layout.height}px` : undefined,
+      }}
+    >
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
-            Base water + selected salts
-          </h2>
-          <span className="text-[10px] uppercase tracking-wider text-slate-500">
+          <div>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
+              Base water + selected salts
+            </h2>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+              Combined contribution toward the selected Watermancer profile.
+            </p>
+          </div>
+          <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
             {targetLabel} ion targets
           </span>
         </div>
-        <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-          Combined contribution toward the selected Watermancer profile.
-        </p>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span
+            role="button"
+            tabIndex={0}
+            title="Drag to move this sticky summary"
+            aria-label="Drag to move this sticky summary"
+            onPointerDown={event => beginInteraction('move', event)}
+            onPointerMove={handleInteractionMove}
+            onPointerUp={endInteraction}
+            onPointerCancel={endInteraction}
+            onKeyDown={event => {
+              if (event.key === 'ArrowUp') setLayout(current => ({ ...current, top: Math.max(0, current.top - 8) }));
+              if (event.key === 'ArrowDown') setLayout(current => ({ ...current, top: Math.min(240, current.top + 8) }));
+              if (event.key === 'ArrowLeft') setLayout(current => ({ ...current, left: Math.max(0, current.left - 3) }));
+              if (event.key === 'ArrowRight') setLayout(current => ({ ...current, left: Math.min(100 - current.width, current.left + 3) }));
+            }}
+            className="cursor-move select-none rounded-md border border-cyan-400/20 bg-slate-950/25 px-2 py-1 text-sm leading-none tracking-[-0.2em] text-cyan-200/70 outline-none hover:bg-cyan-400/10 focus:ring-2 focus:ring-cyan-400/50"
+          >
+            ⋮⋮
+          </span>
+          <button
+            type="button"
+            onClick={resetLayout}
+            title="Reset sticky summary size and position"
+            aria-label="Reset sticky summary size and position"
+            className="rounded-md border border-slate-700/60 bg-slate-950/25 px-2 py-1 text-[10px] text-slate-400 transition hover:border-cyan-400/30 hover:text-cyan-200"
+          >
+            Reset
+          </button>
+        </div>
       </div>
-      <div className="space-y-3 px-4 py-4 sm:px-6">
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
         {ACTIVE_ION_IDS.map(id => {
           const ion = ION_MAP[id];
           const baseWater = baseWaterIons[id] ?? 0;
@@ -4151,6 +4302,19 @@ function WatermancerIonCoverageBars({
           );
         })}
       </div>
+      <span
+        role="button"
+        tabIndex={0}
+        title="Drag to resize this sticky summary"
+        aria-label="Drag to resize this sticky summary"
+        onPointerDown={event => beginInteraction('resize', event)}
+        onPointerMove={handleInteractionMove}
+        onPointerUp={endInteraction}
+        onPointerCancel={endInteraction}
+        className="absolute bottom-0 right-0 h-7 w-7 cursor-se-resize touch-none select-none rounded-tl-lg border-l border-t border-cyan-400/25 bg-cyan-400/10 text-center text-xs leading-6 text-cyan-200/70 outline-none hover:bg-cyan-400/20 focus:ring-2 focus:ring-cyan-400/50"
+      >
+        ↘
+      </span>
     </div>
   );
 }
