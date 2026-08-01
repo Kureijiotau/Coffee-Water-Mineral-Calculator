@@ -2900,7 +2900,7 @@ function App() {
                    })}
                  </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt additions still needed after mineral-water coverage</span>
                     <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
                       {([
                         {
