@@ -1,14 +1,15 @@
 ---
-name: Watermancer salt inventory
-description: The durable meaning of salt availability and dosing modes in Watermancer matching
+name: Watermancer salt selection
+description: The durable interaction model for selecting salts and hydration forms in Watermancer
 ---
 
-Watermancer treats the salt inventory as the source of truth for salt participation:
+Watermancer uses a deliberately simple salt selection model:
 
-- **Unavailable** salts contribute nothing.
-- **Auto-dose** salts are optimized together by the existing matcher.
-- **Fixed dose** salts contribute their entered amount and are held constant while auto-dose salts are optimized.
+- Each salt has a hydration-form selector.
+- Each salt has a direct **Used / Not used** button.
+- Only salts marked **Used** are passed to the existing matcher.
+- The matcher calculates the dose; users do not choose an availability or fixed-dose mode.
 
-**Why:** A repeated salt-option list made availability ambiguous and allowed recipe-row values to leak into Watermancer matching even when the user had not selected those salts.
+**Why:** The availability/fixed-dose inventory added an unrequested concept and made salt selection harder to understand. The user explicitly preferred direct button selection.
 
-**How to apply:** Keep future Watermancer UI and solver changes expressed through these inventory modes; do not silently fall back to the Brewer/Alchemist recipe rows.
+**How to apply:** Keep future Watermancer salt UI expressed through form selection plus Used/Not used toggles; do not reintroduce availability or fixed-dose controls without explicit product direction.
