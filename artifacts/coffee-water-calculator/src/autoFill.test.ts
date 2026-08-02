@@ -726,6 +726,35 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(result.primaryPlan.finalIons.calcium).toBeCloseTo(10, 5);
   });
 
+  it('treats chloride deficits as strict unless a positive deviation is explicitly configured', () => {
+    const source = water('source', { calcium: 10, chloride: 9.6 });
+    source.volumeMl = '1000';
+    const strictResult = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, chloride: 10 },
+        selectedWaters: [source],
+        selectedSalts: [],
+        fixedWaterVolumes: { source: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'chloride'],
+        allowOvershoot: true,
+        allowedOvershootIons: ['calcium', 'chloride'],
+        overshootLimits: { calcium: 0, chloride: 0 },
+        softDeficitIons: [],
+        softDeficitLimits: {},
+        overshootOrder: ['calcium', 'chloride'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    expect(strictResult.status).toBe('partial');
+    expect(strictResult.primaryPlan.deviations.find(item => item.id === 'chloride')?.delta).toBeCloseTo(-0.4, 5);
+  });
+
   it('computes added-water ions using batch dilution and overfill scaling', () => {
     const filled = computeWatermancerBottledIons([
       water('source-a', { calcium: 20 }),

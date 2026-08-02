@@ -69,11 +69,11 @@ Salt matching must solve coupled allowed salts globally, not rely only on coordi
 
 **How to apply:** Enumerate feasible active salt sets for the small allowed inventory, solve their non-negative coupled-ion system, and rank candidates with the complete target/overshoot objective. Keep “use more salts” distinct by holding water volumes, not by discounting overshoots.
 
-Watermancer matching is target-first rather than profile-generating: selected waters and allowed salts are variables, while the selected ionic target remains authoritative. The default controlled budget is 0.5 ppm overshoot for positive target ions; only chloride and sulfate may absorb up to a 0.5 ppm deficit, and GH/KH deviation is included in route ranking.
+Watermancer matching is target-first rather than profile-generating: selected waters and allowed salts are variables, while the selected ionic target remains authoritative. All ion deviations are strict by default; only explicitly enabled ions with a positive value in the visible deviation controls receive tolerance, and GH/KH deviation is included in route ranking.
 
 **Why:** The intended workflow is to hit an existing ionic profile with whatever inputs are available, not to create a looser replacement profile. Primary GH/KH ions must not be sacrificed to improve a coupled counter-ion.
 
-**How to apply:** Treat calcium, magnesium, sodium, potassium, and bicarbonate deficits as hard violations. Treat chloride/sulfate deficits within their small allowance as acceptable residuals, keep zero-target ions as hard ceilings, and rank policy violations before raw overshoot count.
+**How to apply:** Treat every deficit and overshoot as a policy violation at zero tolerance unless the user explicitly enables that ion and enters a positive deviation limit. Keep zero-target ions as hard ceilings unless explicitly configured otherwise, and rank policy violations before raw overshoot count.
 
 Water-led routes must allocate base and added waters in one shared pass before salt matching; do not fill the groups sequentially.
 

@@ -53,12 +53,6 @@ type OvershootSettings = {
   limits: Partial<Record<IonId, number>>;
 };
 
-const WATERMANCER_SOFT_DEFICIT_IONS: IonId[] = ['chloride', 'sulfate'];
-const WATERMANCER_SOFT_DEFICIT_LIMITS: Partial<Record<IonId, number>> = {
-  chloride: 0.5,
-  sulfate: 0.5,
-};
-
 function HoldStepperButton({
   onStep,
   disabled,
@@ -661,7 +655,7 @@ const WATERMANCER_MIN_SALT_MG = 10;
 const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
   enabled: true,
   allowedIons: [...ACTIVE_ION_IDS],
-  limits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0.5])),
+  limits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0])),
 };
 
 function loadDropsPerMl(): number {
@@ -713,14 +707,19 @@ function loadOvershootSettings(): OvershootSettings {
       limits: unknown;
     }> | null;
     if (!stored) return DEFAULT_OVERSHOOT_SETTINGS;
+    const storedLimits = normalizeOvershootLimits(stored.limits);
+    const storedAllowed = normalizeOvershootAllowedIons(stored.allowedIons);
     const isLegacyDefault = stored.enabled === false
-      && (!Array.isArray(stored.allowedIons) || stored.allowedIons.length === 0)
-      && (!stored.limits || Object.keys(stored.limits as Record<string, unknown>).length === 0);
-    if (isLegacyDefault) return DEFAULT_OVERSHOOT_SETTINGS;
+      && storedAllowed.length === 0
+      && Object.keys(storedLimits).length === 0;
+    const isLockedHalfPpmDefault = stored.enabled === true
+      && storedAllowed.length === ACTIVE_ION_IDS.length
+      && ACTIVE_ION_IDS.every(id => storedLimits[id] === 0.5);
+    if (isLegacyDefault || isLockedHalfPpmDefault) return DEFAULT_OVERSHOOT_SETTINGS;
     return {
       enabled: stored.enabled === true,
-      allowedIons: normalizeOvershootAllowedIons(stored.allowedIons),
-      limits: normalizeOvershootLimits(stored.limits),
+      allowedIons: storedAllowed,
+      limits: storedLimits,
     };
   } catch {
     return DEFAULT_OVERSHOOT_SETTINGS;
@@ -1862,8 +1861,18 @@ function App() {
     allowOvershoot: overshootSettings.enabled,
     allowedOvershootIons: [...overshootSettings.allowedIons],
     overshootLimits: { ...overshootSettings.limits },
-    softDeficitIons: [...WATERMANCER_SOFT_DEFICIT_IONS],
-    softDeficitLimits: { ...WATERMANCER_SOFT_DEFICIT_LIMITS },
+    // Deficits are strict by default. A user-entered deviation in the
+    // per-ion policy box is the only source of a soft deficit allowance.
+    softDeficitIons: overshootSettings.enabled
+      ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+      : [],
+    softDeficitLimits: overshootSettings.enabled
+      ? Object.fromEntries(
+        overshootSettings.allowedIons
+          .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+          .map(id => [id, overshootSettings.limits[id] ?? 0]),
+      )
+      : {},
     minimumSaltDosePpm: Object.fromEntries(
       SALTS.map((salt, index) => {
         const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
@@ -4199,8 +4208,16 @@ function App() {
                          enabled: showWatermancer && overshootSettings.enabled,
                          allowedIons: overshootSettings.allowedIons,
                          maxPpm: overshootSettings.limits,
-                          softDeficitIons: WATERMANCER_SOFT_DEFICIT_IONS,
-                          softDeficitLimits: WATERMANCER_SOFT_DEFICIT_LIMITS,
+                          softDeficitIons: showWatermancer && overshootSettings.enabled
+                            ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                            : [],
+                          softDeficitLimits: showWatermancer && overshootSettings.enabled
+                            ? Object.fromEntries(
+                              overshootSettings.allowedIons
+                                .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                                .map(id => [id, overshootSettings.limits[id] ?? 0]),
+                            )
+                            : {},
                          priorityOrder: activeAutoFillPriority,
                        },
                     ))}
