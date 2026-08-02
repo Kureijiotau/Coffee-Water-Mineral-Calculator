@@ -69,6 +69,12 @@ Salt matching must solve coupled allowed salts globally, not rely only on coordi
 
 **How to apply:** Enumerate feasible active salt sets for the small allowed inventory, solve their non-negative coupled-ion system, and rank candidates with the complete target/overshoot objective. Keep “use more salts” distinct by holding water volumes, not by discounting overshoots.
 
+Watermancer matching is target-first rather than profile-generating: selected waters and allowed salts are variables, while the selected ionic target remains authoritative. The default controlled budget is 0.5 ppm overshoot for positive target ions; only chloride and sulfate may absorb up to a 0.5 ppm deficit, and GH/KH deviation is included in route ranking.
+
+**Why:** The intended workflow is to hit an existing ionic profile with whatever inputs are available, not to create a looser replacement profile. Primary GH/KH ions must not be sacrificed to improve a coupled counter-ion.
+
+**How to apply:** Treat calcium, magnesium, sodium, potassium, and bicarbonate deficits as hard violations. Treat chloride/sulfate deficits within their small allowance as acceptable residuals, keep zero-target ions as hard ceilings, and rank policy violations before raw overshoot count.
+
 Selected Watermancer salts are an allowed inventory, not a must-use recipe. The matcher should assign zero dose when another allowed salt reaches the target with a better coupled-ion profile.
 
 **Why:** A salt can solve one ion while unnecessarily oversupplying its counter-ion; requiring every selected salt would turn an availability choice into harmful chemistry.

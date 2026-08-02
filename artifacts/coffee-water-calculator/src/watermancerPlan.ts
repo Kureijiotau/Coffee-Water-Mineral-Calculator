@@ -7,6 +7,9 @@ export type WatermancerOvershootPolicy = {
   enabled: boolean;
   allowedIons: IonId[];
   maxPpm: Partial<Record<IonId, number>>;
+  /** Lower-impact ions may remain slightly below target when chemistry is coupled. */
+  softDeficitIons?: IonId[];
+  softDeficitLimits?: Partial<Record<IonId, number>>;
   priorityOrder: IonId[];
 };
 
@@ -23,6 +26,8 @@ export type WatermancerPlan = {
   allowOvershoot: boolean;
   allowedOvershootIons: IonId[];
   overshootLimits: Partial<Record<IonId, number>>;
+  softDeficitIons?: IonId[];
+  softDeficitLimits?: Partial<Record<IonId, number>>;
   overshootOrder: IonId[];
 };
 
@@ -111,6 +116,12 @@ export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
     allowedOvershootIons: [...new Set(plan.allowedOvershootIons ?? [])].sort(),
     overshootLimits: Object.fromEntries(
       Object.entries(plan.overshootLimits)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, value]) => [id, round(value ?? 0)]),
+    ),
+    softDeficitIons: [...new Set(plan.softDeficitIons ?? [])].sort(),
+    softDeficitLimits: Object.fromEntries(
+      Object.entries(plan.softDeficitLimits ?? {})
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([id, value]) => [id, round(value ?? 0)]),
     ),

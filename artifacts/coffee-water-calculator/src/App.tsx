@@ -54,6 +54,12 @@ type OvershootSettings = {
   limits: Partial<Record<IonId, number>>;
 };
 
+const WATERMANCER_SOFT_DEFICIT_IONS: IonId[] = ['chloride', 'sulfate'];
+const WATERMANCER_SOFT_DEFICIT_LIMITS: Partial<Record<IonId, number>> = {
+  chloride: 0.5,
+  sulfate: 0.5,
+};
+
 function HoldStepperButton({
   onStep,
   disabled,
@@ -345,8 +351,17 @@ export function autoCraftSaltTargets(
   );
   const controlledOvershootEnabled = overshootPolicy?.enabled === true;
   const overshootAllowanceFor = (ionId: IonId): number => {
-    if (!overshootPolicy?.enabled || !overshootPolicy.allowedIons.includes(ionId)) return 0;
+    if (
+      !overshootPolicy?.enabled
+      || !overshootPolicy.allowedIons.includes(ionId)
+      || (targetIons[ionId] ?? 0) <= 0
+    ) return 0;
     const value = Number(overshootPolicy.maxPpm[ionId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const softDeficitAllowanceFor = (ionId: IonId): number => {
+    if (!controlledOvershootEnabled || !overshootPolicy?.softDeficitIons?.includes(ionId)) return 0;
+    const value = Number(overshootPolicy.softDeficitLimits?.[ionId] ?? 0);
     return Number.isFinite(value) ? Math.max(0, value) : 0;
   };
   const weightedDeviation = (ionId: IonId, actual: number, target: number): number => {
@@ -358,13 +373,15 @@ export function autoCraftSaltTargets(
     }
     const allowance = overshootAllowanceFor(ionId);
     const excessBeyondPolicy = Math.max(delta - allowance, 0);
-    const deficit = Math.max(-delta, 0);
+    const deficit = Math.max(-delta - softDeficitAllowanceFor(ionId), 0);
     const priorityIndex = normalizedOvershootOrder.indexOf(ionId);
     const priorityWeight = normalizedOvershootOrder.length - Math.max(priorityIndex, 0);
+    const softDeficitIon = Boolean(overshootPolicy?.softDeficitIons?.includes(ionId));
+    const deficitWeight = softDeficitIon ? 2 : 12;
     return objective === 'coverage'
-      ? deficit * (2 + priorityWeight / normalizedOvershootOrder.length)
+      ? deficit * (deficitWeight + priorityWeight / normalizedOvershootOrder.length)
         + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length)
-      : deficit * (1 + priorityWeight / normalizedOvershootOrder.length)
+      : deficit * (deficitWeight + priorityWeight / normalizedOvershootOrder.length)
         + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length);
   };
   const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
@@ -467,7 +484,11 @@ export function autoCraftSaltTargets(
     const columns = allowedSalts.map(salt => IONS.map(ion => (
       salt.ions.find(item => item.ionId === ion.id)?.fraction ?? 0
     )));
-    const weights = IONS.map(ion => (targetIons[ion.id] ?? 0) > 0 ? 1 : 4);
+    const weights = IONS.map(ion => {
+      const target = targetIons[ion.id] ?? 0;
+      if (target <= 0) return 4;
+      return overshootPolicy?.softDeficitIons?.includes(ion.id) ? 2 : 12;
+    });
     let best: Record<string, number> | null = null;
     let bestScore = Number.POSITIVE_INFINITY;
 
@@ -632,9 +653,9 @@ const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
 const DEFAULT_DROPS_PER_ML = 20;
 const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
-  enabled: false,
-  allowedIons: [],
-  limits: {},
+  enabled: true,
+  allowedIons: [...ACTIVE_ION_IDS],
+  limits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0.5])),
 };
 
 function loadDropsPerMl(): number {
@@ -686,6 +707,10 @@ function loadOvershootSettings(): OvershootSettings {
       limits: unknown;
     }> | null;
     if (!stored) return DEFAULT_OVERSHOOT_SETTINGS;
+    const isLegacyDefault = stored.enabled === false
+      && (!Array.isArray(stored.allowedIons) || stored.allowedIons.length === 0)
+      && (!stored.limits || Object.keys(stored.limits as Record<string, unknown>).length === 0);
+    if (isLegacyDefault) return DEFAULT_OVERSHOOT_SETTINGS;
     return {
       enabled: stored.enabled === true,
       allowedIons: normalizeOvershootAllowedIons(stored.allowedIons),
@@ -905,6 +930,8 @@ function fillWatermancerRoute(
         enabled: inputs.plan.allowOvershoot,
         allowedIons: inputs.plan.allowedOvershootIons,
         maxPpm: inputs.plan.overshootLimits,
+        softDeficitIons: inputs.plan.softDeficitIons,
+        softDeficitLimits: inputs.plan.softDeficitLimits,
         priorityOrder: inputs.plan.overshootOrder,
       },
     )
@@ -925,6 +952,8 @@ function fillWatermancerRoute(
         enabled: inputs.plan.allowOvershoot,
         allowedIons: inputs.plan.allowedOvershootIons,
         maxPpm: inputs.plan.overshootLimits,
+        softDeficitIons: inputs.plan.softDeficitIons,
+        softDeficitLimits: inputs.plan.softDeficitLimits,
         priorityOrder: inputs.plan.overshootOrder,
       },
     )
@@ -964,6 +993,8 @@ function executeWatermancerRoute(
       enabled: routePlan.allowOvershoot,
       allowedIons: routePlan.allowedOvershootIons,
       maxPpm: routePlan.overshootLimits,
+      softDeficitIons: routePlan.softDeficitIons,
+      softDeficitLimits: routePlan.softDeficitLimits,
       priorityOrder: routePlan.overshootOrder,
     },
   );
@@ -979,15 +1010,29 @@ function executeWatermancerRoute(
     normalizeWatermancerIonOrder(routePlan.overshootOrder).map((id, index) => [id, index]),
   );
   const score = deviations.reduce((total, deviation) => {
-    const allowance = routePlan.allowOvershoot && routePlan.allowedOvershootIons.includes(deviation.id)
+    const allowance = routePlan.allowOvershoot
+      && routePlan.allowedOvershootIons.includes(deviation.id)
+      && (routePlan.targetIons[deviation.id] ?? 0) > 0
       ? Math.max(0, routePlan.overshootLimits[deviation.id] ?? 0)
       : 0;
     const excessBeyondAllowance = Math.max(deviation.delta - allowance, 0);
-    const shortfall = Math.max(-deviation.delta, 0);
+    const softDeficitAllowance = routePlan.allowOvershoot
+      && routePlan.softDeficitIons?.includes(deviation.id)
+      ? Math.max(0, routePlan.softDeficitLimits?.[deviation.id] ?? 0)
+      : 0;
+    const shortfall = Math.max(-deviation.delta - softDeficitAllowance, 0);
     const priorityWeight = IONS.length - (overshootRank.get(deviation.id) ?? IONS.length);
-    return total + shortfall * (1 + priorityWeight / IONS.length)
+    const deficitWeight = routePlan.softDeficitIons?.includes(deviation.id) ? 2 : 12;
+    return total + shortfall * (deficitWeight + priorityWeight / IONS.length)
       + excessBeyondAllowance * (4 + priorityWeight / IONS.length);
   }, 0);
+  const targetGh = computeGH(completeIonTotals(routePlan.targetIons));
+  const targetKh = computeKH(completeIonTotals(routePlan.targetIons));
+  const finalGh = computeGH(finalIons);
+  const finalKh = computeKH(finalIons);
+  const hardnessPenalty = (
+    Math.abs(finalGh - targetGh) + Math.abs(finalKh - targetKh)
+  ) * 1.5;
   const candidatePlan: WatermancerPlan = {
     ...routePlan,
     selectedWaters,
@@ -1007,7 +1052,7 @@ function executeWatermancerRoute(
     finalIons,
     deviations,
     overshoots,
-    score,
+    score: score + hardnessPenalty,
   };
 }
 
@@ -1031,12 +1076,17 @@ function watermancerDeviationBeyondPolicy(
   deviation: WatermancerIonDeviation,
   plan: WatermancerPlan,
 ): number {
-  const allowance = plan.allowOvershoot && plan.allowedOvershootIons.includes(deviation.id)
+  const allowance = plan.allowOvershoot
+    && plan.allowedOvershootIons.includes(deviation.id)
+    && deviation.target > 0
     ? Math.max(0, plan.overshootLimits[deviation.id] ?? 0)
     : 0;
-  return deviation.delta >= 0
-    ? Math.max(deviation.delta - allowance, 0)
-    : deviation.delta;
+  if (deviation.delta >= 0) return Math.max(deviation.delta - allowance, 0);
+  const softDeficitAllowance = plan.allowOvershoot
+    && plan.softDeficitIons?.includes(deviation.id)
+    ? Math.max(0, plan.softDeficitLimits?.[deviation.id] ?? 0)
+    : 0;
+  return Math.min(deviation.delta + softDeficitAllowance, 0);
 }
 
 export function solveWatermancerRoutes({
@@ -1106,8 +1156,13 @@ export function solveWatermancerRoutes({
     definition,
   ));
 
+  const policyViolationCount = (candidate: WatermancerRouteCandidate): number => (
+    candidate.deviations.filter(deviation => (
+      Math.abs(watermancerDeviationBeyondPolicy(deviation, candidate.plan)) > 0.05
+    )).length
+  );
   const primaryCandidate = [...candidates].sort((a, b) => (
-    a.overshoots.length - b.overshoots.length || a.score - b.score
+    policyViolationCount(a) - policyViolationCount(b) || a.score - b.score
   ))[0];
   const primaryPlan: WatermancerRouteCandidate = {
     ...primaryCandidate,
@@ -1805,6 +1860,8 @@ function App() {
     allowOvershoot: overshootSettings.enabled,
     allowedOvershootIons: [...overshootSettings.allowedIons],
     overshootLimits: { ...overshootSettings.limits },
+    softDeficitIons: [...WATERMANCER_SOFT_DEFICIT_IONS],
+    softDeficitLimits: { ...WATERMANCER_SOFT_DEFICIT_LIMITS },
     overshootOrder: [...activeAutoFillPriority],
   }), [
     activeAutoFillPriority,
@@ -4101,6 +4158,8 @@ function App() {
                          enabled: showWatermancer && overshootSettings.enabled,
                          allowedIons: overshootSettings.allowedIons,
                          maxPpm: overshootSettings.limits,
+                          softDeficitIons: WATERMANCER_SOFT_DEFICIT_IONS,
+                          softDeficitLimits: WATERMANCER_SOFT_DEFICIT_LIMITS,
                          priorityOrder: activeAutoFillPriority,
                        },
                     ))}

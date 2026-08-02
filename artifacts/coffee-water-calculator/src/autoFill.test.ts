@@ -542,6 +542,60 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(chloride).toBeCloseTo(2.7, 1);
   });
 
+  it('protects primary ions instead of trading calcium coverage for chloride', () => {
+    const result = autoCraftSaltTargets(
+      ['cacl2'],
+      {},
+      { calcium: 10, chloride: 10 },
+      {},
+      'closest-match',
+      'balanced',
+      {
+        enabled: true,
+        allowedIons: ['calcium', 'chloride'],
+        maxPpm: { calcium: 0.5, chloride: 0.5 },
+        softDeficitIons: ['chloride'],
+        softDeficitLimits: { chloride: 0.5 },
+        priorityOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate'],
+      },
+    );
+    const cacl2 = SALTS.find(salt => salt.id === 'cacl2')!;
+    const calcium = (result.cacl2 ?? 0)
+      * (cacl2.ions.find(contribution => contribution.ionId === 'calcium')?.fraction ?? 0);
+
+    expect(calcium).toBeGreaterThanOrEqual(9.5);
+  });
+
+  it('treats a small chloride deficit as within the controlled matching policy', () => {
+    const source = water('source', { calcium: 10, chloride: 9.6 });
+    source.volumeMl = '1000';
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, chloride: 10 },
+        selectedWaters: [source],
+        selectedSalts: [],
+        fixedWaterVolumes: { source: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate'],
+        allowOvershoot: true,
+        allowedOvershootIons: ['calcium', 'chloride'],
+        overshootLimits: { calcium: 0.5, chloride: 0.5 },
+        softDeficitIons: ['chloride', 'sulfate'],
+        softDeficitLimits: { chloride: 0.5, sulfate: 0.5 },
+        overshootOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    expect(result.status).toBe('matched');
+    expect(result.primaryPlan.finalIons.chloride).toBeCloseTo(9.6, 5);
+    expect(result.primaryPlan.finalIons.calcium).toBeCloseTo(10, 5);
+  });
+
   it('computes added-water ions using batch dilution and overfill scaling', () => {
     const filled = computeWatermancerBottledIons([
       water('source-a', { calcium: 20 }),
