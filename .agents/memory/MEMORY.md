@@ -15,3 +15,4 @@
 - [Mode workspace hierarchy](mode-workspace-hierarchy.md) — Alchemist starts collapsed around recipe preparation; Watermancer leads with ion targets and translates salt recipes
 - [Watermancer salt selection](watermancer-salt-inventory.md) — use a simple Used/Not used salt toggle and choose hydration form per salt
 - [Watermancer unified plan](watermancer-plan-model.md) — coordinate target, water, salt, strategy, priority, and overshoot decisions through one plan signature
+- [Watermancer result follow mode](watermancer-sticky-ui.md) — use viewport anchoring for reliable selected-route result following

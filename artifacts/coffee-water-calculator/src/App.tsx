@@ -5117,7 +5117,9 @@ function WatermancerIonCoverageBars({
 }) {
   return (
     <div
-      className={`${sticky ? 'sticky top-3' : 'relative'} z-20 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+      className={`${sticky
+        ? 'fixed inset-x-3 top-3 sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2'
+        : 'relative'} z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -5136,13 +5138,17 @@ function WatermancerIonCoverageBars({
         <button
           type="button"
           onClick={onToggleSticky}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-cyan-300/25 bg-slate-950/30 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-300/55 hover:bg-cyan-500/10"
+          className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+            sticky
+              ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65 hover:bg-emerald-500/20'
+              : 'border-cyan-300/25 bg-slate-950/30 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-500/10'
+          }`}
           aria-pressed={sticky}
           aria-label={sticky ? 'Stop following the selected route result' : 'Keep the selected route result visible while scrolling'}
           title={sticky ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
         >
           {sticky ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">{sticky ? 'Dock to page' : 'Follow screen'}</span>
+          <span className="hidden sm:inline">{sticky ? 'Following screen' : 'Follow screen'}</span>
         </button>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
