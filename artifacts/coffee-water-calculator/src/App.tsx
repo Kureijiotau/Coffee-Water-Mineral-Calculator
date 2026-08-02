@@ -1339,6 +1339,8 @@ function App() {
     result: WatermancerSolverResult;
     activeRouteId: string;
     transitionFromSignature?: string;
+    sourceBaseWaters: MineralWaterEntry[];
+    sourceAdditionWaters: MineralWaterEntry[];
   } | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
@@ -1868,6 +1870,8 @@ function App() {
       result,
       activeRouteId: result.primaryPlan.id,
       transitionFromSignature: createWatermancerPlanSignature(watermancerPlan),
+      sourceBaseWaters: mineralWaters.map(entry => ({ ...entry })),
+      sourceAdditionWaters: additionWaters.map(entry => ({ ...entry })),
     });
   };
 
@@ -1888,8 +1892,8 @@ function App() {
       {
         plan: watermancerPlan,
         batchMl,
-        baseWaters: mineralWaters,
-        additionWaters,
+        baseWaters: watermancerCraft?.sourceBaseWaters ?? mineralWaters,
+        additionWaters: watermancerCraft?.sourceAdditionWaters ?? additionWaters,
       },
       routeDefinition,
     );
@@ -1912,7 +1916,12 @@ function App() {
         ...current,
         signature: createWatermancerPlanSignature(executedCandidate.plan),
         activeRouteId: executedCandidate.id,
-        transitionFromSignature: current.signature,
+        // The state setters above update the plan inputs in the same React
+        // event. Keep the result visible against the signature from the
+        // render that handled the click while those inputs settle, rather
+        // than using current.signature (which can already be stale after a
+        // rapid series of route clicks).
+        transitionFromSignature: watermancerCraftSignature,
         result: {
           ...current.result,
           primaryPlan: current.result.primaryPlan.id === executedCandidate.id

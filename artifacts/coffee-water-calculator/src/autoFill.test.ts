@@ -228,6 +228,41 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(result.explanation).toContain('primary route');
   });
 
+  it('keeps route alternatives independently actionable from the same source waters', () => {
+    const source = water('source', { calcium: 12, magnesium: 6, sulfate: 18 });
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, magnesium: 8, sulfate: 20 },
+        selectedWaters: [source],
+        selectedSalts: ['mgso4', 'cacl2'],
+        fixedWaterVolumes: { source: 400 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sulfate'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium', 'sulfate'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    const waterLed = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-water');
+    const saltLed = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-salts');
+
+    expect(waterLed).toBeDefined();
+    expect(saltLed).toBeDefined();
+    expect(
+      waterLed!.baseWaters.map(entry => entry.volumeMl),
+    ).not.toEqual(saltLed!.baseWaters.map(entry => entry.volumeMl));
+    expect(waterLed!.saltTargets).not.toEqual(saltLed!.saltTargets);
+  });
+
   it('reports a blocked result when the plan cannot run', () => {
     const result = solveWatermancerRoutes({
       plan: {
