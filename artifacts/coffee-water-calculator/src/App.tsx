@@ -4315,8 +4315,8 @@ function BrewerSimpleRecipeCard({
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
-    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'nacl', label: 'Table salt', note: 'sweetness & balance' },
+    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
   ];
   const calciumTarget = saltTargets.cacl2 ?? 0;
   const effectiveSaltTargets = (() => {
@@ -4376,8 +4376,8 @@ function BrewerSimpleRecipeCard({
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
-    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'nacl', label: 'Table salt', note: 'roundness & balance' },
+    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
   ];
   const recipeSalts = activeSimpleSalts.filter(salt => calciumAvailable || salt.id !== 'cacl2');
@@ -5080,8 +5080,8 @@ function BrewStationMode({
   const steps = [
     { id: 'mgso4', label: 'Epsom Salt' },
     { id: 'nahco3', label: 'Baking Soda' },
-    ...(saltTargets.kcl > 0.05 ? [{ id: 'kcl', label: 'Potassium Chloride' }] : []),
     { id: 'nacl', label: 'Table Salt' },
+    ...(saltTargets.kcl > 0.05 ? [{ id: 'kcl', label: 'Potassium Chloride' }] : []),
     ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium Chloride' }] : []),
   ].map(step => {
     const salt = SALTS.find(item => item.id === step.id);

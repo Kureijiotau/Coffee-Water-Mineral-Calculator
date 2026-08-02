@@ -242,6 +242,14 @@ export const SALTS: SaltInfo[] = [
     ],
   },
   {
+    id: 'nacl', name: 'Sodium Chloride', formula: 'NaCl', anhydrousMass: 58.44,
+    hydrationForms: [{ label: 'Anhydrous', molarMass: 58.44 }],
+    ions: [
+      { ionId: 'sodium',   fraction: 22.990 / 58.44 },
+      { ionId: 'chloride', fraction: 35.450 / 58.44 },
+    ],
+  },
+  {
     id: 'khco3', name: 'Potassium Bicarbonate', formula: 'KHCO₃', anhydrousMass: 100.115,
     hydrationForms: [{ label: 'Anhydrous', molarMass: 100.115 }],
     ions: [
@@ -255,14 +263,6 @@ export const SALTS: SaltInfo[] = [
     ions: [
       { ionId: 'potassium', fraction: 39.098 / 74.551 },
       { ionId: 'chloride',  fraction: 35.450 / 74.551 },
-    ],
-  },
-  {
-    id: 'nacl', name: 'Sodium Chloride', formula: 'NaCl', anhydrousMass: 58.44,
-    hydrationForms: [{ label: 'Anhydrous', molarMass: 58.44 }],
-    ions: [
-      { ionId: 'sodium',   fraction: 22.990 / 58.44 },
-      { ionId: 'chloride', fraction: 35.450 / 58.44 },
     ],
   },
 ];
