@@ -1142,6 +1142,22 @@ function watermancerDeviationBeyondPolicy(
   return Math.min(deviation.delta + softDeficitAllowance, 0);
 }
 
+export function totalWatermancerDeviation(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+  plan: WatermancerPlan,
+): number {
+  return watermancerRouteDeviations(
+    Object.fromEntries(
+      IONS.map(({ id }) => [id, actual[id] ?? 0]),
+    ) as Record<IonId, number>,
+    target,
+  ).reduce(
+    (total, deviation) => total + Math.abs(watermancerDeviationBeyondPolicy(deviation, plan)),
+    0,
+  );
+}
+
 export function solveWatermancerRoutes({
   plan,
   batchMl,
@@ -2326,6 +2342,21 @@ function App() {
   const reviewWaterGh = computeGH(reviewWaterIons);
   const reviewWaterKh = computeKH(reviewWaterIons);
   const reviewWaterTds = Object.values(reviewWaterIons).reduce((total, ppm) => total + ppm, 0);
+  const reviewTotalDeviation = activeWatermancerRouteWithManualSalt
+    ? totalWatermancerDeviation(
+      reviewFinalIons,
+      watermancerIonTargets,
+      activeWatermancerRouteWithManualSalt.plan,
+    )
+    : 0;
+  const reviewDeviationCount = activeWatermancerRouteWithManualSalt
+    ? activeWatermancerRouteWithManualSalt.deviations.filter(deviation => (
+      Math.abs(watermancerDeviationBeyondPolicy(
+        deviation,
+        activeWatermancerRouteWithManualSalt.plan,
+      )) > 0.05
+    )).length
+    : 0;
   const completeWatermancerTargets = completeIonTotals(watermancerIonTargets);
   const originalTargetGh = computeGH(completeWatermancerTargets);
   const originalTargetKh = computeKH(completeWatermancerTargets);
@@ -4551,6 +4582,33 @@ function App() {
                   </div>
                 </div>
               </div>
+               <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+                 reviewTotalDeviation <= 0.05
+                   ? 'border-emerald-400/20 bg-emerald-500/5'
+                   : 'border-amber-400/20 bg-amber-500/5'
+               }`}>
+                 <div>
+                   <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                     Final total deviation
+                   </div>
+                   <div className="mt-1 text-[10px] text-slate-500">
+                     Sum of absolute ion gaps after configured tolerances
+                   </div>
+                 </div>
+                 <div className="flex items-baseline gap-2 text-right">
+                   <span className={`text-xl font-semibold tabular-nums ${
+                     reviewTotalDeviation <= 0.05 ? 'text-emerald-300' : 'text-amber-300'
+                   }`}>
+                     {reviewTotalDeviation.toFixed(2)}
+                   </span>
+                   <span className="text-xs text-slate-400">ppm</span>
+                   <span className="text-[10px] text-slate-500">
+                     {reviewDeviationCount === 0
+                       ? 'within tolerance'
+                       : `${reviewDeviationCount} ion${reviewDeviationCount === 1 ? '' : 's'} beyond tolerance`}
+                   </span>
+                 </div>
+               </div>
             </div>
           </div>
         )}

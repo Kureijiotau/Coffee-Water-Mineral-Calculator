@@ -8,6 +8,7 @@ import {
   solveWatermancerRoutes,
   selectWatermancerRouteCandidate,
   recalculateWatermancerRouteAtCurrentVolumes,
+  totalWatermancerDeviation,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -26,6 +27,23 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('reports the policy-adjusted total final ion deviation', () => {
+    const plan = {
+      targetIons: { calcium: 10, chloride: 0 },
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      softDeficitIons: [],
+      softDeficitLimits: {},
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    expect(totalWatermancerDeviation(
+      { calcium: 8, chloride: 1 },
+      plan.targetIons,
+      plan,
+    )).toBeCloseTo(3, 5);
+  });
+
   it('recalculates the selected route card from edited visible water volumes', () => {
     const source = water('source', { calcium: 10 });
     source.volumeMl = '500';
