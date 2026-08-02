@@ -229,6 +229,63 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(result.explanation).toContain('primary route');
   });
 
+  it('keeps the priority route identity when it wins the primary ranking', () => {
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, magnesium: 8, sulfate: 20 },
+        selectedWaters: [],
+        selectedSalts: ['mgso4', 'cacl2'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['magnesium', 'sulfate', 'calcium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['magnesium', 'sulfate', 'calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+
+    const priorityRoute = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'prioritize-ions');
+    expect(priorityRoute).toBeDefined();
+    expect(priorityRoute?.plan.overshootOrder).toEqual(priorityRoute?.plan.ionPriority);
+    expect(new Set([result.primaryPlan.id, ...result.alternatives.map(route => route.id)]).size).toBe(4);
+  });
+
+  it('removes an automatic salt target below the physical minimum instead of emitting a trace dose', () => {
+    const kcl = SALTS.find(salt => salt.id === 'kcl')!;
+    const minimumPpm = 10 * kcl.anhydrousMass / kcl.hydrationForms[0].molarMass;
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { potassium: 0.2, chloride: 0.2 },
+        selectedWaters: [],
+        selectedSalts: ['kcl'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['potassium', 'chloride'],
+        allowOvershoot: true,
+        allowedOvershootIons: ['potassium', 'chloride'],
+        overshootLimits: { potassium: 0.5, chloride: 0.5 },
+        minimumSaltDosePpm: { kcl: minimumPpm },
+        overshootOrder: ['potassium', 'chloride'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+
+    for (const route of [result.primaryPlan, ...result.alternatives]) {
+      expect(route.saltTargets.kcl ?? 0).toBe(0);
+    }
+  });
+
   it('keeps route alternatives independently actionable from the same source waters', () => {
     const source = water('source', { calcium: 12, magnesium: 6, sulfate: 18 });
     const result = solveWatermancerRoutes({

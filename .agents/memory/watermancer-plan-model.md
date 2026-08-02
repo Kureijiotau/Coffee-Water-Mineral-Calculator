@@ -105,6 +105,18 @@ Manual Watermancer salt additions are physical-mass overrides layered on top of 
 
 **How to apply:** Keep manual additions separate from route candidates, convert them to the current hydration form only for chemistry calculations, and preserve the physical mg value when routes or automatic inputs change.
 
+The selected Watermancer route must be tracked by both its stable route kind and its displayed ID, because the best-ranked candidate can be promoted into the primary card and receive a rewritten ID.
+
+**Why:** Ranking can move Prioritize ions into the primary slot; matching only the old ID then makes the result card show a different candidate's chemistry.
+
+**How to apply:** Resolve active candidates by route kind when the stored ID no longer matches, and label route cards from their actual kind rather than assuming the primary slot is balanced.
+
+All automatic Watermancer salt output paths, including sodium correction and displayed recipe maps, must apply the physical minimum-dose rule; only explicit user-entered manual additions may intentionally be below that minimum.
+
+**Why:** A post-solver correction or presentation-specific map can reintroduce the same unusable 1 mg dose that the solver correctly rejected.
+
+**How to apply:** Practicalize automatic route targets before final-mixture, recipe, and salt-table calculations, while keeping manual physical-mass additions separate.
+
 Displayed route results must not use stale calculated values after current inputs change; the route candidates and review values should recalculate live from the current plan.
 
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.

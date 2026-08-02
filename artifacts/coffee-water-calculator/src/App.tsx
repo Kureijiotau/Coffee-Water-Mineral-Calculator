@@ -1509,6 +1509,7 @@ function App() {
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerCraft, setWatermancerCraft] = useState<{
     activeRouteId: string;
+    activeRouteKind?: WatermancerRouteCandidate['kind'];
   } | null>(null);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
@@ -1903,9 +1904,18 @@ function App() {
   );
   const activeWatermancerSaltTargets = useMemo(
     () => [watermancerLiveResult.primaryPlan, ...watermancerLiveResult.alternatives]
-      .find(candidate => candidate.id === watermancerCraft?.activeRouteId)
+      .find(candidate => (
+        candidate.id === watermancerCraft?.activeRouteId
+        || (watermancerCraft?.activeRouteKind !== undefined
+          && candidate.kind === watermancerCraft.activeRouteKind)
+      ))
       ?.saltTargets ?? selectedWatermancerSaltTargets,
-    [selectedWatermancerSaltTargets, watermancerCraft?.activeRouteId, watermancerLiveResult],
+    [
+      selectedWatermancerSaltTargets,
+      watermancerCraft?.activeRouteId,
+      watermancerCraft?.activeRouteKind,
+      watermancerLiveResult,
+    ],
   );
   // Route candidates are the live Watermancer result. The selected route ID
   // is the only piece of state we preserve between recalculations, so edits
@@ -1915,10 +1925,23 @@ function App() {
     ?? watermancerDisplayedResult.primaryPlan.id;
   const activeWatermancerRoute = useMemo(
     () => [watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives]
-      .find(candidate => candidate.id === watermancerDisplayedRouteId)
+      .find(candidate => (
+        candidate.id === watermancerDisplayedRouteId
+        || (watermancerCraft?.activeRouteKind !== undefined
+          && candidate.kind === watermancerCraft.activeRouteKind)
+      ))
       ?? watermancerDisplayedResult.primaryPlan,
-    [watermancerDisplayedResult, watermancerDisplayedRouteId],
+    [watermancerCraft?.activeRouteKind, watermancerDisplayedResult, watermancerDisplayedRouteId],
   );
+  const practicalWatermancerSaltTargets = useMemo(() => (
+    Object.fromEntries(
+      SALTS.map(salt => {
+        const target = Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0));
+        const minimum = Math.max(0, Number(activeWatermancerRoute.plan.minimumSaltDosePpm?.[salt.id] ?? 0));
+        return [salt.id, target > 0 && target < minimum ? 0 : target];
+      }),
+    ) as Record<string, number>
+  ), [activeWatermancerRoute]);
   const watermancerManualSaltPpm = useMemo(() => Object.fromEntries(
     SALTS.map((salt, index) => {
       const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
@@ -1934,10 +1957,17 @@ function App() {
   const activeWatermancerRouteWithManualSalt = useMemo(() => {
     const manualEntries = Object.entries(watermancerManualSaltPpm)
       .filter(([, target]) => target > 0.000001);
-    if (manualEntries.length === 0) return activeWatermancerRoute;
-    const saltTargets = { ...activeWatermancerRoute.saltTargets };
+    const saltTargets = { ...practicalWatermancerSaltTargets };
     for (const [saltId, target] of manualEntries) {
       saltTargets[saltId] = (saltTargets[saltId] ?? 0) + target;
+    }
+    if (
+      manualEntries.length === 0
+      && Object.entries(saltTargets).every(([saltId, target]) => (
+        Math.abs(target - (activeWatermancerRoute.saltTargets[saltId] ?? 0)) < 0.000001
+      ))
+    ) {
+      return activeWatermancerRoute;
     }
     const automaticSaltIons = computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1);
     const bottledIons = Object.fromEntries(
@@ -1951,7 +1981,7 @@ function App() {
       deviations: watermancerRouteDeviations(finalIons, activeWatermancerRoute.plan.targetIons),
       overshoots: findIonOvershoots(finalIons, activeWatermancerRoute.plan.targetIons),
     };
-  }, [activeWatermancerRoute, watermancerManualSaltPpm]);
+  }, [activeWatermancerRoute, practicalWatermancerSaltTargets, watermancerManualSaltPpm]);
   const adjustWatermancerManualSalt = (saltId: string, deltaMg: number) => {
     setWatermancerManualSaltAdditionsMg(current => {
       const next = Math.max(0, Number((current[saltId] ?? 0) + deltaMg));
@@ -2090,7 +2120,10 @@ function App() {
     // The route has just been executed from the current on-screen inputs.
     // Preserve only the selected card; the next render performs the same full
     // pass again from the newly applied waters and current salt inventory.
-    setWatermancerCraft({ activeRouteId: executedCandidate.id });
+    setWatermancerCraft({
+      activeRouteId: executedCandidate.id,
+      activeRouteKind: executedCandidate.kind,
+    });
   };
 
   // Watermancer's allowed salt inventory is the source of truth for dosing.
@@ -2101,10 +2134,12 @@ function App() {
     return Object.fromEntries(
       SALTS.map(salt => [
         salt.id,
-        (activeWatermancerSaltTargets[salt.id] ?? 0) + (watermancerManualSaltPpm[salt.id] ?? 0),
+        (
+          practicalWatermancerSaltTargets[salt.id] ?? 0
+        ) + (watermancerManualSaltPpm[salt.id] ?? 0),
       ]),
     );
-  }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets, watermancerManualSaltPpm]);
+  }, [activeWatermancerSaltTargets, practicalWatermancerSaltTargets, showWatermancer, suggestedSaltTargets, watermancerManualSaltPpm]);
   const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
@@ -2120,10 +2155,15 @@ function App() {
   const sodiumCorrectionTarget = hasMineralWater && sodiumCorrectionAllowed && (showAlchemist || sodiumCorrectionOn)
     ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
     : 0;
+  const practicalSodiumCorrectionTarget = showWatermancer
+    && sodiumCorrectionTarget > 0
+    && sodiumCorrectionTarget < (activeWatermancerRoute.plan.minimumSaltDosePpm?.nacl ?? 0)
+    ? 0
+    : sodiumCorrectionTarget;
   const effectiveSuggestedSaltTargets = useMemo<Record<string, number>>(() => ({
     ...selectedSuggestedSaltTargets,
-    nacl: (selectedSuggestedSaltTargets.nacl ?? 0) + sodiumCorrectionTarget,
-  }), [selectedSuggestedSaltTargets, sodiumCorrectionTarget]);
+    nacl: (selectedSuggestedSaltTargets.nacl ?? 0) + practicalSodiumCorrectionTarget,
+  }), [practicalSodiumCorrectionTarget, selectedSuggestedSaltTargets]);
 
   // One dosing target map for every user-facing preparation surface. With
   // source water, this is the final salt contribution still needed after
@@ -4441,7 +4481,7 @@ function App() {
                     {SALTS.map((salt, index) => {
                       const option = watermancerSaltOptions[index];
                       const used = watermancerUsedSaltIds.includes(salt.id);
-                      const activePpm = used ? (activeWatermancerSaltTargets[salt.id] ?? option.targetPpm) : 0;
+                      const activePpm = used ? (practicalWatermancerSaltTargets[salt.id] ?? option.targetPpm) : 0;
                       const activeMg = activePpm > 0
                         ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
@@ -4576,7 +4616,11 @@ function App() {
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
                   {[watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives].map(candidate => {
-                    const active = candidate.id === watermancerDisplayedRouteId;
+                    const active = candidate.id === watermancerDisplayedRouteId
+                      || (
+                        watermancerCraft?.activeRouteKind !== undefined
+                        && candidate.kind === watermancerCraft.activeRouteKind
+                      );
                     const meaningful = candidate.deviations.filter(item => (
                       Math.abs(watermancerDeviationBeyondPolicy(item, candidate.plan)) > 0.05
                     ));
@@ -4585,15 +4629,15 @@ function App() {
                       .reduce((total, water) => total + num(water.volumeMl), 0);
                     const saltCount = Object.values(candidate.saltTargets)
                       .filter(target => target > 0.000001).length;
-                     const routeMode = candidate.id === 'primary'
-                       ? 'Balanced'
-                       : candidate.kind === 'use-more-water'
+                     const routeMode = candidate.kind === 'use-more-water'
                       ? 'Water-led'
                       : candidate.kind === 'use-more-salts'
                         ? 'Salt-led'
                         : candidate.kind === 'prioritize-ions'
                           ? 'Priority-led'
-                          : 'Balanced';
+                           : candidate.id === 'balanced'
+                             ? 'Balanced'
+                             : 'Balanced';
                     return (
                       <div
                         key={candidate.id}
