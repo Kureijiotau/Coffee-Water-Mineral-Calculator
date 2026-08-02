@@ -134,6 +134,20 @@ describe('serializeRecipeFile', () => {
 // ─── parseRecipeFile ──────────────────────────────────────────────────────────
 
 describe('parseRecipeFile', () => {
+  it('accepts potassium chloride as a shared recipe salt', () => {
+    const payload = JSON.stringify({
+      kind: RECIPE_FILE_KIND,
+      version: 1,
+      name: 'Potassium chloride recipe',
+      salts: { kcl: { target: '10', formIdx: 0 } },
+    });
+
+    const result = parseRecipeFile(payload);
+
+    expect(result).not.toBeNull();
+    expect(result!.salts.kcl).toEqual({ target: '10', formIdx: 0 });
+  });
+
   it('returns null for invalid JSON', () => {
     expect(parseRecipeFile('{NOT_VALID_JSON')).toBeNull();
   });

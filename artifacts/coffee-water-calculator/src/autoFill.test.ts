@@ -175,6 +175,21 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(targets.nacl).toBeUndefined();
   });
 
+  it('auto-crafts potassium chloride against potassium and chloride targets', () => {
+    const targets = autoCraftSaltTargets(
+      ['kcl'],
+      {},
+      { potassium: 3, chloride: 10 },
+    );
+    const kcl = SALTS.find(salt => salt.id === 'kcl')!;
+    const potassium = (targets.kcl ?? 0) * (kcl.ions.find(c => c.ionId === 'potassium')?.fraction ?? 0);
+    const chloride = (targets.kcl ?? 0) * (kcl.ions.find(c => c.ionId === 'chloride')?.fraction ?? 0);
+
+    expect(targets.kcl).toBeGreaterThan(0);
+    expect(potassium).toBeCloseTo(3, 1);
+    expect(chloride).toBeCloseTo(2.7, 1);
+  });
+
   it('computes added-water ions using batch dilution and overfill scaling', () => {
     const filled = computeWatermancerBottledIons([
       water('source-a', { calcium: 20 }),

@@ -71,7 +71,7 @@ function ionTotalsForSaltRecipe(recipe: SaltRecipe): Record<IonId, number> {
   return computeIonTotals(saltTargets, {}, 1);
 }
 
-const BREWER_SALT_IDS = new Set(['mgso4', 'cacl2', 'nahco3', 'nacl']);
+const BREWER_SALT_IDS = new Set(['mgso4', 'cacl2', 'nahco3', 'kcl', 'nacl']);
 const WATERMANCER_SALT_IDS = new Set(['mgcit', 'cacit']);
 
 function nerdLevelForRecipe(recipe: SaltRecipe): NerdLevel {
@@ -4315,6 +4315,7 @@ function BrewerSimpleRecipeCard({
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
+    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'nacl', label: 'Table salt', note: 'sweetness & balance' },
   ];
   const calciumTarget = saltTargets.cacl2 ?? 0;
@@ -4375,6 +4376,7 @@ function BrewerSimpleRecipeCard({
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
+    { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'nacl', label: 'Table salt', note: 'roundness & balance' },
     { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
   ];
@@ -4754,6 +4756,7 @@ function BrewerRecipeStepsModal({
     cacit: 'Calcium citrate',
     nahco3: 'Baking soda',
     khco3: 'Potassium bicarbonate',
+    kcl: 'Potassium chloride',
     nacl: 'Table salt',
   };
   const amount = (salt: typeof SALTS[number], targets = saltTargets) => {
@@ -5077,6 +5080,7 @@ function BrewStationMode({
   const steps = [
     { id: 'mgso4', label: 'Epsom Salt' },
     { id: 'nahco3', label: 'Baking Soda' },
+    ...(saltTargets.kcl > 0.05 ? [{ id: 'kcl', label: 'Potassium Chloride' }] : []),
     { id: 'nacl', label: 'Table Salt' },
     ...(saltTargets.cacl2 > 0.05 ? [{ id: 'cacl2', label: 'Calcium Chloride' }] : []),
   ].map(step => {

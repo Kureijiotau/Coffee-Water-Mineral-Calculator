@@ -71,6 +71,16 @@ describe('computeIonTotals', () => {
     expect(totals.sulfate).toBeCloseTo(expectedSulfate, 5);
   });
 
+  it('adds potassium chloride contributions to potassium and chloride', () => {
+    const kcl = SALTS.find(s => s.id === 'kcl')!;
+    const totals = computeIonTotals({ kcl: 10 }, {}, 0);
+
+    expect(totals.potassium).toBeCloseTo(10 * (39.098 / 74.551), 5);
+    expect(totals.chloride).toBeCloseTo(10 * (35.450 / 74.551), 5);
+    expect(kcl.formula).toBe('KCl');
+    expect(kcl.hydrationForms).toHaveLength(1);
+  });
+
   it('adds base water ions scaled by dilution factor', () => {
     const totals = computeIonTotals({}, { magnesium: 20 }, 0.5);
     expect(totals.magnesium).toBeCloseTo(10, 5);

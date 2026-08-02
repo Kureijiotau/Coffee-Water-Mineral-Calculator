@@ -250,6 +250,14 @@ export const SALTS: SaltInfo[] = [
     ],
   },
   {
+    id: 'kcl', name: 'Potassium Chloride', formula: 'KCl', anhydrousMass: 74.551,
+    hydrationForms: [{ label: 'Anhydrous', molarMass: 74.551 }],
+    ions: [
+      { ionId: 'potassium', fraction: 39.098 / 74.551 },
+      { ionId: 'chloride',  fraction: 35.450 / 74.551 },
+    ],
+  },
+  {
     id: 'nacl', name: 'Sodium Chloride', formula: 'NaCl', anhydrousMass: 58.44,
     hydrationForms: [{ label: 'Anhydrous', molarMass: 58.44 }],
     ions: [
@@ -424,6 +432,7 @@ const SALT_SOLUBILITY_G_PER_100ML: Partial<Record<string, number>> = {
   cacit:  0.085,
   nahco3: 9.6,
   khco3:  33,
+  kcl:    34.2,
   nacl:   36,
 };
 
