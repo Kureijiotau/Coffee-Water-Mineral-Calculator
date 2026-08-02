@@ -4964,6 +4964,7 @@ function BrewerDropperCalibrationCard({
   const [doseDrops, setDoseDrops] = useState('20');
   const [doseVolumeLiters, setDoseVolumeLiters] = useState('1');
   const [acknowledged, setAcknowledged] = useState(() => loadDropperCalibrationAcknowledged());
+  const [collapsed, setCollapsed] = useState(false);
   const parsedDrops = Number(dropCount);
   const parsedVolume = Number(measuredVolume);
   const measuredDropsPerMl = parsedDrops > 0 && parsedVolume > 0
@@ -4998,9 +4999,13 @@ function BrewerDropperCalibrationCard({
     >
       <button
         type="button"
-        onClick={acknowledge}
+        onClick={() => {
+          acknowledge();
+          if (collapsed) setCollapsed(false);
+        }}
         className="flex w-full items-start gap-3 border-b border-sky-400/15 bg-gradient-to-r from-sky-500/10 via-cyan-500/[0.04] to-transparent px-4 py-3 text-left sm:px-6"
         aria-label="Acknowledge dropper calibration"
+        aria-expanded={!collapsed}
       >
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/30 bg-sky-400/10 text-sky-200">
           <FlaskConical className="h-4 w-4" />
@@ -5008,11 +5013,13 @@ function BrewerDropperCalibrationCard({
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wider text-sky-100">Calibrate dropper</h2>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-            Turn drops into a reliable mg/L dose for your brew water.
+            {collapsed
+              ? `${dropsPerMl.toFixed(1)} drops/mL · Click to review calibration`
+              : 'Turn drops into a reliable mg/L dose for your brew water.'}
           </p>
         </div>
       </button>
-      <div className="space-y-3 px-4 py-4 sm:px-6">
+      {!collapsed && <div className="space-y-3 px-4 py-4 sm:px-6">
         <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-3 text-[11px] leading-relaxed text-slate-300">
           <div className="font-semibold text-sky-200">Measure once, dose with confidence</div>
           <ol className="mt-2 list-inside list-decimal space-y-1 text-slate-400">
@@ -5064,7 +5071,10 @@ function BrewerDropperCalibrationCard({
           </div>
           <button
             type="button"
-            onClick={() => onCalibrate(measuredDropsPerMl)}
+            onClick={() => {
+              onCalibrate(measuredDropsPerMl);
+              setCollapsed(true);
+            }}
             disabled={!canCalibrate}
             className="shrink-0 rounded-lg border border-sky-300/35 bg-sky-400/15 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:bg-sky-400/25 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -5129,7 +5139,7 @@ function BrewerDropperCalibrationCard({
         <p className="text-[10px] leading-relaxed text-slate-500">
           The default stock is 50 mg/mL (a 5% solution). Change it when a stock has a different concentration. Recheck if you change droppers or technique.
         </p>
-      </div>
+      </div>}
     </div>
   );
 }
