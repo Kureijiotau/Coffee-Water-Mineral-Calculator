@@ -18,6 +18,14 @@ export interface SharedWater {
  */
 export const SHARED_WATERS: SharedWater[] = [
   {
+    id: 25,
+    name: "S.Pellegrino",
+    ions: { sodium: 31.2, potassium: 2.4, calcium: 169, magnesium: 49.2, chloride: 49.8, sulfate: 403, bicarbonate: 249 },
+    metadata: { tds: 860, ph: 7.6, silica: 7.2 },
+    shared: "yes",
+    createdAt: "2026-08-02T00:00:00.000Z",
+  },
+  {
     id: 24,
     name: "Vichy Catalan",
     ions: { sodium: 1097, calcium: 14, sulfate: 50, chloride: 584, magnesium: 6, potassium: 51, bicarbonate: 2081 },
