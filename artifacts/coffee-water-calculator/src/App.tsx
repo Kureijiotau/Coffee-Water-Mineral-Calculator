@@ -2242,6 +2242,7 @@ function App() {
          </div>
 
          {showWatermancer && (
+          <div className="order-1">
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               targetIons={watermancerIonTargets}
@@ -2255,16 +2256,8 @@ function App() {
               onTargetSourceChange={setWatermancerTargetSource}
               onSaveWmProfile={handleSaveWmProfile}
             />
+          </div>
          )}
-          {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
-            <WatermancerIonCoverageBars
-              baseWaterIons={baseWaterIons}
-              selectedSaltIons={watermancerSelectedSaltIonTotals}
-              targetIons={watermancerIonTargets}
-              targetLabel={watermancerTargetSourceLabel}
-            />
-          )}
-
          {/* Mineral Table */}
            {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
@@ -2731,7 +2724,7 @@ function App() {
         </div>}
 
         {showWatermancer && (
-          <div className="order-4">
+          <div className="order-7">
             <WaterChemistryCard
               estimate={waterChemistry.estimate}
               basePH={waterChemistry.basePH}
@@ -2741,7 +2734,7 @@ function App() {
         )}
 
         {/* Taste Profile */}
-        <div className="order-5">
+        <div className="order-9">
           <TasteProfileCard
             ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
             gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
@@ -2751,7 +2744,7 @@ function App() {
         </div>
 
         {/* Mineral Water Base */}
-        {(showAlchemist || showWatermancer) && <div className={`${showAlchemist ? 'order-3 border-emerald-400/25' : 'order-6 border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
+        {(showAlchemist || showWatermancer) && <div className={`order-3 ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title="Mineral Water Base"
@@ -3338,7 +3331,7 @@ function App() {
                   const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-sky-400' : 'bg-slate-600';
                   const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-sky-300' : 'text-slate-500';
                   const label = level === 'overshoot'
-                    ? `⚠ Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
+                    ? `Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
                     : level === 'full'
                      ? `${covered.toFixed(1)} ppm — ${noRecipeSelected ? 'safe limit' : 'salt target'} of ${target.toFixed(1)} reached`
                     : level === 'partial'
@@ -3397,7 +3390,9 @@ function App() {
                        <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
                          <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
                          {covered >= target - 0.01 ? (
-                           <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
+                           <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
+                             <Check className="h-3.5 w-3.5" /> Covered
+                           </span>
                          ) : (
                            <span className="text-sm font-semibold tabular-nums text-amber-300">
                              {remaining.toFixed(1)} ppm
@@ -3485,10 +3480,54 @@ function App() {
                   />
                </div>
              )}
+          </div>
+        </div>}
 
-             {/* Remaining gaps — what the active Watermancer target still needs */}
-             {showWatermancer && batchMl > 0 && (
-              <div className="border-t border-slate-700/40 pt-4">
+        {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
+          <div className="order-6">
+            <WatermancerIonCoverageBars
+              baseWaterIons={baseWaterIons}
+              selectedSaltIons={watermancerSelectedSaltIonTotals}
+              targetIons={watermancerIonTargets}
+              targetLabel={watermancerTargetSourceLabel}
+            />
+          </div>
+        )}
+
+        {showWatermancer && hasMineralWater && (
+          <div className="order-8 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
+            <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
+              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
+            </div>
+            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
+              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
+              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
+              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
+                <span className="h-4 w-px bg-slate-700" />
+                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
+                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
+                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                  </span>
+                ) : (
+                  <span className="text-lg font-semibold text-slate-500">—</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mineral Water Addition */}
+        {showWatermancer && batchMl > 0 && (
+          <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+            <SectionHeader
+              icon={<GiSaltShaker className="w-4 h-4" />}
+              title="Add Salts & Match Target"
+            />
+            <div className="px-4 sm:px-6 py-4 space-y-4">
+
                  <div className="flex flex-wrap items-center justify-between gap-2">
                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                      Still needed from salts
@@ -3508,13 +3547,17 @@ function App() {
                       <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
                          {coveredTarget ? (
-                           <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
+                           <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
+                             <Check className="h-3.5 w-3.5" /> Covered
+                           </span>
                          ) : remaining > 0 ? (
                           <span className="text-sm font-semibold tabular-nums text-amber-300">
                             {remaining.toFixed(1)} ppm
                           </span>
                         ) : (
-                          <span className="text-sm font-semibold tabular-nums text-emerald-300">✓ Covered</span>
+                          <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
+                             <Check className="h-3.5 w-3.5" /> Covered
+                          </span>
                         )}
                       </div>
                     );
@@ -3583,7 +3626,7 @@ function App() {
                                     {activeMg.toFixed(1)} mg
                                  </div>
                                   {used && watermancerCraftIsCurrent && (
-                                    <div className="mt-0.5 text-[9px] text-emerald-200/70">Auto-crafted dose</div>
+                                    <div className="mt-0.5 text-[9px] text-emerald-200/70">Auto-matched dose</div>
                                   )}
                                </button>
                              );
@@ -3595,18 +3638,18 @@ function App() {
                  </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/25 bg-cyan-500/[0.07] px-3 py-3">
                     <div className="min-w-0">
-                      <span className="block text-xs font-semibold text-cyan-100">Auto-craft selected salts</span>
+                      <span className="block text-xs font-semibold text-cyan-100">Auto-match ionic target</span>
                       <span className="mt-0.5 block text-[10px] leading-relaxed text-slate-400">
                         Choose how the Used salts and added waters should close the selected ion profile.
                       </span>
                       {watermancerCraftIsCurrent && (
                         <span className="mt-1 block text-[10px] font-medium text-emerald-300">
-                          Crafted doses are active. Changing a salt, water, or target profile requires a new craft.
+                           Matched doses are active. Changing a salt, water, or target profile requires a new match.
                         </span>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <label className="sr-only" htmlFor="watermancer-auto-craft-preset">Auto-craft strategy</label>
+                      <label className="sr-only" htmlFor="watermancer-auto-craft-preset">Matching strategy</label>
                       <select
                         id="watermancer-auto-craft-preset"
                         value={autoCraftPreset}
@@ -3615,7 +3658,7 @@ function App() {
                           setWatermancerCraft(null);
                         }}
                         className="max-w-[190px] rounded-lg border border-cyan-300/30 bg-slate-950/70 px-2.5 py-2 text-[11px] font-medium text-cyan-100 outline-none transition focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-400/20"
-                        title="Choose the Auto-craft optimization strategy"
+                        title="Choose the Auto-match optimization strategy"
                       >
                         <option value="closest-match">Closest match</option>
                         <option value="water-first">Water first</option>
@@ -3627,11 +3670,11 @@ function App() {
                         disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
                         className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
                         title={watermancerUsedSaltIds.length === 0
-                          ? 'Mark at least one salt Used before auto-crafting'
+                          ? 'Mark at least one salt Used before auto-matching'
                           : 'Optimize the selected salt doses against the active ion profile'}
                       >
                         <Sparkles className="h-3.5 w-3.5" />
-                        Auto-craft
+                         Auto-match
                       </button>
                     </div>
                   </div>
@@ -3717,38 +3760,10 @@ function App() {
                       </p>
                     </div>
                   )}
-              </div>
-            )}
-          </div>
-        </div>}
-
-        {showWatermancer && hasMineralWater && (
-          <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
-            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
-            <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
-              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
-            </div>
-            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
-              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
-              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
-              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
-                <span className="h-4 w-px bg-slate-700" />
-                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
-                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
-                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
-                  </span>
-                ) : (
-                  <span className="text-lg font-semibold text-slate-500">—</span>
-                )}
-              </div>
             </div>
           </div>
         )}
-
-        {/* Mineral Water Addition */}
-        {showWatermancer && <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+        {showWatermancer && <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
           <SectionHeader
             icon={<PouringCarafeIcon />}
             title="Mineral Water Addition"
@@ -5330,7 +5345,7 @@ function BrewerRecipeStepsModal({
                         <span className={`text-sm font-semibold tabular-nums ${bicarbonateBlocked ? 'text-rose-300' : covered ? 'text-emerald-300' : 'text-amber-300'}`}>
                           {bicarbonateBlocked
                             ? `Blocked: ${bicarbonateFromWater.toFixed(1)} ppm`
-                            : covered ? '✓ Covered' : `${remaining.toFixed(1)} ppm`}
+                            : covered ? 'Covered' : `${remaining.toFixed(1)} ppm`}
                         </span>
                       </div>
                     );
@@ -5702,7 +5717,7 @@ function BrewStationMode({
           </div>
 
           <div className={`mx-auto mt-7 w-full max-w-4xl rounded-2xl px-5 py-5 text-center text-xl font-black sm:text-2xl ${isOnTarget ? 'bg-emerald-400 text-black' : 'bg-zinc-900 text-zinc-400'}`}>
-            {isOnTarget ? '✓ Check — on target' : targetDifference < 0 ? `Add ${formatted(Math.abs(targetDifference))} g to reach the cumulative target` : `Remove ${formatted(targetDifference)} g to reach the cumulative target`}
+            {isOnTarget ? 'Check — on target' : targetDifference < 0 ? `Add ${formatted(Math.abs(targetDifference))} g to reach the cumulative target` : `Remove ${formatted(targetDifference)} g to reach the cumulative target`}
           </div>
 
           <div className="mt-5 flex gap-3">
