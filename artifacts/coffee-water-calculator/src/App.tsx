@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, ListChecks, Sparkles, SlidersHorizontal } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -1510,6 +1510,8 @@ function App() {
   const [watermancerCraft, setWatermancerCraft] = useState<{
     activeRouteId: string;
   } | null>(null);
+  const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
+  const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -1917,6 +1919,49 @@ function App() {
       ?? watermancerDisplayedResult.primaryPlan,
     [watermancerDisplayedResult, watermancerDisplayedRouteId],
   );
+  const watermancerManualSaltPpm = useMemo(() => Object.fromEntries(
+    SALTS.map((salt, index) => {
+      const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+      const mg = Math.max(0, Number(watermancerManualSaltAdditionsMg[salt.id] ?? 0));
+      return [
+        salt.id,
+        L > 0 && mg > 0
+          ? mg * salt.anhydrousMass / (L * form.molarMass)
+          : 0,
+      ];
+    }),
+  ) as Record<string, number>, [L, rows, watermancerManualSaltAdditionsMg]);
+  const activeWatermancerRouteWithManualSalt = useMemo(() => {
+    const manualEntries = Object.entries(watermancerManualSaltPpm)
+      .filter(([, target]) => target > 0.000001);
+    if (manualEntries.length === 0) return activeWatermancerRoute;
+    const saltTargets = { ...activeWatermancerRoute.saltTargets };
+    for (const [saltId, target] of manualEntries) {
+      saltTargets[saltId] = (saltTargets[saltId] ?? 0) + target;
+    }
+    const automaticSaltIons = computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1);
+    const bottledIons = Object.fromEntries(
+      IONS.map(({ id }) => [id, Math.max((activeWatermancerRoute.finalIons[id] ?? 0) - (automaticSaltIons[id] ?? 0), 0)]),
+    ) as Record<IonId, number>;
+    const finalIons = computeIonTotals(saltTargets, bottledIons, 1);
+    return {
+      ...activeWatermancerRoute,
+      saltTargets,
+      finalIons,
+      deviations: watermancerRouteDeviations(finalIons, activeWatermancerRoute.plan.targetIons),
+      overshoots: findIonOvershoots(finalIons, activeWatermancerRoute.plan.targetIons),
+    };
+  }, [activeWatermancerRoute, watermancerManualSaltPpm]);
+  const adjustWatermancerManualSalt = (saltId: string, deltaMg: number) => {
+    setWatermancerManualSaltAdditionsMg(current => {
+      const next = Math.max(0, Number((current[saltId] ?? 0) + deltaMg));
+      if (next <= 0) {
+        const { [saltId]: _removed, ...rest } = current;
+        return rest;
+      }
+      return { ...current, [saltId]: next };
+    });
+  };
     // Build the salt recommendation shown below the calculator. The sulfate /
     // chloride preference is a real source selection for magnesium, not merely
     // a sort order. Keep the user's actual recipe rows unchanged until they
@@ -2053,8 +2098,13 @@ function App() {
     if (!showWatermancer) {
       return suggestedSaltTargets;
     }
-    return activeWatermancerSaltTargets;
-  }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
+    return Object.fromEntries(
+      SALTS.map(salt => [
+        salt.id,
+        (activeWatermancerSaltTargets[salt.id] ?? 0) + (watermancerManualSaltPpm[salt.id] ?? 0),
+      ]),
+    );
+  }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets, watermancerManualSaltPpm]);
   const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
@@ -2133,9 +2183,9 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
-  const reviewFinalIons = activeWatermancerRoute?.finalIons ?? suggestedIonTotals;
-  const reviewSaltIons = activeWatermancerRoute
-    ? computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1)
+  const reviewFinalIons = activeWatermancerRouteWithManualSalt?.finalIons ?? suggestedIonTotals;
+  const reviewSaltIons = activeWatermancerRouteWithManualSalt
+    ? computeIonTotals(activeWatermancerRouteWithManualSalt.saltTargets, {}, 1)
     : finalSaltIons;
   const reviewWaterIons = Object.fromEntries(
     IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
@@ -2258,6 +2308,8 @@ function App() {
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerCraft(null);
+    setWatermancerManualSaltAdditionsMg({});
+    setWatermancerResultSticky(true);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
@@ -4302,10 +4354,12 @@ function App() {
 
           {showWatermancer && activeWatermancerRoute && (
             <div className="order-5" data-watermancer-stage="results">
-            <WatermancerIonCoverageBars
-              actualIons={activeWatermancerRoute.finalIons}
+             <WatermancerIonCoverageBars
+               actualIons={activeWatermancerRouteWithManualSalt.finalIons}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
+               sticky={watermancerResultSticky}
+               onToggleSticky={() => setWatermancerResultSticky(current => !current)}
             />
           </div>
         )}
@@ -4376,10 +4430,11 @@ function App() {
             <div className="px-4 sm:px-6 py-4 space-y-4">
 
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-700/60">
-                  <div className="hidden grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,0.8fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                  <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                     <span>Salt</span>
                     <span>Hydration form</span>
-                    <span>Dose</span>
+                    <span>Route dose</span>
+                    <span>Add manually</span>
                     <span>Allowed</span>
                   </div>
                   <div className="divide-y divide-slate-700/50">
@@ -4390,8 +4445,9 @@ function App() {
                       const activeMg = activePpm > 0
                         ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
+                      const manualMg = Math.max(0, Number(watermancerManualSaltAdditionsMg[salt.id] ?? 0));
                       return (
-                        <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,0.7fr)_minmax(0,0.8fr)] sm:items-center">
+                        <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] sm:items-center">
                           <div>
                             <div className="text-xs font-semibold text-slate-200">{salt.name}</div>
                             <div className="mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
@@ -4417,6 +4473,42 @@ function App() {
                           </label>
                           <div className={`text-sm font-semibold tabular-nums ${used && activeMg > 0 ? 'text-emerald-300' : 'text-slate-600'}`}>
                             {used && activeMg > 0 ? `${activeMg.toFixed(1)} mg` : '—'}
+                          </div>
+                          <div className="flex min-w-0 items-center gap-1.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Add manually</span>
+                            <HoldStepperButton
+                              onStep={() => adjustWatermancerManualSalt(salt.id, -1)}
+                              disabled={manualMg <= 0}
+                              label={`Remove 1 mg of ${salt.name}`}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </HoldStepperButton>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={manualMg}
+                              onChange={event => {
+                                const value = Math.max(0, Number(event.target.value) || 0);
+                                setWatermancerManualSaltAdditionsMg(current => (
+                                  value > 0
+                                    ? { ...current, [salt.id]: value }
+                                    : Object.fromEntries(Object.entries(current).filter(([id]) => id !== salt.id))
+                                ));
+                              }}
+                              className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70"
+                              aria-label={`Manual ${salt.name} addition in milligrams`}
+                            />
+                            <span className="text-[10px] text-slate-500">mg</span>
+                            <HoldStepperButton
+                              onStep={() => adjustWatermancerManualSalt(salt.id, 1)}
+                              disabled={false}
+                              label={`Add 1 mg of ${salt.name}`}
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:bg-cyan-500/20"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </HoldStepperButton>
                           </div>
                           <button
                             type="button"
@@ -4953,15 +5045,18 @@ function WatermancerIonCoverageBars({
   actualIons,
   targetIons,
   targetLabel,
+  sticky,
+  onToggleSticky,
 }: {
   actualIons: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
+  sticky: boolean;
+  onToggleSticky: () => void;
 }) {
   return (
     <div
-      className="relative sticky z-20 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
-      style={{ top: '12px' }}
+      className={`${sticky ? 'sticky top-3' : 'relative'} z-20 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
     >
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -4977,6 +5072,17 @@ function WatermancerIonCoverageBars({
             {targetLabel} ion targets
           </span>
         </div>
+        <button
+          type="button"
+          onClick={onToggleSticky}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-cyan-300/25 bg-slate-950/30 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-300/55 hover:bg-cyan-500/10"
+          aria-pressed={sticky}
+          aria-label={sticky ? 'Stop following the selected route result' : 'Keep the selected route result visible while scrolling'}
+          title={sticky ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
+        >
+          {sticky ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          <span className="hidden sm:inline">{sticky ? 'Dock to page' : 'Follow screen'}</span>
+        </button>
       </div>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
         {ACTIVE_ION_IDS.map(id => {

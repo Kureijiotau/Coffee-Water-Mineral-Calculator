@@ -99,6 +99,12 @@ Watermancer salt candidates must be practical to weigh: each salt is either omit
 
 **How to apply:** Include per-salt minimum dose thresholds in the plan and solver objective, reject trace candidates during coupled-salt solving, and let mineral-water or alternate-salt routes win when they avoid an impractical dose.
 
+Manual Watermancer salt additions are physical-mass overrides layered on top of the selected route; they may be entered independently of the automatic allowed-salt inventory and must flow through final ion, GH/KH, TDS, coverage, and recipe-step calculations.
+
+**Why:** Users may intentionally fine-tune one salt after selecting a route, and the manual amount should remain exactly weighable in mg rather than becoming another solver-generated target.
+
+**How to apply:** Keep manual additions separate from route candidates, convert them to the current hydration form only for chemistry calculations, and preserve the physical mg value when routes or automatic inputs change.
+
 Displayed route results must not use stale calculated values after current inputs change; the route candidates and review values should recalculate live from the current plan.
 
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
