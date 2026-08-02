@@ -21,11 +21,11 @@ The separate pre-match strategy selector is intentionally removed; Phase 4 route
 
 **How to apply:** Keep any internal primary strategy defaults needed by the solver, but do not reintroduce a standalone matching-strategy panel unless the route model changes substantially.
 
-Post-match ion coverage must render from the active route candidate's final-ion profile and remain mounted whenever a solver result exists; it must not be gated by transient current water-volume totals.
+Route candidates and ion coverage should derive live from the current Watermancer plan; there is no separate user-facing Auto-match action. The selected route's final-ion profile must remain mounted and visible while plan inputs update.
 
-**Why:** Applying a route updates water state asynchronously, and volume-based visibility caused the ion card to unmount and remount during route selection.
+**Why:** A separate Auto-match button created a fragile intermediate state, and volume-based visibility caused the ion card to unmount and remount during route selection.
 
-**How to apply:** Use the selected candidate as the display source of truth immediately after Auto-match and whenever a route is applied.
+**How to apply:** Keep the route selector visible whenever Watermancer is active, solve candidates from current inputs, preserve only the selected route ID and stable source-water baseline across route clicks, and use the selected candidate as the review-card source.
 
 Route selection must preserve the Auto-match result surface during asynchronous plan updates, and the displayed Primary match should be the candidate with the fewest overshoots, using score as the tie-breaker.
 
