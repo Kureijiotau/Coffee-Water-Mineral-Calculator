@@ -16,3 +16,4 @@
 - [Watermancer salt selection](watermancer-salt-inventory.md) — use a simple Used/Not used salt toggle and choose hydration form per salt
 - [Watermancer unified plan](watermancer-plan-model.md) — coordinate target, water, salt, strategy, priority, and overshoot decisions through one plan signature
 - [Watermancer result follow mode](watermancer-sticky-ui.md) — use viewport anchoring for reliable selected-route result following
+- [Watermancer live volume result](watermancer-live-volume-card.md) — selected-route ion results must recalculate from edited visible water volumes

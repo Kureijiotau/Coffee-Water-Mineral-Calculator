@@ -7,6 +7,7 @@ import {
   translateSaltTargetsToIonTargets,
   solveWatermancerRoutes,
   selectWatermancerRouteCandidate,
+  recalculateWatermancerRouteAtCurrentVolumes,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -25,6 +26,54 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('recalculates the selected route card from edited visible water volumes', () => {
+    const source = water('source', { calcium: 10 });
+    source.volumeMl = '500';
+    const solved = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10 },
+        selectedWaters: [source],
+        selectedSalts: [],
+        fixedWaterVolumes: { source: 500 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+    const selected = solved.alternatives.find(candidate => candidate.kind === 'use-more-salts')
+      ?? solved.primaryPlan;
+    const current = recalculateWatermancerRouteAtCurrentVolumes(
+      {
+        plan: selected.plan,
+        batchMl: 1000,
+        baseWaters: [source],
+        additionWaters: [],
+      },
+      selected,
+    );
+    const editedSource = { ...source, volumeMl: '501' };
+    const edited = recalculateWatermancerRouteAtCurrentVolumes(
+      {
+        plan: selected.plan,
+        batchMl: 1000,
+        baseWaters: [editedSource],
+        additionWaters: [],
+      },
+      selected,
+    );
+
+    expect(current.finalIons.calcium).toBeCloseTo(5, 5);
+    expect(edited.finalIons.calcium).toBeCloseTo(5.01, 5);
+  });
+
   it('keeps the selected route kind when live reranking reuses the primary route ID', () => {
     const candidates = [
       {

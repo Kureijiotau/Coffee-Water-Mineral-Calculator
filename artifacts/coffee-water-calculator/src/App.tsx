@@ -1077,6 +1077,38 @@ function executeWatermancerRoute(
   };
 }
 
+export function recalculateWatermancerRouteAtCurrentVolumes(
+  inputs: WatermancerRouteInputs,
+  selectedCandidate: WatermancerRouteCandidate,
+  selectedSaltTargets = selectedCandidate.saltTargets,
+): WatermancerRouteCandidate {
+  // Route application may fill water, but subsequent edits to the visible
+  // volume controls must be treated as the user's current source volumes.
+  // Keep the selected route's salt dose fixed for this live preview so a
+  // 1 mL water adjustment cannot be hidden by an automatic salt re-solve.
+  const selectedWaters = [...inputs.baseWaters, ...inputs.additionWaters];
+  const bottledIons = computeWatermancerBottledIons(selectedWaters, inputs.batchMl);
+  const finalIons = computeIonTotals(selectedSaltTargets, bottledIons, 1);
+  const deviations = watermancerRouteDeviations(finalIons, selectedCandidate.plan.targetIons);
+  const routePlan: WatermancerPlan = {
+    ...selectedCandidate.plan,
+    selectedWaters,
+    fixedWaterVolumes: Object.fromEntries(
+      selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+    ),
+  };
+  return {
+    ...selectedCandidate,
+    plan: routePlan,
+    baseWaters: inputs.baseWaters.map(entry => ({ ...entry })),
+    additionWaters: inputs.additionWaters.map(entry => ({ ...entry })),
+    saltTargets: { ...selectedSaltTargets },
+    finalIons,
+    deviations,
+    overshoots: findIonOvershoots(finalIons, selectedCandidate.plan.targetIons),
+  };
+}
+
 function watermancerRouteDeviations(
   actual: Record<IonId, number>,
   target: Partial<Record<IonId, number>>,
@@ -1251,6 +1283,10 @@ function WaterVolumeStepper({
   const repeatIntervalRef = useRef<number | null>(null);
   const currentValue = Math.max(0, Math.round(num(value)));
   const currentValueRef = useRef(currentValue);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
   useEffect(() => {
     currentValueRef.current = currentValue;
   }, [currentValue]);
@@ -1265,8 +1301,8 @@ function WaterVolumeStepper({
   const adjust = useCallback((delta: number) => {
     const nextValue = Math.max(0, currentValueRef.current + delta);
     currentValueRef.current = nextValue;
-    onChange(String(nextValue));
-  }, [onChange]);
+    onChangeRef.current(String(nextValue));
+  }, []);
 
   const startRepeating = useCallback((delta: number) => {
     stopRepeating();
@@ -1391,6 +1427,11 @@ function formatIonDeviation(value: number): string {
   const rounded = Math.abs(value) >= 10 ? Math.round(Math.abs(value)) : Number(Math.abs(value).toFixed(1));
   if (rounded === 0) return '0';
   return `${value > 0 ? '+' : '−'}${rounded}`;
+}
+
+function formatLiveIonPpm(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  return value.toFixed(4).replace(/\.?0+$/, '');
 }
 
 function App() {
@@ -1527,6 +1568,7 @@ function App() {
   const [watermancerCraft, setWatermancerCraft] = useState<{
     activeRouteId: string;
     activeRouteKind?: WatermancerRouteCandidate['kind'];
+    activeSaltTargets?: Record<string, number>;
   } | null>(null);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
@@ -1949,12 +1991,33 @@ function App() {
   const watermancerDisplayedRouteId = watermancerCraft?.activeRouteId
     ?? watermancerDisplayedResult.primaryPlan.id;
   const activeWatermancerRoute = useMemo(
-    () => selectWatermancerRouteCandidate(
-      [watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives],
-      watermancerDisplayedRouteId,
+    () => {
+      const selectedCandidate = selectWatermancerRouteCandidate(
+        [watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives],
+        watermancerDisplayedRouteId,
+        watermancerCraft?.activeRouteKind,
+      ) ?? watermancerDisplayedResult.primaryPlan;
+      return recalculateWatermancerRouteAtCurrentVolumes(
+        {
+          plan: watermancerPlan,
+          batchMl,
+          baseWaters: mineralWaters,
+          additionWaters,
+        },
+        selectedCandidate,
+        watermancerCraft?.activeSaltTargets ?? selectedCandidate.saltTargets,
+      );
+    },
+    [
+      additionWaters,
+      batchMl,
+      mineralWaters,
       watermancerCraft?.activeRouteKind,
-    ) ?? watermancerDisplayedResult.primaryPlan,
-    [watermancerCraft?.activeRouteKind, watermancerDisplayedResult, watermancerDisplayedRouteId],
+      watermancerCraft?.activeSaltTargets,
+      watermancerDisplayedResult,
+      watermancerDisplayedRouteId,
+      watermancerPlan,
+    ],
   );
   const practicalWatermancerSaltTargets = useMemo(() => (
     Object.fromEntries(
@@ -2146,6 +2209,7 @@ function App() {
     setWatermancerCraft({
       activeRouteId: executedCandidate.id,
       activeRouteKind: executedCandidate.kind,
+      activeSaltTargets: { ...executedCandidate.saltTargets },
     });
   };
 
@@ -5193,10 +5257,10 @@ function WatermancerIonCoverageBars({
           const status = target <= 0
             ? actual > tolerance ? 'above target' : 'no target set'
             : overshoot
-              ? `${(actual - target).toFixed(1)} ppm above target`
+              ? `${formatLiveIonPpm(actual - target)} ppm above target`
               : covered
-                ? `${actual.toFixed(1)} ppm — target reached`
-                : `${actual.toFixed(1)} ppm of ${target.toFixed(1)} ppm covered`;
+                ? `${formatLiveIonPpm(actual)} ppm — target reached`
+                : `${formatLiveIonPpm(actual)} ppm of ${formatLiveIonPpm(target)} ppm covered`;
 
           return (
             <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
@@ -5213,8 +5277,8 @@ function WatermancerIonCoverageBars({
                 </div>
               </div>
               <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
-                {actual.toFixed(1)}
-                <span className="font-normal text-slate-500"> / {target.toFixed(1)}</span>
+                {formatLiveIonPpm(actual)}
+                <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
               </span>
             </div>
           );
