@@ -349,6 +349,14 @@ export function autoCraftSaltTargets(
     overshootPolicy?.priorityOrder ?? AUTO_FILL_SOURCE_PRIORITY,
   );
   const controlledOvershootEnabled = overshootPolicy?.enabled === true;
+  const minimumDosePpmFor = (saltId: string): number => {
+    const value = Number(overshootPolicy?.minimumSaltDosePpm?.[saltId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const practicalSaltDose = (saltId: string, candidate: number): number => {
+    if (!Number.isFinite(candidate) || candidate <= 1e-8) return 0;
+    return Math.max(candidate, minimumDosePpmFor(saltId));
+  };
   const overshootAllowanceFor = (ionId: IonId): number => {
     if (
       !overshootPolicy?.enabled
@@ -522,7 +530,10 @@ export function autoCraftSaltTargets(
         const solution = solveLinearSystem(normal, rhs);
         if (!solution || solution.some(value => value < -1e-7 || value > 5000)) continue;
         activeIndexes.forEach((saltIndex, index) => {
-          candidateTargets[allowedSalts[saltIndex].id] = Math.max(0, solution[index]);
+          candidateTargets[allowedSalts[saltIndex].id] = practicalSaltDose(
+            allowedSalts[saltIndex].id,
+            solution[index],
+          );
         });
       }
 
@@ -542,7 +553,7 @@ export function autoCraftSaltTargets(
     let largestChange = 0;
     for (const salt of allowedSalts) {
       const previous = targets[salt.id] ?? 0;
-      const candidates = [0];
+      const candidates = [0, minimumDosePpmFor(salt.id)];
       for (const contribution of salt.ions) {
         if (contribution.fraction <= 0) continue;
         let actualWithoutSalt = fixedIonTotals[contribution.ionId] ?? 0;
@@ -551,17 +562,14 @@ export function autoCraftSaltTargets(
           actualWithoutSalt += (targets[otherSalt.id] ?? 0)
             * (otherSalt.ions.find(item => item.ionId === contribution.ionId)?.fraction ?? 0);
         }
-           candidates.push(Math.max(
-          0,
-             Math.min(
-               5000,
-               (
-                 (targetIons[contribution.ionId] ?? 0)
-                 + overshootAllowanceFor(contribution.ionId)
-                 - actualWithoutSalt
-               ) / contribution.fraction,
-             ),
-        ));
+          candidates.push(practicalSaltDose(salt.id, Math.min(
+            5000,
+            (
+              (targetIons[contribution.ionId] ?? 0)
+              + overshootAllowanceFor(contribution.ionId)
+              - actualWithoutSalt
+            ) / contribution.fraction,
+          )));
       }
       if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
         const ionsWithoutSalt = Object.fromEntries(IONS.map(ion => [
@@ -575,13 +583,10 @@ export function autoCraftSaltTargets(
         const khContribution = computeKH(saltIons);
         const ratioDenominator = ghContribution / targetGh - khContribution / targetKh;
         if (Math.abs(ratioDenominator) > 1e-10) {
-          candidates.push(Math.max(
-            0,
-            Math.min(
-              5000,
-              (khWithoutSalt / targetKh - ghWithoutSalt / targetGh) / ratioDenominator,
-            ),
-          ));
+          candidates.push(practicalSaltDose(salt.id, Math.min(
+            5000,
+            (khWithoutSalt / targetKh - ghWithoutSalt / targetGh) / ratioDenominator,
+          )));
         }
       }
       const next = candidates.reduce((best, candidate) => {
@@ -592,7 +597,7 @@ export function autoCraftSaltTargets(
           ? candidate
           : best;
       }, 0);
-      targets[salt.id] = Number(next.toFixed(6));
+       targets[salt.id] = Number(practicalSaltDose(salt.id, next).toFixed(6));
       largestChange = Math.max(largestChange, Math.abs(next - previous));
     }
     if (largestChange < 1e-7) break;
@@ -651,6 +656,8 @@ const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-po
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
 const DEFAULT_DROPS_PER_ML = 20;
+/** Smallest practical physical salt dose shown by Watermancer. */
+const WATERMANCER_MIN_SALT_MG = 10;
 const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
   enabled: true,
   allowedIons: [...ACTIVE_ION_IDS],
@@ -991,6 +998,7 @@ function executeWatermancerRoute(
       maxPpm: routePlan.overshootLimits,
       softDeficitIons: routePlan.softDeficitIons,
       softDeficitLimits: routePlan.softDeficitLimits,
+      minimumSaltDosePpm: routePlan.minimumSaltDosePpm,
       priorityOrder: routePlan.overshootOrder,
     },
   );
@@ -1853,6 +1861,15 @@ function App() {
     overshootLimits: { ...overshootSettings.limits },
     softDeficitIons: [...WATERMANCER_SOFT_DEFICIT_IONS],
     softDeficitLimits: { ...WATERMANCER_SOFT_DEFICIT_LIMITS },
+    minimumSaltDosePpm: Object.fromEntries(
+      SALTS.map((salt, index) => {
+        const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+        const dosePpm = L > 0
+          ? WATERMANCER_MIN_SALT_MG * salt.anhydrousMass / (L * form.molarMass)
+          : 0;
+        return [salt.id, dosePpm];
+      }),
+    ),
     overshootOrder: [...activeAutoFillPriority],
   }), [
     activeAutoFillPriority,
@@ -1860,6 +1877,8 @@ function App() {
     autoCraftPreset,
     mineralWaters,
     overshootSettings,
+    rows,
+    L,
     watermancerSaltObjective,
     watermancerIonTargets,
     watermancerUsedSaltIds,
@@ -4420,6 +4439,9 @@ function App() {
                       );
                     })}
                   </div>
+                 <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
+                   Practical dosing rule: Watermancer omits any salt below {WATERMANCER_MIN_SALT_MG} mg of the selected physical form and searches for water or salt alternatives instead.
+                 </p>
                 </div>
             </div>
           </div>

@@ -10,6 +10,8 @@ export type WatermancerOvershootPolicy = {
   /** Lower-impact ions may remain slightly below target when chemistry is coupled. */
   softDeficitIons?: IonId[];
   softDeficitLimits?: Partial<Record<IonId, number>>;
+  /** A salt is either omitted or dosed at/above this ppm floor. */
+  minimumSaltDosePpm?: Partial<Record<string, number>>;
   priorityOrder: IonId[];
 };
 
@@ -28,6 +30,7 @@ export type WatermancerPlan = {
   overshootLimits: Partial<Record<IonId, number>>;
   softDeficitIons?: IonId[];
   softDeficitLimits?: Partial<Record<IonId, number>>;
+  minimumSaltDosePpm?: Partial<Record<string, number>>;
   overshootOrder: IonId[];
 };
 
@@ -122,6 +125,11 @@ export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
     softDeficitIons: [...new Set(plan.softDeficitIons ?? [])].sort(),
     softDeficitLimits: Object.fromEntries(
       Object.entries(plan.softDeficitLimits ?? {})
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([id, value]) => [id, round(value ?? 0)]),
+    ),
+    minimumSaltDosePpm: Object.fromEntries(
+      Object.entries(plan.minimumSaltDosePpm ?? {})
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([id, value]) => [id, round(value ?? 0)]),
     ),

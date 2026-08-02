@@ -93,6 +93,12 @@ Selected Watermancer salts are an allowed inventory, not a must-use recipe. The 
 
 **How to apply:** Keep zero as a candidate dose for every allowed salt, optimize the complete ion profile, and label the UI as “Allowed” rather than “Used.”
 
+Watermancer salt candidates must be practical to weigh: each salt is either omitted or dosed at least 10 mg of the selected physical hydration form.
+
+**Why:** Sub-10 mg recommendations such as 0.4 mg KCl are not meaningfully doseable with normal kitchen or lab scales and should not be presented as finished recipes.
+
+**How to apply:** Include per-salt minimum dose thresholds in the plan and solver objective, reject trace candidates during coupled-salt solving, and let mineral-water or alternate-salt routes win when they avoid an impractical dose.
+
 Displayed route results must not use stale calculated values after current inputs change; the route candidates and review values should recalculate live from the current plan.
 
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
