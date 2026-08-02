@@ -217,6 +217,9 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(result.finalIons).toEqual(result.primaryPlan.finalIons);
     expect(result.deviations).toHaveLength(IONS.length);
     expect(result.overshoots).toEqual(result.primaryPlan.overshoots);
+    const priorityRoute = result.alternatives.find(route => route.kind === 'prioritize-ions');
+    expect(priorityRoute?.plan.overshootOrder).toEqual(priorityRoute?.plan.ionPriority);
+    expect(priorityRoute?.plan.ionPriority).not.toEqual(result.primaryPlan.plan.ionPriority);
     expect(result.explanation).toContain('primary route');
   });
 

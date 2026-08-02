@@ -843,6 +843,15 @@ export function solveWatermancerRoutes({
   additionWaters,
 }: WatermancerRouteInputs): WatermancerSolverResult {
   const currentPriority = [...plan.ionPriority];
+  const currentBottledIons = computeWatermancerBottledIons(
+    [...baseWaters, ...additionWaters],
+    batchMl,
+  );
+  const shortfallPriority = [...ACTIVE_ION_IDS].sort((a, b) => {
+    const shortfallA = Math.max((plan.targetIons[a] ?? 0) - (currentBottledIons[a] ?? 0), 0);
+    const shortfallB = Math.max((plan.targetIons[b] ?? 0) - (currentBottledIons[b] ?? 0), 0);
+    return shortfallB - shortfallA || currentPriority.indexOf(a) - currentPriority.indexOf(b);
+  });
   const routeDefinitions: Array<{
     id: string;
     kind: WatermancerRouteCandidate['kind'];
@@ -889,11 +898,7 @@ export function solveWatermancerRoutes({
       label: 'Prioritize ions',
       explanation: 'Use water first, ordering source selection around the ions with the largest current shortfalls.',
       fillWater: true,
-      priority: [...currentPriority].sort((a, b) => {
-        const targetA = plan.targetIons[a] ?? 0;
-        const targetB = plan.targetIons[b] ?? 0;
-        return targetB - targetA || currentPriority.indexOf(a) - currentPriority.indexOf(b);
-      }),
+      priority: shortfallPriority,
       saltObjective: 'coverage',
       strategy: 'water-first',
     },
@@ -905,7 +910,9 @@ export function solveWatermancerRoutes({
       strategy: definition.strategy,
       saltObjective: definition.saltObjective,
       ionPriority: definition.priority,
-      overshootOrder: plan.overshootOrder,
+      overshootOrder: definition.kind === 'prioritize-ions'
+        ? definition.priority
+        : plan.overshootOrder,
     };
     const waters = fillWatermancerRoute(
       { plan: routePlan, batchMl, baseWaters, additionWaters },
