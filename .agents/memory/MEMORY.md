@@ -14,3 +14,4 @@
 - [Empirical reference waters](empirical-reference-waters.md) — published final-water profiles belong in Watermancer, not the salt-dose recipe selector
 - [Mode workspace hierarchy](mode-workspace-hierarchy.md) — Alchemist starts collapsed around recipe preparation; Watermancer leads with ion targets and translates salt recipes
 - [Watermancer salt selection](watermancer-salt-inventory.md) — use a simple Used/Not used salt toggle and choose hydration form per salt
+- [Watermancer unified plan](watermancer-plan-model.md) — coordinate target, water, salt, strategy, priority, and overshoot decisions through one plan signature

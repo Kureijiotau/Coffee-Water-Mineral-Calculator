@@ -26,6 +26,10 @@ import {
 } from './watermancerProfiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
+import {
+  createWatermancerPlanSignature,
+  type WatermancerPlan,
+} from './watermancerPlan';
 
 export type SaltRow = { target: string; formIdx: number };
 type BrewerFlavorInput = {
@@ -1223,6 +1227,27 @@ function App() {
         : 0,
     };
   }), [L, rows, watermancerIonGaps]);
+  const watermancerPlan = useMemo<WatermancerPlan>(() => ({
+    targetIons: watermancerIonTargets,
+    selectedWaters: [...mineralWaters, ...additionWaters],
+    selectedSalts: [...watermancerUsedSaltIds],
+    fixedWaterVolumes: Object.fromEntries(
+      [...mineralWaters, ...additionWaters].map(entry => [entry.id, num(entry.volumeMl)]),
+    ),
+    fixedSaltDoses: {},
+    strategy: autoCraftPreset,
+    ionPriority: [...activeAutoFillPriority],
+    allowOvershoot: false,
+    overshootLimits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0])),
+    overshootOrder: [...activeAutoFillPriority],
+  }), [
+    activeAutoFillPriority,
+    additionWaters,
+    autoCraftPreset,
+    mineralWaters,
+    watermancerIonTargets,
+    watermancerUsedSaltIds,
+  ]);
   const selectedWatermancerSaltTargets = useMemo(() => ({
     ...Object.fromEntries(
       watermancerSaltOptions
@@ -1231,18 +1256,8 @@ function App() {
     ),
   }) as Record<string, number>, [watermancerSaltOptions, watermancerUsedSaltIds]);
   const watermancerCraftSignature = useMemo(
-    () => JSON.stringify({
-      salts: [...watermancerUsedSaltIds].sort(),
-      water: ACTIVE_ION_IDS.map(id => Number((bottledIons[id] ?? 0).toFixed(6))),
-      target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
-      preset: autoCraftPreset,
-    }),
-    [
-      autoCraftPreset,
-      bottledIons,
-      watermancerIonTargets,
-      watermancerUsedSaltIds,
-    ],
+    () => createWatermancerPlanSignature(watermancerPlan),
+    [watermancerPlan],
   );
   const activeWatermancerSaltTargets = useMemo(
     () => watermancerCraft?.signature === watermancerCraftSignature
@@ -1251,15 +1266,15 @@ function App() {
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
   );
   const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
-  const makeWatermancerCraftSignature = (
-    waterIons: Partial<Record<IonId, number>>,
-    preset = autoCraftPreset,
-  ) => JSON.stringify({
-    salts: [...watermancerUsedSaltIds].sort(),
-    water: ACTIVE_ION_IDS.map(id => Number((waterIons[id] ?? 0).toFixed(6))),
-    target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
-    preset,
-  });
+  const makeWatermancerCraftSignature = (waters: MineralWaterEntry[]) => (
+    createWatermancerPlanSignature({
+      ...watermancerPlan,
+      selectedWaters: waters,
+      fixedWaterVolumes: Object.fromEntries(
+        waters.map(entry => [entry.id, num(entry.volumeMl)]),
+      ),
+    })
+  );
 
     // Build the salt recommendation shown below the calculator. The sulfate /
     // chloride preference is a real source selection for magnesium, not merely
@@ -1357,21 +1372,21 @@ function App() {
    );
 
   const handleAutoCraft = () => {
-    if (watermancerUsedSaltIds.length === 0 || batchMl <= 0) return;
+    if (watermancerPlan.selectedSalts.length === 0 || batchMl <= 0) return;
     let craftedMineralWaters = mineralWaters;
     let craftedAdditionWaters = additionWaters;
     let craftedWaterIons = bottledIons;
 
-    if (autoCraftPreset === 'water-first') {
+    if (watermancerPlan.strategy === 'water-first') {
       craftedMineralWaters = mineralWaters.length > 0
         ? autoFillWaterVolumes(
           mineralWaters,
           batchMl,
-          watermancerIonTargets,
+          watermancerPlan.targetIons,
           additionWaters,
-          activeAutoFillPriority,
+          watermancerPlan.ionPriority,
           0,
-          true,
+          !watermancerPlan.allowOvershoot,
           false,
           1,
           0,
@@ -1381,11 +1396,11 @@ function App() {
         ? autoFillWaterVolumes(
           additionWaters,
           batchMl,
-          watermancerIonTargets,
+          watermancerPlan.targetIons,
           craftedMineralWaters,
-          activeAutoFillPriority,
+          watermancerPlan.ionPriority,
           0,
-          true,
+          !watermancerPlan.allowOvershoot,
           false,
           1,
           0,
@@ -1399,20 +1414,15 @@ function App() {
       setAdditionWaters(craftedAdditionWaters);
     }
 
-    const craftedHasWater = hasMineralWater
-      || Object.values(craftedWaterIons).some(value => value > 0.000001);
-    const craftedSuggestedSaltTargets = autoCraftPreset === 'water-first'
-      ? buildSuggestedSaltTargets(craftedWaterIons, craftedHasWater)
-      : suggestedSaltTargets;
     const targets = autoCraftSaltTargets(
-      watermancerUsedSaltIds,
+      watermancerPlan.selectedSalts,
       craftedWaterIons,
-      watermancerIonTargets,
-      {},
-      autoCraftPreset,
+      watermancerPlan.targetIons,
+      watermancerPlan.fixedSaltDoses,
+      watermancerPlan.strategy,
     );
     setWatermancerCraft({
-      signature: makeWatermancerCraftSignature(craftedWaterIons),
+      signature: makeWatermancerCraftSignature([...craftedMineralWaters, ...craftedAdditionWaters]),
       targets,
     });
   };
