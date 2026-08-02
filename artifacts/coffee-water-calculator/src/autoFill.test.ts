@@ -340,6 +340,21 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(sulfate).toBeCloseTo(20, 1);
   });
 
+  it('treats selected salts as optional inventory and avoids a harmful coupled ion', () => {
+    const targets = autoCraftSaltTargets(
+      ['mgcl2', 'mgso4'],
+      {},
+      { magnesium: 10, sulfate: 20, chloride: 0 },
+    );
+    const epsom = SALTS.find(salt => salt.id === 'mgso4')!;
+    const epsomMagnesium = (targets.mgso4 ?? 0)
+      * (epsom.ions.find(contribution => contribution.ionId === 'magnesium')?.fraction ?? 0);
+
+    expect(targets.mgcl2).toBe(0);
+    expect(targets.mgso4).toBeGreaterThan(0);
+    expect(epsomMagnesium).toBeGreaterThan(0);
+  });
+
   it('includes water and preserves fixed salt chemistry while crafting selected salts', () => {
     const targets = autoCraftSaltTargets(
       ['khco3'],

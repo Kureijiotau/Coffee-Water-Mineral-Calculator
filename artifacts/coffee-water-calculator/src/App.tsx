@@ -304,7 +304,7 @@ export function computeWatermancerBottledIons(
 }
 
 export function autoCraftSaltTargets(
-  selectedSaltIds: string[],
+  allowedSaltIds: string[],
   waterIons: Partial<Record<IonId, number>>,
   targetIons: Partial<Record<IonId, number>>,
   fixedSaltTargets: Record<string, number> = {},
@@ -312,17 +312,20 @@ export function autoCraftSaltTargets(
   objective: AutoCraftObjective = 'balanced',
   overshootPolicy?: WatermancerOvershootPolicy,
 ): Record<string, number> {
-  const selectedSalts = SALTS.filter(salt => selectedSaltIds.includes(salt.id));
-  if (selectedSalts.length === 0) return {};
+  // These salts are an allowed inventory, not a required recipe. The
+  // coordinate descent below always includes zero as a candidate dose, so a
+  // salt stays unused when another allowed salt gives a better overall fit.
+  const allowedSalts = SALTS.filter(salt => allowedSaltIds.includes(salt.id));
+  if (allowedSalts.length === 0) return {};
 
   const targets = Object.fromEntries(
-    selectedSalts.map(salt => [salt.id, 0]),
+    allowedSalts.map(salt => [salt.id, 0]),
   ) as Record<string, number>;
   if (preset === 'gh-kh-harmony') {
     Object.assign(
       targets,
        autoCraftSaltTargets(
-         selectedSaltIds,
+          allowedSaltIds,
          waterIons,
          targetIons,
          fixedSaltTargets,
@@ -366,7 +369,7 @@ export function autoCraftSaltTargets(
   };
   const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
     let value = fixedIonTotals[ionId] ?? 0;
-    for (const otherSalt of selectedSalts) {
+    for (const otherSalt of allowedSalts) {
       if (otherSalt.id === salt.id) continue;
       value += (targets[otherSalt.id] ?? 0)
         * (otherSalt.ions.find(item => item.ionId === ionId)?.fraction ?? 0);
@@ -411,13 +414,13 @@ export function autoCraftSaltTargets(
   // those breakpoints keeps the result deterministic without adding a solver.
   for (let pass = 0; pass < 80; pass += 1) {
     let largestChange = 0;
-    for (const salt of selectedSalts) {
+    for (const salt of allowedSalts) {
       const previous = targets[salt.id] ?? 0;
       const candidates = [0];
       for (const contribution of salt.ions) {
         if (contribution.fraction <= 0) continue;
         let actualWithoutSalt = fixedIonTotals[contribution.ionId] ?? 0;
-        for (const otherSalt of selectedSalts) {
+        for (const otherSalt of allowedSalts) {
           if (otherSalt.id === salt.id) continue;
           actualWithoutSalt += (targets[otherSalt.id] ?? 0)
             * (otherSalt.ions.find(item => item.ionId === contribution.ionId)?.fraction ?? 0);
@@ -1927,7 +1930,7 @@ function App() {
       : current);
   };
 
-  // Watermancer's Used salt selections are the source of truth for dosing.
+  // Watermancer's allowed salt inventory is the source of truth for dosing.
   const selectedSuggestedSaltTargets = useMemo(() => {
     if (!showWatermancer) {
       return suggestedSaltTargets;
@@ -4244,7 +4247,7 @@ function App() {
           <div className="order-3 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts">
             <SectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
-             title="3. Add salts"
+             title="3. Choose salts"
             />
             <div className="px-4 sm:px-6 py-4 space-y-4">
 
@@ -4253,7 +4256,7 @@ function App() {
                     <span>Salt</span>
                     <span>Hydration form</span>
                     <span>Dose</span>
-                    <span>Selection</span>
+                    <span>Allowed</span>
                   </div>
                   <div className="divide-y divide-slate-700/50">
                     {SALTS.map((salt, index) => {
@@ -4306,7 +4309,7 @@ function App() {
                                 : 'border-slate-700 bg-slate-950/40 text-slate-500 hover:border-indigo-300/50 hover:bg-indigo-500/10 hover:text-indigo-200'
                             }`}
                           >
-                            {used ? 'Used' : 'Not used'}
+                            {used ? 'Allowed' : 'Not allowed'}
                           </button>
                         </div>
                       );
@@ -4325,9 +4328,9 @@ function App() {
             />
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
               <div>
-                <p className="text-xs font-semibold text-cyan-100">Run the matcher against your selected waters and salts.</p>
+                <p className="text-xs font-semibold text-cyan-100">Run the matcher against your selected waters and allowed salts.</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                  Run once after setting a target. The matcher uses the selected waters and salts, then shows the closest achievable final ion profile and any remaining deviations.
+                  Run once after setting a target. Waters are selected sources, while salts are an allowed inventory—the matcher may leave an allowed salt unused when another salt produces a closer final ion profile.
                 </p>
                 {watermancerCraftIsCurrent && (
                   <p className="mt-1 text-[10px] font-medium text-emerald-300">
@@ -4342,7 +4345,7 @@ function App() {
                 className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-4 py-2.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
                 title={batchMl <= 0
                   ? 'Set a batch volume before matching'
-                  : 'Optimize the selected waters and salts against the active ion profile'}
+                  : 'Optimize the selected waters and allowed salts against the active ion profile'}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 Auto-match

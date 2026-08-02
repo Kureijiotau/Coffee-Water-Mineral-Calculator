@@ -63,6 +63,12 @@ Auto-match must remain available after setting a target even when no salts are s
 
 **How to apply:** Gate Auto-match on valid batch volume, not salt count; classify empty plans as blocked; preserve selected water and salt boundaries without inventing selections.
 
+Selected Watermancer salts are an allowed inventory, not a must-use recipe. The matcher should assign zero dose when another allowed salt reaches the target with a better coupled-ion profile.
+
+**Why:** A salt can solve one ion while unnecessarily oversupplying its counter-ion; requiring every selected salt would turn an availability choice into harmful chemistry.
+
+**How to apply:** Keep zero as a candidate dose for every allowed salt, optimize the complete ion profile, and label the UI as “Allowed” rather than “Used.”
+
 Displayed route results must be hidden whenever their plan signature no longer matches current inputs.
 
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
