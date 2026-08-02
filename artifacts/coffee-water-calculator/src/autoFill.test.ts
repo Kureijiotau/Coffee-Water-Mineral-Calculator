@@ -9,6 +9,8 @@ import {
   selectWatermancerRouteCandidate,
   recalculateWatermancerRouteAtCurrentVolumes,
   totalWatermancerDeviation,
+  executeWatermancerRouteCandidate,
+  watermancerRouteWaterInputs,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -105,6 +107,68 @@ describe('autoFillWaterVolumes', () => {
     ] as unknown as WatermancerRouteCandidate[];
 
     expect(selectWatermancerRouteCandidate(candidates, 'primary', 'primary')?.kind).toBe('primary');
+  });
+
+  it('switches routes from the stable water baseline instead of accumulating route fills', () => {
+    const source = water('source', { calcium: 10 });
+    const plan = {
+      targetIons: { calcium: 10 },
+      selectedWaters: [source],
+      selectedSalts: [],
+      fixedWaterVolumes: { source: 0 },
+      fixedSaltDoses: {},
+      strategy: 'closest-match' as const,
+      saltObjective: 'balanced' as const,
+      ionPriority: ['calcium' as const],
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      overshootOrder: ['calcium' as const],
+    };
+    const solved = solveWatermancerRoutes({
+      plan,
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+    const candidates = [solved.primaryPlan, ...solved.alternatives];
+    const waterRoute = candidates.find(candidate => candidate.kind === 'use-more-water');
+    const saltRoute = candidates.find(candidate => candidate.kind === 'use-more-salts');
+    expect(waterRoute).toBeDefined();
+    expect(saltRoute).toBeDefined();
+
+    const baseline = watermancerRouteWaterInputs([source], [], null);
+    const appliedWaterRoute = executeWatermancerRouteCandidate(
+      { plan, batchMl: 1000, ...baseline },
+      waterRoute!,
+    );
+    const appliedSaltRoute = executeWatermancerRouteCandidate(
+      { plan, batchMl: 1000, ...watermancerRouteWaterInputs(
+        appliedWaterRoute.baseWaters,
+        appliedWaterRoute.additionWaters,
+        {
+          baseWaters: baseline.baseWaters,
+          additionWaters: baseline.additionWaters,
+        },
+      ) },
+      saltRoute!,
+    );
+    const appliedWaterRouteAgain = executeWatermancerRouteCandidate(
+      { plan, batchMl: 1000, ...watermancerRouteWaterInputs(
+        appliedSaltRoute.baseWaters,
+        appliedSaltRoute.additionWaters,
+        {
+          baseWaters: baseline.baseWaters,
+          additionWaters: baseline.additionWaters,
+        },
+      ) },
+      waterRoute!,
+    );
+
+    expect(Number(appliedWaterRoute.baseWaters[0].volumeMl)).toBeGreaterThan(0);
+    expect(Number(appliedSaltRoute.baseWaters[0].volumeMl)).toBe(0);
+    expect(appliedWaterRouteAgain.baseWaters[0].volumeMl)
+      .toBe(appliedWaterRoute.baseWaters[0].volumeMl);
   });
 
   it('caps every active ion at its safe target in no-recipe mode', () => {

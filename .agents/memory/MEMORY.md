@@ -17,3 +17,4 @@
 - [Watermancer unified plan](watermancer-plan-model.md) — coordinate target, water, salt, strategy, priority, and overshoot decisions through one plan signature
 - [Watermancer result follow mode](watermancer-sticky-ui.md) — use viewport anchoring for reliable selected-route result following
 - [Watermancer live volume result](watermancer-live-volume-card.md) — selected-route ion results must recalculate from edited visible water volumes
+- [Watermancer route switch baseline](watermancer-route-switch-baseline.md) — route alternatives must switch reversibly from the last user-controlled water state

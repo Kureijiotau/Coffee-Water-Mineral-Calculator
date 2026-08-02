@@ -907,6 +907,34 @@ type WatermancerRouteDefinition = {
   strategy: AutoCraftPreset;
 };
 
+type WatermancerRouteWaterBaseline = {
+  baseWaters: MineralWaterEntry[];
+  additionWaters: MineralWaterEntry[];
+};
+
+function cloneWatermancerRouteWaterBaseline(
+  baseWaters: MineralWaterEntry[],
+  additionWaters: MineralWaterEntry[],
+): WatermancerRouteWaterBaseline {
+  return {
+    baseWaters: baseWaters.map(entry => ({ ...entry, ions: { ...entry.ions }, metadata: { ...entry.metadata } })),
+    additionWaters: additionWaters.map(entry => ({ ...entry, ions: { ...entry.ions }, metadata: { ...entry.metadata } })),
+  };
+}
+
+export function watermancerRouteWaterInputs(
+  currentBaseWaters: MineralWaterEntry[],
+  currentAdditionWaters: MineralWaterEntry[],
+  baseline: WatermancerRouteWaterBaseline | null,
+): Pick<WatermancerRouteInputs, 'baseWaters' | 'additionWaters'> {
+  return baseline
+    ? cloneWatermancerRouteWaterBaseline(baseline.baseWaters, baseline.additionWaters)
+    : {
+      baseWaters: currentBaseWaters.map(entry => ({ ...entry })),
+      additionWaters: currentAdditionWaters.map(entry => ({ ...entry })),
+    };
+}
+
 export function selectWatermancerRouteCandidate(
   candidates: WatermancerRouteCandidate[],
   activeRouteId?: string,
@@ -923,6 +951,24 @@ export function selectWatermancerRouteCandidate(
       : undefined)
     ?? candidates[0]
   );
+}
+
+export function executeWatermancerRouteCandidate(
+  inputs: WatermancerRouteInputs,
+  candidate: WatermancerRouteCandidate,
+): WatermancerRouteCandidate {
+  return executeWatermancerRoute(inputs, {
+    id: candidate.id,
+    kind: candidate.kind,
+    label: candidate.label,
+    explanation: candidate.explanation,
+    fillWater: candidate.kind === 'use-more-water'
+      || candidate.kind === 'prioritize-ions'
+      || (candidate.kind === 'primary' && candidate.plan.strategy === 'water-first'),
+    priority: candidate.plan.ionPriority,
+    saltObjective: candidate.plan.saltObjective,
+    strategy: candidate.plan.strategy,
+  });
 }
 
 function fillWatermancerRoute(
@@ -1468,6 +1514,7 @@ function App() {
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
+    setWatermancerRouteWaterBaseline(null);
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
@@ -1504,12 +1551,15 @@ function App() {
     });
   };
   const updateMineralWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    setWatermancerRouteWaterBaseline(null);
     setMineralWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
   const removeMineralWater = (id: string) => {
+    setWatermancerRouteWaterBaseline(null);
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
   const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
+    setWatermancerRouteWaterBaseline(null);
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
@@ -1521,9 +1571,11 @@ function App() {
     return entry;
   };
   const updateAdditionWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    setWatermancerRouteWaterBaseline(null);
     setAdditionWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
   const removeAdditionWater = (id: string) => {
+    setWatermancerRouteWaterBaseline(null);
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
   useEffect(() => {
@@ -1586,6 +1638,7 @@ function App() {
     activeRouteKind?: WatermancerRouteCandidate['kind'];
     activeSaltTargets?: Record<string, number>;
   } | null>(null);
+  const [watermancerRouteWaterBaseline, setWatermancerRouteWaterBaseline] = useState<WatermancerRouteWaterBaseline | null>(null);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -1982,10 +2035,19 @@ function App() {
     () => solveWatermancerRoutes({
       plan: watermancerPlan,
       batchMl,
-      baseWaters: mineralWaters,
-      additionWaters,
+      ...watermancerRouteWaterInputs(
+        mineralWaters,
+        additionWaters,
+        watermancerRouteWaterBaseline,
+      ),
     }),
-    [additionWaters, batchMl, mineralWaters, watermancerPlan],
+    [
+      additionWaters,
+      batchMl,
+      mineralWaters,
+      watermancerPlan,
+      watermancerRouteWaterBaseline,
+    ],
   );
   const activeWatermancerSaltTargets = useMemo(
     () => selectWatermancerRouteCandidate(
@@ -2190,27 +2252,19 @@ function App() {
    );
 
   const handleApplyWatermancerRoute = (candidate: WatermancerRouteCandidate) => {
-    const routeDefinition: WatermancerRouteDefinition = {
-      id: candidate.id,
-      kind: candidate.kind,
-      label: candidate.label,
-      explanation: candidate.explanation,
-      fillWater: candidate.kind === 'use-more-water'
-        || candidate.kind === 'prioritize-ions'
-        || (candidate.kind === 'primary' && candidate.plan.strategy === 'water-first'),
-      priority: candidate.plan.ionPriority,
-      saltObjective: candidate.plan.saltObjective,
-      strategy: candidate.plan.strategy,
-    };
-    const executedCandidate = executeWatermancerRoute(
+    const baseline = watermancerRouteWaterBaseline
+      ?? cloneWatermancerRouteWaterBaseline(mineralWaters, additionWaters);
+    const executedCandidate = executeWatermancerRouteCandidate(
       {
         plan: watermancerPlan,
         batchMl,
-        baseWaters: mineralWaters,
-        additionWaters,
+        ...watermancerRouteWaterInputs(mineralWaters, additionWaters, baseline),
       },
-      routeDefinition,
+      candidate,
     );
+    if (!watermancerRouteWaterBaseline) {
+      setWatermancerRouteWaterBaseline(baseline);
+    }
     setMineralWaters(executedCandidate.baseWaters);
     setAdditionWaters(executedCandidate.additionWaters);
     setAutoCraftPreset(executedCandidate.plan.strategy);
@@ -2466,6 +2520,7 @@ function App() {
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerCraft(null);
+    setWatermancerRouteWaterBaseline(null);
     setWatermancerManualSaltAdditionsMg({});
     setWatermancerResultSticky(true);
     setSodiumCorrectionOn(false);
