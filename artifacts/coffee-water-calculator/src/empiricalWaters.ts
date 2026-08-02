@@ -12,6 +12,7 @@ export interface ReferenceWater {
 }
 
 const SOURCE_URL = 'https://empiricalwater.com/pages/mineral-composition';
+const SAN_PELLEGRINO_SOURCE_URL = 'https://www.sanpellegrino.com/water/50-cl-glass-bottle';
 
 /**
  * Published finished-water compositions from Empirical Water's Mineral Profiles
@@ -68,5 +69,26 @@ export const EMPIRICAL_WATERS: ReferenceWater[] = [
     hardnessAlkalinity: 'GH/KH ~58/27',
     description: 'Empirical Water’s Aviary Coffee Water mineral profile.',
     sourceUrl: SOURCE_URL,
+  },
+  {
+    id: 'san-pellegrino',
+    name: 'S.Pellegrino',
+    ions: {
+      calcium: 169,
+      magnesium: 49.2,
+      sodium: 31.2,
+      potassium: 2.4,
+      bicarbonate: 249,
+      chloride: 49.8,
+      sulfate: 403,
+    },
+    metadata: {
+      silica: 7.2,
+      ph: 7.6,
+      tds: 860,
+    },
+    hardnessAlkalinity: 'GH/KH ~625/204',
+    description: 'Carbonated natural mineral water with high calcium, magnesium, and sulfate.',
+    sourceUrl: SAN_PELLEGRINO_SOURCE_URL,
   },
 ];
