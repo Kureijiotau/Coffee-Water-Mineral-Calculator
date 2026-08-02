@@ -2241,8 +2241,42 @@ function App() {
            </div>
          </div>
 
+          {showWatermancer && (
+            <nav
+              aria-label="Watermancer workflow"
+              className="rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-lg"
+            >
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-6">
+                {[
+                  { number: '1', label: 'Set target', complete: true },
+                  { number: '2', label: 'Add waters', complete: mineralWaters.length + additionWaters.length > 0 },
+                  { number: '3', label: 'Add salts', complete: watermancerUsedSaltIds.length > 0 },
+                  { number: '4', label: 'Match options', complete: true },
+                  { number: '5', label: 'Auto-match', complete: watermancerCraftIsCurrent },
+                  { number: '6', label: 'Review result', complete: watermancerCraftIsCurrent },
+                ].map(step => (
+                  <li
+                    key={step.number}
+                    className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-[11px] ${
+                      step.complete
+                        ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
+                        : 'border-slate-700/60 bg-slate-900/35 text-slate-500'
+                    }`}
+                  >
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                      step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
+                    }`}>
+                      {step.number}
+                    </span>
+                    <span className="truncate">{step.label}</span>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+
          {showWatermancer && (
-          <div className="order-1">
+          <div className="order-1" data-watermancer-stage="target">
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               targetIons={watermancerIonTargets}
@@ -2508,12 +2542,12 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-            {(showAlchemist || showWatermancer) && <div className={`order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+            {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
-              title={showAlchemist ? 'Batch & Concentrate' : 'Final Batch Volume'}
+               title={showAlchemist ? 'Batch & Concentrate' : '2. Add waters — Batch volume'}
              after={
                <div className="flex items-center gap-2">
                 {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
@@ -2725,7 +2759,7 @@ function App() {
 
         {showWatermancer && (
           <div className="order-7">
-            <WaterChemistryCard
+             <WaterChemistryCard
               estimate={waterChemistry.estimate}
               basePH={waterChemistry.basePH}
               baseAlkalinity={waterChemistry.baseAlkalinity}
@@ -2744,10 +2778,10 @@ function App() {
         </div>
 
         {/* Mineral Water Base */}
-        {(showAlchemist || showWatermancer) && <div className={`order-3 ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
+         {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
-            title="Mineral Water Base"
+             title={showWatermancer ? '2. Add waters — Base water' : 'Mineral Water Base'}
             after={<div className="flex items-center gap-2">
              {showWatermancer && (
                <button
@@ -2759,10 +2793,10 @@ function App() {
                      ? 'border border-amber-400/40 bg-amber-500/15 text-amber-200'
                      : 'border border-slate-600/50 bg-slate-700/40 text-slate-400 hover:bg-amber-500/10 hover:text-amber-200'
                  }`}
-                 title="Configure how base waters are auto-filled"
+                 title="Configure how water volumes are filled"
                >
                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                 Auto-fill settings
+                 Water fill options
                </button>
              )}
              {showWatermancer && (
@@ -2827,7 +2861,7 @@ function App() {
               <div className="rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 sm:p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Auto-fill settings</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Water fill options</p>
                     <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
                       Choose which ions guide base-water selection. These settings are saved on this device.
                     </p>
@@ -3293,7 +3327,7 @@ function App() {
                     ? 'Fill base waters up to the active ion profile safe limits'
                     : "Use all base waters to cover as much of the recipe's ion targets as possible"}
                >
-                 Auto-fill all base waters
+                 Fill base waters toward target
                </button>
              )}
 
@@ -3484,7 +3518,7 @@ function App() {
         </div>}
 
         {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
-          <div className="order-6">
+           <div className="order-6" data-watermancer-stage="results">
             <WatermancerIonCoverageBars
               baseWaterIons={baseWaterIons}
               selectedSaltIons={watermancerSelectedSaltIonTotals}
@@ -3495,8 +3529,8 @@ function App() {
         )}
 
         {showWatermancer && hasMineralWater && (
-          <div className="order-8 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
-            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="Final Mixture Summary" />
+           <div className="order-6 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
+            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="6. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
               Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
             </div>
@@ -3521,10 +3555,10 @@ function App() {
 
         {/* Mineral Water Addition */}
         {showWatermancer && batchMl > 0 && (
-          <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+          <div className="order-3 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts">
             <SectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
-              title="Add Salts & Match Target"
+             title="3. Add salts"
             />
             <div className="px-4 sm:px-6 py-4 space-y-4">
 
@@ -3635,138 +3669,79 @@ function App() {
                        </div>
                      );
                    })}
-                 </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-400/25 bg-cyan-500/[0.07] px-3 py-3">
-                    <div className="min-w-0">
-                      <span className="block text-xs font-semibold text-cyan-100">Auto-match ionic target</span>
-                      <span className="mt-0.5 block text-[10px] leading-relaxed text-slate-400">
-                        Choose how the Used salts and added waters should close the selected ion profile.
-                      </span>
-                      {watermancerCraftIsCurrent && (
-                        <span className="mt-1 block text-[10px] font-medium text-emerald-300">
-                           Matched doses are active. Changing a salt, water, or target profile requires a new match.
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <label className="sr-only" htmlFor="watermancer-auto-craft-preset">Matching strategy</label>
-                      <select
-                        id="watermancer-auto-craft-preset"
-                        value={autoCraftPreset}
-                        onChange={event => {
-                          setAutoCraftPreset(event.target.value as AutoCraftPreset);
-                          setWatermancerCraft(null);
-                        }}
-                        className="max-w-[190px] rounded-lg border border-cyan-300/30 bg-slate-950/70 px-2.5 py-2 text-[11px] font-medium text-cyan-100 outline-none transition focus:border-cyan-200/70 focus:ring-2 focus:ring-cyan-400/20"
-                        title="Choose the Auto-match optimization strategy"
-                      >
-                        <option value="closest-match">Closest match</option>
-                        <option value="water-first">Water first</option>
-                        <option value="gh-kh-harmony">GH:KH harmony</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleAutoCraft}
-                        disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
-                        className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
-                        title={watermancerUsedSaltIds.length === 0
-                          ? 'Mark at least one salt Used before auto-matching'
-                          : 'Optimize the selected salt doses against the active ion profile'}
-                      >
-                        <Sparkles className="h-3.5 w-3.5" />
-                         Auto-match
-                      </button>
-                    </div>
                   </div>
-                 {(finalMixtureOvershoots.length > 0
-                   || finalMixtureUnderdoses.length > 0
-                   || (hasMineralWater && sodiumCorrectionGap > 0.05)
-                   || sodiumCorrectionOn) && (
-                     <div className="mt-3 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2.5">
-                       <div className="flex items-start justify-between gap-3">
-                         <div>
-                           <span className="block text-[10px] font-semibold uppercase tracking-wider text-rose-300">
-                              Final profile deviation
-                           </span>
-                           <p className="mt-1 text-[11px] text-slate-400">
-                               Mineral water and suggested salts can leave some ions above or below the selected ion target.
-                           </p>
-                         </div>
-                         {hasMineralWater && sodiumCorrectionGap > 0.05 && (
-                           <button
-                             type="button"
-                             onClick={() => setSodiumCorrectionOn(current => !current)}
-                             aria-pressed={sodiumCorrectionOn}
-                             aria-label={sodiumCorrectionOn
-                               ? 'Turn off sodium chloride correction'
-                               : 'Add sodium chloride to close the sodium gap'}
-                             title={sodiumCorrectionOn
-                               ? 'Turn off sodium chloride correction'
-                               : `Add NaCl to close the ${sodiumCorrectionGap.toFixed(1)} ppm sodium gap`}
-                             className={`salt-shaker-toggle flex shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-medium transition ${
-                               sodiumCorrectionOn ? 'is-on' : 'is-off'
-                             } ${
-                               sodiumCorrectionOn
-                                 ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-200'
-                                 : 'border-amber-400/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20'
-                             }`}
-                           >
-                             <span className="salt-shaker-icon relative h-5 w-5" aria-hidden="true">
-                               <GiSaltShaker className="salt-shaker-visual h-5 w-5" />
-                               <span className="salt-grains">
-                                 <span className="salt-grain salt-grain-one" />
-                                 <span className="salt-grain salt-grain-two" />
-                                 <span className="salt-grain salt-grain-three" />
-                               </span>
-                             </span>
-                             <span className="hidden sm:inline">{sodiumCorrectionOn ? 'Salt added' : 'Add salt'}</span>
-                           </button>
-                         )}
-                       </div>
-                       <div className="mt-2 flex flex-wrap gap-2">
-                          {finalMixtureOvershoots.map(({ id, amount }) => (
-                           <span
-                             key={id}
-                             className="rounded-md border border-rose-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-rose-200"
-                           >
-                             {ION_MAP[id].formula} +{amount.toFixed(1)} ppm
-                           </span>
-                         ))}
-                          {finalMixtureUnderdoses.map(({ id, amount }) => (
-                           <span
-                             key={id}
-                             className="rounded-md border border-amber-500/30 bg-slate-900/30 px-2 py-1 text-xs font-semibold tabular-nums text-amber-200"
-                           >
-                             {ION_MAP[id].formula} −{amount.toFixed(1)} ppm
-                           </span>
-                         ))}
-                       </div>
-                       {sodiumCorrectionOn && sodiumCorrectionTarget > 0 && (
-                         <p className="mt-2 text-[11px] text-emerald-200/80">
-                           Adding {sodiumCorrectionTarget.toFixed(1)} ppm NaCl closes the sodium gap and includes its chloride contribution.
-                         </p>
-                       )}
-                     </div>
-                 )}
-                  {bicarbonateWaterOvershoot && (
-                    <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
-                      <span className="block text-[10px] font-semibold uppercase tracking-wider text-amber-300">
-                        Bicarbonate source-water stop
-                      </span>
-                      <p className="mt-1 text-[11px] text-slate-300">
-                        This water alone provides {bicarbonateFromWater.toFixed(1)} ppm HCO₃⁻,
-                         above the {bicarbonateTarget.toFixed(1)} ppm selected ion target. No bicarbonate
-                        salts will be recommended; use less of this water or choose a lower-alkalinity source.
-                      </p>
-                    </div>
-                  )}
             </div>
           </div>
         )}
-        {showWatermancer && <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden">
+
+        {showWatermancer && batchMl > 0 && (
+          <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-amber-400/25 overflow-hidden" data-watermancer-stage="matching-options">
+            <SectionHeader
+              icon={<SlidersHorizontal className="h-4 w-4 text-amber-300" />}
+              title="4. Choose matching strategy"
+            />
+            <div className="px-4 sm:px-6 py-4 space-y-3">
+              <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
+                Choose how the matcher should trade water coverage, salt dosing, and hardness balance before you run it.
+              </p>
+              <label className="block max-w-sm">
+                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-amber-300">Matching strategy</span>
+                <select
+                  id="watermancer-auto-craft-preset"
+                  value={autoCraftPreset}
+                  onChange={event => {
+                    setAutoCraftPreset(event.target.value as AutoCraftPreset);
+                    setWatermancerCraft(null);
+                  }}
+                  className="w-full rounded-lg border border-amber-300/30 bg-slate-950/70 px-2.5 py-2 text-[11px] font-medium text-amber-100 outline-none transition focus:border-amber-200/70 focus:ring-2 focus:ring-amber-400/20"
+                  title="Choose the Auto-match optimization strategy"
+                >
+                  <option value="closest-match">Closest match</option>
+                  <option value="water-first">Water first</option>
+                  <option value="gh-kh-harmony">GH:KH harmony</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {showWatermancer && batchMl > 0 && (
+          <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/30 bg-slate-800/70 shadow-xl overflow-hidden" data-watermancer-stage="auto-match">
+            <SectionHeader
+              icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
+              title="5. Auto-match ionic target"
+            />
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
+              <div>
+                <p className="text-xs font-semibold text-cyan-100">Run the matcher against your selected waters and salts.</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                  The result will show the closest achievable final ion profile and any remaining deviations.
+                </p>
+                {watermancerCraftIsCurrent && (
+                  <p className="mt-1 text-[10px] font-medium text-emerald-300">
+                    Matched doses are active. Changing a salt, water, or target profile requires a new match.
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleAutoCraft}
+                disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
+                className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-4 py-2.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+                title={watermancerUsedSaltIds.length === 0
+                  ? 'Mark at least one salt Used before auto-matching'
+                  : 'Optimize the selected salt doses against the active ion profile'}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Auto-match
+              </button>
+            </div>
+          </div>
+        )}
+         {showWatermancer && <div className="order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="waters">
           <SectionHeader
             icon={<PouringCarafeIcon />}
-            title="Mineral Water Addition"
+             title="2. Add waters — Additional sources"
             after={<div className="flex items-center gap-2">
               <span className="text-[11px] text-slate-400">
                 {additionWaters.length} water{additionWaters.length !== 1 ? 's' : ''}
@@ -3996,7 +3971,7 @@ function App() {
                     ? 'Fill addition waters up to the active ion profile safe limits'
                     : "Use all addition waters to cover as much of the recipe's ion targets as possible"}
                >
-                 Auto-fill all addition waters
+                 Fill addition waters toward target
                </button>
              )}
 
@@ -4265,7 +4240,7 @@ function WatermancerIonProfileCard({
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-indigo-400/15 text-slate-300">
         <div className="flex items-center gap-2">
           <Gauge className="w-4 h-4 text-indigo-300" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider">Ion Profile</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set ionic target</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
