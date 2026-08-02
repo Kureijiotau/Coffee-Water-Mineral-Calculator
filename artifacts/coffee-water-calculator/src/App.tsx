@@ -907,6 +907,24 @@ type WatermancerRouteDefinition = {
   strategy: AutoCraftPreset;
 };
 
+export function selectWatermancerRouteCandidate(
+  candidates: WatermancerRouteCandidate[],
+  activeRouteId?: string,
+  activeRouteKind?: WatermancerRouteCandidate['kind'],
+): WatermancerRouteCandidate | undefined {
+  // Route IDs can be rewritten when a candidate is promoted to the primary
+  // slot. The kind is the stable identity across live recalculations.
+  return (
+    (activeRouteKind
+      ? candidates.find(candidate => candidate.kind === activeRouteKind)
+      : undefined)
+    ?? (activeRouteId
+      ? candidates.find(candidate => candidate.id === activeRouteId)
+      : undefined)
+    ?? candidates[0]
+  );
+}
+
 function fillWatermancerRoute(
   inputs: WatermancerRouteInputs,
   fillWater: boolean,
@@ -1912,13 +1930,11 @@ function App() {
     [additionWaters, batchMl, mineralWaters, watermancerPlan],
   );
   const activeWatermancerSaltTargets = useMemo(
-    () => [watermancerLiveResult.primaryPlan, ...watermancerLiveResult.alternatives]
-      .find(candidate => (
-        candidate.id === watermancerCraft?.activeRouteId
-        || (watermancerCraft?.activeRouteKind !== undefined
-          && candidate.kind === watermancerCraft.activeRouteKind)
-      ))
-      ?.saltTargets ?? selectedWatermancerSaltTargets,
+    () => selectWatermancerRouteCandidate(
+      [watermancerLiveResult.primaryPlan, ...watermancerLiveResult.alternatives],
+      watermancerCraft?.activeRouteId,
+      watermancerCraft?.activeRouteKind,
+    )?.saltTargets ?? selectedWatermancerSaltTargets,
     [
       selectedWatermancerSaltTargets,
       watermancerCraft?.activeRouteId,
@@ -1933,13 +1949,11 @@ function App() {
   const watermancerDisplayedRouteId = watermancerCraft?.activeRouteId
     ?? watermancerDisplayedResult.primaryPlan.id;
   const activeWatermancerRoute = useMemo(
-    () => [watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives]
-      .find(candidate => (
-        candidate.id === watermancerDisplayedRouteId
-        || (watermancerCraft?.activeRouteKind !== undefined
-          && candidate.kind === watermancerCraft.activeRouteKind)
-      ))
-      ?? watermancerDisplayedResult.primaryPlan,
+    () => selectWatermancerRouteCandidate(
+      [watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives],
+      watermancerDisplayedRouteId,
+      watermancerCraft?.activeRouteKind,
+    ) ?? watermancerDisplayedResult.primaryPlan,
     [watermancerCraft?.activeRouteKind, watermancerDisplayedResult, watermancerDisplayedRouteId],
   );
   const practicalWatermancerSaltTargets = useMemo(() => (

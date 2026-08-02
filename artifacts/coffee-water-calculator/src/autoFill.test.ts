@@ -6,7 +6,9 @@ import {
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
   solveWatermancerRoutes,
+  selectWatermancerRouteCandidate,
   type MineralWaterEntry,
+  type WatermancerRouteCandidate,
 } from './App';
 import { computeIonTotals, findIonOvershoots, findIonUnderdoses, IONS, RECIPES, SALTS } from './waterData';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
@@ -23,6 +25,21 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('keeps the selected route kind when live reranking reuses the primary route ID', () => {
+    const candidates = [
+      {
+        id: 'primary',
+        kind: 'use-more-water' as const,
+      },
+      {
+        id: 'balanced',
+        kind: 'primary' as const,
+      },
+    ] as unknown as WatermancerRouteCandidate[];
+
+    expect(selectWatermancerRouteCandidate(candidates, 'primary', 'primary')?.kind).toBe('primary');
+  });
+
   it('caps every active ion at its safe target in no-recipe mode', () => {
     const entries = [
       water('calcium-rich', { calcium: 12, sulfate: 30 }),
