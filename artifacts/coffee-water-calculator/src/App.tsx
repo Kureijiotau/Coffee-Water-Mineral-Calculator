@@ -3342,27 +3342,59 @@ function App() {
                               aria-label={`Allow ${ION_MAP[id].name} overshoot`}
                             />
                             <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="0.1"
-                              inputMode="decimal"
-                              value={overshootSettings.limits[id] ?? 0}
-                              disabled={!overshootSettings.enabled || !allowed}
-                              onChange={e => {
-                                const value = Number(e.target.value);
-                                setOvershootSettings(current => ({
+                            <div className="flex items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70 disabled:opacity-40">
+                              <button
+                                type="button"
+                                onClick={() => setOvershootSettings(current => ({
                                   ...current,
                                   limits: {
                                     ...current.limits,
-                                    [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0,
+                                    [id]: Math.max(0, Number(((current.limits[id] ?? 0) - 0.1).toFixed(1))),
                                   },
-                                }));
-                              }}
-                              className="w-20 rounded-md border border-slate-600/60 bg-slate-950/70 px-2 py-1 text-right text-xs tabular-nums text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
-                              aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
-                            />
+                                }))}
+                                disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) <= 0}
+                                className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                                aria-label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
+                              >
+                                −
+                              </button>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.1"
+                                inputMode="decimal"
+                                value={overshootSettings.limits[id] ?? 0}
+                                disabled={!overshootSettings.enabled || !allowed}
+                                onChange={e => {
+                                  const value = Number(e.target.value);
+                                  setOvershootSettings(current => ({
+                                    ...current,
+                                    limits: {
+                                      ...current.limits,
+                                      [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0,
+                                    },
+                                  }));
+                                }}
+                                className="w-12 border-x border-slate-700/70 bg-transparent px-1 py-1 text-center text-xs tabular-nums text-slate-200 outline-none disabled:cursor-not-allowed"
+                                aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setOvershootSettings(current => ({
+                                  ...current,
+                                  limits: {
+                                    ...current.limits,
+                                    [id]: Math.min(100, Number(((current.limits[id] ?? 0) + 0.1).toFixed(1))),
+                                  },
+                                }))}
+                                disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) >= 100}
+                                className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                                aria-label={`Increase ${ION_MAP[id].name} maximum overshoot`}
+                              >
+                                +
+                              </button>
+                            </div>
                             <span className="text-[10px] text-slate-600">ppm</span>
                           </div>
                         );
