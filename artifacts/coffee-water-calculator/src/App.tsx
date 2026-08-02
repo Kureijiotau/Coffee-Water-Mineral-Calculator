@@ -4160,27 +4160,6 @@ function WatermancerIonProfileCard({
   const [naming, setNaming] = useState(false);
   const [newName, setNewName] = useState('');
 
-  const targetSourceLabel = useMemo(() => {
-    if (watermancerTargetSource === 'safe-profile') {
-      const p = profiles.find(x => x.id === activeProfileId);
-      return p?.name ?? 'Custom';
-    }
-    if (watermancerTargetSource === 'salt-table') return 'Current salt table';
-    if (watermancerTargetSource.startsWith('profile:')) {
-      return profiles.find(p => p.id === watermancerTargetSource.slice('profile:'.length))?.name ?? '';
-    }
-    if (watermancerTargetSource.startsWith('saved:')) {
-      return wmProfiles.find(p => p.id === watermancerTargetSource.slice('saved:'.length))?.name ?? 'Saved';
-    }
-    if (watermancerTargetSource.startsWith('recipe:')) {
-      return allRecipes.find(r => r.id === watermancerTargetSource.slice('recipe:'.length))?.name ?? '';
-    }
-    if (watermancerTargetSource.startsWith('external:')) {
-      return externalRecipes.find(r => r.id === watermancerTargetSource.slice('external:'.length))?.name ?? '';
-    }
-    return '';
-  }, [watermancerTargetSource, activeProfileId, profiles, wmProfiles, allRecipes, externalRecipes]);
-
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
     ? `profile:${activeProfileId}`
     : watermancerTargetSource;
@@ -4294,11 +4273,6 @@ function WatermancerIonProfileCard({
             </button>
           )}
         </div>
-      </div>
-
-      {/* Info note */}
-      <div className="border-b border-indigo-400/10 bg-indigo-500/[0.035] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
-        Using {targetSourceLabel} — ionic targets guide mineral-water and addition-salt recommendations below.
       </div>
 
       {/* Ion cards */}
