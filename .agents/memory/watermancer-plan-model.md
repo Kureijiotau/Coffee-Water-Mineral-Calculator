@@ -44,3 +44,9 @@ Priority editing belongs inside the allowed-overshoot ion list rather than in a 
 **Why:** Keeping selection, overshoot limits, and priority in one list makes the relationship between an allowed ion and its coverage priority immediately clear.
 
 **How to apply:** Treat the active priority list as the single UI source for ordering, preserve it in the Watermancer plan signature, and show the same order in the solver explanation.
+
+Numeric overshoot steppers should step once immediately, then repeat at a steady interval after a short hold delay, stopping on pointer release, cancellation, or leave.
+
+**Why:** This supports both precise taps and efficient adjustment of ppm limits without requiring repeated clicks.
+
+**How to apply:** Keep direct numeric entry available, clamp values to their configured range, and ensure repeat timers are cleaned up on unmount and pointer termination.

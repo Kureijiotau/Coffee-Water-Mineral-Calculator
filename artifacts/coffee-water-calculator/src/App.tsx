@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
@@ -53,6 +53,73 @@ type OvershootSettings = {
   allowedIons: IonId[];
   limits: Partial<Record<IonId, number>>;
 };
+
+function HoldStepperButton({
+  onStep,
+  disabled,
+  label,
+  children,
+  className,
+}: {
+  onStep: () => void;
+  disabled: boolean;
+  label: string;
+  children: ReactNode;
+  className: string;
+}) {
+  const timeoutRef = useRef<number | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const clearHold = useCallback(() => {
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearHold, [clearHold]);
+
+  const startHold = () => {
+    if (disabled) return;
+    suppressClickRef.current = true;
+    onStep();
+    clearHold();
+    timeoutRef.current = window.setTimeout(() => {
+      intervalRef.current = window.setInterval(onStep, 90);
+    }, 350);
+  };
+
+  const finishHold = () => {
+    clearHold();
+  };
+
+  return (
+    <button
+      type="button"
+      onPointerDown={startHold}
+      onPointerUp={finishHold}
+      onPointerLeave={finishHold}
+      onPointerCancel={finishHold}
+      onClick={() => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          return;
+        }
+        onStep();
+      }}
+      disabled={disabled}
+      className={className}
+      aria-label={label}
+    >
+      {children}
+    </button>
+  );
+}
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -3354,9 +3421,8 @@ function App() {
                                </>
                              )}
                             <div className="flex items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70 disabled:opacity-40">
-                              <button
-                                type="button"
-                                onClick={() => setOvershootSettings(current => ({
+                              <HoldStepperButton
+                                onStep={() => setOvershootSettings(current => ({
                                   ...current,
                                   limits: {
                                     ...current.limits,
@@ -3365,10 +3431,10 @@ function App() {
                                 }))}
                                 disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) <= 0}
                                 className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                aria-label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
+                                label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
                               >
                                 −
-                              </button>
+                              </HoldStepperButton>
                               <input
                                 type="number"
                                 min="0"
@@ -3390,9 +3456,8 @@ function App() {
                                 className="w-12 border-x border-slate-700/70 bg-transparent px-1 py-1 text-center text-xs tabular-nums text-slate-200 outline-none disabled:cursor-not-allowed"
                                 aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
                               />
-                              <button
-                                type="button"
-                                onClick={() => setOvershootSettings(current => ({
+                              <HoldStepperButton
+                                onStep={() => setOvershootSettings(current => ({
                                   ...current,
                                   limits: {
                                     ...current.limits,
@@ -3401,10 +3466,10 @@ function App() {
                                 }))}
                                 disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) >= 100}
                                 className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                aria-label={`Increase ${ION_MAP[id].name} maximum overshoot`}
+                                label={`Increase ${ION_MAP[id].name} maximum overshoot`}
                               >
                                 +
-                              </button>
+                              </HoldStepperButton>
                             </div>
                             <span className="text-[10px] text-slate-600">ppm</span>
                           </div>
