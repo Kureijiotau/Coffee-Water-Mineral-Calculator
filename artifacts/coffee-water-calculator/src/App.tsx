@@ -4993,7 +4993,8 @@ function BrewerDropperCalibrationCard({
   return (
     <div
       className={`dropper-calibration-card overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800/75 shadow-xl backdrop-blur ${!acknowledged ? 'dropper-calibration-card--attention' : ''}`}
-      onClick={acknowledge}
+      onPointerDownCapture={acknowledge}
+      onClickCapture={acknowledge}
     >
       <button
         type="button"
