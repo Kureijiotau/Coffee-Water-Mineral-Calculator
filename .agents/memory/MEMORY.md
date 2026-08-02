@@ -13,3 +13,4 @@
 - [Saved water picker](saved-water-picker.md) — clicking an already-added saved water must not append another mineral-water entry
 - [Empirical reference waters](empirical-reference-waters.md) — published final-water profiles belong in Watermancer, not the salt-dose recipe selector
 - [Mode workspace hierarchy](mode-workspace-hierarchy.md) — Alchemist starts collapsed around recipe preparation; Watermancer leads with ion targets and translates salt recipes
+- [Watermancer salt inventory](watermancer-salt-inventory.md) — unavailable salts are excluded, auto-dose salts are matched together, and fixed doses remain unchanged

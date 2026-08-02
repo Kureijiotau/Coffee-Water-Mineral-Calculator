@@ -28,6 +28,11 @@ import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 
 export type SaltRow = { target: string; formIdx: number };
+type WatermancerSaltMode = 'unavailable' | 'auto' | 'fixed';
+type WatermancerSaltInventoryEntry = {
+  mode: WatermancerSaltMode;
+  dosePpm: string;
+};
 type BrewerFlavorInput = {
   brightness: number;
   body: number;
@@ -872,7 +877,11 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
-  const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
+  const [watermancerSaltInventory, setWatermancerSaltInventory] = useState<Record<string, WatermancerSaltInventoryEntry>>(
+    () => Object.fromEntries(
+      SALTS.map(salt => [salt.id, { mode: 'unavailable', dosePpm: '' }]),
+    ),
+  );
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerCraft, setWatermancerCraft] = useState<{
     signature: string;
@@ -888,6 +897,33 @@ function App() {
   const activeRanges: RangeSet = activeProfile.ranges;
   const showAlchemist = nerdLevel === 'alchemist';
   const showWatermancer = nerdLevel === 'watermancer';
+  const watermancerSaltInventoryEntries = useMemo(
+    () => SALTS.map(salt => ({
+      salt,
+      entry: watermancerSaltInventory[salt.id] ?? { mode: 'unavailable' as const, dosePpm: '' },
+    })),
+    [watermancerSaltInventory],
+  );
+  const watermancerAutoSaltIds = useMemo(
+    () => watermancerSaltInventoryEntries
+      .filter(({ entry }) => entry.mode === 'auto')
+      .map(({ salt }) => salt.id),
+    [watermancerSaltInventoryEntries],
+  );
+  const watermancerFixedSaltTargets = useMemo(
+    () => Object.fromEntries(
+      watermancerSaltInventoryEntries
+        .filter(({ entry }) => entry.mode === 'fixed' && num(entry.dosePpm) > 0)
+        .map(({ salt, entry }) => [salt.id, num(entry.dosePpm)]),
+    ) as Record<string, number>,
+    [watermancerSaltInventoryEntries],
+  );
+  const watermancerActiveSaltIds = useMemo(
+    () => watermancerSaltInventoryEntries
+      .filter(({ entry }) => entry.mode !== 'unavailable')
+      .map(({ salt }) => salt.id),
+    [watermancerSaltInventoryEntries],
+  );
   const effectiveAutoFillPreset: AutoFillPriorityPreset = showAlchemist
     ? 'balanced-gh-kh'
     : autoFillPriorityPreset;
@@ -1223,35 +1259,52 @@ function App() {
         : 0,
     };
   }), [L, rows, watermancerIonGaps]);
-  const selectedWatermancerSaltTargets = useMemo(() => {
-    const selected = new Set(watermancerUsedSaltIds);
-    return Object.fromEntries(
+  const selectedWatermancerSaltTargets = useMemo(() => ({
+    ...Object.fromEntries(
       watermancerSaltOptions
-        .filter(option => selected.has(option.salt.id) && option.targetPpm > 0)
+        .filter(option => watermancerAutoSaltIds.includes(option.salt.id) && option.targetPpm > 0)
         .map(option => [option.salt.id, option.targetPpm]),
-    ) as Record<string, number>;
-  }, [watermancerSaltOptions, watermancerUsedSaltIds]);
+    ),
+    ...watermancerFixedSaltTargets,
+  }) as Record<string, number>, [
+    watermancerAutoSaltIds,
+    watermancerFixedSaltTargets,
+    watermancerSaltOptions,
+  ]);
   const watermancerCraftSignature = useMemo(
     () => JSON.stringify({
-      salts: [...watermancerUsedSaltIds].sort(),
+      autoSalts: [...watermancerAutoSaltIds].sort(),
+      fixedSalts: watermancerFixedSaltTargets,
       water: ACTIVE_ION_IDS.map(id => Number((bottledIons[id] ?? 0).toFixed(6))),
       target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
       preset: autoCraftPreset,
     }),
-    [autoCraftPreset, bottledIons, watermancerIonTargets, watermancerUsedSaltIds],
+    [
+      autoCraftPreset,
+      bottledIons,
+      watermancerAutoSaltIds,
+      watermancerFixedSaltTargets,
+      watermancerIonTargets,
+    ],
   );
   const activeWatermancerSaltTargets = useMemo(
     () => watermancerCraft?.signature === watermancerCraftSignature
-      ? watermancerCraft.targets
+      ? { ...watermancerFixedSaltTargets, ...watermancerCraft.targets }
       : selectedWatermancerSaltTargets,
-    [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
+    [
+      selectedWatermancerSaltTargets,
+      watermancerCraft,
+      watermancerCraftSignature,
+      watermancerFixedSaltTargets,
+    ],
   );
   const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
   const makeWatermancerCraftSignature = (
     waterIons: Partial<Record<IonId, number>>,
     preset = autoCraftPreset,
   ) => JSON.stringify({
-    salts: [...watermancerUsedSaltIds].sort(),
+    autoSalts: [...watermancerAutoSaltIds].sort(),
+    fixedSalts: watermancerFixedSaltTargets,
     water: ACTIVE_ION_IDS.map(id => Number((waterIons[id] ?? 0).toFixed(6))),
     target: ACTIVE_ION_IDS.map(id => Number((watermancerIonTargets[id] ?? 0).toFixed(6))),
     preset,
@@ -1353,7 +1406,7 @@ function App() {
    );
 
   const handleAutoCraft = () => {
-    if (watermancerUsedSaltIds.length === 0 || batchMl <= 0) return;
+    if (watermancerAutoSaltIds.length === 0 || batchMl <= 0) return;
     let craftedMineralWaters = mineralWaters;
     let craftedAdditionWaters = additionWaters;
     let craftedWaterIons = bottledIons;
@@ -1395,17 +1448,23 @@ function App() {
       setAdditionWaters(craftedAdditionWaters);
     }
 
-    const selectedIds = new Set(watermancerUsedSaltIds);
     const craftedHasWater = hasMineralWater
       || Object.values(craftedWaterIons).some(value => value > 0.000001);
     const craftedSuggestedSaltTargets = autoCraftPreset === 'water-first'
       ? buildSuggestedSaltTargets(craftedWaterIons, craftedHasWater)
       : suggestedSaltTargets;
-    const fixedSaltTargets = Object.fromEntries(
-      Object.entries(craftedSuggestedSaltTargets).filter(([saltId]) => !selectedIds.has(saltId)),
-    );
+    const fixedSaltTargets = {
+      ...watermancerFixedSaltTargets,
+      ...Object.fromEntries(
+        Object.entries(craftedSuggestedSaltTargets).filter(([saltId]) =>
+          watermancerActiveSaltIds.includes(saltId)
+          && watermancerSaltInventory[saltId]?.mode !== 'auto'
+          && watermancerSaltInventory[saltId]?.mode !== 'fixed',
+        ),
+      ),
+    };
     const targets = autoCraftSaltTargets(
-      watermancerUsedSaltIds,
+      watermancerAutoSaltIds,
       craftedWaterIons,
       watermancerIonTargets,
       fixedSaltTargets,
@@ -1417,17 +1476,13 @@ function App() {
     });
   };
 
-  // A Watermancer salt marked "Used" represents the user's chosen salt
-  // option for that gap. Replace that salt's automatic recommendation with
-  // the selected option dose so final chemistry and all dosing surfaces agree.
+  // Watermancer inventory is the source of truth for salt dosing. Unavailable
+  // salts are excluded; fixed salts are held constant; auto salts are matched.
   const selectedSuggestedSaltTargets = useMemo(() => {
-    if (!showWatermancer || Object.keys(activeWatermancerSaltTargets).length === 0) {
+    if (!showWatermancer) {
       return suggestedSaltTargets;
     }
-    return {
-      ...suggestedSaltTargets,
-      ...activeWatermancerSaltTargets,
-    };
+    return activeWatermancerSaltTargets;
   }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
   const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
@@ -1443,7 +1498,9 @@ function App() {
     (finalMixtureTargetIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
     0,
   );
-  const sodiumCorrectionTarget = hasMineralWater && (showAlchemist || sodiumCorrectionOn)
+  const sodiumCorrectionAllowed = !showWatermancer
+    || watermancerSaltInventory.nacl?.mode === 'auto';
+  const sodiumCorrectionTarget = hasMineralWater && sodiumCorrectionAllowed && (showAlchemist || sodiumCorrectionOn)
     ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
     : 0;
   const effectiveSuggestedSaltTargets = useMemo<Record<string, number>>(() => ({
@@ -1608,7 +1665,9 @@ function App() {
     setSplitStrengths({ hardness: 100, alkalinity: 100, citrate: 50 });
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
     setMagnesiumPreference('original');
-    setWatermancerUsedSaltIds([]);
+    setWatermancerSaltInventory(Object.fromEntries(
+      SALTS.map(salt => [salt.id, { mode: 'unavailable', dosePpm: '' }]),
+    ));
     setAutoCraftPreset('closest-match');
     setWatermancerCraft(null);
     setSodiumCorrectionOn(false);
@@ -2250,7 +2309,7 @@ function App() {
                 {[
                   { number: '1', label: 'Set target', complete: true },
                   { number: '2', label: 'Add waters', complete: mineralWaters.length + additionWaters.length > 0 },
-                  { number: '3', label: 'Add salts', complete: watermancerUsedSaltIds.length > 0 },
+                  { number: '3', label: 'Add salts', complete: watermancerActiveSaltIds.length > 0 },
                   { number: '4', label: 'Match options', complete: true },
                   { number: '5', label: 'Auto-match', complete: watermancerCraftIsCurrent },
                   { number: '6', label: 'Review result', complete: watermancerCraftIsCurrent },
@@ -3570,106 +3629,112 @@ function App() {
                       Using {watermancerTargetSourceLabel} as the ion target source
                    </span>
                  </div>
-                <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {ACTIVE_ION_IDS.map(id => {
-                     const target = watermancerIonTargets[id] ?? 0;
+                    const target = watermancerIonTargets[id] ?? 0;
                     const covered = bottledIons[id] ?? 0;
                     const remaining = Math.max(target - covered, 0);
-                     const coveredTarget = covered >= target - 0.01;
-                     if (target <= 0 && covered <= 0) return null;
+                    const coveredTarget = covered >= target - 0.01;
+                    if (target <= 0 && covered <= 0) return null;
                     return (
-                      <div key={id} className="bg-slate-900/40 border border-slate-700/50 rounded-lg px-3 py-2">
+                      <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
-                         {coveredTarget ? (
-                           <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
-                             <Check className="h-3.5 w-3.5" /> Covered
-                           </span>
-                         ) : remaining > 0 ? (
-                          <span className="text-sm font-semibold tabular-nums text-amber-300">
-                            {remaining.toFixed(1)} ppm
+                        {coveredTarget ? (
+                          <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
+                            <Check className="h-3.5 w-3.5" /> Covered
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
-                             <Check className="h-3.5 w-3.5" /> Covered
+                          <span className="text-sm font-semibold tabular-nums text-amber-300">
+                            {remaining.toFixed(1)} ppm
                           </span>
                         )}
                       </div>
                     );
                   })}
                 </div>
-                  {/* Every gap gets every compatible salt option. Marking an
-                      option Used feeds that salt dose into the final chemistry
-                      while leaving the editable recipe rows unchanged. */}
-                 <div className="mt-3 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salt options</span>
-                   </div>
-                   {ACTIVE_ION_IDS.map(id => {
-                     const gap = watermancerIonGaps[id] ?? 0;
-                     if (gap <= 0.05) return null;
-                     const options = watermancerSaltOptions.filter(option =>
-                       option.targetPpm > 0 && option.salt.ions.some(contribution => contribution.ionId === id),
-                     );
-                     if (options.length === 0) return null;
-                     return (
-                       <div key={id} className="rounded-xl border border-slate-700/50 bg-slate-900/25 p-3">
-                         <div className="mb-2 flex items-center justify-between gap-2">
-                           <span className="text-xs font-semibold text-amber-200">
-                             {ION_MAP[id].name} gap · {gap.toFixed(1)} ppm
-                           </span>
-                           <span className="text-[10px] text-slate-500">{options.length} option{options.length === 1 ? '' : 's'}</span>
-                         </div>
-                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                           {options.map(option => {
-                             const used = watermancerUsedSaltIds.includes(option.salt.id);
-                              const activeTargetPpm = used
-                                ? (activeWatermancerSaltTargets[option.salt.id] ?? 0)
-                                : option.targetPpm;
-                              const activeMg = used
-                                ? computeSaltMg(activeTargetPpm, L, option.form.molarMass, option.salt.anhydrousMass)
-                                : option.mg;
-                             const toggleUsed = () => setWatermancerUsedSaltIds(current =>
-                               used ? current.filter(id => id !== option.salt.id) : [...current, option.salt.id],
-                             );
-                             return (
-                               <button
-                                 key={option.salt.id}
-                                 type="button"
-                                 onClick={toggleUsed}
-                                 aria-pressed={used}
-                                 className={`rounded-lg border px-3 py-2 text-left transition ${
-                                   used
-                                     ? 'border-emerald-400/60 bg-emerald-500/15 shadow-[0_0_12px_-4px_rgba(52,211,153,0.65)]'
-                                     : 'border-slate-700/50 bg-slate-950/30 opacity-55 hover:border-sky-400/40 hover:bg-sky-500/10 hover:opacity-100'
-                                 }`}
-                               >
-                                 <div className="flex items-center justify-between gap-2">
-                                   <span className={`text-xs font-semibold ${used ? 'text-emerald-200' : 'text-slate-400'}`}>
-                                     {option.salt.name}
-                                   </span>
-                                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
-                                     used ? 'bg-emerald-400/20 text-emerald-200' : 'bg-slate-700/60 text-slate-500'
-                                   }`}>
-                                     {used ? 'Used' : 'Unused'}
-                                   </span>
-                                 </div>
-                                 <div className="mt-1 text-[10px] text-slate-500">
-                                   {option.salt.formula} · {option.form.label}
-                                 </div>
-                                 <div className={`mt-1 text-sm font-semibold tabular-nums ${used ? 'text-emerald-300' : 'text-slate-500'}`}>
-                                    {activeMg.toFixed(1)} mg
-                                 </div>
-                                  {used && watermancerCraftIsCurrent && (
-                                    <div className="mt-0.5 text-[9px] text-emerald-200/70">Auto-matched dose</div>
-                                  )}
-                               </button>
-                             );
-                           })}
-                         </div>
-                       </div>
-                     );
-                   })}
+                <div className="mt-4 overflow-hidden rounded-xl border border-slate-700/60">
+                  <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                    <span>Salt inventory</span>
+                    <span>Form</span>
+                    <span>Availability</span>
+                    <span>Dose</span>
                   </div>
+                  <div className="divide-y divide-slate-700/50">
+                    {watermancerSaltInventoryEntries.map(({ salt, entry }) => {
+                      const option = watermancerSaltOptions.find(item => item.salt.id === salt.id)!;
+                      const activePpm = entry.mode === 'fixed'
+                        ? num(entry.dosePpm)
+                        : activeWatermancerSaltTargets[salt.id] ?? option.targetPpm;
+                      const activeMg = activePpm > 0
+                        ? computeSaltMg(activePpm, L, option.form.molarMass, option.salt.anhydrousMass)
+                        : 0;
+                      const setInventoryEntry = (patch: Partial<WatermancerSaltInventoryEntry>) => {
+                        setWatermancerSaltInventory(current => ({
+                          ...current,
+                          [salt.id]: {
+                            ...(current[salt.id] ?? { mode: 'unavailable', dosePpm: '' }),
+                            ...patch,
+                          },
+                        }));
+                        setWatermancerCraft(null);
+                      };
+                      return (
+                        <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
+                          <div>
+                            <div className="text-xs font-semibold text-slate-200">{salt.name}</div>
+                            <div className="mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
+                          </div>
+                          <div className="text-[10px] text-slate-400 sm:text-xs">{option.form.label}</div>
+                          <label className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Availability</span>
+                            <select
+                              value={entry.mode}
+                              onChange={event => {
+                                const mode = event.target.value as WatermancerSaltMode;
+                                setInventoryEntry({
+                                  mode,
+                                  dosePpm: mode === 'fixed' ? (entry.dosePpm || option.targetPpm.toFixed(2)) : entry.dosePpm,
+                                });
+                              }}
+                              className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-indigo-300/60"
+                            >
+                              <option value="unavailable">Unavailable</option>
+                              <option value="auto">Auto-dose</option>
+                              <option value="fixed">Fixed dose</option>
+                            </select>
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Dose</span>
+                            {entry.mode === 'fixed' ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={entry.dosePpm}
+                                onChange={event => setInventoryEntry({ dosePpm: normalizeSaltTarget(event.target.value) })}
+                                className="min-w-0 flex-1 rounded-lg border border-amber-300/30 bg-slate-950/70 px-2 py-1.5 text-right text-[11px] tabular-nums text-amber-100 outline-none focus:border-amber-200/70"
+                                aria-label={`${salt.name} fixed dose in ppm`}
+                              />
+                            ) : (
+                              <span className={`text-sm font-semibold tabular-nums ${
+                                entry.mode === 'auto' && activePpm > 0 ? 'text-emerald-300' : 'text-slate-600'
+                              }`}>
+                                {entry.mode === 'auto' && activePpm > 0 ? `${activeMg.toFixed(1)} mg` : '—'}
+                              </span>
+                            )}
+                            {entry.mode === 'auto' && activePpm > 0 && watermancerCraftIsCurrent && (
+                              <span className="text-[9px] text-emerald-200/70">matched</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-500">
+                  <span>Auto-dose salts are optimized together. Fixed doses stay unchanged. Unavailable salts are excluded.</span>
+                  <span>{watermancerActiveSaltIds.length} of {SALTS.length} salts available</span>
+                </div>
             </div>
           </div>
         )}
@@ -3726,11 +3791,11 @@ function App() {
               <button
                 type="button"
                 onClick={handleAutoCraft}
-                disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
+                disabled={watermancerAutoSaltIds.length === 0 || batchMl <= 0}
                 className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-4 py-2.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
-                title={watermancerUsedSaltIds.length === 0
-                  ? 'Mark at least one salt Used before auto-matching'
-                  : 'Optimize the selected salt doses against the active ion profile'}
+                title={watermancerAutoSaltIds.length === 0
+                  ? 'Set at least one salt to Auto-dose before matching'
+                  : 'Optimize the Auto-dose salts against the active ion profile'}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 Auto-match
