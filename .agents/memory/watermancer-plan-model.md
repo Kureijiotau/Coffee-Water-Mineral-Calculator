@@ -27,6 +27,12 @@ Post-match ion coverage must render from the active route candidate's final-ion 
 
 **How to apply:** Use the selected candidate as the display source of truth immediately after Auto-match and whenever a route is applied.
 
+Route selection must preserve the Auto-match result surface during asynchronous plan updates, and the displayed Primary match should be the candidate with the fewest overshoots, using score as the tie-breaker.
+
+**Why:** Applying an alternative changes several plan-signature inputs at once; treating the intermediate state as stale closes the route panel, while a higher-overshoot Primary route contradicts the user's safety preference.
+
+**How to apply:** Keep a short-lived transition signature while applying a route, and rank candidates by overshoot count before score.
+
 The Review Match panel should remain available for every active solver route, including routes that minimize or omit water, and should show original target GH/KH/TDS separately from the selected route's final mixture.
 
 **Why:** Gating review visibility on mineral-water volume hid valid salt-focused routes and made it difficult to compare the route result against the user's original ionic objective.

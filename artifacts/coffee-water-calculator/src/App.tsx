@@ -752,6 +752,17 @@ type WatermancerRouteInputs = {
   additionWaters: MineralWaterEntry[];
 };
 
+type WatermancerRouteDefinition = {
+  id: string;
+  kind: WatermancerRouteCandidate['kind'];
+  label: string;
+  explanation: string;
+  fillWater: boolean;
+  priority: IonId[];
+  saltObjective: WatermancerSaltObjective;
+  strategy: AutoCraftPreset;
+};
+
 function fillWatermancerRoute(
   inputs: WatermancerRouteInputs,
   fillWater: boolean,
@@ -808,6 +819,84 @@ function fillWatermancerRoute(
   return { baseWaters, additionWaters };
 }
 
+function executeWatermancerRoute(
+  inputs: WatermancerRouteInputs,
+  definition: WatermancerRouteDefinition,
+): WatermancerRouteCandidate {
+  const routePlan: WatermancerPlan = {
+    ...inputs.plan,
+    strategy: definition.strategy,
+    saltObjective: definition.saltObjective,
+    ionPriority: definition.priority,
+    overshootOrder: definition.kind === 'prioritize-ions'
+      ? definition.priority
+      : inputs.plan.overshootOrder,
+  };
+  const waters = fillWatermancerRoute(
+    inputs,
+    definition.fillWater,
+    definition.priority,
+  );
+  const selectedWaters = [...waters.baseWaters, ...waters.additionWaters];
+  const bottledIons = computeWatermancerBottledIons(selectedWaters, inputs.batchMl);
+  const saltTargets = autoCraftSaltTargets(
+    routePlan.selectedSalts,
+    bottledIons,
+    routePlan.targetIons,
+    routePlan.fixedSaltDoses,
+    routePlan.strategy,
+    routePlan.saltObjective,
+    {
+      enabled: routePlan.allowOvershoot,
+      allowedIons: routePlan.allowedOvershootIons,
+      maxPpm: routePlan.overshootLimits,
+      priorityOrder: routePlan.overshootOrder,
+    },
+  );
+  const allSaltTargets = { ...routePlan.fixedSaltDoses, ...saltTargets };
+  const finalIons = computeIonTotals(
+    allSaltTargets,
+    bottledIons,
+    1,
+  );
+  const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
+  const overshoots = findIonOvershoots(finalIons, routePlan.targetIons);
+  const overshootRank = new Map(
+    normalizeWatermancerIonOrder(routePlan.overshootOrder).map((id, index) => [id, index]),
+  );
+  const score = deviations.reduce((total, deviation) => {
+    const allowance = routePlan.allowOvershoot && routePlan.allowedOvershootIons.includes(deviation.id)
+      ? Math.max(0, routePlan.overshootLimits[deviation.id] ?? 0)
+      : 0;
+    const excessBeyondAllowance = Math.max(deviation.delta - allowance, 0);
+    const shortfall = Math.max(-deviation.delta, 0);
+    const priorityWeight = IONS.length - (overshootRank.get(deviation.id) ?? IONS.length);
+    return total + shortfall * (1 + priorityWeight / IONS.length)
+      + excessBeyondAllowance * (4 + priorityWeight / IONS.length);
+  }, 0);
+  const candidatePlan: WatermancerPlan = {
+    ...routePlan,
+    selectedWaters,
+    fixedWaterVolumes: Object.fromEntries(
+      selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+    ),
+  };
+  return {
+    id: definition.id,
+    kind: definition.kind,
+    label: definition.label,
+    explanation: definition.explanation,
+    plan: candidatePlan,
+    baseWaters: waters.baseWaters,
+    additionWaters: waters.additionWaters,
+    saltTargets: allSaltTargets,
+    finalIons,
+    deviations,
+    overshoots,
+    score,
+  };
+}
+
 function watermancerRouteDeviations(
   actual: Record<IonId, number>,
   target: Partial<Record<IonId, number>>,
@@ -852,16 +941,7 @@ export function solveWatermancerRoutes({
     const shortfallB = Math.max((plan.targetIons[b] ?? 0) - (currentBottledIons[b] ?? 0), 0);
     return shortfallB - shortfallA || currentPriority.indexOf(a) - currentPriority.indexOf(b);
   });
-  const routeDefinitions: Array<{
-    id: string;
-    kind: WatermancerRouteCandidate['kind'];
-    label: string;
-    explanation: string;
-    fillWater: boolean;
-    priority: IonId[];
-    saltObjective: WatermancerSaltObjective;
-    strategy: AutoCraftPreset;
-  }> = [
+  const routeDefinitions: WatermancerRouteDefinition[] = [
     {
       id: 'primary',
       kind: 'primary',
@@ -904,83 +984,29 @@ export function solveWatermancerRoutes({
     },
   ];
 
-  const candidates = routeDefinitions.map(definition => {
-    const routePlan: WatermancerPlan = {
-      ...plan,
-      strategy: definition.strategy,
-      saltObjective: definition.saltObjective,
-      ionPriority: definition.priority,
-      overshootOrder: definition.kind === 'prioritize-ions'
-        ? definition.priority
-        : plan.overshootOrder,
-    };
-    const waters = fillWatermancerRoute(
-      { plan: routePlan, batchMl, baseWaters, additionWaters },
-      definition.fillWater,
-      definition.priority,
-    );
-    const selectedWaters = [...waters.baseWaters, ...waters.additionWaters];
-    const bottledIons = computeWatermancerBottledIons(selectedWaters, batchMl);
-    const saltTargets = autoCraftSaltTargets(
-      routePlan.selectedSalts,
-      bottledIons,
-      routePlan.targetIons,
-      routePlan.fixedSaltDoses,
-      routePlan.strategy,
-      routePlan.saltObjective,
-      {
-        enabled: routePlan.allowOvershoot,
-        allowedIons: routePlan.allowedOvershootIons,
-        maxPpm: routePlan.overshootLimits,
-        priorityOrder: routePlan.overshootOrder,
-      },
-    );
-    const allSaltTargets = { ...routePlan.fixedSaltDoses, ...saltTargets };
-    const finalIons = computeIonTotals(
-      allSaltTargets,
-      bottledIons,
-      1,
-    );
-    const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
-    const overshoots = findIonOvershoots(finalIons, routePlan.targetIons);
-    const overshootRank = new Map(
-      normalizeWatermancerIonOrder(routePlan.overshootOrder).map((id, index) => [id, index]),
-    );
-    const score = deviations.reduce((total, deviation) => {
-      const allowance = routePlan.allowOvershoot && routePlan.allowedOvershootIons.includes(deviation.id)
-        ? Math.max(0, routePlan.overshootLimits[deviation.id] ?? 0)
-        : 0;
-      const excessBeyondAllowance = Math.max(deviation.delta - allowance, 0);
-      const shortfall = Math.max(-deviation.delta, 0);
-      const priorityWeight = IONS.length - (overshootRank.get(deviation.id) ?? IONS.length);
-      return total + shortfall * (1 + priorityWeight / IONS.length)
-        + excessBeyondAllowance * (4 + priorityWeight / IONS.length);
-    }, 0);
-    const candidatePlan: WatermancerPlan = {
-      ...routePlan,
-      selectedWaters,
-      fixedWaterVolumes: Object.fromEntries(
-        selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
-      ),
-    };
-    return {
-      id: definition.id,
-      kind: definition.kind,
-      label: definition.label,
-      explanation: definition.explanation,
-      plan: candidatePlan,
-      baseWaters: waters.baseWaters,
-      additionWaters: waters.additionWaters,
-      saltTargets: allSaltTargets,
-      finalIons,
-      deviations,
-      overshoots,
-      score,
-    };
-  });
+  const candidates = routeDefinitions.map(definition => executeWatermancerRoute(
+    { plan, batchMl, baseWaters, additionWaters },
+    definition,
+  ));
 
-  const primaryPlan = candidates[0];
-  const alternatives = candidates.slice(1);
+  const primaryCandidate = [...candidates].sort((a, b) => (
+    a.overshoots.length - b.overshoots.length || a.score - b.score
+  ))[0];
+  const primaryPlan: WatermancerRouteCandidate = {
+    ...primaryCandidate,
+    id: 'primary',
+    label: 'Primary match',
+  };
+  const alternatives = candidates
+    .filter(candidate => candidate.id !== primaryCandidate.id)
+    .map(candidate => candidate.id === 'primary'
+      ? {
+        ...candidate,
+        id: 'balanced',
+        label: 'Balanced match',
+        explanation: 'Use the selected matching strategy with the current water and salt boundaries.',
+      }
+      : candidate);
   const meaningfulDeviations = primaryPlan.deviations
     .filter(item => Math.abs(watermancerDeviationBeyondPolicy(item, primaryPlan.plan)) > 0.05);
    const status: WatermancerSolverResult['status'] = batchMl <= 0
@@ -1309,6 +1335,7 @@ function App() {
     signature: string;
     result: WatermancerSolverResult;
     activeRouteId: string;
+    transitionFromSignature?: string;
   } | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
@@ -1688,7 +1715,23 @@ function App() {
       : selectedWatermancerSaltTargets,
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
   );
-  const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
+  const watermancerCraftIsCurrent = Boolean(
+    watermancerCraft
+    && (
+      watermancerCraft.signature === watermancerCraftSignature
+      || watermancerCraft.transitionFromSignature === watermancerCraftSignature
+    ),
+  );
+  useEffect(() => {
+    setWatermancerCraft(current => {
+      if (!current?.transitionFromSignature) return current;
+      if (current.signature === watermancerCraftSignature) {
+        const { transitionFromSignature: _transitionFromSignature, ...settled } = current;
+        return settled;
+      }
+      return current;
+    });
+  }, [watermancerCraftSignature]);
   const activeWatermancerRoute = useMemo(
     () => watermancerCraftIsCurrent && watermancerCraft
       ? [watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives]
@@ -1811,27 +1854,75 @@ function App() {
     });
     setMineralWaters(result.primaryPlan.baseWaters);
     setAdditionWaters(result.primaryPlan.additionWaters);
+    setAutoCraftPreset(result.primaryPlan.plan.strategy);
+    setWatermancerSaltObjective(result.primaryPlan.plan.saltObjective);
+    if (result.primaryPlan.kind === 'prioritize-ions') {
+      setAutoFillPriorityPreset('custom');
+      setAutoFillCustomPriority(result.primaryPlan.plan.ionPriority);
+    }
     setWatermancerCraft({
       signature: createWatermancerPlanSignature(result.primaryPlan.plan),
       result,
       activeRouteId: result.primaryPlan.id,
+      transitionFromSignature: createWatermancerPlanSignature(watermancerPlan),
     });
   };
 
   const handleApplyWatermancerRoute = (candidate: WatermancerRouteCandidate) => {
-    setMineralWaters(candidate.baseWaters);
-    setAdditionWaters(candidate.additionWaters);
-    setAutoCraftPreset(candidate.plan.strategy);
-    setWatermancerSaltObjective(candidate.plan.saltObjective);
-    if (candidate.kind === 'prioritize-ions') {
+    const routeDefinition: WatermancerRouteDefinition = {
+      id: candidate.id,
+      kind: candidate.kind,
+      label: candidate.label,
+      explanation: candidate.explanation,
+      fillWater: candidate.kind === 'use-more-water'
+        || candidate.kind === 'prioritize-ions'
+        || (candidate.kind === 'primary' && candidate.plan.strategy === 'water-first'),
+      priority: candidate.plan.ionPriority,
+      saltObjective: candidate.plan.saltObjective,
+      strategy: candidate.plan.strategy,
+    };
+    const executedCandidate = executeWatermancerRoute(
+      {
+        plan: watermancerPlan,
+        batchMl,
+        baseWaters: mineralWaters,
+        additionWaters,
+      },
+      routeDefinition,
+    );
+    const meaningfulDeviations = executedCandidate.deviations.filter(item => (
+      Math.abs(watermancerDeviationBeyondPolicy(item, executedCandidate.plan)) > 0.05
+    ));
+    const freshStatus: WatermancerSolverResult['status'] = meaningfulDeviations.length === 0
+      ? 'matched'
+      : 'partial';
+    setMineralWaters(executedCandidate.baseWaters);
+    setAdditionWaters(executedCandidate.additionWaters);
+    setAutoCraftPreset(executedCandidate.plan.strategy);
+    setWatermancerSaltObjective(executedCandidate.plan.saltObjective);
+    if (executedCandidate.kind === 'prioritize-ions') {
       setAutoFillPriorityPreset('custom');
-      setAutoFillCustomPriority(candidate.plan.ionPriority);
+      setAutoFillCustomPriority(executedCandidate.plan.ionPriority);
     }
     setWatermancerCraft(current => current
       ? {
         ...current,
-        signature: createWatermancerPlanSignature(candidate.plan),
-        activeRouteId: candidate.id,
+        signature: createWatermancerPlanSignature(executedCandidate.plan),
+        activeRouteId: executedCandidate.id,
+        transitionFromSignature: current.signature,
+        result: {
+          ...current.result,
+          primaryPlan: current.result.primaryPlan.id === executedCandidate.id
+            ? executedCandidate
+            : current.result.primaryPlan,
+          alternatives: current.result.alternatives.map(route => (
+            route.id === executedCandidate.id ? executedCandidate : route
+          )),
+          status: freshStatus,
+          finalIons: executedCandidate.finalIons,
+          deviations: executedCandidate.deviations,
+          overshoots: executedCandidate.overshoots,
+        },
       }
       : current);
   };
@@ -4289,7 +4380,9 @@ function App() {
                       .reduce((total, water) => total + num(water.volumeMl), 0);
                     const saltCount = Object.values(candidate.saltTargets)
                       .filter(target => target > 0.000001).length;
-                    const routeMode = candidate.kind === 'use-more-water'
+                     const routeMode = candidate.id === 'primary'
+                       ? 'Balanced'
+                       : candidate.kind === 'use-more-water'
                       ? 'Water-led'
                       : candidate.kind === 'use-more-salts'
                         ? 'Salt-led'
