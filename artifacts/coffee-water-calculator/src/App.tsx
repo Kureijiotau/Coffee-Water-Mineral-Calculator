@@ -45,7 +45,7 @@ type BrewerFlavorInput = {
   sweetness: number;
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
-type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}`;
+type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `reference:${string}`;
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 type AutoCraftObjective = WatermancerSaltObjective;
 type OvershootSettings = {
@@ -1745,6 +1745,10 @@ function App() {
       const recipe = ROBERT_ASAMI_RECIPES.find(item => item.id === recipeId);
       return recipe ? ionTotalsForSaltRecipe(recipe) : {};
     }
+    if (watermancerTargetSource.startsWith('reference:')) {
+      const referenceId = watermancerTargetSource.slice('reference:'.length);
+      return EMPIRICAL_WATERS.find(item => item.id === referenceId)?.ions ?? {};
+    }
     if (watermancerTargetSource.startsWith('saved:')) {
       const pId = watermancerTargetSource.slice('saved:'.length);
       const p = wmProfiles.find(item => item.id === pId);
@@ -2310,6 +2314,9 @@ function App() {
     }
     if (watermancerTargetSource.startsWith('recipe:')) {
       return allRecipes.find(item => item.id === watermancerTargetSource.slice('recipe:'.length))?.name ?? 'Selected recipe';
+    }
+    if (watermancerTargetSource.startsWith('reference:')) {
+      return EMPIRICAL_WATERS.find(item => item.id === watermancerTargetSource.slice('reference:'.length))?.name ?? 'Reference water';
     }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
   }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
@@ -2921,6 +2928,7 @@ function App() {
               wmProfiles={wmProfiles}
               allRecipes={allRecipes}
               externalRecipes={ROBERT_ASAMI_RECIPES}
+              referenceWaters={EMPIRICAL_WATERS}
               watermancerTargetSource={watermancerTargetSource}
               onSelectProfile={handleSelectProfile}
               onTargetSourceChange={setWatermancerTargetSource}
@@ -4693,6 +4701,7 @@ function WatermancerIonProfileCard({
   wmProfiles,
   allRecipes,
   externalRecipes,
+  referenceWaters,
   watermancerTargetSource,
   onSelectProfile,
   onTargetSourceChange,
@@ -4705,6 +4714,7 @@ function WatermancerIonProfileCard({
   wmProfiles: WatermancerProfile[];
   allRecipes: SaltRecipe[];
   externalRecipes: ExternalRecipe[];
+  referenceWaters: typeof EMPIRICAL_WATERS;
   watermancerTargetSource: WatermancerTargetSourceId;
   onSelectProfile: (id: string) => void;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
@@ -4805,6 +4815,13 @@ function WatermancerIonProfileCard({
             <optgroup label="Robert Asami's Watering Hole">
               {externalRecipes.map(r => (
                 <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name} → ions</option>
+              ))}
+            </optgroup>
+            <optgroup label="Empirical reference waters">
+              {referenceWaters.map(water => (
+                <option key={`reference:${water.id}`} value={`reference:${water.id}`}>
+                  {water.name} → ions
+                </option>
               ))}
             </optgroup>
           </select>

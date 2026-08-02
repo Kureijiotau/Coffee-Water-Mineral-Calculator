@@ -9,6 +9,7 @@ import {
   type MineralWaterEntry,
 } from './App';
 import { computeIonTotals, findIonOvershoots, findIonUnderdoses, IONS, RECIPES, SALTS } from './waterData';
+import { EMPIRICAL_WATERS } from './empiricalWaters';
 
 const water = (
   id: string,
@@ -406,6 +407,70 @@ describe('Watermancer salt-to-ion helpers', () => {
 
     expect(findIonOvershoots(finalIons, ionTargets)).toEqual([]);
     expect(findIonUnderdoses(finalIons, ionTargets)).toEqual([]);
+  });
+
+  it('runs every route against the Empirical Glacier profile for diagnosis', () => {
+    const glacier = EMPIRICAL_WATERS.find(water => water.id === 'empirical-glacial')!;
+    const targetIons = glacier.ions;
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons,
+        selectedWaters: [],
+        selectedSalts: SALTS.map(salt => salt.id),
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+
+    expect(result.primaryPlan).toBeDefined();
+  });
+
+  it('replicates the Empirical Glacier profile exactly when Glacier is selected as source water', () => {
+    const glacier = EMPIRICAL_WATERS.find(water => water.id === 'empirical-glacial')!;
+    const targetIons = glacier.ions;
+    const sourceWater: MineralWaterEntry = {
+      id: 'glacier-source',
+      name: glacier.name,
+      ions: Object.fromEntries(
+        Object.entries(glacier.ions).map(([ionId, value]) => [ionId, String(value)]),
+      ),
+      metadata: { tds: String(glacier.metadata.tds) },
+      volumeMl: '1000',
+    };
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons,
+        selectedWaters: [sourceWater],
+        selectedSalts: SALTS.map(salt => salt.id),
+        fixedWaterVolumes: { [sourceWater.id]: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+      },
+      batchMl: 1000,
+      baseWaters: [sourceWater],
+      additionWaters: [],
+    });
+    const exactRoute = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-salts')!;
+
+    expect(findIonOvershoots(exactRoute.finalIons, targetIons)).toEqual([]);
+    expect(findIonUnderdoses(exactRoute.finalIons, targetIons)).toEqual([]);
   });
 
   it('sizes a salt option from the tightest coupled-ion gap', () => {
