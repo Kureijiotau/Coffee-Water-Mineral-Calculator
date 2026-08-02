@@ -26,3 +26,9 @@ Post-match ion coverage must render from the active route candidate's final-ion 
 **Why:** Applying a route updates water state asynchronously, and volume-based visibility caused the ion card to unmount and remount during route selection.
 
 **How to apply:** Use the selected candidate as the display source of truth immediately after Auto-match and whenever a route is applied.
+
+The Review Match panel should remain available for every active solver route, including routes that minimize or omit water, and should show original target GH/KH/TDS separately from the selected route's final mixture.
+
+**Why:** Gating review visibility on mineral-water volume hid valid salt-focused routes and made it difficult to compare the route result against the user's original ionic objective.
+
+**How to apply:** Drive review visibility from the active solver candidate, calculate route result metrics from its final ions, and calculate the original target cards from the Watermancer target profile.

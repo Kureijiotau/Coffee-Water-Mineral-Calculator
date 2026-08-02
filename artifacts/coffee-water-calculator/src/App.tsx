@@ -1677,6 +1677,29 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
+  const reviewFinalIons = activeWatermancerRoute?.finalIons ?? suggestedIonTotals;
+  const reviewSaltIons = activeWatermancerRoute
+    ? computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1)
+    : finalSaltIons;
+  const reviewWaterIons = Object.fromEntries(
+    IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
+  ) as Record<IonId, number>;
+  const reviewFinalGh = computeGH(reviewFinalIons);
+  const reviewFinalKh = computeKH(reviewFinalIons);
+  const reviewFinalTds = Object.values(reviewFinalIons).reduce((total, ppm) => total + ppm, 0);
+  const reviewSaltGh = computeGH(reviewSaltIons);
+  const reviewSaltKh = computeKH(reviewSaltIons);
+  const reviewSaltTds = Object.values(reviewSaltIons).reduce((total, ppm) => total + ppm, 0);
+  const reviewWaterGh = computeGH(reviewWaterIons);
+  const reviewWaterKh = computeKH(reviewWaterIons);
+  const reviewWaterTds = Object.values(reviewWaterIons).reduce((total, ppm) => total + ppm, 0);
+  const completeWatermancerTargets = completeIonTotals(watermancerIonTargets);
+  const originalTargetGh = computeGH(completeWatermancerTargets);
+  const originalTargetKh = computeKH(completeWatermancerTargets);
+  const originalTargetTds = IONS.reduce(
+    (total, { id }) => total + completeWatermancerTargets[id],
+    0,
+  );
   const bicarbonateTarget = finalMixtureTargetIons.bicarbonate ?? 0;
   const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
   const bicarbonateWaterOvershoot = hasMineralWater
@@ -3694,26 +3717,57 @@ function App() {
           </div>
         )}
 
-         {showWatermancer && hasMineralWater && (
+         {showWatermancer && activeWatermancerRoute && (
             <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
              <SectionHeader icon={<Droplet className="w-4 h-4" />} title="5. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
-              Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
+              The selected route's modeled final mixture at the selected batch volume.
             </div>
-            <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <HardnessCard label="General Hardness (GH)" value={finalGh} saltValue={finalSaltGh} bottledValue={ghBottled} />
-              <HardnessCard label="Carbonate Hardness (KH)" value={finalKh} saltValue={finalSaltKh} bottledValue={khBottled} />
-              <TdsCard value={finalTds} saltValue={finalSaltTds} bottledValue={tdsMineral} />
-              <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH Ratio</span>
-                <span className="h-4 w-px bg-slate-700" />
-                {finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh) ? (
-                  <span className="text-lg font-semibold text-emerald-300 tabular-nums">
-                    {(finalGh / finalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
-                  </span>
-                ) : (
-                  <span className="text-lg font-semibold text-slate-500">—</span>
-                )}
+            <div className="px-4 sm:px-6 py-4">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="space-y-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">
+                    Original ion targets
+                  </div>
+                  <div className="space-y-3">
+                    <SimpleMetricCard label="Original GH target" value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
+                    <SimpleMetricCard label="Original KH target" value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
+                    <SimpleMetricCard label="Original TDS target" value={originalTargetTds} unit="mg/L" tone="tds" />
+                  </div>
+                  <div className="flex items-center justify-center gap-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 px-4 py-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Original target GH : KH ratio</span>
+                    <span className="h-4 w-px bg-slate-700" />
+                    {originalTargetKh > 0 && originalTargetGh >= 0 && Number.isFinite(originalTargetGh / originalTargetKh) ? (
+                      <span className="text-lg font-semibold text-indigo-300 tabular-nums">
+                        {(originalTargetGh / originalTargetKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                      </span>
+                    ) : (
+                      <span className="text-lg font-semibold text-slate-500">—</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200">
+                    Selected water + salts
+                  </div>
+                  <div className="space-y-3">
+                    <HardnessCard label="General Hardness (GH)" value={reviewFinalGh} saltValue={reviewSaltGh} bottledValue={reviewWaterGh} />
+                    <HardnessCard label="Carbonate Hardness (KH)" value={reviewFinalKh} saltValue={reviewSaltKh} bottledValue={reviewWaterKh} />
+                    <TdsCard value={reviewFinalTds} saltValue={reviewSaltTds} bottledValue={reviewWaterTds} />
+                  </div>
+                  <div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH ratio</span>
+                    <span className="h-4 w-px bg-slate-700" />
+                    {reviewFinalKh > 0 && reviewFinalGh >= 0 && Number.isFinite(reviewFinalGh / reviewFinalKh) ? (
+                      <span className="text-lg font-semibold text-emerald-300 tabular-nums">
+                        {(reviewFinalGh / reviewFinalKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
+                      </span>
+                    ) : (
+                      <span className="text-lg font-semibold text-slate-500">—</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
