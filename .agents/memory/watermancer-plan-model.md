@@ -14,3 +14,9 @@ Phase 4 solver results should expose one primary route plus explicit alternative
 **Why:** Users need to compare actionable tradeoffs instead of treating strategy and priority controls as hidden solver settings.
 
 **How to apply:** Keep the primary route as the default active match, store the complete solver result, and apply alternatives by updating the same Watermancer state and signature inputs so the selected route remains current.
+
+The separate pre-match strategy selector is intentionally removed; Phase 4 route cards are the only user-facing route-selection surface.
+
+**Why:** The selector duplicated the solver's route alternatives and added an unnecessary decision step before Auto-match.
+
+**How to apply:** Keep any internal primary strategy defaults needed by the solver, but do not reintroduce a standalone matching-strategy panel unless the route model changes substantially.

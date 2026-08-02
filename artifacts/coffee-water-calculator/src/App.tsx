@@ -3696,8 +3696,8 @@ function App() {
           </div>
         </div>}
 
-        {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
-           <div className="order-6" data-watermancer-stage="results">
+         {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
+            <div className="order-5" data-watermancer-stage="results">
             <WatermancerIonCoverageBars
               baseWaterIons={baseWaterIons}
               selectedSaltIons={watermancerSelectedSaltIonTotals}
@@ -3707,9 +3707,9 @@ function App() {
           </div>
         )}
 
-        {showWatermancer && hasMineralWater && (
-           <div className="order-6 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
-            <SectionHeader icon={<Droplet className="w-4 h-4" />} title="6. Review match — Final mixture" />
+         {showWatermancer && hasMineralWater && (
+            <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
+             <SectionHeader icon={<Droplet className="w-4 h-4" />} title="5. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
               Configured mineral/addition water plus suggested salts, diluted to the selected batch volume.
             </div>
@@ -3811,41 +3811,10 @@ function App() {
         )}
 
         {showWatermancer && batchMl > 0 && (
-          <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-amber-400/25 overflow-hidden" data-watermancer-stage="matching-options">
-            <SectionHeader
-              icon={<SlidersHorizontal className="h-4 w-4 text-amber-300" />}
-              title="4. Choose matching strategy"
-            />
-            <div className="px-4 sm:px-6 py-4 space-y-3">
-              <p className="max-w-2xl text-xs leading-relaxed text-slate-400">
-                Choose how the matcher should trade water coverage, salt dosing, and hardness balance before you run it.
-              </p>
-              <label className="block max-w-sm">
-                <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-amber-300">Matching strategy</span>
-                <select
-                  id="watermancer-auto-craft-preset"
-                  value={autoCraftPreset}
-                  onChange={event => {
-                    setAutoCraftPreset(event.target.value as AutoCraftPreset);
-                    setWatermancerCraft(null);
-                  }}
-                  className="w-full rounded-lg border border-amber-300/30 bg-slate-950/70 px-2.5 py-2 text-[11px] font-medium text-amber-100 outline-none transition focus:border-amber-200/70 focus:ring-2 focus:ring-amber-400/20"
-                  title="Choose the Auto-match optimization strategy"
-                >
-                  <option value="closest-match">Closest match</option>
-                  <option value="water-first">Water first</option>
-                  <option value="gh-kh-harmony">GH:KH harmony</option>
-                </select>
-              </label>
-            </div>
-          </div>
-        )}
-
-        {showWatermancer && batchMl > 0 && (
-          <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/30 bg-slate-800/70 shadow-xl overflow-hidden" data-watermancer-stage="auto-match">
+          <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/30 bg-slate-800/70 shadow-xl overflow-hidden" data-watermancer-stage="auto-match">
             <SectionHeader
               icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
-              title="5. Auto-match ionic target"
+              title="4. Auto-match ionic target"
             />
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
               <div>
