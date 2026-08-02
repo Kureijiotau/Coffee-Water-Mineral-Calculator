@@ -22,6 +22,7 @@ const basePlan = (): WatermancerPlan => ({
   saltObjective: 'balanced',
   ionPriority: ['calcium', 'magnesium', 'sodium'],
   allowOvershoot: false,
+  allowedOvershootIons: [],
   overshootLimits: { calcium: 0, bicarbonate: 0 },
   overshootOrder: ['calcium', 'magnesium', 'sodium'],
 });
@@ -64,5 +65,34 @@ describe('Watermancer plan', () => {
     });
 
     expect(volumeChanged).not.toBe(first);
+  });
+
+  it('captures the complete controlled-overshoot policy in the signature', () => {
+    const first = createWatermancerPlanSignature(basePlan());
+    const changed = createWatermancerPlanSignature({
+      ...basePlan(),
+      allowOvershoot: true,
+      allowedOvershootIons: ['calcium'],
+      overshootLimits: { calcium: 2 },
+      overshootOrder: ['magnesium', 'calcium'],
+    });
+
+    expect(changed).not.toBe(first);
+  });
+
+  it('normalizes policy order deterministically', () => {
+    const first = createWatermancerPlanSignature({
+      ...basePlan(),
+      ionPriority: ['calcium'],
+      overshootOrder: ['magnesium'],
+    });
+    const second = createWatermancerPlanSignature({
+      ...basePlan(),
+      ionPriority: ['calcium', 'potassium', 'magnesium'],
+      overshootOrder: ['magnesium', 'calcium', 'potassium'],
+    });
+
+    expect(first).not.toBe(second);
+    expect(first).toContain('"overshootOrder":["magnesium","sodium","potassium","calcium"');
   });
 });

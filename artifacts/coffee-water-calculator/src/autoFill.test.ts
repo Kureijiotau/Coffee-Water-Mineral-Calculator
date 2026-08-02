@@ -126,6 +126,64 @@ describe('autoFillWaterVolumes', () => {
     expect(volume * 12.3 / 1000).toBeCloseTo(12.3, 4);
     expect(volume * 12.3 / 1000).toBeLessThanOrEqual(12.7);
   });
+
+  it('allows only the configured amount of controlled overshoot', () => {
+    const waterEntry = water('calcium-rich', { calcium: 12 });
+    const strict = autoFillWaterVolumes(
+      [waterEntry],
+      1000,
+      { calcium: 10 },
+      [],
+      ['calcium'],
+      0,
+      true,
+    );
+    const controlled = autoFillWaterVolumes(
+      [waterEntry],
+      1000,
+      { calcium: 10 },
+      [],
+      ['calcium'],
+      0,
+      true,
+      false,
+      1,
+      0,
+      {
+        enabled: true,
+        allowedIons: ['calcium'],
+        maxPpm: { calcium: 2 },
+        priorityOrder: ['calcium'],
+      },
+    );
+
+    expect(Number(strict[0].volumeMl)).toBeCloseTo(833, 0);
+    expect(Number(controlled[0].volumeMl)).toBe(1000);
+  });
+
+  it('keeps unlisted ions as hard ceilings when controlled overshoot is enabled', () => {
+    const filled = autoFillWaterVolumes(
+      [water('calcium-and-sulfate', { calcium: 12, sulfate: 20 })],
+      1000,
+      { calcium: 10, sulfate: 10 },
+      [],
+      ['calcium', 'sulfate'],
+      0,
+      true,
+      false,
+      1,
+      0,
+      {
+        enabled: true,
+        allowedIons: ['calcium'],
+        maxPpm: { calcium: 2 },
+        priorityOrder: ['calcium', 'sulfate'],
+      },
+    );
+
+    expect(Number(filled[0].volumeMl) * 20 / 1000).toBeLessThanOrEqual(10);
+    expect(Number(filled[0].volumeMl) * 12 / 1000).toBeLessThanOrEqual(12);
+  });
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
@@ -141,6 +199,7 @@ describe('Watermancer salt-to-ion helpers', () => {
         saltObjective: 'balanced',
         ionPriority: ['calcium', 'magnesium', 'sulfate'],
         allowOvershoot: false,
+      allowedOvershootIons: [],
         overshootLimits: { calcium: 0, magnesium: 0, sulfate: 0 },
         overshootOrder: ['calcium', 'magnesium', 'sulfate'],
       },
@@ -173,6 +232,7 @@ describe('Watermancer salt-to-ion helpers', () => {
         saltObjective: 'balanced',
         ionPriority: ['calcium'],
         allowOvershoot: false,
+        allowedOvershootIons: [],
         overshootLimits: {},
         overshootOrder: ['calcium'],
       },

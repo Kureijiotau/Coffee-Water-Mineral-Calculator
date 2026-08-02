@@ -1,8 +1,14 @@
-import type { IonId, IonOvershoot } from './waterData';
+import { ACTIVE_ION_IDS, type IonId, type IonOvershoot } from './waterData';
 import type { MineralWaterEntry } from './App';
 
 export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 export type WatermancerSaltObjective = 'balanced' | 'coverage';
+export type WatermancerOvershootPolicy = {
+  enabled: boolean;
+  allowedIons: IonId[];
+  maxPpm: Partial<Record<IonId, number>>;
+  priorityOrder: IonId[];
+};
 
 export type WatermancerPlan = {
   targetIons: Partial<Record<IonId, number>>;
@@ -14,6 +20,7 @@ export type WatermancerPlan = {
   saltObjective: WatermancerSaltObjective;
   ionPriority: IonId[];
   allowOvershoot: boolean;
+  allowedOvershootIons: IonId[];
   overshootLimits: Partial<Record<IonId, number>>;
   overshootOrder: IonId[];
 };
@@ -60,6 +67,15 @@ export type WatermancerSolverResult = {
 
 const round = (value: number): number => Number(value.toFixed(6));
 
+export function normalizeWatermancerIonOrder(order: IonId[]): IonId[] {
+  return [
+    ...new Set([
+      ...order.filter(id => ACTIVE_ION_IDS.includes(id)),
+      ...ACTIVE_ION_IDS,
+    ]),
+  ];
+}
+
 export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
   return JSON.stringify({
     targetIons: Object.fromEntries(
@@ -89,13 +105,14 @@ export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
     ),
     strategy: plan.strategy,
     saltObjective: plan.saltObjective,
-    ionPriority: plan.ionPriority,
-    allowOvershoot: plan.allowOvershoot,
+    ionPriority: normalizeWatermancerIonOrder(plan.ionPriority),
+    allowOvershoot: plan.allowOvershoot === true,
+    allowedOvershootIons: [...new Set(plan.allowedOvershootIons ?? [])].sort(),
     overshootLimits: Object.fromEntries(
       Object.entries(plan.overshootLimits)
         .sort(([a], [b]) => a.localeCompare(b))
         .map(([id, value]) => [id, round(value ?? 0)]),
     ),
-    overshootOrder: plan.overshootOrder,
+    overshootOrder: normalizeWatermancerIonOrder(plan.overshootOrder ?? []),
   });
 }

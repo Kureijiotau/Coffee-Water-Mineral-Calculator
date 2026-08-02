@@ -28,9 +28,11 @@ import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
   createWatermancerPlanSignature,
+  normalizeWatermancerIonOrder,
   type WatermancerIonDeviation,
   type WatermancerRouteCandidate,
   type WatermancerSaltObjective,
+  type WatermancerOvershootPolicy,
   type WatermancerSolverResult,
   type WatermancerPlan,
 } from './watermancerPlan';
@@ -46,6 +48,11 @@ type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}`;
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 type AutoCraftObjective = WatermancerSaltObjective;
+type OvershootSettings = {
+  enabled: boolean;
+  allowedIons: IonId[];
+  limits: Partial<Record<IonId, number>>;
+};
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -236,6 +243,7 @@ export function autoCraftSaltTargets(
   fixedSaltTargets: Record<string, number> = {},
   preset: AutoCraftPreset = 'closest-match',
   objective: AutoCraftObjective = 'balanced',
+  overshootPolicy?: WatermancerOvershootPolicy,
 ): Record<string, number> {
   const selectedSalts = SALTS.filter(salt => selectedSaltIds.includes(salt.id));
   if (selectedSalts.length === 0) return {};
@@ -246,7 +254,15 @@ export function autoCraftSaltTargets(
   if (preset === 'gh-kh-harmony') {
     Object.assign(
       targets,
-       autoCraftSaltTargets(selectedSaltIds, waterIons, targetIons, fixedSaltTargets, 'closest-match', objective),
+       autoCraftSaltTargets(
+         selectedSaltIds,
+         waterIons,
+         targetIons,
+         fixedSaltTargets,
+         'closest-match',
+         objective,
+         overshootPolicy,
+       ),
     );
   }
   const fixedIonTotals = computeIonTotals(fixedSaltTargets, waterIons, 1);
@@ -254,6 +270,33 @@ export function autoCraftSaltTargets(
   const targetGh = computeGH(completeTargets);
   const targetKh = computeKH(completeTargets);
   const harmonyWeight = preset === 'gh-kh-harmony' ? 8 : 0;
+  const normalizedOvershootOrder = normalizeWatermancerIonOrder(
+    overshootPolicy?.priorityOrder ?? AUTO_FILL_SOURCE_PRIORITY,
+  );
+  const controlledOvershootEnabled = overshootPolicy?.enabled === true;
+  const overshootAllowanceFor = (ionId: IonId): number => {
+    if (!overshootPolicy?.enabled || !overshootPolicy.allowedIons.includes(ionId)) return 0;
+    const value = Number(overshootPolicy.maxPpm[ionId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const weightedDeviation = (ionId: IonId, actual: number, target: number): number => {
+    const delta = actual - target;
+    if (!controlledOvershootEnabled) {
+      return objective === 'coverage'
+        ? delta < 0 ? Math.abs(delta) * 2 : Math.abs(delta) * 0.35
+        : Math.abs(delta);
+    }
+    const allowance = overshootAllowanceFor(ionId);
+    const excessBeyondPolicy = Math.max(delta - allowance, 0);
+    const deficit = Math.max(-delta, 0);
+    const priorityIndex = normalizedOvershootOrder.indexOf(ionId);
+    const priorityWeight = normalizedOvershootOrder.length - Math.max(priorityIndex, 0);
+    return objective === 'coverage'
+      ? deficit * (2 + priorityWeight / normalizedOvershootOrder.length)
+        + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length)
+      : deficit * (1 + priorityWeight / normalizedOvershootOrder.length)
+        + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length);
+  };
   const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
     let value = fixedIonTotals[ionId] ?? 0;
     for (const otherSalt of selectedSalts) {
@@ -278,10 +321,7 @@ export function autoCraftSaltTargets(
       const saltContribution = salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0;
       const actual = ionValueWithoutSalt(salt, ion.id) + candidate * saltContribution;
       actualIons[ion.id] = actual;
-      const delta = actual - (targetIons[ion.id] ?? 0);
-      score += objective === 'coverage'
-        ? delta < 0 ? Math.abs(delta) * 2 : Math.abs(delta) * 0.35
-        : Math.abs(delta);
+       score += weightedDeviation(ion.id, actual, targetIons[ion.id] ?? 0);
     }
     if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
       const actualGh = computeGH(actualIons);
@@ -315,9 +355,16 @@ export function autoCraftSaltTargets(
           actualWithoutSalt += (targets[otherSalt.id] ?? 0)
             * (otherSalt.ions.find(item => item.ionId === contribution.ionId)?.fraction ?? 0);
         }
-        candidates.push(Math.max(
+           candidates.push(Math.max(
           0,
-          Math.min(5000, ((targetIons[contribution.ionId] ?? 0) - actualWithoutSalt) / contribution.fraction),
+             Math.min(
+               5000,
+               (
+                 (targetIons[contribution.ionId] ?? 0)
+                 + overshootAllowanceFor(contribution.ionId)
+                 - actualWithoutSalt
+               ) / contribution.fraction,
+             ),
         ));
       }
       if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
@@ -399,11 +446,53 @@ const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom
   },
 };
 const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
+const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-policy';
+const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
+  enabled: false,
+  allowedIons: [],
+  limits: {},
+};
 function normalizeAutoFillPriority(priority: unknown): IonId[] {
   const valid = Array.isArray(priority)
     ? priority.filter((id): id is IonId => typeof id === 'string' && ACTIVE_ION_IDS.includes(id as IonId))
     : [];
   return [...new Set([...valid, ...AUTO_FILL_SOURCE_PRIORITY])];
+}
+
+function normalizeOvershootAllowedIons(value: unknown): IonId[] {
+  return Array.isArray(value)
+    ? [...new Set(value.filter((id): id is IonId => typeof id === 'string' && ACTIVE_ION_IDS.includes(id as IonId)))]
+    : [];
+}
+
+function normalizeOvershootLimits(value: unknown): Partial<Record<IonId, number>> {
+  if (!value || typeof value !== 'object') return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([id]) => ACTIVE_ION_IDS.includes(id as IonId))
+      .map(([id, raw]) => {
+        const parsed = Number(raw);
+        return [id, Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0];
+      }),
+  ) as Partial<Record<IonId, number>>;
+}
+
+function loadOvershootSettings(): OvershootSettings {
+  try {
+    const stored = JSON.parse(localStorage.getItem(WATERMANCER_OVERSHOOT_STORAGE_KEY) ?? 'null') as Partial<{
+      enabled: boolean;
+      allowedIons: unknown;
+      limits: unknown;
+    }> | null;
+    if (!stored) return DEFAULT_OVERSHOOT_SETTINGS;
+    return {
+      enabled: stored.enabled === true,
+      allowedIons: normalizeOvershootAllowedIons(stored.allowedIons),
+      limits: normalizeOvershootLimits(stored.limits),
+    };
+  } catch {
+    return DEFAULT_OVERSHOOT_SETTINGS;
+  }
 }
 
 function loadAutoFillSettings(): {
@@ -444,6 +533,7 @@ export function autoFillWaterVolumes(
   ignoreZeroTargetCeilings = false,
   volumeStepMl = 1,
   positiveTargetWigglePpm = 0,
+  overshootPolicy?: WatermancerOvershootPolicy,
 ): MineralWaterEntry[] {
   if (batchMl <= 0 || entries.length === 0) return entries;
 
@@ -458,6 +548,11 @@ export function autoFillWaterVolumes(
     ? Math.max(0, positiveTargetWigglePpm)
     : 0;
   const positiveTargetWiggleAmount = safePositiveTargetWigglePpm * batchMl;
+  const overshootAllowanceAmount = (id: IonId): number => {
+    if (!overshootPolicy?.enabled || !overshootPolicy.allowedIons.includes(id)) return 0;
+    const limit = Number(overshootPolicy.maxPpm[id] ?? 0);
+    return Number.isFinite(limit) ? Math.max(0, limit) * batchMl : 0;
+  };
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
   const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
   const fixedContributions = Object.fromEntries(
@@ -475,6 +570,7 @@ export function autoFillWaterVolumes(
     .some(id => fixedContributions[id] > (
       enforceAllIonCeilings
         ? (targetAmounts[id] ?? 0) + ((targetAmounts[id] ?? 0) > 0 ? positiveTargetWiggleAmount : 0)
+        + overshootAllowanceAmount(id)
         : bicarbonateLimit
     ) + 1e-8);
   if (variableVolumeLimit <= 0 || fixedWaterAlreadyExceedsLimit) {
@@ -488,7 +584,7 @@ export function autoFillWaterVolumes(
         const difference = num(b.entry.ions[id] ?? '') - num(a.entry.ions[id] ?? '');
         if (Math.abs(difference) > 1e-8) return difference;
       }
-      return 0;
+      return a.index - b.index;
     });
   const volumes = entries.map(() => 0);
   const covered = { ...fixedContributions };
@@ -518,7 +614,7 @@ export function autoFillWaterVolumes(
             allowPositiveTargetWiggle && target > 0
               ? positiveTargetWiggleAmount
               : 0
-          )
+          ) + overshootAllowanceAmount(id)
           : id === 'bicarbonate'
           ? bicarbonateLimit
           : target + deviationAmount;
@@ -589,10 +685,16 @@ function fillWatermancerRoute(
       inputs.additionWaters,
       priority,
       0,
-      !inputs.plan.allowOvershoot,
+       true,
       false,
       1,
       0,
+      {
+        enabled: inputs.plan.allowOvershoot,
+        allowedIons: inputs.plan.allowedOvershootIons,
+        maxPpm: inputs.plan.overshootLimits,
+        priorityOrder: inputs.plan.overshootOrder,
+      },
     )
     : inputs.baseWaters;
   const additionWaters = inputs.additionWaters.length > 0
@@ -603,10 +705,16 @@ function fillWatermancerRoute(
       baseWaters,
       priority,
       0,
-      !inputs.plan.allowOvershoot,
+       true,
       false,
       1,
       0,
+      {
+        enabled: inputs.plan.allowOvershoot,
+        allowedIons: inputs.plan.allowedOvershootIons,
+        maxPpm: inputs.plan.overshootLimits,
+        priorityOrder: inputs.plan.overshootOrder,
+      },
     )
     : inputs.additionWaters;
 
@@ -627,6 +735,18 @@ function watermancerRouteDeviations(
       delta: actualValue - targetValue,
     };
   });
+}
+
+function watermancerDeviationBeyondPolicy(
+  deviation: WatermancerIonDeviation,
+  plan: WatermancerPlan,
+): number {
+  const allowance = plan.allowOvershoot && plan.allowedOvershootIons.includes(deviation.id)
+    ? Math.max(0, plan.overshootLimits[deviation.id] ?? 0)
+    : 0;
+  return deviation.delta >= 0
+    ? Math.max(deviation.delta - allowance, 0)
+    : deviation.delta;
 }
 
 export function solveWatermancerRoutes({
@@ -685,7 +805,7 @@ export function solveWatermancerRoutes({
       priority: [...currentPriority].sort((a, b) => {
         const targetA = plan.targetIons[a] ?? 0;
         const targetB = plan.targetIons[b] ?? 0;
-        return targetB - targetA;
+        return targetB - targetA || currentPriority.indexOf(a) - currentPriority.indexOf(b);
       }),
       saltObjective: 'coverage',
       strategy: 'water-first',
@@ -698,7 +818,7 @@ export function solveWatermancerRoutes({
       strategy: definition.strategy,
       saltObjective: definition.saltObjective,
       ionPriority: definition.priority,
-      overshootOrder: definition.priority,
+      overshootOrder: plan.overshootOrder,
     };
     const waters = fillWatermancerRoute(
       { plan: routePlan, batchMl, baseWaters, additionWaters },
@@ -714,6 +834,12 @@ export function solveWatermancerRoutes({
       routePlan.fixedSaltDoses,
       routePlan.strategy,
       routePlan.saltObjective,
+      {
+        enabled: routePlan.allowOvershoot,
+        allowedIons: routePlan.allowedOvershootIons,
+        maxPpm: routePlan.overshootLimits,
+        priorityOrder: routePlan.overshootOrder,
+      },
     );
     const allSaltTargets = { ...routePlan.fixedSaltDoses, ...saltTargets };
     const finalIons = computeIonTotals(
@@ -723,7 +849,19 @@ export function solveWatermancerRoutes({
     );
     const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
     const overshoots = findIonOvershoots(finalIons, routePlan.targetIons);
-    const score = deviations.reduce((total, deviation) => total + Math.abs(deviation.delta), 0);
+    const overshootRank = new Map(
+      normalizeWatermancerIonOrder(routePlan.overshootOrder).map((id, index) => [id, index]),
+    );
+    const score = deviations.reduce((total, deviation) => {
+      const allowance = routePlan.allowOvershoot && routePlan.allowedOvershootIons.includes(deviation.id)
+        ? Math.max(0, routePlan.overshootLimits[deviation.id] ?? 0)
+        : 0;
+      const excessBeyondAllowance = Math.max(deviation.delta - allowance, 0);
+      const shortfall = Math.max(-deviation.delta, 0);
+      const priorityWeight = IONS.length - (overshootRank.get(deviation.id) ?? IONS.length);
+      return total + shortfall * (1 + priorityWeight / IONS.length)
+        + excessBeyondAllowance * (4 + priorityWeight / IONS.length);
+    }, 0);
     const candidatePlan: WatermancerPlan = {
       ...routePlan,
       selectedWaters,
@@ -749,7 +887,8 @@ export function solveWatermancerRoutes({
 
   const primaryPlan = candidates[0];
   const alternatives = candidates.slice(1);
-  const meaningfulDeviations = primaryPlan.deviations.filter(item => Math.abs(item.delta) > 0.05);
+  const meaningfulDeviations = primaryPlan.deviations
+    .filter(item => Math.abs(watermancerDeviationBeyondPolicy(item, primaryPlan.plan)) > 0.05);
   const status: WatermancerSolverResult['status'] = plan.selectedSalts.length === 0 || batchMl <= 0
     ? 'blocked'
     : meaningfulDeviations.length === 0
@@ -953,6 +1092,7 @@ function App() {
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
   const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
   const [showAutoFillSettings, setShowAutoFillSettings] = useState(false);
+  const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
@@ -1021,6 +1161,9 @@ function App() {
       deviationPpm: autoFillDeviationPpm,
     }));
   }, [autoFillPriorityPreset, autoFillCustomPriority, autoFillDeviationPpm]);
+  useEffect(() => {
+    localStorage.setItem(WATERMANCER_OVERSHOOT_STORAGE_KEY, JSON.stringify(overshootSettings));
+  }, [overshootSettings]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -1410,14 +1553,16 @@ function App() {
     strategy: autoCraftPreset,
     saltObjective: watermancerSaltObjective,
     ionPriority: [...activeAutoFillPriority],
-    allowOvershoot: false,
-    overshootLimits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0])),
+    allowOvershoot: overshootSettings.enabled,
+    allowedOvershootIons: [...overshootSettings.allowedIons],
+    overshootLimits: { ...overshootSettings.limits },
     overshootOrder: [...activeAutoFillPriority],
   }), [
     activeAutoFillPriority,
     additionWaters,
     autoCraftPreset,
     mineralWaters,
+    overshootSettings,
     watermancerSaltObjective,
     watermancerIonTargets,
     watermancerUsedSaltIds,
@@ -3155,6 +3300,80 @@ function App() {
                     </div>
                   </div>
                 )}
+                <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/[0.04] p-3">
+                  <label className="flex cursor-pointer items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={overshootSettings.enabled}
+                      onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
+                      className="mt-0.5 h-4 w-4 accent-rose-400"
+                    />
+                    <span>
+                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-rose-200">
+                        Allow controlled overshoot
+                      </span>
+                      <span className="mt-1 block text-[11px] leading-relaxed text-slate-400">
+                        Only the ions selected below may exceed target, and only up to their stated maximum.
+                        All other ions remain hard ceilings.
+                      </span>
+                    </span>
+                  </label>
+                  <div className="mt-3">
+                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed overshoot ions</span>
+                      <span className="text-[10px] text-slate-600">Maximum excess in ppm</span>
+                    </div>
+                    <div className="grid gap-1.5 sm:grid-cols-2">
+                      {ACTIVE_ION_IDS.map(id => {
+                        const allowed = overshootSettings.allowedIons.includes(id);
+                        return (
+                          <div key={id} className="flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2">
+                            <input
+                              type="checkbox"
+                              checked={allowed}
+                              disabled={!overshootSettings.enabled}
+                              onChange={e => setOvershootSettings(current => ({
+                                ...current,
+                                allowedIons: e.target.checked
+                                  ? [...current.allowedIons, id]
+                                  : current.allowedIons.filter(item => item !== id),
+                              }))}
+                              className="h-3.5 w-3.5 accent-rose-400"
+                              aria-label={`Allow ${ION_MAP[id].name} overshoot`}
+                            />
+                            <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              inputMode="decimal"
+                              value={overshootSettings.limits[id] ?? 0}
+                              disabled={!overshootSettings.enabled || !allowed}
+                              onChange={e => {
+                                const value = Number(e.target.value);
+                                setOvershootSettings(current => ({
+                                  ...current,
+                                  limits: {
+                                    ...current.limits,
+                                    [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0,
+                                  },
+                                }));
+                              }}
+                              className="w-20 rounded-md border border-slate-600/60 bg-slate-950/70 px-2 py-1 text-right text-xs tabular-nums text-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                              aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
+                            />
+                            <span className="text-[10px] text-slate-600">ppm</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                      Coverage priority: <span className="text-slate-400">{activeAutoFillPriority.map(id => ION_MAP[id].name).join(' → ')}</span>.
+                      Earlier ions receive priority when the policy has to spend limited overshoot.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
             {showWatermancer && waterComparisonOpen && (
@@ -3518,6 +3737,12 @@ function App() {
                        autoFillUsesRecipeTargets,
                        showAlchemist ? 0.1 : 1,
                        showAlchemist ? 0.5 : 0,
+                       {
+                         enabled: showWatermancer && overshootSettings.enabled,
+                         allowedIons: overshootSettings.allowedIons,
+                         maxPpm: overshootSettings.limits,
+                         priorityOrder: activeAutoFillPriority,
+                       },
                     ))}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                   title={showAlchemist
@@ -3725,11 +3950,11 @@ function App() {
             </div>
             <div className="px-4 sm:px-6 py-4">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="space-y-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-3">
+                <div className="space-y-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-3 lg:grid lg:grid-rows-[auto_repeat(3,minmax(0,1fr))_auto] lg:gap-3 lg:space-y-0">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">
                     Original ion targets
                   </div>
-                  <div className="space-y-3">
+                  <div className="grid gap-3 lg:contents">
                     <SimpleMetricCard label="Original GH target" value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
                     <SimpleMetricCard label="Original KH target" value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
                     <SimpleMetricCard label="Original TDS target" value={originalTargetTds} unit="mg/L" tone="tds" />
@@ -3747,11 +3972,11 @@ function App() {
                   </div>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3">
+                <div className="space-y-3 rounded-xl border border-cyan-400/20 bg-cyan-500/5 p-3 lg:grid lg:grid-rows-[auto_repeat(3,minmax(0,1fr))_auto] lg:gap-3 lg:space-y-0">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200">
                     Selected water + salts
                   </div>
-                  <div className="space-y-3">
+                  <div className="grid gap-3 lg:contents">
                     <HardnessCard label="General Hardness (GH)" value={reviewFinalGh} saltValue={reviewSaltGh} bottledValue={reviewWaterGh} />
                     <HardnessCard label="Carbonate Hardness (KH)" value={reviewFinalKh} saltValue={reviewSaltKh} bottledValue={reviewWaterKh} />
                     <TdsCard value={reviewFinalTds} saltValue={reviewSaltTds} bottledValue={reviewWaterTds} />
@@ -3906,7 +4131,9 @@ function App() {
                 <div className="grid gap-2 md:grid-cols-2">
                   {[watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives].map(candidate => {
                     const active = candidate.id === watermancerCraft.activeRouteId;
-                    const meaningful = candidate.deviations.filter(item => Math.abs(item.delta) > 0.05);
+                  const meaningful = candidate.deviations.filter(item => (
+                    Math.abs(watermancerDeviationBeyondPolicy(item, candidate.plan)) > 0.05
+                  ));
                     const shortfall = meaningful.filter(item => item.delta < 0).length;
                     return (
                       <div
