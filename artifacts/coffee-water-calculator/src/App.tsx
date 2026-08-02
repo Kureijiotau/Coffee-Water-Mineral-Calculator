@@ -4710,12 +4710,18 @@ function App() {
                   </span>
                 </div>
                 <div className="grid gap-2 md:grid-cols-2">
-                  {[watermancerDisplayedResult.primaryPlan, ...watermancerDisplayedResult.alternatives].map(candidate => {
-                    const active = candidate.id === watermancerDisplayedRouteId
-                      || (
-                        watermancerCraft?.activeRouteKind !== undefined
-                        && candidate.kind === watermancerCraft.activeRouteKind
-                      );
+                  {(() => {
+                    const routeCandidates = [
+                      watermancerDisplayedResult.primaryPlan,
+                      ...watermancerDisplayedResult.alternatives,
+                    ];
+                    const activeCandidate = selectWatermancerRouteCandidate(
+                      routeCandidates,
+                      watermancerDisplayedRouteId,
+                      watermancerCraft?.activeRouteKind,
+                    );
+                    return routeCandidates.map(candidate => {
+                    const active = candidate === activeCandidate;
                     const meaningful = candidate.deviations.filter(item => (
                       Math.abs(watermancerDeviationBeyondPolicy(item, candidate.plan)) > 0.05
                     ));
@@ -4782,7 +4788,8 @@ function App() {
                         </div>
                       </div>
                     );
-                  })}
+                    });
+                  })()}
                 </div>
               </div>
             )}
