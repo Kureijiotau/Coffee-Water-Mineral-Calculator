@@ -4061,15 +4061,15 @@ function App() {
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-3 lg:grid lg:grid-rows-[auto_repeat(3,minmax(0,1fr))_auto] lg:gap-3 lg:space-y-0">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">
-                    Original ion targets
+                     {watermancerTargetSourceLabel} ion targets
                   </div>
                   <div className="grid gap-3 lg:contents">
-                    <SimpleMetricCard label="Original GH target" value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
-                    <SimpleMetricCard label="Original KH target" value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
-                    <SimpleMetricCard label="Original TDS target" value={originalTargetTds} unit="mg/L" tone="tds" />
+                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} GH target`} value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
+                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} KH target`} value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
+                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} TDS target`} value={originalTargetTds} unit="mg/L" tone="tds" />
                   </div>
                   <div className="flex items-center justify-center gap-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 px-4 py-3">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Original target GH : KH ratio</span>
+                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{watermancerTargetSourceLabel} GH : KH ratio</span>
                     <span className="h-4 w-px bg-slate-700" />
                     {originalTargetKh > 0 && originalTargetGh >= 0 && Number.isFinite(originalTargetGh / originalTargetKh) ? (
                       <span className="text-lg font-semibold text-indigo-300 tabular-nums">
