@@ -914,52 +914,49 @@ function fillWatermancerRoute(
     };
   }
 
-  const baseWaters = inputs.baseWaters.length > 0
-    ? autoFillWaterVolumes(
-      inputs.baseWaters,
-      inputs.batchMl,
-      inputs.plan.targetIons,
-      inputs.additionWaters,
-      priority,
-      0,
-       true,
-      false,
-      1,
-      0,
-      {
-        enabled: inputs.plan.allowOvershoot,
-        allowedIons: inputs.plan.allowedOvershootIons,
-        maxPpm: inputs.plan.overshootLimits,
-        softDeficitIons: inputs.plan.softDeficitIons,
-        softDeficitLimits: inputs.plan.softDeficitLimits,
-        priorityOrder: inputs.plan.overshootOrder,
-      },
-    )
-    : inputs.baseWaters;
-  const additionWaters = inputs.additionWaters.length > 0
-    ? autoFillWaterVolumes(
-      inputs.additionWaters,
-      inputs.batchMl,
-      inputs.plan.targetIons,
-      baseWaters,
-      priority,
-      0,
-       true,
-      false,
-      1,
-      0,
-      {
-        enabled: inputs.plan.allowOvershoot,
-        allowedIons: inputs.plan.allowedOvershootIons,
-        maxPpm: inputs.plan.overshootLimits,
-        softDeficitIons: inputs.plan.softDeficitIons,
-        softDeficitLimits: inputs.plan.softDeficitLimits,
-        priorityOrder: inputs.plan.overshootOrder,
-      },
-    )
-    : inputs.additionWaters;
+  // Base and added waters are interchangeable source choices in Watermancer.
+  // Filling them in two passes makes the first group consume the useful
+  // mineral budget before the second group is considered. That is especially
+  // harmful for waters such as S.Pellegrino, whose magnesium/sulfate profile
+  // can replace a large amount of MgSO4. Allocate the combined inventory in a
+  // single pass, then restore the original UI grouping.
+  const allEntries = [
+    ...inputs.baseWaters.map((entry, index) => ({ entry, group: 'base' as const, index })),
+    ...inputs.additionWaters.map((entry, index) => ({ entry, group: 'addition' as const, index })),
+  ];
+  if (allEntries.length === 0) {
+    return { baseWaters: [], additionWaters: [] };
+  }
 
-  return { baseWaters, additionWaters };
+  const filledEntries = autoFillWaterVolumes(
+    allEntries.map(({ entry }) => ({ ...entry })),
+    inputs.batchMl,
+    inputs.plan.targetIons,
+    [],
+    priority,
+    0,
+    true,
+    false,
+    1,
+    0,
+    {
+      enabled: inputs.plan.allowOvershoot,
+      allowedIons: inputs.plan.allowedOvershootIons,
+      maxPpm: inputs.plan.overshootLimits,
+      softDeficitIons: inputs.plan.softDeficitIons,
+      softDeficitLimits: inputs.plan.softDeficitLimits,
+      priorityOrder: inputs.plan.overshootOrder,
+    },
+  );
+
+  return {
+    baseWaters: filledEntries
+      .filter((_, index) => allEntries[index].group === 'base')
+      .map(entry => ({ ...entry })),
+    additionWaters: filledEntries
+      .filter((_, index) => allEntries[index].group === 'addition')
+      .map(entry => ({ ...entry })),
+  };
 }
 
 function executeWatermancerRoute(

@@ -264,6 +264,56 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(waterLed!.saltTargets).not.toEqual(saltLed!.saltTargets);
   });
 
+  it('allocates added magnesium/sulfate-rich water before replacing it with MgSO4', () => {
+    const baseWater = water('base', { calcium: 20 });
+    const addedWater = water('s-pellegrino', {
+      sodium: 31.2,
+      potassium: 2.4,
+      magnesium: 49.2,
+      calcium: 169,
+      chloride: 49.8,
+      sulfate: 403,
+      bicarbonate: 249,
+    });
+    const plan = {
+      targetIons: {
+        calcium: 40,
+        magnesium: 20,
+        sulfate: 100,
+        sodium: 20,
+        potassium: 2,
+        chloride: 25,
+        bicarbonate: 40,
+      },
+      selectedWaters: [baseWater, addedWater],
+      selectedSalts: ['mgso4', 'mgcl2', 'cacl2', 'nacl', 'nahco3', 'kcl'],
+      fixedWaterVolumes: {},
+      fixedSaltDoses: {},
+      strategy: 'closest-match' as const,
+      saltObjective: 'balanced' as const,
+      ionPriority: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'] as const,
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      overshootOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'] as const,
+    };
+    const result = solveWatermancerRoutes({
+      plan,
+      batchMl: 1000,
+      baseWaters: [baseWater],
+      additionWaters: [addedWater],
+    });
+    const waterLed = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-water')!;
+    const saltLed = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-salts')!;
+
+    expect(Number(waterLed.additionWaters[0].volumeMl)).toBeGreaterThan(0);
+    expect(waterLed.finalIons.magnesium).toBeGreaterThan(0);
+    expect(waterLed.finalIons.sulfate).toBeGreaterThan(0);
+    expect(waterLed.saltTargets.mgso4 ?? 0).toBeLessThan(saltLed.saltTargets.mgso4 ?? 0);
+  });
+
   it('reports a blocked result when the plan cannot run', () => {
     const result = solveWatermancerRoutes({
       plan: {

@@ -75,6 +75,12 @@ Watermancer matching is target-first rather than profile-generating: selected wa
 
 **How to apply:** Treat calcium, magnesium, sodium, potassium, and bicarbonate deficits as hard violations. Treat chloride/sulfate deficits within their small allowance as acceptable residuals, keep zero-target ions as hard ceilings, and rank policy violations before raw overshoot count.
 
+Water-led routes must allocate base and added waters in one shared pass before salt matching; do not fill the groups sequentially.
+
+**Why:** Sequential filling lets the first water group consume the mineral budget and makes a later magnesium/sulfate-rich water appear unused, forcing unnecessary MgSO₄ or similar salt doses.
+
+**How to apply:** Treat all selected water entries as interchangeable variables during route filling, then restore their original UI groups after allocation so the final recipe still distinguishes base and added sources.
+
 Selected Watermancer salts are an allowed inventory, not a must-use recipe. The matcher should assign zero dose when another allowed salt reaches the target with a better coupled-ion profile.
 
 **Why:** A salt can solve one ion while unnecessarily oversupplying its counter-ion; requiring every selected salt would turn an availability choice into harmful chemistry.
