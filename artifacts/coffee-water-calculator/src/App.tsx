@@ -3210,7 +3210,13 @@ function App() {
                     <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
                     <select
                       value={autoFillPriorityPreset}
-                      onChange={e => setAutoFillPriorityPreset(e.target.value as AutoFillPriorityPreset)}
+                      onChange={e => {
+                        const nextPreset = e.target.value as AutoFillPriorityPreset;
+                        if (nextPreset === 'custom') {
+                          setAutoFillCustomPriority([...activeAutoFillPriority]);
+                        }
+                        setAutoFillPriorityPreset(nextPreset);
+                      }}
                       className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
                     >
                       {(Object.entries(AUTO_FILL_PRIORITY_PRESETS) as Array<[Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }]>).map(([value, preset]) => (
@@ -3239,67 +3245,6 @@ function App() {
                     </div>
                   </label>
                 </div>
-                {autoFillPriorityPreset === 'custom' && (
-                  <div className="mt-3">
-                    <div className="mb-1.5 flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Custom ion order</span>
-                      <span className="text-[10px] text-slate-600">First gets priority</span>
-                    </div>
-                    <div className="grid gap-1.5 sm:grid-cols-2">
-                      {autoFillCustomPriority.map((id, index) => (
-                        <div
-                          key={id}
-                          draggable
-                          onDragStart={() => setAutoFillDraggedIndex(index)}
-                          onDragOver={e => e.preventDefault()}
-                          onDrop={() => {
-                            if (autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
-                            setAutoFillCustomPriority(current => {
-                              const next = [...current];
-                              const [moved] = next.splice(autoFillDraggedIndex, 1);
-                              next.splice(index, 0, moved);
-                              return next;
-                            });
-                            setAutoFillDraggedIndex(null);
-                          }}
-                          className="flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2"
-                        >
-                          <span className="cursor-grab text-slate-600" aria-hidden="true">⋮⋮</span>
-                          <span className="w-5 text-[10px] tabular-nums text-slate-600">{index + 1}</span>
-                          <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
-                          <button
-                            type="button"
-                            onClick={() => setAutoFillCustomPriority(current => {
-                              if (index === 0) return current;
-                              const next = [...current];
-                              [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                              return next;
-                            })}
-                            disabled={index === 0}
-                            className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                            aria-label={`Move ${ION_MAP[id].name} up`}
-                          >
-                            ↑
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAutoFillCustomPriority(current => {
-                              if (index === current.length - 1) return current;
-                              const next = [...current];
-                              [next[index], next[index + 1]] = [next[index + 1], next[index]];
-                              return next;
-                            })}
-                            disabled={index === autoFillCustomPriority.length - 1}
-                            className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                            aria-label={`Move ${ION_MAP[id].name} down`}
-                          >
-                            ↓
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/[0.04] p-3">
                   <label className="flex cursor-pointer items-start gap-2.5">
                     <input
@@ -3319,15 +3264,42 @@ function App() {
                     </span>
                   </label>
                   <div className="mt-3">
-                    <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed overshoot ions</span>
-                      <span className="text-[10px] text-slate-600">Maximum excess in ppm</span>
+                     <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                       <div>
+                         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed overshoot ions</span>
+                         <span className="ml-2 text-[10px] text-slate-600">
+                           {autoFillPriorityPreset === 'custom' ? 'Drag or use arrows to set priority' : 'Priority follows the selected preset'}
+                         </span>
+                       </div>
+                       <span className="text-[10px] text-slate-600">Maximum excess in ppm</span>
                     </div>
                     <div className="grid gap-1.5 sm:grid-cols-2">
-                      {ACTIVE_ION_IDS.map(id => {
+                       {activeAutoFillPriority.map((id, index) => {
                         const allowed = overshootSettings.allowedIons.includes(id);
                         return (
-                          <div key={id} className="flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2">
+                           <div
+                             key={id}
+                             draggable={autoFillPriorityPreset === 'custom'}
+                             onDragStart={() => {
+                               if (autoFillPriorityPreset === 'custom') setAutoFillDraggedIndex(index);
+                             }}
+                             onDragOver={e => {
+                               if (autoFillPriorityPreset === 'custom') e.preventDefault();
+                             }}
+                             onDrop={() => {
+                               if (autoFillPriorityPreset !== 'custom' || autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
+                               setAutoFillCustomPriority(current => {
+                                 const next = [...current];
+                                 const [moved] = next.splice(autoFillDraggedIndex, 1);
+                                 next.splice(index, 0, moved);
+                                 return next;
+                               });
+                               setAutoFillDraggedIndex(null);
+                             }}
+                             className={`flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2 ${
+                               autoFillPriorityPreset === 'custom' ? 'cursor-grab' : ''
+                             }`}
+                           >
                             <input
                               type="checkbox"
                               checked={allowed}
@@ -3341,7 +3313,46 @@ function App() {
                               className="h-3.5 w-3.5 accent-rose-400"
                               aria-label={`Allow ${ION_MAP[id].name} overshoot`}
                             />
+                             <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${
+                               index === 0
+                                 ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-300/30'
+                                 : 'bg-slate-800 text-slate-400'
+                             }`} aria-label={`Priority ${index + 1}`}>
+                               {index + 1}
+                             </span>
                             <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
+                             {autoFillPriorityPreset === 'custom' && (
+                               <>
+                                 <button
+                                   type="button"
+                                   onClick={() => setAutoFillCustomPriority(current => {
+                                     if (index === 0) return current;
+                                     const next = [...current];
+                                     [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                     return next;
+                                   })}
+                                   disabled={index === 0}
+                                   className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                                   aria-label={`Move ${ION_MAP[id].name} up`}
+                                 >
+                                   ↑
+                                 </button>
+                                 <button
+                                   type="button"
+                                   onClick={() => setAutoFillCustomPriority(current => {
+                                     if (index === current.length - 1) return current;
+                                     const next = [...current];
+                                     [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                     return next;
+                                   })}
+                                   disabled={index === activeAutoFillPriority.length - 1}
+                                   className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                                   aria-label={`Move ${ION_MAP[id].name} down`}
+                                 >
+                                   ↓
+                                 </button>
+                               </>
+                             )}
                             <div className="flex items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70 disabled:opacity-40">
                               <button
                                 type="button"
@@ -3401,8 +3412,8 @@ function App() {
                       })}
                     </div>
                     <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                      Coverage priority: <span className="text-slate-400">{activeAutoFillPriority.map(id => ION_MAP[id].name).join(' → ')}</span>.
-                      Earlier ions receive priority when the policy has to spend limited overshoot.
+                       Priority order: <span className="text-slate-400">{activeAutoFillPriority.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>.
+                       Earlier ions receive priority when the policy has to spend limited overshoot.
                     </p>
                   </div>
                 </div>
