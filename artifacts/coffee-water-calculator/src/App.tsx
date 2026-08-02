@@ -27,7 +27,6 @@ import {
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
-  createWatermancerPlanSignature,
   normalizeWatermancerIonOrder,
   type WatermancerIonDeviation,
   type WatermancerRouteCandidate,
@@ -1501,12 +1500,7 @@ function App() {
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerCraft, setWatermancerCraft] = useState<{
-    signature: string;
-    result: WatermancerSolverResult;
     activeRouteId: string;
-    transitionFromSignature?: string;
-    sourceBaseWaters: MineralWaterEntry[];
-    sourceAdditionWaters: MineralWaterEntry[];
   } | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
@@ -1877,41 +1871,14 @@ function App() {
         .map(option => [option.salt.id, option.targetPpm]),
     ),
   }) as Record<string, number>, [watermancerSaltOptions, watermancerUsedSaltIds]);
-  const watermancerCraftSignature = useMemo(
-    () => createWatermancerPlanSignature(watermancerPlan),
-    [watermancerPlan],
-  );
-  const watermancerCraftIsCurrent = Boolean(
-    watermancerCraft
-    && (
-      watermancerCraft.signature === watermancerCraftSignature
-      || watermancerCraft.transitionFromSignature === watermancerCraftSignature
-    ),
-  );
-  useEffect(() => {
-    setWatermancerCraft(current => {
-      if (!current?.transitionFromSignature) return current;
-      if (current.signature === watermancerCraftSignature) {
-        const { transitionFromSignature: _transitionFromSignature, ...settled } = current;
-        return settled;
-      }
-      return current;
-    });
-  }, [watermancerCraftSignature]);
-  const watermancerRouteBaseWaters = watermancerCraftIsCurrent
-    ? watermancerCraft?.sourceBaseWaters ?? mineralWaters
-    : mineralWaters;
-  const watermancerRouteAdditionWaters = watermancerCraftIsCurrent
-    ? watermancerCraft?.sourceAdditionWaters ?? additionWaters
-    : additionWaters;
   const watermancerLiveResult = useMemo(
     () => solveWatermancerRoutes({
       plan: watermancerPlan,
       batchMl,
-      baseWaters: watermancerRouteBaseWaters,
-      additionWaters: watermancerRouteAdditionWaters,
+      baseWaters: mineralWaters,
+      additionWaters,
     }),
-    [batchMl, watermancerPlan, watermancerRouteAdditionWaters, watermancerRouteBaseWaters],
+    [additionWaters, batchMl, mineralWaters, watermancerPlan],
   );
   const activeWatermancerSaltTargets = useMemo(
     () => [watermancerLiveResult.primaryPlan, ...watermancerLiveResult.alternatives]
@@ -2043,17 +2010,11 @@ function App() {
       {
         plan: watermancerPlan,
         batchMl,
-        baseWaters: watermancerRouteBaseWaters,
-        additionWaters: watermancerRouteAdditionWaters,
+        baseWaters: mineralWaters,
+        additionWaters,
       },
       routeDefinition,
     );
-    const meaningfulDeviations = executedCandidate.deviations.filter(item => (
-      Math.abs(watermancerDeviationBeyondPolicy(item, executedCandidate.plan)) > 0.05
-    ));
-    const freshStatus: WatermancerSolverResult['status'] = meaningfulDeviations.length === 0
-      ? 'matched'
-      : 'partial';
     setMineralWaters(executedCandidate.baseWaters);
     setAdditionWaters(executedCandidate.additionWaters);
     setAutoCraftPreset(executedCandidate.plan.strategy);
@@ -2062,38 +2023,10 @@ function App() {
       setAutoFillPriorityPreset('custom');
       setAutoFillCustomPriority(executedCandidate.plan.ionPriority);
     }
-    setWatermancerCraft(current => {
-      const previousResult = current?.result ?? watermancerLiveResult;
-      return {
-        signature: createWatermancerPlanSignature(executedCandidate.plan),
-        activeRouteId: executedCandidate.id,
-        // The state setters above update the plan inputs in the same React
-        // event. Keep the result visible against the signature from the
-        // render that handled the click while those inputs settle, rather
-        // than using current.signature (which can already be stale after a
-        // rapid series of route clicks).
-        transitionFromSignature: watermancerCraftSignature,
-        sourceBaseWaters: (watermancerCraftIsCurrent
-          ? current?.sourceBaseWaters ?? mineralWaters
-          : mineralWaters).map(entry => ({ ...entry })),
-        sourceAdditionWaters: (watermancerCraftIsCurrent
-          ? current?.sourceAdditionWaters ?? additionWaters
-          : additionWaters).map(entry => ({ ...entry })),
-        result: {
-          ...previousResult,
-          primaryPlan: previousResult.primaryPlan.id === executedCandidate.id
-            ? executedCandidate
-            : previousResult.primaryPlan,
-          alternatives: previousResult.alternatives.map(route => (
-            route.id === executedCandidate.id ? executedCandidate : route
-          )),
-          status: freshStatus,
-          finalIons: executedCandidate.finalIons,
-          deviations: executedCandidate.deviations,
-          overshoots: executedCandidate.overshoots,
-        },
-      };
-    });
+    // The route has just been executed from the current on-screen inputs.
+    // Preserve only the selected card; the next render performs the same full
+    // pass again from the newly applied waters and current salt inventory.
+    setWatermancerCraft({ activeRouteId: executedCandidate.id });
   };
 
   // Watermancer's allowed salt inventory is the source of truth for dosing.
@@ -4502,7 +4435,7 @@ function App() {
               <div>
                 <p className="text-xs font-semibold text-cyan-100">Choose how to balance selected waters and allowed salts.</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                  Routes update live from your current target, waters, and allowed salt inventory. The matcher may leave an allowed salt unused when another salt produces a closer final ion profile.
+                   Every change reruns a complete pass across the current target, all selected waters, and the allowed salt inventory. Mineral waters are evaluated first as the easiest dose, then salts close the remaining gaps; an allowed salt may still remain unused when the full mixture is closer without it.
                 </p>
               </div>
             </div>

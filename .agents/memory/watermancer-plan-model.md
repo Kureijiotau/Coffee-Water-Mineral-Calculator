@@ -81,6 +81,12 @@ Water-led routes must allocate base and added waters in one shared pass before s
 
 **How to apply:** Treat all selected water entries as interchangeable variables during route filling, then restore their original UI groups after allocation so the final recipe still distinguishes base and added sources.
 
+Watermancer should retain only the selected route identity; every target, water, salt, hydration-form, priority, or policy change must trigger a fresh complete solve from current visible inputs.
+
+**Why:** Preserved route results or source snapshots make the interface feel incremental and can ignore a newly toggled salt or edited water even though the user expects every interaction to reconsider the full composition.
+
+**How to apply:** Derive displayed candidates directly from the current plan and water arrays. A route click may execute and apply one fresh candidate, but it must not become a cached solver-result source for later renders.
+
 Selected Watermancer salts are an allowed inventory, not a must-use recipe. The matcher should assign zero dose when another allowed salt reaches the target with a better coupled-ion profile.
 
 **Why:** A salt can solve one ion while unnecessarily oversupplying its counter-ion; requiring every selected salt would turn an availability choice into harmful chemistry.
