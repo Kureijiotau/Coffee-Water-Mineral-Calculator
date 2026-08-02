@@ -409,6 +409,112 @@ export function autoCraftSaltTargets(
     return score;
   };
 
+  const scoreForSaltTargets = (saltTargets: Record<string, number>): number => {
+    const actualIons = computeIonTotals(saltTargets, fixedIonTotals, 1);
+    let score = 0;
+    for (const ion of IONS) {
+      score += weightedDeviation(ion.id, actualIons[ion.id] ?? 0, targetIons[ion.id] ?? 0);
+    }
+    if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
+      const actualGh = computeGH(actualIons);
+      const actualKh = computeKH(actualIons);
+      const ghFraction = actualGh / targetGh;
+      const khFraction = actualKh / targetKh;
+      const hardnessFraction = (actualGh + actualKh) / (targetGh + targetKh);
+      score += harmonyWeight
+        * (
+          Math.abs(ghFraction - khFraction)
+          + 0.5 * Math.abs(1 - hardnessFraction)
+        )
+        * ((targetGh + targetKh) / 2);
+    }
+    return score;
+  };
+
+  const solveLinearSystem = (matrix: number[][], vector: number[]): number[] | null => {
+    const size = vector.length;
+    const augmented = matrix.map((row, rowIndex) => [...row, vector[rowIndex]]);
+    for (let column = 0; column < size; column += 1) {
+      let pivot = column;
+      for (let row = column + 1; row < size; row += 1) {
+        if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) {
+          pivot = row;
+        }
+      }
+      if (Math.abs(augmented[pivot][column]) < 1e-10) return null;
+      [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
+      const divisor = augmented[column][column];
+      for (let index = column; index <= size; index += 1) {
+        augmented[column][index] /= divisor;
+      }
+      for (let row = 0; row < size; row += 1) {
+        if (row === column) continue;
+        const factor = augmented[row][column];
+        if (Math.abs(factor) < 1e-12) continue;
+        for (let index = column; index <= size; index += 1) {
+          augmented[row][index] -= factor * augmented[column][index];
+        }
+      }
+    }
+    return augmented.map(row => row[size]);
+  };
+
+  const solveGlobalSaltTargets = (): Record<string, number> | null => {
+    // The allowed salt inventory is small in practice. Enumerating active
+    // sets lets the solver replace several coupled salts together instead of
+    // getting trapped by coordinate descent at a harmful local choice.
+    if (allowedSalts.length > 15) return null;
+    const columns = allowedSalts.map(salt => IONS.map(ion => (
+      salt.ions.find(item => item.ionId === ion.id)?.fraction ?? 0
+    )));
+    const weights = IONS.map(ion => (targetIons[ion.id] ?? 0) > 0 ? 1 : 4);
+    let best: Record<string, number> | null = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (let mask = 0; mask < (1 << allowedSalts.length); mask += 1) {
+      const activeIndexes = allowedSalts
+        .map((_, index) => index)
+        .filter(index => (mask & (1 << index)) !== 0);
+      const candidateTargets = Object.fromEntries(
+        allowedSalts.map(salt => [salt.id, 0]),
+      ) as Record<string, number>;
+
+      if (activeIndexes.length > 0) {
+        const normal = activeIndexes.map(leftIndex => activeIndexes.map(rightIndex => (
+          columns[leftIndex].reduce(
+            (sum, value, ionIndex) => (
+              sum + weights[ionIndex] * value * columns[rightIndex][ionIndex]
+            ),
+            0,
+          )
+        )));
+        const rhs = activeIndexes.map(leftIndex => columns[leftIndex].reduce(
+          (sum, value, ionIndex) => (
+            sum + weights[ionIndex] * value * (
+              (targetIons[IONS[ionIndex].id] ?? 0)
+              - (fixedIonTotals[IONS[ionIndex].id] ?? 0)
+            )
+          ),
+          0,
+        ));
+        // A tiny ridge makes rank-deficient active sets deterministic.
+        normal.forEach((row, index) => { row[index] += 1e-9; });
+        const solution = solveLinearSystem(normal, rhs);
+        if (!solution || solution.some(value => value < -1e-7 || value > 5000)) continue;
+        activeIndexes.forEach((saltIndex, index) => {
+          candidateTargets[allowedSalts[saltIndex].id] = Math.max(0, solution[index]);
+        });
+      }
+
+      const score = scoreForSaltTargets(candidateTargets);
+      if (score < bestScore - 1e-7) {
+        bestScore = score;
+        best = candidateTargets;
+      }
+    }
+    return best;
+  };
+
   // Coordinate descent over an L1 objective. For each salt, the optimum lies
   // at zero or where one of its coupled ions reaches its target; checking
   // those breakpoints keeps the result deterministic without adding a solver.
@@ -470,6 +576,11 @@ export function autoCraftSaltTargets(
       largestChange = Math.max(largestChange, Math.abs(next - previous));
     }
     if (largestChange < 1e-7) break;
+  }
+
+  const globalTargets = solveGlobalSaltTargets();
+  if (globalTargets && scoreForSaltTargets(globalTargets) < scoreForSaltTargets(targets) - 1e-7) {
+    Object.assign(targets, globalTargets);
   }
 
   return targets;
@@ -969,10 +1080,13 @@ export function solveWatermancerRoutes({
       id: 'use-more-salts',
       kind: 'use-more-salts',
       label: 'Use more salts',
-      explanation: 'Keep the current water volumes and favor salt doses that cover remaining positive ion gaps.',
+      explanation: 'Keep the current water volumes and balance salt doses against the complete ionic target, including coupled-ion limits.',
       fillWater: false,
       priority: currentPriority,
-      saltObjective: 'coverage',
+      // Salt-led is already distinguished by not adding more source water.
+      // Use the balanced objective here so a coverage preference cannot trade
+      // a missing target ion for a discounted coupled-ion overshoot.
+      saltObjective: 'balanced',
       strategy: plan.strategy,
     },
     {

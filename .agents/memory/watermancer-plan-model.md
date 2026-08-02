@@ -57,11 +57,17 @@ Numeric overshoot steppers should step once immediately, then repeat at a steady
 
 **How to apply:** Keep direct numeric entry available, clamp values to their configured range, and ensure repeat timers are cleaned up on unmount and pointer termination.
 
-Auto-match must remain available after setting a target even when no salts are selected; water-only plans can match or partially cover a target, while a completely empty water-and-salt plan remains blocked.
+Route matching must remain available after setting a target even when no salts are selected; water-only plans can match or partially cover a target, while a completely empty water-and-salt plan remains blocked.
 
 **Why:** Watermancer is target-first, and users should not have to make an arbitrary salt choice before seeing whether selected waters can solve the target.
 
-**How to apply:** Gate Auto-match on valid batch volume, not salt count; classify empty plans as blocked; preserve selected water and salt boundaries without inventing selections.
+**How to apply:** Gate route calculation on valid batch volume, not salt count; classify empty plans as blocked; preserve selected water and salt boundaries without inventing selections.
+
+Salt matching must solve coupled allowed salts globally, not rely only on coordinate descent. A salt-led route must use balanced complete-ion scoring so it cannot trade a missing primary ion for a discounted counter-ion overshoot.
+
+**Why:** Coordinate descent can get trapped when several salts must change together—for example, Kimoi's MgCl₂, CaCl₂, and NaCl relationship—producing both underdosed and oversupplied ions even though the original salt recipe is exactly reconstructable.
+
+**How to apply:** Enumerate feasible active salt sets for the small allowed inventory, solve their non-negative coupled-ion system, and rank candidates with the complete target/overshoot objective. Keep “use more salts” distinct by holding water volumes, not by discounting overshoots.
 
 Selected Watermancer salts are an allowed inventory, not a must-use recipe. The matcher should assign zero dose when another allowed salt reaches the target with a better coupled-ion profile.
 
@@ -69,11 +75,11 @@ Selected Watermancer salts are an allowed inventory, not a must-use recipe. The 
 
 **How to apply:** Keep zero as a candidate dose for every allowed salt, optimize the complete ion profile, and label the UI as “Allowed” rather than “Used.”
 
-Displayed route results must be hidden whenever their plan signature no longer matches current inputs.
+Displayed route results must not use stale calculated values after current inputs change; the route candidates and review values should recalculate live from the current plan.
 
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
 
-**How to apply:** Derive the active route only from a current-signature result, while retaining the result object solely to allow a fresh Auto-match.
+**How to apply:** Preserve only the selected route identity and source baseline across route clicks; derive displayed route candidates and final ions from the live current plan.
 
 Brewer dropper dosing should use a user-calibrated drops-per-mL value rather than assuming every dropper delivers the same volume.
 

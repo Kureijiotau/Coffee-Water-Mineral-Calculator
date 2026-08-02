@@ -8,7 +8,7 @@ import {
   solveWatermancerRoutes,
   type MineralWaterEntry,
 } from './App';
-import { IONS, SALTS } from './waterData';
+import { computeIonTotals, findIonOvershoots, findIonUnderdoses, IONS, RECIPES, SALTS } from './waterData';
 
 const water = (
   id: string,
@@ -348,6 +348,64 @@ describe('Watermancer salt-to-ion helpers', () => {
 
     expect(targets.magnesium).toBeCloseTo(10 * mgso4.ions[0].fraction, 5);
     expect(targets.sulfate).toBeCloseTo(10 * mgso4.ions[1].fraction, 5);
+  });
+
+  it('reconstructs the Kimoi salt-based ion profile without missing or excess ions', () => {
+    const kimoi = RECIPES.find(recipe => recipe.id === 'kimoi')!;
+    const saltTargets = Object.fromEntries(
+      Object.entries(kimoi.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
+    );
+    const ionTargets = translateSaltTargetsToIonTargets(saltTargets);
+    const craftedSaltTargets = autoCraftSaltTargets(
+      Object.keys(saltTargets),
+      {},
+      ionTargets,
+      {},
+      'closest-match',
+      'balanced',
+    );
+    const finalIons = computeIonTotals(craftedSaltTargets, {}, 1);
+
+    expect(findIonOvershoots(finalIons, ionTargets)).toEqual([]);
+    expect(findIonUnderdoses(finalIons, ionTargets)).toEqual([]);
+    expect(finalIons).toMatchObject(
+      Object.fromEntries(
+        Object.entries(ionTargets).map(([ionId, target]) => [ionId, expect.closeTo(target as number, 4)]),
+      ),
+    );
+  });
+
+  it('keeps the Kimoi salt-led route free of missing or excess target ions', () => {
+    const kimoi = RECIPES.find(recipe => recipe.id === 'kimoi')!;
+    const saltTargets = Object.fromEntries(
+      Object.entries(kimoi.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
+    );
+    const ionTargets = translateSaltTargetsToIonTargets(saltTargets);
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: ionTargets,
+        selectedWaters: [],
+        selectedSalts: Object.keys(saltTargets),
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'bicarbonate', 'citrates'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+    const saltLed = [result.primaryPlan, ...result.alternatives]
+      .find(route => route.kind === 'use-more-salts')!;
+    const finalIons = computeIonTotals(saltLed.saltTargets, {}, 1);
+
+    expect(findIonOvershoots(finalIons, ionTargets)).toEqual([]);
+    expect(findIonUnderdoses(finalIons, ionTargets)).toEqual([]);
   });
 
   it('sizes a salt option from the tightest coupled-ion gap', () => {
