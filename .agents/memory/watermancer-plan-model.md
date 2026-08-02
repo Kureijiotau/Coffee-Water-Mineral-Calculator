@@ -50,3 +50,15 @@ Numeric overshoot steppers should step once immediately, then repeat at a steady
 **Why:** This supports both precise taps and efficient adjustment of ppm limits without requiring repeated clicks.
 
 **How to apply:** Keep direct numeric entry available, clamp values to their configured range, and ensure repeat timers are cleaned up on unmount and pointer termination.
+
+Auto-match must remain available after setting a target even when no salts are selected; water-only plans can match or partially cover a target, while a completely empty water-and-salt plan remains blocked.
+
+**Why:** Watermancer is target-first, and users should not have to make an arbitrary salt choice before seeing whether selected waters can solve the target.
+
+**How to apply:** Gate Auto-match on valid batch volume, not salt count; classify empty plans as blocked; preserve selected water and salt boundaries without inventing selections.
+
+Displayed route results must be hidden whenever their plan signature no longer matches current inputs.
+
+**Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
+
+**How to apply:** Derive the active route only from a current-signature result, while retaining the result object solely to allow a fresh Auto-match.

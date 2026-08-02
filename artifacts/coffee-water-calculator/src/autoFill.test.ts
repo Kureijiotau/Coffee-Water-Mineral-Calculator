@@ -245,6 +245,60 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(result.alternatives).toHaveLength(3);
   });
 
+  it('can complete a target with water alone when no salts are selected', () => {
+    const source = water('source', { calcium: 10 });
+    source.volumeMl = '1000';
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10 },
+        selectedWaters: [source],
+        selectedSalts: [],
+        fixedWaterVolumes: { source: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    expect(result.status).toBe('matched');
+    expect(result.primaryPlan.saltTargets).toEqual({});
+    expect(result.primaryPlan.finalIons.calcium).toBeCloseTo(10, 5);
+  });
+
+  it('uses the declared ion priority when water choices compete', () => {
+    const sharedWater = water('shared', { calcium: 20, sulfate: 20 });
+    const sulfateWater = water('sulfate', { sulfate: 30 });
+    const targets = { calcium: 10, sulfate: 10 };
+    const first = autoFillWaterVolumes(
+      [sharedWater, sulfateWater],
+      1000,
+      targets,
+      [],
+      ['calcium', 'sulfate'],
+      0,
+      true,
+    );
+    const second = autoFillWaterVolumes(
+      [sharedWater, sulfateWater],
+      1000,
+      targets,
+      [],
+      ['sulfate', 'calcium'],
+      0,
+      true,
+    );
+
+    expect(first.map(entry => entry.volumeMl)).not.toEqual(second.map(entry => entry.volumeMl));
+  });
+
   it('translates a salt recipe into its modeled ion target profile', () => {
     const targets = translateSaltTargetsToIonTargets({ mgso4: 10 });
     const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;

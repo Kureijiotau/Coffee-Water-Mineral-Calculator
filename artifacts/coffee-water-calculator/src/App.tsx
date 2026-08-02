@@ -956,11 +956,12 @@ export function solveWatermancerRoutes({
   const alternatives = candidates.slice(1);
   const meaningfulDeviations = primaryPlan.deviations
     .filter(item => Math.abs(watermancerDeviationBeyondPolicy(item, primaryPlan.plan)) > 0.05);
-  const status: WatermancerSolverResult['status'] = plan.selectedSalts.length === 0 || batchMl <= 0
-    ? 'blocked'
-    : meaningfulDeviations.length === 0
-    ? 'matched'
-    : 'partial';
+   const status: WatermancerSolverResult['status'] = batchMl <= 0
+     || (plan.selectedWaters.length === 0 && plan.selectedSalts.length === 0)
+     ? 'blocked'
+     : meaningfulDeviations.length === 0
+       ? 'matched'
+       : 'partial';
 
   return {
     primaryPlan,
@@ -1656,14 +1657,14 @@ function App() {
       : selectedWatermancerSaltTargets,
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
   );
+  const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
   const activeWatermancerRoute = useMemo(
-    () => watermancerCraft
+    () => watermancerCraftIsCurrent && watermancerCraft
       ? [watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives]
         .find(candidate => candidate.id === watermancerCraft.activeRouteId) ?? watermancerCraft.result.primaryPlan
       : null,
-    [watermancerCraft],
+    [watermancerCraft, watermancerCraftIsCurrent],
   );
-  const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
   const makeWatermancerCraftSignature = (waters: MineralWaterEntry[]) => (
     createWatermancerPlanSignature({
       ...watermancerPlan,
@@ -1770,7 +1771,7 @@ function App() {
    );
 
   const handleAutoCraft = () => {
-    if (watermancerPlan.selectedSalts.length === 0 || batchMl <= 0) return;
+    if (batchMl <= 0) return;
     const result = solveWatermancerRoutes({
       plan: watermancerPlan,
       batchMl,
@@ -4194,7 +4195,7 @@ function App() {
               <div>
                 <p className="text-xs font-semibold text-cyan-100">Run the matcher against your selected waters and salts.</p>
                 <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                  The result will show the closest achievable final ion profile and any remaining deviations.
+                  Run once after setting a target. The matcher uses the selected waters and salts, then shows the closest achievable final ion profile and any remaining deviations.
                 </p>
                 {watermancerCraftIsCurrent && (
                   <p className="mt-1 text-[10px] font-medium text-emerald-300">
@@ -4205,11 +4206,11 @@ function App() {
               <button
                 type="button"
                 onClick={handleAutoCraft}
-                disabled={watermancerUsedSaltIds.length === 0 || batchMl <= 0}
+                disabled={batchMl <= 0}
                 className="flex shrink-0 items-center gap-2 rounded-lg border border-cyan-300/40 bg-cyan-400/15 px-4 py-2.5 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-400/25 disabled:cursor-not-allowed disabled:opacity-40"
-                title={watermancerUsedSaltIds.length === 0
-                  ? 'Mark at least one salt Used before matching'
-                  : 'Optimize the selected salts against the active ion profile'}
+                title={batchMl <= 0
+                  ? 'Set a batch volume before matching'
+                  : 'Optimize the selected waters and salts against the active ion profile'}
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 Auto-match
@@ -4239,10 +4240,21 @@ function App() {
                 <div className="grid gap-2 md:grid-cols-2">
                   {[watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives].map(candidate => {
                     const active = candidate.id === watermancerCraft.activeRouteId;
-                  const meaningful = candidate.deviations.filter(item => (
-                    Math.abs(watermancerDeviationBeyondPolicy(item, candidate.plan)) > 0.05
-                  ));
+                    const meaningful = candidate.deviations.filter(item => (
+                      Math.abs(watermancerDeviationBeyondPolicy(item, candidate.plan)) > 0.05
+                    ));
                     const shortfall = meaningful.filter(item => item.delta < 0).length;
+                    const waterVolumeMl = [...candidate.baseWaters, ...candidate.additionWaters]
+                      .reduce((total, water) => total + num(water.volumeMl), 0);
+                    const saltCount = Object.values(candidate.saltTargets)
+                      .filter(target => target > 0.000001).length;
+                    const routeMode = candidate.kind === 'use-more-water'
+                      ? 'Water-led'
+                      : candidate.kind === 'use-more-salts'
+                        ? 'Salt-led'
+                        : candidate.kind === 'prioritize-ions'
+                          ? 'Priority-led'
+                          : 'Balanced';
                     return (
                       <div
                         key={candidate.id}
@@ -4254,7 +4266,20 @@ function App() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <div className="text-xs font-semibold text-slate-100">{candidate.label}</div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="text-xs font-semibold text-slate-100">{candidate.label}</div>
+                              <span className={`rounded-full border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${
+                                routeMode === 'Water-led'
+                                  ? 'border-sky-400/30 bg-sky-500/10 text-sky-300'
+                                  : routeMode === 'Salt-led'
+                                    ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                                    : routeMode === 'Priority-led'
+                                      ? 'border-violet-400/30 bg-violet-500/10 text-violet-300'
+                                      : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-300'
+                              }`}>
+                                {routeMode}
+                              </span>
+                            </div>
                             <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{candidate.explanation}</p>
                           </div>
                           {active ? (
@@ -4270,6 +4295,8 @@ function App() {
                           )}
                         </div>
                         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                          <span>{waterVolumeMl.toFixed(0)} mL water</span>
+                          <span>{saltCount} salt{saltCount === 1 ? '' : 's'}</span>
                           <span>{meaningful.length === 0 ? 'Within tolerance' : `${meaningful.length} deviations`}</span>
                           <span>{shortfall} under target</span>
                           <span>{candidate.overshoots.length} overshoots</span>
