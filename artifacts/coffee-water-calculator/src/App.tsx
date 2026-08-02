@@ -3292,6 +3292,15 @@ function App() {
               </details>
             </div>
 
+             {/* Add button */}
+             <button
+               onClick={() => addMineralWater()}
+               className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
+             >
+               <Droplet className="w-4 h-4" />
+               Add water source
+             </button>
+
             {/* Built-in reference waters */}
             <div>
               <details className="group">
@@ -3509,15 +3518,6 @@ function App() {
                  Fill base waters toward target
                </button>
              )}
-
-             {/* Add button */}
-            <button
-              onClick={() => addMineralWater()}
-              className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
-            >
-              <Droplet className="w-4 h-4" />
-              Add water source
-            </button>
 
              {/* Coverage bars — recipe targets or active profile safe limits */}
             {batchMl > 0 && (
