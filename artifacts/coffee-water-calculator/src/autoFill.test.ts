@@ -5,9 +5,10 @@ import {
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
+  solveWatermancerRoutes,
   type MineralWaterEntry,
 } from './App';
-import { SALTS } from './waterData';
+import { IONS, SALTS } from './waterData';
 
 const water = (
   id: string,
@@ -128,6 +129,62 @@ describe('autoFillWaterVolumes', () => {
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
+  it('returns a primary route and real alternatives with complete result data', () => {
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, magnesium: 8, sulfate: 20 },
+        selectedWaters: [water('source', { calcium: 12, sulfate: 8 })],
+        selectedSalts: ['mgso4', 'cacl2'],
+        fixedWaterVolumes: { source: 400 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sulfate'],
+        allowOvershoot: false,
+        overshootLimits: { calcium: 0, magnesium: 0, sulfate: 0 },
+        overshootOrder: ['calcium', 'magnesium', 'sulfate'],
+      },
+      batchMl: 1000,
+      baseWaters: [water('source', { calcium: 12, sulfate: 8 })],
+      additionWaters: [],
+    });
+
+    expect(result.primaryPlan.id).toBe('primary');
+    expect(result.alternatives.map(route => route.kind)).toEqual([
+      'use-more-water',
+      'use-more-salts',
+      'prioritize-ions',
+    ]);
+    expect(result.finalIons).toEqual(result.primaryPlan.finalIons);
+    expect(result.deviations).toHaveLength(IONS.length);
+    expect(result.overshoots).toEqual(result.primaryPlan.overshoots);
+    expect(result.explanation).toContain('primary route');
+  });
+
+  it('reports a blocked result when the plan cannot run', () => {
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10 },
+        selectedWaters: [],
+        selectedSalts: [],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium'],
+        allowOvershoot: false,
+        overshootLimits: {},
+        overshootOrder: ['calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+
+    expect(result.status).toBe('blocked');
+    expect(result.alternatives).toHaveLength(3);
+  });
+
   it('translates a salt recipe into its modeled ion target profile', () => {
     const targets = translateSaltTargetsToIonTargets({ mgso4: 10 });
     const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;

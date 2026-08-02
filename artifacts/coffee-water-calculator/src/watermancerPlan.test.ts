@@ -19,6 +19,7 @@ const basePlan = (): WatermancerPlan => ({
   fixedWaterVolumes: { base: 400 },
   fixedSaltDoses: {},
   strategy: 'water-first',
+  saltObjective: 'balanced',
   ionPriority: ['calcium', 'magnesium', 'sodium'],
   allowOvershoot: false,
   overshootLimits: { calcium: 0, bicarbonate: 0 },

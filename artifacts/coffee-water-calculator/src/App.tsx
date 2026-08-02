@@ -28,6 +28,10 @@ import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
   createWatermancerPlanSignature,
+  type WatermancerIonDeviation,
+  type WatermancerRouteCandidate,
+  type WatermancerSaltObjective,
+  type WatermancerSolverResult,
   type WatermancerPlan,
 } from './watermancerPlan';
 
@@ -41,6 +45,7 @@ type BrewerFlavorInput = {
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}`;
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
+type AutoCraftObjective = WatermancerSaltObjective;
 
 const DEFAULT_BREWER_FLAVOR: BrewerFlavorInput = {
   brightness: 70,
@@ -230,6 +235,7 @@ export function autoCraftSaltTargets(
   targetIons: Partial<Record<IonId, number>>,
   fixedSaltTargets: Record<string, number> = {},
   preset: AutoCraftPreset = 'closest-match',
+  objective: AutoCraftObjective = 'balanced',
 ): Record<string, number> {
   const selectedSalts = SALTS.filter(salt => selectedSaltIds.includes(salt.id));
   if (selectedSalts.length === 0) return {};
@@ -240,7 +246,7 @@ export function autoCraftSaltTargets(
   if (preset === 'gh-kh-harmony') {
     Object.assign(
       targets,
-      autoCraftSaltTargets(selectedSaltIds, waterIons, targetIons, fixedSaltTargets, 'closest-match'),
+       autoCraftSaltTargets(selectedSaltIds, waterIons, targetIons, fixedSaltTargets, 'closest-match', objective),
     );
   }
   const fixedIonTotals = computeIonTotals(fixedSaltTargets, waterIons, 1);
@@ -272,7 +278,10 @@ export function autoCraftSaltTargets(
       const saltContribution = salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0;
       const actual = ionValueWithoutSalt(salt, ion.id) + candidate * saltContribution;
       actualIons[ion.id] = actual;
-      score += Math.abs(actual - (targetIons[ion.id] ?? 0));
+      const delta = actual - (targetIons[ion.id] ?? 0);
+      score += objective === 'coverage'
+        ? delta < 0 ? Math.abs(delta) * 2 : Math.abs(delta) * 0.35
+        : Math.abs(delta);
     }
     if (harmonyWeight > 0 && targetGh > 0 && targetKh > 0) {
       const actualGh = computeGH(actualIons);
@@ -551,6 +560,213 @@ export function autoFillWaterVolumes(
     ...entry,
     volumeMl: volumes[index].toFixed(volumePrecision),
   }));
+}
+
+type WatermancerRouteInputs = {
+  plan: WatermancerPlan;
+  batchMl: number;
+  baseWaters: MineralWaterEntry[];
+  additionWaters: MineralWaterEntry[];
+};
+
+function fillWatermancerRoute(
+  inputs: WatermancerRouteInputs,
+  fillWater: boolean,
+  priority: IonId[],
+): { baseWaters: MineralWaterEntry[]; additionWaters: MineralWaterEntry[] } {
+  if (!fillWater || inputs.batchMl <= 0) {
+    return {
+      baseWaters: inputs.baseWaters.map(entry => ({ ...entry })),
+      additionWaters: inputs.additionWaters.map(entry => ({ ...entry })),
+    };
+  }
+
+  const baseWaters = inputs.baseWaters.length > 0
+    ? autoFillWaterVolumes(
+      inputs.baseWaters,
+      inputs.batchMl,
+      inputs.plan.targetIons,
+      inputs.additionWaters,
+      priority,
+      0,
+      !inputs.plan.allowOvershoot,
+      false,
+      1,
+      0,
+    )
+    : inputs.baseWaters;
+  const additionWaters = inputs.additionWaters.length > 0
+    ? autoFillWaterVolumes(
+      inputs.additionWaters,
+      inputs.batchMl,
+      inputs.plan.targetIons,
+      baseWaters,
+      priority,
+      0,
+      !inputs.plan.allowOvershoot,
+      false,
+      1,
+      0,
+    )
+    : inputs.additionWaters;
+
+  return { baseWaters, additionWaters };
+}
+
+function watermancerRouteDeviations(
+  actual: Record<IonId, number>,
+  target: Partial<Record<IonId, number>>,
+): WatermancerIonDeviation[] {
+  return IONS.map(({ id }) => {
+    const actualValue = actual[id] ?? 0;
+    const targetValue = target[id] ?? 0;
+    return {
+      id,
+      actual: actualValue,
+      target: targetValue,
+      delta: actualValue - targetValue,
+    };
+  });
+}
+
+export function solveWatermancerRoutes({
+  plan,
+  batchMl,
+  baseWaters,
+  additionWaters,
+}: WatermancerRouteInputs): WatermancerSolverResult {
+  const currentPriority = [...plan.ionPriority];
+  const routeDefinitions: Array<{
+    id: string;
+    kind: WatermancerRouteCandidate['kind'];
+    label: string;
+    explanation: string;
+    fillWater: boolean;
+    priority: IonId[];
+    saltObjective: WatermancerSaltObjective;
+    strategy: AutoCraftPreset;
+  }> = [
+    {
+      id: 'primary',
+      kind: 'primary',
+      label: 'Primary match',
+      explanation: 'Use the selected matching strategy with the current water and salt boundaries.',
+      fillWater: plan.strategy === 'water-first',
+      priority: currentPriority,
+      saltObjective: plan.saltObjective,
+      strategy: plan.strategy,
+    },
+    {
+      id: 'use-more-water',
+      kind: 'use-more-water',
+      label: 'Use more water',
+      explanation: 'Increase selected water coverage first, then use salts to close the remaining ionic gaps.',
+      fillWater: true,
+      priority: currentPriority,
+      saltObjective: 'balanced',
+      strategy: 'water-first',
+    },
+    {
+      id: 'use-more-salts',
+      kind: 'use-more-salts',
+      label: 'Use more salts',
+      explanation: 'Keep the current water volumes and favor salt doses that cover remaining positive ion gaps.',
+      fillWater: false,
+      priority: currentPriority,
+      saltObjective: 'coverage',
+      strategy: plan.strategy,
+    },
+    {
+      id: 'prioritize-ions',
+      kind: 'prioritize-ions',
+      label: 'Prioritize ions',
+      explanation: 'Use water first, ordering source selection around the ions with the largest current shortfalls.',
+      fillWater: true,
+      priority: [...currentPriority].sort((a, b) => {
+        const targetA = plan.targetIons[a] ?? 0;
+        const targetB = plan.targetIons[b] ?? 0;
+        return targetB - targetA;
+      }),
+      saltObjective: 'coverage',
+      strategy: 'water-first',
+    },
+  ];
+
+  const candidates = routeDefinitions.map(definition => {
+    const routePlan: WatermancerPlan = {
+      ...plan,
+      strategy: definition.strategy,
+      saltObjective: definition.saltObjective,
+      ionPriority: definition.priority,
+      overshootOrder: definition.priority,
+    };
+    const waters = fillWatermancerRoute(
+      { plan: routePlan, batchMl, baseWaters, additionWaters },
+      definition.fillWater,
+      definition.priority,
+    );
+    const selectedWaters = [...waters.baseWaters, ...waters.additionWaters];
+    const bottledIons = computeWatermancerBottledIons(selectedWaters, batchMl);
+    const saltTargets = autoCraftSaltTargets(
+      routePlan.selectedSalts,
+      bottledIons,
+      routePlan.targetIons,
+      routePlan.fixedSaltDoses,
+      routePlan.strategy,
+      routePlan.saltObjective,
+    );
+    const allSaltTargets = { ...routePlan.fixedSaltDoses, ...saltTargets };
+    const finalIons = computeIonTotals(
+      allSaltTargets,
+      bottledIons,
+      1,
+    );
+    const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
+    const overshoots = findIonOvershoots(finalIons, routePlan.targetIons);
+    const score = deviations.reduce((total, deviation) => total + Math.abs(deviation.delta), 0);
+    const candidatePlan: WatermancerPlan = {
+      ...routePlan,
+      selectedWaters,
+      fixedWaterVolumes: Object.fromEntries(
+        selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+      ),
+    };
+    return {
+      id: definition.id,
+      kind: definition.kind,
+      label: definition.label,
+      explanation: definition.explanation,
+      plan: candidatePlan,
+      baseWaters: waters.baseWaters,
+      additionWaters: waters.additionWaters,
+      saltTargets: allSaltTargets,
+      finalIons,
+      deviations,
+      overshoots,
+      score,
+    };
+  });
+
+  const primaryPlan = candidates[0];
+  const alternatives = candidates.slice(1);
+  const meaningfulDeviations = primaryPlan.deviations.filter(item => Math.abs(item.delta) > 0.05);
+  const status: WatermancerSolverResult['status'] = plan.selectedSalts.length === 0 || batchMl <= 0
+    ? 'blocked'
+    : meaningfulDeviations.length === 0
+    ? 'matched'
+    : 'partial';
+
+  return {
+    primaryPlan,
+    alternatives,
+    status,
+    finalIons: primaryPlan.finalIons,
+    deviations: primaryPlan.deviations,
+    overshoots: primaryPlan.overshoots,
+    explanation: status === 'matched'
+      ? 'The primary route reaches the requested ionic targets within tolerance.'
+      : 'The primary route is the best available match; alternatives trade water coverage, salt coverage, and ion priority differently.',
+  };
 }
 
 const WATER_METADATA_FIELDS: { key: keyof WaterMetadata; label: string; unit: string }[] = [
@@ -846,9 +1062,11 @@ function App() {
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
+  const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerCraft, setWatermancerCraft] = useState<{
     signature: string;
-    targets: Record<string, number>;
+    result: WatermancerSolverResult;
+    activeRouteId: string;
   } | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
@@ -1204,6 +1422,7 @@ function App() {
     ),
     fixedSaltDoses: {},
     strategy: autoCraftPreset,
+    saltObjective: watermancerSaltObjective,
     ionPriority: [...activeAutoFillPriority],
     allowOvershoot: false,
     overshootLimits: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 0])),
@@ -1213,6 +1432,7 @@ function App() {
     additionWaters,
     autoCraftPreset,
     mineralWaters,
+    watermancerSaltObjective,
     watermancerIonTargets,
     watermancerUsedSaltIds,
   ]);
@@ -1229,7 +1449,12 @@ function App() {
   );
   const activeWatermancerSaltTargets = useMemo(
     () => watermancerCraft?.signature === watermancerCraftSignature
-      ? watermancerCraft.targets
+      ? (
+        watermancerCraft.result.alternatives
+          .concat(watermancerCraft.result.primaryPlan)
+          .find(candidate => candidate.id === watermancerCraft.activeRouteId)
+          ?.saltTargets ?? selectedWatermancerSaltTargets
+      )
       : selectedWatermancerSaltTargets,
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
   );
@@ -1341,58 +1566,37 @@ function App() {
 
   const handleAutoCraft = () => {
     if (watermancerPlan.selectedSalts.length === 0 || batchMl <= 0) return;
-    let craftedMineralWaters = mineralWaters;
-    let craftedAdditionWaters = additionWaters;
-    let craftedWaterIons = bottledIons;
-
-    if (watermancerPlan.strategy === 'water-first') {
-      craftedMineralWaters = mineralWaters.length > 0
-        ? autoFillWaterVolumes(
-          mineralWaters,
-          batchMl,
-          watermancerPlan.targetIons,
-          additionWaters,
-          watermancerPlan.ionPriority,
-          0,
-          !watermancerPlan.allowOvershoot,
-          false,
-          1,
-          0,
-        )
-        : mineralWaters;
-      craftedAdditionWaters = additionWaters.length > 0
-        ? autoFillWaterVolumes(
-          additionWaters,
-          batchMl,
-          watermancerPlan.targetIons,
-          craftedMineralWaters,
-          watermancerPlan.ionPriority,
-          0,
-          !watermancerPlan.allowOvershoot,
-          false,
-          1,
-          0,
-        )
-        : additionWaters;
-      craftedWaterIons = computeWatermancerBottledIons(
-        [...craftedMineralWaters, ...craftedAdditionWaters],
-        batchMl,
-      );
-      setMineralWaters(craftedMineralWaters);
-      setAdditionWaters(craftedAdditionWaters);
-    }
-
-    const targets = autoCraftSaltTargets(
-      watermancerPlan.selectedSalts,
-      craftedWaterIons,
-      watermancerPlan.targetIons,
-      watermancerPlan.fixedSaltDoses,
-      watermancerPlan.strategy,
-    );
-    setWatermancerCraft({
-      signature: makeWatermancerCraftSignature([...craftedMineralWaters, ...craftedAdditionWaters]),
-      targets,
+    const result = solveWatermancerRoutes({
+      plan: watermancerPlan,
+      batchMl,
+      baseWaters: mineralWaters,
+      additionWaters,
     });
+    setMineralWaters(result.primaryPlan.baseWaters);
+    setAdditionWaters(result.primaryPlan.additionWaters);
+    setWatermancerCraft({
+      signature: createWatermancerPlanSignature(result.primaryPlan.plan),
+      result,
+      activeRouteId: result.primaryPlan.id,
+    });
+  };
+
+  const handleApplyWatermancerRoute = (candidate: WatermancerRouteCandidate) => {
+    setMineralWaters(candidate.baseWaters);
+    setAdditionWaters(candidate.additionWaters);
+    setAutoCraftPreset(candidate.plan.strategy);
+    setWatermancerSaltObjective(candidate.plan.saltObjective);
+    if (candidate.kind === 'prioritize-ions') {
+      setAutoFillPriorityPreset('custom');
+      setAutoFillCustomPriority(candidate.plan.ionPriority);
+    }
+    setWatermancerCraft(current => current
+      ? {
+        ...current,
+        signature: createWatermancerPlanSignature(candidate.plan),
+        activeRouteId: candidate.id,
+      }
+      : current);
   };
 
   // Watermancer's Used salt selections are the source of truth for dosing.
@@ -3651,7 +3855,7 @@ function App() {
                 </p>
                 {watermancerCraftIsCurrent && (
                   <p className="mt-1 text-[10px] font-medium text-emerald-300">
-                    Matched doses are active. Changing a salt, water, or target profile requires a new match.
+                    {watermancerCraft?.result.explanation}
                   </p>
                 )}
               </div>
@@ -3668,6 +3872,70 @@ function App() {
                 Auto-match
               </button>
             </div>
+            {watermancerCraftIsCurrent && watermancerCraft && (
+              <div className="border-t border-cyan-400/15 px-4 py-4 sm:px-6">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200">
+                      Route candidates
+                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      Choose a different tradeoff without changing the ionic chemistry model.
+                    </p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                    watermancerCraft.result.status === 'matched'
+                      ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                      : watermancerCraft.result.status === 'partial'
+                        ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                        : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
+                  }`}>
+                    {watermancerCraft.result.status}
+                  </span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {[watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives].map(candidate => {
+                    const active = candidate.id === watermancerCraft.activeRouteId;
+                    const meaningful = candidate.deviations.filter(item => Math.abs(item.delta) > 0.05);
+                    const shortfall = meaningful.filter(item => item.delta < 0).length;
+                    return (
+                      <div
+                        key={candidate.id}
+                        className={`rounded-xl border px-3 py-3 ${
+                          active
+                            ? 'border-cyan-300/50 bg-cyan-400/10'
+                            : 'border-slate-700/60 bg-slate-900/35'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-semibold text-slate-100">{candidate.label}</div>
+                            <p className="mt-1 text-[10px] leading-relaxed text-slate-400">{candidate.explanation}</p>
+                          </div>
+                          {active ? (
+                            <span className="shrink-0 text-[10px] font-semibold text-emerald-300">Active</span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleApplyWatermancerRoute(candidate)}
+                              className="shrink-0 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 hover:bg-cyan-400/20"
+                            >
+                              Use route
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+                          <span>{meaningful.length === 0 ? 'Within tolerance' : `${meaningful.length} deviations`}</span>
+                          <span>{shortfall} under target</span>
+                          <span>{candidate.overshoots.length} overshoots</span>
+                          <span>score {candidate.score.toFixed(1)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
