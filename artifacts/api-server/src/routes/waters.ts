@@ -56,6 +56,35 @@ function getSafeDatabaseError(err: unknown): {
   return { code, message };
 }
 
+function normalizeWaterIons(value: unknown): Record<string, number> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .map(([key, rawValue]) => [key, Number(rawValue)] as const)
+      .filter(([, parsed]) => Number.isFinite(parsed) && parsed >= 0),
+  );
+}
+
+function publicWaterKey(name: string, ions: unknown): string {
+  const normalizedName = name.trim().toLocaleLowerCase("tr-TR");
+  const normalizedIons = Object.entries(normalizeWaterIons(ions))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${key}:${value}`)
+    .join("|");
+  return `${normalizedName}::${normalizedIons}`;
+}
+
+function deduplicatePublicWaters<T extends { name: string; ions: unknown }>(waters: T[]): T[] {
+  const seen = new Set<string>();
+  return waters.filter(water => {
+    const key = publicWaterKey(water.name, water.ions);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function parseWaterIons(value: unknown): Record<string, number> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const entries = Object.entries(value);
@@ -95,14 +124,17 @@ router.get("/waters", async (_req: Request, res: Response) => {
     );
     const enrichedRows = rows.map(row => {
       const metadata = metadataByName.get(catalogName(row.name));
-      return metadata ? { ...row, metadata } : row;
+      const ions = normalizeWaterIons(row.ions);
+      return metadata ? { ...row, ions, metadata } : { ...row, ions };
     });
-    res.json({ waters: enrichedRows });
+    res.status(200).json({ waters: deduplicatePublicWaters(enrichedRows) });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
     // The public catalog is bundled with the API so a missing Vercel
     // production schema cannot break the calculator's water selector.
-    res.json({ waters: SHARED_WATERS.filter(water => water.shared === "yes") });
+    res.status(200).json({
+      waters: deduplicatePublicWaters(SHARED_WATERS.filter(water => water.shared === "yes")),
+    });
   }
 });
 
