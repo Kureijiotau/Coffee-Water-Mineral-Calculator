@@ -514,11 +514,31 @@ const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom
 };
 const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
 const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-policy';
+const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
+const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
+const DEFAULT_DROPS_PER_ML = 20;
 const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
   enabled: false,
   allowedIons: [],
   limits: {},
 };
+
+function loadDropsPerMl(): number {
+  try {
+    const parsed = Number(localStorage.getItem(DROPPER_CALIBRATION_STORAGE_KEY));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_DROPS_PER_ML;
+  } catch {
+    return DEFAULT_DROPS_PER_ML;
+  }
+}
+
+function loadDropperCalibrationAcknowledged(): boolean {
+  try {
+    return localStorage.getItem(DROPPER_CALIBRATION_ACKNOWLEDGED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
 function normalizeAutoFillPriority(priority: unknown): IonId[] {
   const valid = Array.isArray(priority)
     ? priority.filter((id): id is IonId => typeof id === 'string' && ACTIVE_ION_IDS.includes(id as IonId))
@@ -1161,6 +1181,7 @@ function App() {
   const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
   const [showAutoFillSettings, setShowAutoFillSettings] = useState(false);
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
+  const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
@@ -1232,6 +1253,9 @@ function App() {
   useEffect(() => {
     localStorage.setItem(WATERMANCER_OVERSHOOT_STORAGE_KEY, JSON.stringify(overshootSettings));
   }, [overshootSettings]);
+  useEffect(() => {
+    localStorage.setItem(DROPPER_CALIBRATION_STORAGE_KEY, String(brewerDropsPerMl));
+  }, [brewerDropsPerMl]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -2939,6 +2963,7 @@ function App() {
                concentrateOn={concentrateOn}
                concentrateLiters={concL}
                concentrateStrength={concentrateStrength}
+                dropsPerMl={brewerDropsPerMl}
                onOpenSteps={method => setShowBrewerSteps(method)}
              />
            </>
@@ -3166,6 +3191,15 @@ function App() {
               estimate={waterChemistry.estimate}
               basePH={waterChemistry.basePH}
               baseAlkalinity={waterChemistry.baseAlkalinity}
+            />
+          </div>
+        )}
+
+        {nerdLevel === 'brewer' && (
+          <div className="order-8">
+            <BrewerDropperCalibrationCard
+              dropsPerMl={brewerDropsPerMl}
+              onCalibrate={setBrewerDropsPerMl}
             />
           </div>
         )}
@@ -4378,6 +4412,7 @@ function App() {
           bicarbonateWaterOvershoot={nerdLevel === 'brewer' ? false : bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
           tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
+           dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
           onClose={() => setShowBrewerSteps(null)}
         />
@@ -4916,6 +4951,188 @@ function SaltSieveIcon() {
   );
 }
 
+function BrewerDropperCalibrationCard({
+  dropsPerMl,
+  onCalibrate,
+}: {
+  dropsPerMl: number;
+  onCalibrate: (value: number) => void;
+}) {
+  const [dropCount, setDropCount] = useState('20');
+  const [measuredVolume, setMeasuredVolume] = useState('1');
+  const [stockConcentration, setStockConcentration] = useState('50');
+  const [doseDrops, setDoseDrops] = useState('20');
+  const [doseVolumeLiters, setDoseVolumeLiters] = useState('1');
+  const [acknowledged, setAcknowledged] = useState(() => loadDropperCalibrationAcknowledged());
+  const parsedDrops = Number(dropCount);
+  const parsedVolume = Number(measuredVolume);
+  const measuredDropsPerMl = parsedDrops > 0 && parsedVolume > 0
+    ? parsedDrops / parsedVolume
+    : 0;
+  const canCalibrate = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
+  const effectiveDropsPerMl = canCalibrate ? measuredDropsPerMl : dropsPerMl;
+  const stockMgPerMl = Number(stockConcentration);
+  const finalDoseDrops = Number(doseDrops);
+  const finalVolumeLiters = Number(doseVolumeLiters);
+  const mgPerDrop = stockMgPerMl > 0 && effectiveDropsPerMl > 0
+    ? stockMgPerMl / effectiveDropsPerMl
+    : 0;
+  const resultingMgPerLiter = mgPerDrop > 0 && finalDoseDrops > 0 && finalVolumeLiters > 0
+    ? (finalDoseDrops * mgPerDrop) / finalVolumeLiters
+    : 0;
+  const acknowledge = () => {
+    if (acknowledged) return;
+    setAcknowledged(true);
+    try {
+      localStorage.setItem(DROPPER_CALIBRATION_ACKNOWLEDGED_KEY, 'true');
+    } catch {
+      // The calibration still works if local storage is unavailable.
+    }
+  };
+
+  return (
+    <div
+      className={`dropper-calibration-card overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800/75 shadow-xl backdrop-blur ${!acknowledged ? 'dropper-calibration-card--attention' : ''}`}
+      onClick={acknowledge}
+    >
+      <button
+        type="button"
+        onClick={acknowledge}
+        className="flex w-full items-start gap-3 border-b border-sky-400/15 bg-gradient-to-r from-sky-500/10 via-cyan-500/[0.04] to-transparent px-4 py-3 text-left sm:px-6"
+        aria-label="Acknowledge dropper calibration"
+      >
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/30 bg-sky-400/10 text-sky-200">
+          <FlaskConical className="h-4 w-4" />
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-sky-100">Calibrate dropper</h2>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+            Turn drops into a reliable mg/L dose for your brew water.
+          </p>
+        </div>
+      </button>
+      <div className="space-y-3 px-4 py-4 sm:px-6">
+        <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-3 text-[11px] leading-relaxed text-slate-300">
+          <div className="font-semibold text-sky-200">Measure once, dose with confidence</div>
+          <ol className="mt-2 list-inside list-decimal space-y-1 text-slate-400">
+            <li>Shake the stock bottle, then fill the dropper the same way you normally do.</li>
+            <li>Dispense a known number of drops into a 1 mL syringe or graduated cylinder.</li>
+            <li>Enter the measurement below. Then use the dose converter to see drops → mg/L.</li>
+          </ol>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Drops dispensed</span>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              inputMode="numeric"
+              value={dropCount}
+              onChange={event => setDropCount(event.target.value)}
+              className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+              aria-label="Number of drops dispensed"
+            />
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Measured volume (mL)</span>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={measuredVolume}
+              onChange={event => setMeasuredVolume(event.target.value)}
+              className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+              aria-label="Measured drop volume in milliliters"
+            />
+          </label>
+        </div>
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Current calibration</div>
+            <div className="mt-1 text-sm font-semibold text-cyan-200">
+              {dropsPerMl.toFixed(1)} drops/mL
+              <span className="ml-2 text-[10px] font-normal text-slate-500">({(1 / dropsPerMl).toFixed(3)} mL/drop)</span>
+            </div>
+            {canCalibrate && (
+              <div className="mt-1 text-[10px] text-slate-500">
+                New result: {measuredDropsPerMl.toFixed(1)} drops/mL
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => onCalibrate(measuredDropsPerMl)}
+            disabled={!canCalibrate}
+            className="shrink-0 rounded-lg border border-sky-300/35 bg-sky-400/15 px-3 py-2 text-xs font-semibold text-sky-100 transition hover:bg-sky-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Use this calibration
+          </button>
+        </div>
+        <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.05] px-3 py-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200">Drops → mg/L converter</div>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+            Enter the salt concentration in the stock and the final brew volume. This shows exactly what a number of drops contributes.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
+              <span className="block text-[10px] text-slate-500">Stock concentration (mg/mL)</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.1"
+                inputMode="decimal"
+                value={stockConcentration}
+                onChange={event => setStockConcentration(event.target.value)}
+                className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Stock concentration in milligrams per milliliter"
+              />
+            </label>
+            <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
+              <span className="block text-[10px] text-slate-500">Drops</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={doseDrops}
+                onChange={event => setDoseDrops(event.target.value)}
+                className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Number of drops to convert"
+              />
+            </label>
+            <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
+              <span className="block text-[10px] text-slate-500">Final water (L)</span>
+              <input
+                type="number"
+                min="0.01"
+                step="0.1"
+                inputMode="decimal"
+                value={doseVolumeLiters}
+                onChange={event => setDoseVolumeLiters(event.target.value)}
+                className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Final water volume in liters"
+              />
+            </label>
+          </div>
+          <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2">
+            <span className="text-[11px] text-slate-400">
+              {finalDoseDrops || 0} drops × {mgPerDrop > 0 ? mgPerDrop.toFixed(2) : '—'} mg/drop
+            </span>
+            <strong className="text-base tabular-nums text-cyan-200">
+              {resultingMgPerLiter > 0 ? `${resultingMgPerLiter.toFixed(2)} mg/L` : '—'}
+            </strong>
+          </div>
+        </div>
+        <p className="text-[10px] leading-relaxed text-slate-500">
+          The default stock is 50 mg/mL (a 5% solution). Change it when a stock has a different concentration. Recheck if you change droppers or technique.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function BrewerSimpleRecipeCard({
   saltTargets,
   recipeRows,
@@ -4925,6 +5142,7 @@ function BrewerSimpleRecipeCard({
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
+  dropsPerMl,
   onOpenSteps,
 }: {
   saltTargets: Record<string, number>;
@@ -4935,12 +5153,12 @@ function BrewerSimpleRecipeCard({
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
+  dropsPerMl: number;
   onOpenSteps: (method: 'dry' | 'dropper') => void;
 }) {
-  const DROPS_PER_ML = 20;
   const UNIVERSAL_STOCK_PERCENT = 5;
   const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
-  const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / DROPS_PER_ML;
+  const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / dropsPerMl;
   type BrewerPrepMethod = 'dry' | 'dropper';
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [stocksReady, setStocksReady] = useState(false);
@@ -5257,7 +5475,7 @@ function BrewerSimpleRecipeCard({
                 Put <strong className="text-slate-200">{universalStockMassLabel()}</strong> of each listed salt into its own bottle, then fill each to <strong className="text-slate-200">{pantryBottleMl} mL</strong> with distilled or RO water. Cap and shake.
               </p>
               <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                Label each bottle with the salt, {pantryBottleMl} mL, and the date. For consistent dosing, verify that your dropper delivers about 20 drops per mL.
+                 Label each bottle with the salt, {pantryBottleMl} mL, and the date. For consistent dosing, calibrate your dropper to about {dropsPerMl.toFixed(1)} drops per mL.
               </p>
               {calciumTarget > 0.05 && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
@@ -5349,6 +5567,7 @@ function BrewerRecipeStepsModal({
   bicarbonateWaterOvershoot,
   nerdLevel,
   tdsTarget,
+  dropsPerMl,
   dosingMethod,
   onClose,
 }: {
@@ -5368,6 +5587,7 @@ function BrewerRecipeStepsModal({
   bicarbonateWaterOvershoot: boolean;
   nerdLevel: NerdLevel;
   tdsTarget: number;
+  dropsPerMl: number;
   dosingMethod: 'dry' | 'dropper';
   onClose: () => void;
 }) {
@@ -5418,7 +5638,8 @@ function BrewerRecipeStepsModal({
       : salt.defaultFormIdx ?? 0;
     const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
     const physicalSaltMg = computeSaltMg(target, liters || 1, form.molarMass, salt.anhydrousMass);
-    const drops = Math.max(1, Math.round(physicalSaltMg / 2.5));
+    const universalStockMgPerDrop = 50 / dropsPerMl;
+    const drops = Math.max(1, Math.round(physicalSaltMg / universalStockMgPerDrop));
     return `${drops} drops`;
   };
   const volumeLabel = concentrateOn

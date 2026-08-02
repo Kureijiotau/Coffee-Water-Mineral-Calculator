@@ -62,3 +62,9 @@ Displayed route results must be hidden whenever their plan signature no longer m
 **Why:** Showing an old route after a target, water, salt, priority, or policy change makes the review panel appear authoritative when it no longer describes the current plan.
 
 **How to apply:** Derive the active route only from a current-signature result, while retaining the result object solely to allow a fresh Auto-match.
+
+Brewer dropper dosing should use a user-calibrated drops-per-mL value rather than assuming every dropper delivers the same volume.
+
+**Why:** Drop size varies with the dropper and squeeze technique, so a fixed 20 drops/mL assumption can systematically misdose mineral stocks.
+
+**How to apply:** Keep a sensible default until calibration, persist the measured value locally, and use it consistently in recipe cards and step-by-step dosing instructions.
