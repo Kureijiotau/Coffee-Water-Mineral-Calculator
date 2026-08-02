@@ -20,3 +20,9 @@ The separate pre-match strategy selector is intentionally removed; Phase 4 route
 **Why:** The selector duplicated the solver's route alternatives and added an unnecessary decision step before Auto-match.
 
 **How to apply:** Keep any internal primary strategy defaults needed by the solver, but do not reintroduce a standalone matching-strategy panel unless the route model changes substantially.
+
+Post-match ion coverage must render from the active route candidate's final-ion profile and remain mounted whenever a solver result exists; it must not be gated by transient current water-volume totals.
+
+**Why:** Applying a route updates water state asynchronously, and volume-based visibility caused the ion card to unmount and remount during route selection.
+
+**How to apply:** Use the selected candidate as the display source of truth immediately after Auto-match and whenever a route is applied.

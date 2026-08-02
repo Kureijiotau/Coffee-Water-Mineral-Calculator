@@ -1381,20 +1381,6 @@ function App() {
     }
     return m;
   }, [mineralWaters, additionWaters, batchMl, sourceScale]);
-  const baseWaterIons = useMemo(() => {
-    const m = {} as Record<IonId, number>;
-    for (const ion of IONS) {
-      let total = 0;
-      for (const entry of mineralWaters) {
-        const vol = num(entry.volumeMl) * sourceScale;
-        if (vol > 0 && batchMl > 0) {
-          total += (num(entry.ions[ion.id] ?? '') * vol) / batchMl;
-        }
-      }
-      m[ion.id] = total;
-    }
-    return m;
-  }, [mineralWaters, batchMl, sourceScale]);
   const watermancerIonGaps = Object.fromEntries(
     ACTIVE_ION_IDS.map(id => [
       id,
@@ -1457,6 +1443,13 @@ function App() {
       )
       : selectedWatermancerSaltTargets,
     [selectedWatermancerSaltTargets, watermancerCraft, watermancerCraftSignature],
+  );
+  const activeWatermancerRoute = useMemo(
+    () => watermancerCraft
+      ? [watermancerCraft.result.primaryPlan, ...watermancerCraft.result.alternatives]
+        .find(candidate => candidate.id === watermancerCraft.activeRouteId) ?? watermancerCraft.result.primaryPlan
+      : null,
+    [watermancerCraft],
   );
   const watermancerCraftIsCurrent = watermancerCraft?.signature === watermancerCraftSignature;
   const makeWatermancerCraftSignature = (waters: MineralWaterEntry[]) => (
@@ -1611,10 +1604,6 @@ function App() {
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
     () => computeIonTotals(selectedSuggestedSaltTargets, combinedBottledIons, dil),
     [selectedSuggestedSaltTargets, combinedBottledIons, dil],
-  );
-  const watermancerSelectedSaltIonTotals = useMemo(
-    () => computeIonTotals(activeWatermancerSaltTargets, {}, 1),
-    [activeWatermancerSaltTargets],
   );
   const sodiumCorrectionGap = Math.max(
     (finalMixtureTargetIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
@@ -2425,14 +2414,13 @@ function App() {
               aria-label="Watermancer workflow"
               className="rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-lg"
             >
-              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-6">
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
                   { number: '1', label: 'Set target', complete: true },
                   { number: '2', label: 'Add waters', complete: mineralWaters.length + additionWaters.length > 0 },
                   { number: '3', label: 'Add salts', complete: watermancerUsedSaltIds.length > 0 },
-                  { number: '4', label: 'Match options', complete: true },
-                  { number: '5', label: 'Auto-match', complete: watermancerCraftIsCurrent },
-                  { number: '6', label: 'Review result', complete: watermancerCraftIsCurrent },
+                  { number: '4', label: 'Auto-match', complete: watermancerCraftIsCurrent },
+                  { number: '5', label: 'Review result', complete: watermancerCraftIsCurrent },
                 ].map(step => (
                   <li
                     key={step.number}
@@ -3696,11 +3684,10 @@ function App() {
           </div>
         </div>}
 
-         {showWatermancer && totalBaseMl > 0 && batchMl > 0 && (
+          {showWatermancer && activeWatermancerRoute && (
             <div className="order-5" data-watermancer-stage="results">
             <WatermancerIonCoverageBars
-              baseWaterIons={baseWaterIons}
-              selectedSaltIons={watermancerSelectedSaltIonTotals}
+              actualIons={activeWatermancerRoute.finalIons}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
             />
@@ -4288,13 +4275,11 @@ function WatermancerIonProfileCard({
 }
 
 function WatermancerIonCoverageBars({
-  baseWaterIons,
-  selectedSaltIons,
+  actualIons,
   targetIons,
   targetLabel,
 }: {
-  baseWaterIons: Partial<Record<IonId, number>>;
-  selectedSaltIons: Partial<Record<IonId, number>>;
+  actualIons: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
 }) {
@@ -4307,10 +4292,10 @@ function WatermancerIonCoverageBars({
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
-              Base water + selected salts
+              Selected route result
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-              Combined contribution toward the selected Watermancer profile.
+              Final ion contribution from the active Watermancer route.
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
@@ -4321,9 +4306,7 @@ function WatermancerIonCoverageBars({
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
         {ACTIVE_ION_IDS.map(id => {
           const ion = ION_MAP[id];
-          const baseWater = baseWaterIons[id] ?? 0;
-          const selectedSalts = selectedSaltIons[id] ?? 0;
-          const actual = baseWater + selectedSalts;
+          const actual = actualIons[id] ?? 0;
           const target = Math.max(targetIons[id] ?? 0, 0);
           const tolerance = 0.05;
           const overshoot = target > 0
