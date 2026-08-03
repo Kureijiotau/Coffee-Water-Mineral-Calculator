@@ -5,6 +5,7 @@ import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff, RefreshCw } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
+import recommendedOvershootImage from '@assets/image_1785734539832.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -4725,7 +4726,7 @@ function App() {
                             onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
                             className="mt-0.5 h-4 w-4 accent-emerald-400"
                           />
-                          <span>
+                          <span className="group relative">
                             <span className={`block text-[11px] font-semibold uppercase tracking-wider ${
                               overshootSettings.enabled ? 'text-emerald-200' : 'text-slate-300'
                             }`}>
@@ -4733,6 +4734,19 @@ function App() {
                             </span>
                             <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">
                               A safe way to trade a small, controlled excess for a closer overall match.
+                            </span>
+                            <span
+                              role="tooltip"
+                              className="pointer-events-none absolute bottom-[calc(100%+8px)] left-0 z-30 w-48 -translate-y-1 rounded-xl border border-emerald-400/30 bg-slate-950/95 p-2.5 text-center opacity-0 shadow-2xl backdrop-blur transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
+                            >
+                              <img
+                                src={recommendedOvershootImage}
+                                alt=""
+                                className="mx-auto h-20 w-20 rounded-lg object-contain"
+                              />
+                              <span className="mt-1.5 block text-[11px] font-semibold leading-tight text-emerald-200">
+                                Recommended for most recipes.
+                              </span>
                             </span>
                           </span>
                         </label>
