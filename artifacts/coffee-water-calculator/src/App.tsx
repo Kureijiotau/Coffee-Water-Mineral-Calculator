@@ -1940,7 +1940,7 @@ function App() {
   const watermancerActionBusyRef = useRef(false);
   const watermancerActionGenerationRef = useRef(0);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
-  const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
+  const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -2085,7 +2085,7 @@ function App() {
       setWatermancerActionMessage(null);
       setWatermancerRecalculationNonce(0);
       setWatermancerManualSaltAdditionsMg({});
-      setWatermancerResultSticky(true);
+      setWatermancerResultSticky(false);
       setSodiumCorrectionOn(false);
       setFillWaterNudgeSeen(false);
     }
@@ -2892,7 +2892,7 @@ function App() {
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
     setWatermancerManualSaltAdditionsMg({});
-    setWatermancerResultSticky(true);
+    setWatermancerResultSticky(false);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
