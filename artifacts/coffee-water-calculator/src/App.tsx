@@ -6,6 +6,7 @@ import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download
 import { GiSaltShaker } from 'react-icons/gi';
 import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
 import recommendedOvershootImage from '@assets/image_1785734539832.png';
+import fillWaterPromptImage from '@assets/ez_1785735003821.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -4626,13 +4627,13 @@ function App() {
                      </div>
                    </div>
                </div>
-                <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 sm:p-4">
+                 <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                   <button
                     type="button"
                     onClick={() => setShowAutoFillSettings(open => !open)}
                     aria-expanded={showAutoFillSettings}
                     className={`flex w-full items-center justify-between gap-3 rounded-lg text-left transition ${
-                      showAutoFillSettings ? 'text-amber-200' : 'text-slate-300 hover:text-amber-200'
+                       showAutoFillSettings ? 'text-cyan-200' : 'text-slate-300 hover:text-cyan-200'
                     }`}
                     title="Adjust Watermancer matching strategy"
                   >
@@ -4650,14 +4651,14 @@ function App() {
                     </span>
                   </button>
                   {showAutoFillSettings && (
-                    <div className="mt-3 border-t border-amber-400/15 pt-3">
+                     <div className="mt-3 border-t border-cyan-400/20 pt-3">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <label className="block">
                           <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Matching strategy</span>
                           <select
                             value={autoCraftPreset}
                             onChange={event => setAutoCraftPreset(event.target.value as AutoCraftPreset)}
-                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                           >
                             <option value="closest-match">Closest match</option>
                             <option value="water-first">Water-first</option>
@@ -4669,7 +4670,7 @@ function App() {
                           <select
                             value={watermancerSaltObjective}
                             onChange={event => setWatermancerSaltObjective(event.target.value as AutoCraftObjective)}
-                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                           >
                             <option value="balanced">Balanced ions</option>
                             <option value="coverage">Target coverage</option>
@@ -4686,7 +4687,7 @@ function App() {
                               if (nextPreset === 'custom') setAutoFillCustomPriority([...activeAutoFillPriority]);
                               setAutoFillPriorityPreset(nextPreset);
                             }}
-                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                           >
                             {(Object.entries(AUTO_FILL_PRIORITY_PRESETS) as Array<[Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }]>).map(([value, preset]) => (
                               <option key={value} value={value}>{preset.label}</option>
@@ -4708,7 +4709,7 @@ function App() {
                                 const value = Number(e.target.value);
                                 setAutoFillDeviationPpm(Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0);
                               }}
-                              className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                               className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                             />
                             <span className="shrink-0 text-[11px] text-slate-500">ppm</span>
                           </div>
@@ -4940,6 +4941,26 @@ function App() {
                       </div>
                     </div>
                   )}
+                   <div className="mt-3 rounded-lg border border-cyan-300/35 bg-cyan-400/[0.08] p-2">
+                     <button
+                       type="button"
+                       disabled={watermancerBestMatchRunning}
+                       onClick={() => {
+                         setWatermancerBestMatchDeviationMode(null);
+                         setWatermancerBestMatchSummary(null);
+                         setWatermancerBestMatchMessage(null);
+                         setWatermancerRecalculationNonce(current => current + 1);
+                       }}
+                       className="flex w-full items-center justify-center gap-2 rounded-md border border-cyan-200/50 bg-cyan-300/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-cyan-50 transition hover:border-cyan-100/80 hover:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-60"
+                       title="Apply the selected strategy, priority, deviation, overshoot, waters, salts, and hydration settings to the automatic match."
+                     >
+                       <RefreshCw className="h-3.5 w-3.5" />
+                       Apply current matching settings
+                     </button>
+                     <p className="mt-1.5 text-center text-[10px] font-medium text-cyan-200/70">
+                       Applies the matching controls above to the automatic match
+                     </p>
+                   </div>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {mineralWaters.length > 0 && batchMl > 0 && (
@@ -4973,10 +4994,14 @@ function App() {
                           priorityOrder: activeAutoFillPriority,
                         },
                       ))}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
                       title="Fill base waters toward the current Watermancer ion targets."
                     >
-                      <Droplet className="h-4 w-4" />
+                       <img
+                         src={fillWaterPromptImage}
+                         alt="Click to fill base waters"
+                         className="h-5 w-5 rounded-md object-contain"
+                       />
                       Fill base waters toward target
                     </button>
                   )}
@@ -4987,25 +5012,10 @@ function App() {
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
                     title="Try every strategy with strict and 10% ion deviation policies"
                   >
-                    <Sparkles className="h-4 w-4" />
+                     <span aria-hidden="true" className="text-base leading-none">👉</span>
                     {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
                   </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={watermancerBestMatchRunning}
-                  onClick={() => {
-                    setWatermancerBestMatchDeviationMode(null);
-                    setWatermancerBestMatchSummary(null);
-                    setWatermancerBestMatchMessage(null);
-                    setWatermancerRecalculationNonce(current => current + 1);
-                  }}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60"
-                  title="Apply the selected strategy, priority, deviation, overshoot, waters, salts, and hydration settings to the automatic match."
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  Apply current matching settings
-                </button>
                 {watermancerBestMatchSummary && (
                   <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
                     Best of 6 matches: <span className="font-semibold">

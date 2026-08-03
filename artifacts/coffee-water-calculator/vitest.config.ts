@@ -18,6 +18,11 @@ export default defineConfig({
         'src',
         'testAssetMock.ts',
       ),
+      '@assets/ez_1785735003821.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
     },
   },
 });
