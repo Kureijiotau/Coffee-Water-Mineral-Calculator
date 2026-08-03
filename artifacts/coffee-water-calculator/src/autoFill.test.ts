@@ -6,6 +6,9 @@ import {
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
   solveWatermancerRoutes,
+  applyWatermancerBestMatchDeviationMode,
+  findBestWatermancerMatch,
+  selectBestWatermancerMatchCandidate,
   selectWatermancerRouteCandidate,
   recalculateWatermancerRouteAtCurrentVolumes,
   totalWatermancerDeviation,
@@ -336,6 +339,95 @@ describe('autoFillWaterVolumes', () => {
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
+  it('benchmarks every strategy with strict and permissive deviation modes', () => {
+    const source = water('source', { calcium: 10, sulfate: 20 });
+    const plan = {
+      targetIons: { calcium: 10, sulfate: 20, chloride: 0 },
+      selectedWaters: [source],
+      selectedSalts: ['cacl2'],
+      fixedWaterVolumes: { source: 500 },
+      fixedSaltDoses: {},
+      strategy: 'closest-match' as const,
+      saltObjective: 'balanced' as const,
+      ionPriority: ['calcium', 'sulfate', 'chloride'] as const,
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      overshootOrder: ['calcium', 'sulfate', 'chloride'] as const,
+    };
+
+    const sweep = findBestWatermancerMatch({
+      plan,
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    expect(sweep.candidates).toHaveLength(6);
+    expect(new Set(sweep.candidates.map(candidate => candidate.strategy))).toEqual(
+      new Set(['closest-match', 'water-first', 'gh-kh-harmony']),
+    );
+    expect(new Set(sweep.candidates.map(candidate => candidate.deviationMode))).toEqual(
+      new Set(['strict', 'permissive']),
+    );
+    expect(sweep.winner).toBeDefined();
+  });
+
+  it('uses zero tolerance for strict mode and target-scaled tolerance for permissive mode', () => {
+    const plan = {
+      targetIons: { calcium: 10, sulfate: 20, chloride: 0 },
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      softDeficitIons: ['chloride'],
+      softDeficitLimits: { chloride: 50 },
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    const strict = applyWatermancerBestMatchDeviationMode(plan, 'strict');
+    const permissive = applyWatermancerBestMatchDeviationMode(plan, 'permissive');
+
+    expect(strict.allowOvershoot).toBe(false);
+    expect(strict.softDeficitIons).toEqual([]);
+    expect(strict.softDeficitLimits).toEqual({});
+    expect(permissive.allowOvershoot).toBe(true);
+    expect(permissive.softDeficitIons).toEqual(['calcium', 'sulfate']);
+    expect(permissive.softDeficitLimits).toEqual({ calcium: 1, sulfate: 2 });
+    expect(permissive.softDeficitIons).not.toContain('chloride');
+  });
+
+  it('prefers strict mode and then the current strategy for equal sweep scores', () => {
+    const route = {} as WatermancerRouteCandidate;
+    const matched = { status: 'matched' } as WatermancerSolverResult;
+    const candidates = [
+      {
+        strategy: 'water-first' as const,
+        deviationMode: 'permissive' as const,
+        result: matched,
+        route,
+        totalDeviation: 2,
+      },
+      {
+        strategy: 'closest-match' as const,
+        deviationMode: 'strict' as const,
+        result: matched,
+        route,
+        totalDeviation: 2,
+      },
+      {
+        strategy: 'gh-kh-harmony' as const,
+        deviationMode: 'strict' as const,
+        result: matched,
+        route,
+        totalDeviation: 2,
+      },
+    ];
+
+    expect(selectBestWatermancerMatchCandidate(candidates, 'gh-kh-harmony')?.strategy)
+      .toBe('gh-kh-harmony');
+    expect(selectBestWatermancerMatchCandidate(candidates, 'closest-match')?.strategy)
+      .toBe('closest-match');
+  });
+
   it('returns a primary route and real alternatives with complete result data', () => {
     const result = solveWatermancerRoutes({
       plan: {

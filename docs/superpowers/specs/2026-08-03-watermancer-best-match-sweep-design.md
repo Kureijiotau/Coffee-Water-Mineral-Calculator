@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved conversational design; implementation to follow after spec review.
+Implemented and verified.
 
 ## Goal
 

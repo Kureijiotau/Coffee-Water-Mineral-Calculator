@@ -30,6 +30,7 @@ import {
   normalizeWatermancerIonOrder,
   type WatermancerIonDeviation,
   type WatermancerRouteCandidate,
+  type WatermancerStrategy,
   type WatermancerSaltObjective,
   type WatermancerOvershootPolicy,
   type WatermancerSolverResult,
@@ -47,6 +48,7 @@ type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `reference:${string}`;
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 type AutoCraftObjective = WatermancerSaltObjective;
+export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
 type OvershootSettings = {
   enabled: boolean;
   allowedIons: IonId[];
@@ -889,7 +891,7 @@ export function autoFillWaterVolumes(
   }));
 }
 
-type WatermancerRouteInputs = {
+export type WatermancerRouteInputs = {
   plan: WatermancerPlan;
   batchMl: number;
   baseWaters: MineralWaterEntry[];
@@ -1199,6 +1201,125 @@ export function totalWatermancerDeviation(
     (total, deviation) => total + Math.abs(watermancerDeviationBeyondPolicy(deviation, plan)),
     0,
   );
+}
+
+export function applyWatermancerBestMatchDeviationMode(
+  plan: WatermancerPlan,
+  mode: WatermancerBestMatchDeviationMode,
+): WatermancerPlan {
+  const targetIonIds = IONS
+    .filter(({ id }) => (plan.targetIons[id] ?? 0) > 0)
+    .map(({ id }) => id);
+  const configuredOvershootEnabled = plan.allowOvershoot === true;
+  const configuredAllowedOvershootIons = configuredOvershootEnabled
+    ? [...plan.allowedOvershootIons]
+    : [];
+  const configuredOvershootLimits = configuredOvershootEnabled
+    ? { ...plan.overshootLimits }
+    : {};
+
+  return {
+    ...plan,
+    // Permissive deficit tolerance needs the policy path enabled, but it must
+    // not turn on positive overshoot when the user's overshoot policy is off.
+    allowOvershoot: configuredOvershootEnabled || mode === 'permissive',
+    allowedOvershootIons: configuredAllowedOvershootIons,
+    overshootLimits: configuredOvershootLimits,
+    softDeficitIons: mode === 'permissive' ? targetIonIds : [],
+    softDeficitLimits: mode === 'permissive'
+      ? Object.fromEntries(targetIonIds.map(id => [id, Math.max(plan.targetIons[id] ?? 0, 0) * 0.1]))
+      : {},
+  };
+}
+
+export type WatermancerBestMatchCandidate = {
+  strategy: WatermancerStrategy;
+  deviationMode: WatermancerBestMatchDeviationMode;
+  result: WatermancerSolverResult;
+  route: WatermancerRouteCandidate;
+  totalDeviation: number;
+};
+
+const WATERMANCER_BEST_MATCH_STRATEGIES: WatermancerStrategy[] = [
+  'closest-match',
+  'water-first',
+  'gh-kh-harmony',
+];
+
+const WATERMANCER_BEST_MATCH_DEVIATION_MODES: WatermancerBestMatchDeviationMode[] = [
+  'strict',
+  'permissive',
+];
+
+function watermancerSolverStatusRank(status: WatermancerSolverResult['status']): number {
+  return status === 'matched' ? 0 : status === 'partial' ? 1 : 2;
+}
+
+export function selectBestWatermancerMatchCandidate(
+  candidates: WatermancerBestMatchCandidate[],
+  currentStrategy: WatermancerStrategy,
+): WatermancerBestMatchCandidate | undefined {
+  return [...candidates].sort((a, b) => {
+    const scoreDifference = a.totalDeviation - b.totalDeviation;
+    if (Math.abs(scoreDifference) > 1e-7) return scoreDifference;
+
+    const statusDifference = watermancerSolverStatusRank(a.result.status)
+      - watermancerSolverStatusRank(b.result.status);
+    if (statusDifference !== 0) return statusDifference;
+
+    if (a.deviationMode !== b.deviationMode) {
+      return a.deviationMode === 'strict' ? -1 : 1;
+    }
+
+    const currentDifference = Number(b.strategy === currentStrategy) - Number(a.strategy === currentStrategy);
+    if (currentDifference !== 0) return currentDifference;
+
+    return WATERMANCER_BEST_MATCH_STRATEGIES.indexOf(a.strategy)
+      - WATERMANCER_BEST_MATCH_STRATEGIES.indexOf(b.strategy);
+  })[0];
+}
+
+export function findBestWatermancerMatch({
+  plan,
+  batchMl,
+  baseWaters,
+  additionWaters,
+}: WatermancerRouteInputs): {
+  candidates: WatermancerBestMatchCandidate[];
+  winner?: WatermancerBestMatchCandidate;
+} {
+  const candidates = WATERMANCER_BEST_MATCH_STRATEGIES.flatMap(strategy => (
+    WATERMANCER_BEST_MATCH_DEVIATION_MODES.map(deviationMode => {
+      const candidatePlan = applyWatermancerBestMatchDeviationMode(
+        { ...plan, strategy },
+        deviationMode,
+      );
+      const result = solveWatermancerRoutes({
+        plan: candidatePlan,
+        batchMl,
+        baseWaters,
+        additionWaters,
+      });
+      const route = result.primaryPlan;
+      return {
+        strategy,
+        deviationMode,
+        result,
+        route,
+        totalDeviation: totalWatermancerDeviation(
+          route.finalIons,
+          candidatePlan.targetIons,
+          route.plan,
+        ),
+      };
+    })
+  ));
+
+  const winner = selectBestWatermancerMatchCandidate(candidates, plan.strategy);
+  return {
+    candidates,
+    winner: winner && winner.result.status !== 'blocked' ? winner : undefined,
+  };
 }
 
 export function solveWatermancerRoutes({
@@ -1625,6 +1746,14 @@ function App() {
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
+  const [watermancerBestMatchDeviationMode, setWatermancerBestMatchDeviationMode] = useState<WatermancerBestMatchDeviationMode | null>(null);
+  const [watermancerBestMatchSummary, setWatermancerBestMatchSummary] = useState<{
+    strategy: WatermancerStrategy;
+    deviationMode: WatermancerBestMatchDeviationMode;
+    totalDeviation: number;
+  } | null>(null);
+  const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
+  const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -1973,21 +2102,33 @@ function App() {
     strategy: autoCraftPreset,
     saltObjective: watermancerSaltObjective,
     ionPriority: [...activeAutoFillPriority],
-    allowOvershoot: overshootSettings.enabled,
-    allowedOvershootIons: [...overshootSettings.allowedIons],
-    overshootLimits: { ...overshootSettings.limits },
+    allowOvershoot: overshootSettings.enabled || watermancerBestMatchDeviationMode === 'permissive',
+    allowedOvershootIons: overshootSettings.enabled ? [...overshootSettings.allowedIons] : [],
+    overshootLimits: overshootSettings.enabled ? { ...overshootSettings.limits } : {},
     // Deficits are strict by default. A user-entered deviation in the
     // per-ion policy box is the only source of a soft deficit allowance.
-    softDeficitIons: overshootSettings.enabled
-      ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-      : [],
-    softDeficitLimits: overshootSettings.enabled
-      ? Object.fromEntries(
-        overshootSettings.allowedIons
-          .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-          .map(id => [id, overshootSettings.limits[id] ?? 0]),
-      )
-      : {},
+    softDeficitIons: watermancerBestMatchDeviationMode
+      ? watermancerBestMatchDeviationMode === 'permissive'
+        ? ACTIVE_ION_IDS.filter(id => (watermancerIonTargets[id] ?? 0) > 0)
+        : []
+      : overshootSettings.enabled
+        ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+        : [],
+    softDeficitLimits: watermancerBestMatchDeviationMode
+      ? watermancerBestMatchDeviationMode === 'permissive'
+        ? Object.fromEntries(
+          ACTIVE_ION_IDS
+            .filter(id => (watermancerIonTargets[id] ?? 0) > 0)
+            .map(id => [id, Math.max(watermancerIonTargets[id] ?? 0, 0) * 0.1]),
+        )
+        : {}
+      : overshootSettings.enabled
+        ? Object.fromEntries(
+          overshootSettings.allowedIons
+            .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+            .map(id => [id, overshootSettings.limits[id] ?? 0]),
+        )
+        : {},
     minimumSaltDosePpm: Object.fromEntries(
       SALTS.map((salt, index) => {
         const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
@@ -2009,6 +2150,7 @@ function App() {
     watermancerSaltObjective,
     watermancerIonTargets,
     watermancerUsedSaltIds,
+    watermancerBestMatchDeviationMode,
   ]);
   const selectedWatermancerSaltTargets = useMemo(() => ({
     ...Object.fromEntries(
@@ -2026,6 +2168,33 @@ function App() {
     }),
     [additionWaters, batchMl, mineralWaters, watermancerPlan, watermancerRecalculationNonce],
   );
+  const handleFindBestWatermancerMatch = () => {
+    setWatermancerBestMatchRunning(true);
+    setWatermancerBestMatchMessage(null);
+    const sweep = findBestWatermancerMatch({
+      plan: watermancerPlan,
+      batchMl,
+      baseWaters: mineralWaters,
+      additionWaters,
+    });
+    const winner = sweep.winner;
+    if (!winner) {
+      setWatermancerBestMatchSummary(null);
+      setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
+      setWatermancerBestMatchRunning(false);
+      return;
+    }
+    setAutoCraftPreset(winner.strategy);
+    setWatermancerBestMatchDeviationMode(winner.deviationMode);
+    setWatermancerBestMatchSummary({
+      strategy: winner.strategy,
+      deviationMode: winner.deviationMode,
+      totalDeviation: winner.totalDeviation,
+    });
+    setWatermancerBestMatchMessage(null);
+    setWatermancerRecalculationNonce(current => current + 1);
+    setWatermancerBestMatchRunning(false);
+  };
   const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
   const activeWatermancerRoute = useMemo(
     () => recalculateWatermancerRouteAtCurrentVolumes(
@@ -2436,6 +2605,10 @@ function App() {
     setMagnesiumPreference('original');
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
+    setWatermancerBestMatchDeviationMode(null);
+    setWatermancerBestMatchSummary(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
     setWatermancerManualSaltAdditionsMg({});
     setWatermancerResultSticky(true);
@@ -4756,15 +4929,55 @@ function App() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setWatermancerRecalculationNonce(current => current + 1)}
+                       disabled={watermancerBestMatchRunning}
+                       onClick={() => {
+                         setWatermancerBestMatchDeviationMode(null);
+                         setWatermancerBestMatchSummary(null);
+                       setWatermancerBestMatchMessage(null);
+                         setWatermancerRecalculationNonce(current => current + 1);
+                       }}
                       className="flex items-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/20"
                       title="Recalculate the automatic Watermancer match"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
                       Recalculate match
                     </button>
+                     <button
+                       type="button"
+                       disabled={watermancerBestMatchRunning}
+                       onClick={handleFindBestWatermancerMatch}
+                       className="flex items-center gap-1.5 rounded-lg border border-violet-300/40 bg-violet-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
+                       title="Try every strategy with strict and 10% ion deviation policies"
+                     >
+                       <Sparkles className="h-3.5 w-3.5" />
+                       {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
+                     </button>
                   </div>
                </div>
+                {watermancerBestMatchSummary && (
+                  <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
+                    Best of 6 matches: <span className="font-semibold">
+                      {watermancerBestMatchSummary.strategy === 'closest-match'
+                        ? 'Closest match'
+                        : watermancerBestMatchSummary.strategy === 'water-first'
+                          ? 'Water-first'
+                          : 'GH / KH harmony'}
+                    </span>
+                    <span className="mx-1.5 text-violet-300/60">·</span>
+                    <span className="font-semibold">
+                      {watermancerBestMatchSummary.deviationMode === 'strict'
+                        ? 'strict 0 ppm'
+                        : 'permissive 10% of target'}
+                    </span>
+                    <span className="mx-1.5 text-violet-300/60">·</span>
+                    {watermancerBestMatchSummary.totalDeviation.toFixed(2)} ppm final deviation
+                  </div>
+                )}
+                {watermancerBestMatchMessage && (
+                  <div className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] text-amber-100">
+                    {watermancerBestMatchMessage}
+                  </div>
+                )}
                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Automatic plan</div>
