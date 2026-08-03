@@ -111,6 +111,13 @@ function hasAdminDeleteAccess(req: Request): boolean {
  * Returns all saved mineral water entries, newest first.
  */
 router.get("/waters", async (_req: Request, res: Response) => {
+  if (!db) {
+    res.status(200).json({
+      waters: deduplicatePublicWaters(SHARED_WATERS.filter(water => water.shared === "yes")),
+    });
+    return;
+  }
+
   try {
     const rows = await db
       .select()
@@ -145,6 +152,13 @@ router.get("/waters", async (_req: Request, res: Response) => {
  */
 router.post("/waters", async (req: Request, res: Response) => {
   try {
+    if (!db) {
+      res.status(503).json({
+        error: "Community sharing is temporarily unavailable because the production database is not configured.",
+      });
+      return;
+    }
+
     const { name, ions, shared } = req.body;
     const parsedIons = parseWaterIons(ions);
     if (!parsedIons) {
@@ -175,6 +189,13 @@ router.post("/waters", async (req: Request, res: Response) => {
  */
 router.delete("/waters/:id", async (req: Request, res: Response) => {
   try {
+    if (!db) {
+      res.status(503).json({
+        error: "Community water administration is unavailable because the production database is not configured.",
+      });
+      return;
+    }
+
     if (!hasAdminDeleteAccess(req)) {
       res.status(403).json({ error: "Deleting community waters requires administrator access" });
       return;
