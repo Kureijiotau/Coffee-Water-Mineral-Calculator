@@ -4871,47 +4871,89 @@ function App() {
                       Adjust the advanced controls, then recalculate to apply the complete matching strategy to the current target, water volumes, salts, and hydration forms.
                    </p>
                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                      watermancerLiveResult.status === 'matched'
-                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                        : watermancerLiveResult.status === 'partial'
-                          ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
-                          : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
-                    }`}>
-                      {watermancerLiveResult.status === 'matched'
-                        ? 'Matched'
-                        : watermancerLiveResult.status === 'partial'
-                          ? 'Partial match'
-                          : 'Needs inputs'}
-                    </span>
+                   <div className="flex shrink-0 flex-col items-stretch gap-2">
+                     <div className="flex items-center justify-end gap-2">
+                       <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                         watermancerLiveResult.status === 'matched'
+                           ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                           : watermancerLiveResult.status === 'partial'
+                             ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                             : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
+                       }`}>
+                         {watermancerLiveResult.status === 'matched'
+                           ? 'Matched'
+                           : watermancerLiveResult.status === 'partial'
+                             ? 'Partial match'
+                             : 'Needs inputs'}
+                       </span>
+                     </div>
+                   </div>
+               </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {mineralWaters.length > 0 && batchMl > 0 && (
                     <button
                       type="button"
-                       disabled={watermancerBestMatchRunning}
-                       onClick={() => {
-                         setWatermancerBestMatchDeviationMode(null);
-                         setWatermancerBestMatchSummary(null);
-                       setWatermancerBestMatchMessage(null);
-                         setWatermancerRecalculationNonce(current => current + 1);
-                       }}
-                      className="flex items-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/20"
-                      title="Recalculate the automatic Watermancer match"
+                      onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
+                        prev,
+                        batchMl,
+                        autoFillTargets,
+                        additionWaters,
+                        activeAutoFillPriority,
+                        effectiveAutoFillDeviationPpm,
+                        showAlchemist || noRecipeSelected,
+                        autoFillUsesRecipeTargets,
+                        showAlchemist ? 0.1 : 1,
+                        showAlchemist ? 0.5 : 0,
+                        {
+                          enabled: showWatermancer && overshootSettings.enabled,
+                          allowedIons: overshootSettings.allowedIons,
+                          maxPpm: overshootSettings.limits,
+                          softDeficitIons: showWatermancer && overshootSettings.enabled
+                            ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                            : [],
+                          softDeficitLimits: showWatermancer && overshootSettings.enabled
+                            ? Object.fromEntries(
+                              overshootSettings.allowedIons
+                                .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                                .map(id => [id, overshootSettings.limits[id] ?? 0]),
+                            )
+                            : {},
+                          priorityOrder: activeAutoFillPriority,
+                        },
+                      ))}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                      title="Fill base waters toward the current Watermancer ion targets."
                     >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Recalculate match
+                      <Droplet className="h-4 w-4" />
+                      Fill base waters toward target
                     </button>
-                     <button
-                       type="button"
-                       disabled={watermancerBestMatchRunning}
-                       onClick={handleFindBestWatermancerMatch}
-                       className="flex items-center gap-1.5 rounded-lg border border-violet-300/40 bg-violet-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
-                       title="Try every strategy with strict and 10% ion deviation policies"
-                     >
-                       <Sparkles className="h-3.5 w-3.5" />
-                       {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
-                     </button>
-                  </div>
-               </div>
+                  )}
+                  <button
+                    type="button"
+                    disabled={watermancerBestMatchRunning}
+                    onClick={handleFindBestWatermancerMatch}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
+                    title="Try every strategy with strict and 10% ion deviation policies"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  disabled={watermancerBestMatchRunning}
+                  onClick={() => {
+                    setWatermancerBestMatchDeviationMode(null);
+                    setWatermancerBestMatchSummary(null);
+                    setWatermancerBestMatchMessage(null);
+                    setWatermancerRecalculationNonce(current => current + 1);
+                  }}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-3 py-2 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  title="Apply the selected strategy, priority, deviation, overshoot, waters, salts, and hydration settings to the automatic match."
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Apply current matching settings
+                </button>
                 {watermancerBestMatchSummary && (
                   <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
                     Best of 6 matches: <span className="font-semibold">
@@ -4935,43 +4977,6 @@ function App() {
                   <div className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] text-amber-100">
                     {watermancerBestMatchMessage}
                   </div>
-                )}
-                {mineralWaters.length > 0 && batchMl > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
-                      prev,
-                      batchMl,
-                      autoFillTargets,
-                      additionWaters,
-                      activeAutoFillPriority,
-                      effectiveAutoFillDeviationPpm,
-                      showAlchemist || noRecipeSelected,
-                      autoFillUsesRecipeTargets,
-                      showAlchemist ? 0.1 : 1,
-                      showAlchemist ? 0.5 : 0,
-                      {
-                        enabled: showWatermancer && overshootSettings.enabled,
-                        allowedIons: overshootSettings.allowedIons,
-                        maxPpm: overshootSettings.limits,
-                        softDeficitIons: showWatermancer && overshootSettings.enabled
-                          ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                          : [],
-                        softDeficitLimits: showWatermancer && overshootSettings.enabled
-                          ? Object.fromEntries(
-                            overshootSettings.allowedIons
-                              .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                              .map(id => [id, overshootSettings.limits[id] ?? 0]),
-                          )
-                          : {},
-                        priorityOrder: activeAutoFillPriority,
-                      },
-                    ))}
-                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                    title="Fill base waters toward the current Watermancer ion targets."
-                  >
-                    Fill base waters toward target
-                  </button>
                 )}
                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
