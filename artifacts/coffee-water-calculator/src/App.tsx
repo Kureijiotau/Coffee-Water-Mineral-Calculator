@@ -4468,48 +4468,6 @@ function App() {
               </div>
             ))}
 
-             {mineralWaters.length > 0 && batchMl > 0 && (
-               <button
-                 type="button"
-                    onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
-                      prev,
-                      batchMl,
-                      autoFillTargets,
-                      additionWaters,
-                      activeAutoFillPriority,
-                       effectiveAutoFillDeviationPpm,
-                       showAlchemist || noRecipeSelected,
-                       autoFillUsesRecipeTargets,
-                       showAlchemist ? 0.1 : 1,
-                       showAlchemist ? 0.5 : 0,
-                       {
-                         enabled: showWatermancer && overshootSettings.enabled,
-                         allowedIons: overshootSettings.allowedIons,
-                         maxPpm: overshootSettings.limits,
-                          softDeficitIons: showWatermancer && overshootSettings.enabled
-                            ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                            : [],
-                          softDeficitLimits: showWatermancer && overshootSettings.enabled
-                            ? Object.fromEntries(
-                              overshootSettings.allowedIons
-                                .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                                .map(id => [id, overshootSettings.limits[id] ?? 0]),
-                            )
-                            : {},
-                         priorityOrder: activeAutoFillPriority,
-                       },
-                    ))}
-                 className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
-                  title={showAlchemist
-                    ? 'Fill from the base water to cover as many ions in the original recipe as possible without overshooting any target.'
-                    : noRecipeSelected
-                    ? 'Fill base waters up to the active ion profile safe limits'
-                    : "Use all base waters to cover as much of the recipe's ion targets as possible"}
-               >
-                 Fill base waters toward target
-               </button>
-             )}
-
              {/* Coverage bars — recipe targets or active profile safe limits */}
             {batchMl > 0 && (
               <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
@@ -4977,6 +4935,43 @@ function App() {
                   <div className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] text-amber-100">
                     {watermancerBestMatchMessage}
                   </div>
+                )}
+                {mineralWaters.length > 0 && batchMl > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
+                      prev,
+                      batchMl,
+                      autoFillTargets,
+                      additionWaters,
+                      activeAutoFillPriority,
+                      effectiveAutoFillDeviationPpm,
+                      showAlchemist || noRecipeSelected,
+                      autoFillUsesRecipeTargets,
+                      showAlchemist ? 0.1 : 1,
+                      showAlchemist ? 0.5 : 0,
+                      {
+                        enabled: showWatermancer && overshootSettings.enabled,
+                        allowedIons: overshootSettings.allowedIons,
+                        maxPpm: overshootSettings.limits,
+                        softDeficitIons: showWatermancer && overshootSettings.enabled
+                          ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                          : [],
+                        softDeficitLimits: showWatermancer && overshootSettings.enabled
+                          ? Object.fromEntries(
+                            overshootSettings.allowedIons
+                              .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                              .map(id => [id, overshootSettings.limits[id] ?? 0]),
+                          )
+                          : {},
+                        priorityOrder: activeAutoFillPriority,
+                      },
+                    ))}
+                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                    title="Fill base waters toward the current Watermancer ion targets."
+                  >
+                    Fill base waters toward target
+                  </button>
                 )}
                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
