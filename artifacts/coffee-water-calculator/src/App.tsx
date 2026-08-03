@@ -6698,19 +6698,35 @@ function BrewerRecipeStepsModal({
   const useMixingVessel = batchMl > 1000 && orderedRecipeSalts.length > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 backdrop-blur-sm sm:p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 backdrop-blur-sm sm:p-4"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
         className="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="recipe-steps-title"
+        aria-describedby="recipe-steps-description"
       >
         <div className="flex shrink-0 items-start justify-between border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-3 sm:px-5 sm:py-4">
           <div>
             <div className="flex items-center gap-2 text-sky-200">
               <ListChecks className="h-5 w-5" />
-              <h2 className="text-base font-semibold">Your recipe steps</h2>
+              <h2 id="recipe-steps-title" className="text-base font-semibold">Your recipe steps</h2>
             </div>
-            <p className="mt-1 text-xs text-slate-400">A simple guide for the recipe currently selected above.</p>
+            <p id="recipe-steps-description" className="mt-1 text-xs text-slate-400">A simple guide for the recipe currently selected above.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
             <X className="h-4 w-4" />
