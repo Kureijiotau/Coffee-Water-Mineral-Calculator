@@ -1895,6 +1895,7 @@ function App() {
   const [communityWaters, setCommunityWaters] = useState<CommunityWater[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
+  const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
   const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
   const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
   const loadCommunityWaters = async () => {
@@ -4454,30 +4455,62 @@ function App() {
                     ) : 'Save'}
                   </button>
                   <button
-                    onClick={() => {
+                    type="button"
+                    onClick={async () => {
                       const hasName = entry.name.trim().length > 0;
                       const hasIons = Object.values(entry.ions).some(v => parseFloat(v || '0') > 0);
                       if (!hasName || !hasIons) return;
-                      if (window.confirm(`Share "${entry.name.trim()}" with the community? Other users will be able to find and use this water profile.`)) {
-                        const vals: Record<string, number> = Object.fromEntries(
-                          Object.entries(entry.ions)
-                            .filter(([, v]) => parseFloat(v || '0') > 0)
-                            .map(([k, v]) => [k, parseFloat(v || '0')])
-                        );
-                        fetch(`${API_BASE}/api/waters`, {
+                      if (communityShareStatus[entry.id] === 'sharing') return;
+                      if (!window.confirm(`Share "${entry.name.trim()}" with the community? Other users will be able to find and use this water profile.`)) return;
+
+                      const vals: Record<string, number> = Object.fromEntries(
+                        Object.entries(entry.ions)
+                          .filter(([, v]) => parseFloat(v || '0') > 0)
+                          .map(([k, v]) => [k, parseFloat(v || '0')])
+                      );
+                      setCommunityShareStatus(current => ({ ...current, [entry.id]: 'sharing' }));
+                      try {
+                        const response = await fetch(`${API_BASE}/api/waters`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ name: entry.name.trim(), ions: vals, metadata: metadataToNumbers(entry.metadata), shared: 'yes' }),
-                        }).catch(() => {});
+                          body: JSON.stringify({
+                            name: entry.name.trim(),
+                            ions: vals,
+                            metadata: metadataToNumbers(entry.metadata),
+                            shared: 'yes',
+                          }),
+                        });
+                        if (!response.ok) {
+                          throw new Error(`Share request failed with status ${response.status}`);
+                        }
+                        setCommunityShareStatus(current => ({ ...current, [entry.id]: 'shared' }));
+                        void loadCommunityWaters();
+                      } catch (error) {
+                        console.error('Error sharing water with the community:', error);
+                        setCommunityShareStatus(current => ({ ...current, [entry.id]: 'error' }));
                       }
                     }}
+                    disabled={communityShareStatus[entry.id] === 'sharing'}
                     className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                      communityShareStatus[entry.id] === 'sharing'
+                        ? 'cursor-wait text-violet-200/60 bg-violet-500/10 border border-violet-500/20'
+                        : communityShareStatus[entry.id] === 'shared'
+                          ? 'cursor-default text-emerald-400 bg-emerald-500/10 border border-emerald-500/30'
+                          : communityShareStatus[entry.id] === 'error'
+                            ? 'text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30'
+                            :
                       (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
                         ? 'text-slate-600 bg-slate-700/20 cursor-not-allowed'
                         : 'text-violet-300 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30'
                     }`}
                   >
-                    <Share2 className="w-3 h-3 inline mr-1" />Share
+                    {communityShareStatus[entry.id] === 'sharing'
+                      ? 'Sharing…'
+                      : communityShareStatus[entry.id] === 'shared'
+                        ? <><Check className="w-3 h-3 inline mr-1" />Shared</>
+                        : communityShareStatus[entry.id] === 'error'
+                          ? 'Retry share'
+                          : <><Share2 className="w-3 h-3 inline mr-1" />Share</>}
                   </button>
                 </div>
               </div>

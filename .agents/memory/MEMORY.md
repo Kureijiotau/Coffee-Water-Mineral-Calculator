@@ -26,3 +26,4 @@
 - [Watermancer best-match dimensions](watermancer-best-match-dimensions.md) — sweep strategy, salt objective, priority preset, and tolerance while fixing added-water volumes
 - [Mode switch reset boundary](mode-switch-reset-boundary.md) — Brewer resets to a lightweight default recipe and pauses Watermancer work without deleting saved preferences
 - [Watermancer result card default](watermancer-result-default.md) — keep automatic-match results in document flow by default; following remains an explicit toggle
+- [Community water share feedback](community-water-share-feedback.md) — show share request state and refresh the community catalog after success
