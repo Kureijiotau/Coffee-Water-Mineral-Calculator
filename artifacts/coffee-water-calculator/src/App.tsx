@@ -236,6 +236,14 @@ function brewerSaltSuggestion(flavor: BrewerFlavorInput): Record<string, number>
   };
 }
 
+function defaultBrewerRows(): SaltRow[] {
+  const defaultTargets = brewerSaltSuggestion(DEFAULT_BREWER_FLAVOR);
+  return SALTS.map(salt => ({
+    target: defaultTargets[salt.id] ? String(defaultTargets[salt.id]) : '',
+    formIdx: salt.defaultFormIdx ?? 0,
+  }));
+}
+
 export type MineralWaterEntry = {
   id: string;
   name: string;
@@ -1752,6 +1760,33 @@ function formatLiveIonPpm(value: number): string {
   return value.toFixed(4).replace(/\.?0+$/, '');
 }
 
+function createInactiveWatermancerResult(plan: WatermancerPlan): WatermancerSolverResult {
+  const finalIons = completeIonTotals({});
+  const primaryPlan: WatermancerRouteCandidate = {
+    id: 'inactive',
+    kind: 'primary',
+    label: 'Watermancer inactive',
+    explanation: 'Watermancer calculations are paused outside Watermancer mode.',
+    plan,
+    baseWaters: [],
+    additionWaters: [],
+    saltTargets: {},
+    finalIons,
+    deviations: watermancerRouteDeviations(finalIons, plan.targetIons),
+    overshoots: [],
+    score: 0,
+  };
+  return {
+    primaryPlan,
+    alternatives: [],
+    status: 'blocked',
+    finalIons,
+    deviations: primaryPlan.deviations,
+    overshoots: [],
+    explanation: 'Watermancer calculations are paused outside Watermancer mode.',
+  };
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -1903,6 +1938,7 @@ function App() {
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
   const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
   const watermancerActionBusyRef = useRef(false);
+  const watermancerActionGenerationRef = useRef(0);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -2010,6 +2046,15 @@ function App() {
       .sort((a, b) => a.distance - b.distance)[0];
   }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
+    if (nerdLevel === 'watermancer' && level !== 'watermancer') {
+      // Invalidate any deferred best-match callback before leaving the
+      // Watermancer workspace so it cannot write results into another mode.
+      watermancerActionGenerationRef.current += 1;
+      watermancerActionBusyRef.current = false;
+      setWatermancerBestMatchRunning(false);
+      setWatermancerActionRunning(false);
+      setWatermancerActionMessage(null);
+    }
     if (nerdLevel === 'alchemist' && level !== 'alchemist') {
       // Concentrate controls belong to the Alchemist recipe lab. Do not let
       // their hidden state change Watermancer or Brewer salt amounts/labels.
@@ -2017,28 +2062,32 @@ function App() {
       setSplitMode(false);
     }
     if (level === 'brewer' && nerdLevel !== 'brewer') {
-      const currentRecipe: SaltRecipe = {
-        id: 'current',
-        name: 'Current recipe',
-        salts: Object.fromEntries(
-          SALTS.flatMap((salt, index) => num(rows[index]?.target) > 0
-            ? [[salt.id, { target: rows[index].target, formIdx: rows[index].formIdx }]]
-            : []),
-        ),
-      };
-      const currentFlavor = brewerFlavorFromRecipe(currentRecipe);
-      if (currentFlavor) {
-        setBrewerFlavor(currentFlavor);
-      } else {
-        const defaultTargets = brewerSaltSuggestion(DEFAULT_BREWER_FLAVOR);
-        setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
-        setActiveRecipeId('custom');
-        setExternalRecipeId('custom');
-        setRows(SALTS.map(salt => ({
-          target: defaultTargets[salt.id] ? String(defaultTargets[salt.id]) : '',
-          formIdx: salt.defaultFormIdx ?? 0,
-        })));
-      }
+      // Brewer is a lightweight flavor-first workspace. Do not carry the
+      // active Watermancer recipe and source-water graph into it: that keeps
+      // hidden calculations alive and makes the builder feel sluggish.
+      setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
+      setRows(defaultBrewerRows());
+      setMineralWaters([]);
+      setAdditionWaters([]);
+      setLiters('1');
+      setActiveRecipeId('custom');
+      setExternalRecipeId('custom');
+      setMagnesiumPreference('original');
+      setWatermancerTargetSource('safe-profile');
+      setWatermancerUsedSaltIds([]);
+      setAutoCraftPreset('closest-match');
+      setWatermancerSaltObjective('balanced');
+      setWatermancerBestMatchDeviationMode(null);
+      setWatermancerBestMatchSummary(null);
+      setWatermancerBestMatchMessage(null);
+      setWatermancerBestMatchRunning(false);
+      setWatermancerActionRunning(false);
+      setWatermancerActionMessage(null);
+      setWatermancerRecalculationNonce(0);
+      setWatermancerManualSaltAdditionsMg({});
+      setWatermancerResultSticky(true);
+      setSodiumCorrectionOn(false);
+      setFillWaterNudgeSeen(false);
     }
     setNerdLevel(level);
   };
@@ -2310,13 +2359,15 @@ function App() {
     ),
   }) as Record<string, number>, [watermancerSaltOptions, watermancerUsedSaltIds]);
   const watermancerLiveResult = useMemo(
-    () => solveWatermancerRoutes({
-      plan: watermancerPlan,
-      batchMl,
-      baseWaters: mineralWaters,
-      additionWaters,
-    }),
-    [additionWaters, batchMl, mineralWaters, watermancerPlan, watermancerRecalculationNonce],
+    () => showWatermancer
+      ? solveWatermancerRoutes({
+        plan: watermancerPlan,
+        batchMl,
+        baseWaters: mineralWaters,
+        additionWaters,
+      })
+      : createInactiveWatermancerResult(watermancerPlan),
+    [additionWaters, batchMl, mineralWaters, showWatermancer, watermancerPlan, watermancerRecalculationNonce],
   );
   const beginWatermancerAction = () => {
     if (watermancerActionBusyRef.current) return false;
@@ -2379,6 +2430,7 @@ function App() {
     if (!beginWatermancerAction()) return;
     setWatermancerBestMatchRunning(true);
     setWatermancerBestMatchMessage(null);
+    const actionGeneration = watermancerActionGenerationRef.current;
     const snapshot = {
       plan: cloneWatermancerPlan(watermancerPlan),
       batchMl,
@@ -2387,7 +2439,9 @@ function App() {
     };
     window.setTimeout(() => {
       try {
+        if (actionGeneration !== watermancerActionGenerationRef.current) return;
         const sweep = findBestWatermancerMatch(snapshot);
+        if (actionGeneration !== watermancerActionGenerationRef.current) return;
         const winner = sweep.winner;
         if (!winner) {
           setWatermancerBestMatchSummary(null);
@@ -2421,20 +2475,23 @@ function App() {
   };
   const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
   const activeWatermancerRoute = useMemo(
-    () => recalculateWatermancerRouteAtCurrentVolumes(
-      {
-        plan: watermancerPlan,
-        batchMl,
-        baseWaters: mineralWaters,
-        additionWaters,
-      },
-      watermancerLiveResult.primaryPlan,
-      watermancerLiveResult.primaryPlan.saltTargets,
-    ),
+    () => showWatermancer
+      ? recalculateWatermancerRouteAtCurrentVolumes(
+        {
+          plan: watermancerPlan,
+          batchMl,
+          baseWaters: mineralWaters,
+          additionWaters,
+        },
+        watermancerLiveResult.primaryPlan,
+        watermancerLiveResult.primaryPlan.saltTargets,
+      )
+      : watermancerLiveResult.primaryPlan,
     [
       additionWaters,
       batchMl,
       mineralWaters,
+      showWatermancer,
       watermancerPlan,
       watermancerLiveResult,
     ],
