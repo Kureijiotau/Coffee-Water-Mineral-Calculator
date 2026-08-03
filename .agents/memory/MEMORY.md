@@ -18,4 +18,5 @@
 - [Watermancer result follow mode](watermancer-sticky-ui.md) — use viewport anchoring for reliable automatic-match result following
 - [Watermancer live volume result](watermancer-live-volume-card.md) — automatic-match ion results recalculate from edited visible water volumes
 - [Watermancer visible water baseline](watermancer-route-switch-baseline.md) — the automatic match treats visible water volumes as the user-controlled baseline
+- [Watermancer recalculation control](watermancer-recalculate-control.md) — advanced matching settings have an explicit full-plan apply action
 - [Shared water fallback catalog](shared-water-fallback-catalog.md) — keep bundled public waters synchronized when production may lack a database

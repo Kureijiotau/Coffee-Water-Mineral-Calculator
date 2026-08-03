@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff, RefreshCw } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
@@ -1624,6 +1624,7 @@ function App() {
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
+  const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -2023,7 +2024,7 @@ function App() {
       baseWaters: mineralWaters,
       additionWaters,
     }),
-    [additionWaters, batchMl, mineralWaters, watermancerPlan],
+    [additionWaters, batchMl, mineralWaters, watermancerPlan, watermancerRecalculationNonce],
   );
   const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
   const activeWatermancerRoute = useMemo(
@@ -2435,6 +2436,7 @@ function App() {
     setMagnesiumPreference('original');
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
+    setWatermancerRecalculationNonce(0);
     setWatermancerManualSaltAdditionsMg({});
     setWatermancerResultSticky(true);
     setSodiumCorrectionOn(false);
@@ -4731,26 +4733,37 @@ function App() {
                title="Automatic match"
              />
              <div className="px-4 py-4 sm:px-6">
-               <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
                  <div>
                    <p className="text-xs font-semibold text-cyan-100">Watermancer is using the best available match.</p>
                    <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
-                     The result updates from your current target, visible water volumes, selected salts, and hydration forms. Adjust the matching strategy only if you want to guide the automatic plan.
+                      Adjust the advanced controls, then recalculate to apply the complete matching strategy to the current target, water volumes, salts, and hydration forms.
                    </p>
                  </div>
-                 <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                   watermancerLiveResult.status === 'matched'
-                     ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                     : watermancerLiveResult.status === 'partial'
-                       ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
-                       : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
-                 }`}>
-                   {watermancerLiveResult.status === 'matched'
-                     ? 'Matched'
-                     : watermancerLiveResult.status === 'partial'
-                       ? 'Partial match'
-                       : 'Needs inputs'}
-                 </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                      watermancerLiveResult.status === 'matched'
+                        ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                        : watermancerLiveResult.status === 'partial'
+                          ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                          : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
+                    }`}>
+                      {watermancerLiveResult.status === 'matched'
+                        ? 'Matched'
+                        : watermancerLiveResult.status === 'partial'
+                          ? 'Partial match'
+                          : 'Needs inputs'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setWatermancerRecalculationNonce(current => current + 1)}
+                      className="flex items-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/20"
+                      title="Recalculate the automatic Watermancer match"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Recalculate match
+                    </button>
+                  </div>
                </div>
                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
