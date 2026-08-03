@@ -9,35 +9,35 @@ Watermancer actions should be represented by one plan containing target ions, se
 
 **How to apply:** Derive the current plan from the Watermancer UI state, use its deterministic signature to invalidate stale matches, and route orchestration through existing water-fill and salt-dose helpers rather than adding a second solver.
 
-Phase 4 solver results should expose one primary route plus explicit alternatives, each carrying its own plan, water/salt choices, final ions, deviations, overshoots, and explanation. Route choices such as more water, more salts, or ion prioritization are presentation-level objectives over the shared chemistry helpers.
+Phase 4 solver results should retain one ranked primary candidate plus internal alternatives, each carrying its own plan, water/salt choices, final ions, deviations, overshoots, and explanation. Alternatives are for ranking and regression coverage, not a user-facing route chooser.
 
-**Why:** Users need to compare actionable tradeoffs instead of treating strategy and priority controls as hidden solver settings.
+**Why:** The earlier route-card chooser made users resolve solver tradeoffs before seeing a useful answer; Watermancer now presents the best available match automatically and keeps deliberate tuning optional.
 
-**How to apply:** Keep the primary route as the default active match, store the complete solver result, and apply alternatives by updating the same Watermancer state and signature inputs so the selected route remains current.
+**How to apply:** Keep the primary candidate as the sole active UI result, store alternatives for ranking/tests, and derive live ions from the current visible water volumes plus the primary candidate's automatic salt targets.
 
-The separate pre-match strategy selector is intentionally removed; Phase 4 route cards are the only user-facing route-selection surface.
+The route-card chooser and separate route-selection state are intentionally removed. Strategy, salt objective, priority, and overshoot controls belong behind the optional advanced matching disclosure.
 
-**Why:** The selector duplicated the solver's route alternatives and added an unnecessary decision step before Auto-match.
+**Why:** The selector duplicated the solver's route alternatives, while route cards added an unnecessary decision step before the automatic answer.
 
-**How to apply:** Keep any internal primary strategy defaults needed by the solver, but do not reintroduce a standalone matching-strategy panel unless the route model changes substantially.
+**How to apply:** Keep internal strategy defaults and solver alternatives, but do not expose route identity, route buttons, or route-switching state. Only expose deliberate strategy controls as advanced settings.
 
-Route candidates and ion coverage should derive live from the current Watermancer plan; there is no separate user-facing Auto-match action. The selected route's final-ion profile must remain mounted and visible while plan inputs update.
+The automatic candidate and ion coverage should derive live from the current Watermancer plan; there is no separate user-facing Auto-match action. The automatic match's final-ion profile must remain mounted and visible while plan inputs update.
 
 **Why:** A separate Auto-match button created a fragile intermediate state, and volume-based visibility caused the ion card to unmount and remount during route selection.
 
-**How to apply:** Keep the route selector visible whenever Watermancer is active, solve candidates from current inputs, preserve only the selected route ID and stable source-water baseline across route clicks, and use the selected candidate as the review-card source.
+**How to apply:** Keep the automatic-match summary visible whenever Watermancer is active, solve candidates from current inputs, use `primaryPlan` as the sole review-card source, and treat visible water volumes as the user-controlled baseline.
 
-Route selection must preserve the Auto-match result surface during asynchronous plan updates, and the displayed Primary match should be the candidate with the fewest overshoots, using score as the tie-breaker.
+The automatic-match result surface must remain stable during plan updates, and the displayed primary match should be the candidate with the fewest policy violations, using score as the tie-breaker.
 
-**Why:** Applying an alternative changes several plan-signature inputs at once; treating the intermediate state as stale closes the route panel, while a higher-overshoot Primary route contradicts the user's safety preference.
+**Why:** The primary result is selected by safety-aware ranking internally; exposing route application would create a second mutable state that can drift from the visible water controls.
 
-**How to apply:** Keep a short-lived transition signature while applying a route, and rank candidates by overshoot count before score.
+**How to apply:** Rank internal candidates by policy violations before score and render only the resulting primary candidate.
 
-The Review Match panel should remain available for every active solver route, including routes that minimize or omit water, and should show original target GH/KH/TDS separately from the selected route's final mixture.
+The Review Match panel should remain available for every active primary solver result, including matches that minimize or omit water, and should show original target GH/KH/TDS separately from the automatic match's final mixture.
 
 **Why:** Gating review visibility on mineral-water volume hid valid salt-focused routes and made it difficult to compare the route result against the user's original ionic objective.
 
-**How to apply:** Drive review visibility from the active solver candidate, calculate route result metrics from its final ions, and calculate the original target cards from the Watermancer target profile.
+**How to apply:** Drive review visibility from the primary solver candidate, calculate result metrics from its final ions, and calculate the original target cards from the Watermancer target profile.
 
 Controlled overshoot is an explicit policy with an enabled flag, allowed-ion list, per-ion maximum ppm excess, and deterministic priority order. Unlisted ions remain hard ceilings, and permitted excess within its cap does not make a route partial.
 

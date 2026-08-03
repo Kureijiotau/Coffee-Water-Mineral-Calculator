@@ -1,10 +1,10 @@
 ---
-name: Watermancer route switch baseline
-description: Route alternatives must be reversible and start from the last user-controlled water state.
+name: Watermancer visible water baseline
+description: The automatic Watermancer result must use the last user-controlled visible water volumes.
 ---
 
-Watermancer route buttons must execute from a stable baseline of user-controlled water volumes, not from the previously applied route's auto-filled output. Preserve that baseline while switching routes; clear it when the user edits, adds, or removes water.
+Watermancer no longer exposes route buttons or route-switching state. The visible water entries are the authoritative baseline for the automatic match and its live ion review.
 
-**Why:** Switching between water-led and salt-led routes otherwise accumulates the first route's auto-filled water, making the comparison non-reversible and causing back-and-forth route selection to drift.
+**Why:** Applying hypothetical route fills to hidden state made the displayed result diverge from the editable water controls and caused route switching to accumulate volume changes.
 
-**How to apply:** Clone the baseline before the first route application, solve and execute every subsequent route from it, keep visible route output separate from the baseline, and invalidate the baseline on direct water changes.
+**How to apply:** Solve from current visible base/addition water entries, recalculate the primary result directly from those volumes, and keep automatic salt targets fixed during small volume edits so the ion review remains informative.
