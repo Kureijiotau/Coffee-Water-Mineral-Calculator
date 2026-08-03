@@ -23,3 +23,4 @@
 - [Shared water fallback catalog](shared-water-fallback-catalog.md) — keep bundled public waters synchronized when production may lack a database
 - [Attention animation dismissal](attention-animation-dismissal.md) — stop first-action nudges after interaction or completion, and honor reduced-motion preferences
 - [Watermancer single-flight actions](watermancer-single-flight-actions.md) — matching actions reject duplicates and commit one captured input snapshot at a time
+- [Watermancer best-match dimensions](watermancer-best-match-dimensions.md) — sweep strategy, salt objective, priority preset, and tolerance while fixing added-water volumes

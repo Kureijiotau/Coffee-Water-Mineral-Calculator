@@ -363,14 +363,49 @@ describe('Watermancer salt-to-ion helpers', () => {
       additionWaters: [],
     });
 
-    expect(sweep.candidates).toHaveLength(6);
+    expect(sweep.candidates).toHaveLength(36);
     expect(new Set(sweep.candidates.map(candidate => candidate.strategy))).toEqual(
       new Set(['closest-match', 'water-first', 'gh-kh-harmony']),
     );
     expect(new Set(sweep.candidates.map(candidate => candidate.deviationMode))).toEqual(
       new Set(['strict', 'permissive']),
     );
+    expect(new Set(sweep.candidates.map(candidate => candidate.saltObjective))).toEqual(
+      new Set(['balanced', 'coverage']),
+    );
+    expect(new Set(sweep.candidates.map(candidate => candidate.priorityPreset))).toEqual(
+      new Set(['mineral-first', 'bicarbonate-first', 'balanced-gh-kh']),
+    );
     expect(sweep.winner).toBeDefined();
+  });
+
+  it('fills only base waters while preserving added-water volumes for every best-match candidate', () => {
+    const base = water('base', { calcium: 20 });
+    const added = water('added', { magnesium: 10 });
+    added.volumeMl = '250';
+    const sweep = findBestWatermancerMatch({
+      plan: {
+        targetIons: { calcium: 10, magnesium: 5 },
+        selectedWaters: [base, added],
+        selectedSalts: ['cacl2', 'mgso4'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium'],
+      },
+      batchMl: 1000,
+      baseWaters: [base],
+      additionWaters: [added],
+    });
+
+    expect(sweep.candidates).toHaveLength(36);
+    expect(sweep.candidates.every(candidate => candidate.route.additionWaters[0].volumeMl === '250')).toBe(true);
+    expect(sweep.candidates.some(candidate => Number(candidate.route.baseWaters[0].volumeMl) > 0)).toBe(true);
   });
 
   it('uses zero tolerance for strict mode and target-scaled tolerance for permissive mode', () => {
