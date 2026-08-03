@@ -4,6 +4,7 @@ import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff, RefreshCw } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
+import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -4752,29 +4753,44 @@ function App() {
                               {activeAutoFillPriority.map((id, index) => {
                                 const allowed = overshootSettings.allowedIons.includes(id);
                                 return (
-                                  <button
-                                    key={id}
-                                    type="button"
-                                    aria-pressed={allowed}
-                                    onClick={() => setOvershootSettings(current => ({
-                                      ...current,
-                                      allowedIons: allowed
-                                        ? current.allowedIons.filter(item => item !== id)
-                                        : [...current.allowedIons, id],
-                                    }))}
-                                    className={`flex min-h-11 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition ${
-                                      allowed
-                                        ? 'border-emerald-300/50 bg-emerald-400/10 text-emerald-100'
-                                        : 'border-slate-700/70 bg-slate-950/30 text-slate-500 hover:border-slate-500 hover:text-slate-300'
-                                    }`}
-                                  >
-                                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
-                                      allowed ? 'bg-emerald-300/20 text-emerald-200' : 'bg-slate-800 text-slate-500'
-                                    }`}>
-                                      {allowed ? '✓' : '+'}
-                                    </span>
-                                    <span className="truncate text-[11px] font-medium">{ION_MAP[id].name}</span>
-                                  </button>
+                                  <div key={id} className="group relative min-w-0">
+                                    <button
+                                      type="button"
+                                      aria-pressed={allowed}
+                                      aria-label={`${ION_MAP[id].name}; hover for overshoot guidance`}
+                                      onClick={() => setOvershootSettings(current => ({
+                                        ...current,
+                                        allowedIons: allowed
+                                          ? current.allowedIons.filter(item => item !== id)
+                                          : [...current.allowedIons, id],
+                                      }))}
+                                      className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition ${
+                                        allowed
+                                          ? 'border-emerald-300/50 bg-emerald-400/10 text-emerald-100'
+                                          : 'border-slate-700/70 bg-slate-950/30 text-slate-500 hover:border-slate-500 hover:text-slate-300'
+                                      }`}
+                                    >
+                                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
+                                        allowed ? 'bg-emerald-300/20 text-emerald-200' : 'bg-slate-800 text-slate-500'
+                                      }`}>
+                                        {allowed ? '✓' : '+'}
+                                      </span>
+                                      <span className="truncate text-[11px] font-medium">{ION_MAP[id].name}</span>
+                                    </button>
+                                    <div
+                                      role="tooltip"
+                                      className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-48 -translate-x-1/2 translate-y-1 rounded-xl border border-slate-600/80 bg-slate-950/95 p-2.5 text-center opacity-0 shadow-2xl backdrop-blur transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
+                                    >
+                                      <img
+                                        src={monkasOvershootImage}
+                                        alt=""
+                                        className="mx-auto h-20 w-20 rounded-lg object-contain"
+                                      />
+                                      <p className="mt-1.5 text-[11px] font-semibold leading-tight text-amber-200">
+                                        You better know what you’re doing
+                                      </p>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
