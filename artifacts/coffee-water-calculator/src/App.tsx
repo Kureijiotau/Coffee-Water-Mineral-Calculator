@@ -3799,22 +3799,6 @@ function App() {
             after={<div className="flex items-center gap-2">
              {showWatermancer && (
                <button
-                 type="button"
-                 onClick={() => setShowAutoFillSettings(open => !open)}
-                 aria-expanded={showAutoFillSettings}
-                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium transition ${
-                   showAutoFillSettings
-                     ? 'border border-amber-400/40 bg-amber-500/15 text-amber-200'
-                     : 'border border-slate-600/50 bg-slate-700/40 text-slate-400 hover:bg-amber-500/10 hover:text-amber-200'
-                 }`}
-                  title="Adjust Watermancer matching strategy"
-               >
-                 <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Advanced matching controls
-               </button>
-             )}
-             {showWatermancer && (
-               <button
                  onClick={() => {
                    setWaterComparisonOpen(open => !open);
                    if (!communityWatersLoaded && !communityLoading) void loadCommunityWaters();
@@ -3871,256 +3855,6 @@ function App() {
             </div>}
           />
           <div className="px-6 py-4 space-y-4">
-            {showWatermancer && showAutoFillSettings && (
-              <div className="rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 sm:p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Advanced matching controls</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                      Tune how the automatic match balances water coverage, salt coverage, and coupled-ion limits. These settings are saved on this device.
-                    </p>
-                  </div>
-                  <span className="rounded-full border border-amber-400/25 bg-amber-500/10 px-2 py-1 text-[10px] font-medium text-amber-200">
-                    Watermancer
-                  </span>
-                </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Matching strategy</span>
-                    <select
-                      value={autoCraftPreset}
-                      onChange={event => setAutoCraftPreset(event.target.value as AutoCraftPreset)}
-                      className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                    >
-                      <option value="closest-match">Closest match</option>
-                      <option value="water-first">Water-first</option>
-                      <option value="gh-kh-harmony">GH / KH harmony</option>
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Salt objective</span>
-                    <select
-                      value={watermancerSaltObjective}
-                      onChange={event => setWatermancerSaltObjective(event.target.value as AutoCraftObjective)}
-                      className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                    >
-                      <option value="balanced">Balanced ions</option>
-                      <option value="coverage">Target coverage</option>
-                    </select>
-                  </label>
-                </div>
-                <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-                  <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
-                    <select
-                      value={autoFillPriorityPreset}
-                      onChange={e => {
-                        const nextPreset = e.target.value as AutoFillPriorityPreset;
-                        if (nextPreset === 'custom') {
-                          setAutoFillCustomPriority([...activeAutoFillPriority]);
-                        }
-                        setAutoFillPriorityPreset(nextPreset);
-                      }}
-                      className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                    >
-                      {(Object.entries(AUTO_FILL_PRIORITY_PRESETS) as Array<[Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }]>).map(([value, preset]) => (
-                        <option key={value} value={value}>{preset.label}</option>
-                      ))}
-                      <option value="custom">Custom order</option>
-                    </select>
-                  </label>
-                  <label className="block">
-                    <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed deviation</span>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="1"
-                        inputMode="decimal"
-                        value={autoFillDeviationPpm}
-                        onChange={e => {
-                          const value = Number(e.target.value);
-                          setAutoFillDeviationPpm(Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0);
-                        }}
-                        className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                      />
-                      <span className="shrink-0 text-[11px] text-slate-500">ppm</span>
-                    </div>
-                  </label>
-                </div>
-                <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/[0.04] p-3">
-                  <label className="flex cursor-pointer items-start gap-2.5">
-                    <input
-                      type="checkbox"
-                      checked={overshootSettings.enabled}
-                      onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
-                      className="mt-0.5 h-4 w-4 accent-rose-400"
-                    />
-                    <span>
-                      <span className="block text-[11px] font-semibold uppercase tracking-wider text-rose-200">
-                        Allow controlled overshoot
-                      </span>
-                      <span className="mt-1 block text-[11px] leading-relaxed text-slate-400">
-                        Only the ions selected below may exceed target, and only up to their stated maximum.
-                        All other ions remain hard ceilings.
-                      </span>
-                    </span>
-                  </label>
-                  <div className="mt-3">
-                     <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
-                       <div>
-                         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed overshoot ions</span>
-                         <span className="ml-2 text-[10px] text-slate-600">
-                           {autoFillPriorityPreset === 'custom' ? 'Drag or use arrows to set priority' : 'Priority follows the selected preset'}
-                         </span>
-                       </div>
-                       <span className="text-[10px] text-slate-600">Maximum excess in ppm</span>
-                    </div>
-                    <div className="grid gap-1.5 sm:grid-cols-2">
-                       {activeAutoFillPriority.map((id, index) => {
-                        const allowed = overshootSettings.allowedIons.includes(id);
-                        return (
-                           <div
-                             key={id}
-                             draggable={autoFillPriorityPreset === 'custom'}
-                             onDragStart={() => {
-                               if (autoFillPriorityPreset === 'custom') setAutoFillDraggedIndex(index);
-                             }}
-                             onDragOver={e => {
-                               if (autoFillPriorityPreset === 'custom') e.preventDefault();
-                             }}
-                             onDrop={() => {
-                               if (autoFillPriorityPreset !== 'custom' || autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
-                               setAutoFillCustomPriority(current => {
-                                 const next = [...current];
-                                 const [moved] = next.splice(autoFillDraggedIndex, 1);
-                                 next.splice(index, 0, moved);
-                                 return next;
-                               });
-                               setAutoFillDraggedIndex(null);
-                             }}
-                             className={`flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2 ${
-                               autoFillPriorityPreset === 'custom' ? 'cursor-grab' : ''
-                             }`}
-                           >
-                            <input
-                              type="checkbox"
-                              checked={allowed}
-                              disabled={!overshootSettings.enabled}
-                              onChange={e => setOvershootSettings(current => ({
-                                ...current,
-                                allowedIons: e.target.checked
-                                  ? [...current.allowedIons, id]
-                                  : current.allowedIons.filter(item => item !== id),
-                              }))}
-                              className="h-3.5 w-3.5 accent-rose-400"
-                              aria-label={`Allow ${ION_MAP[id].name} overshoot`}
-                            />
-                             <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${
-                               index === 0
-                                 ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-300/30'
-                                 : 'bg-slate-800 text-slate-400'
-                             }`} aria-label={`Priority ${index + 1}`}>
-                               {index + 1}
-                             </span>
-                            <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
-                             {autoFillPriorityPreset === 'custom' && (
-                               <>
-                                 <button
-                                   type="button"
-                                   onClick={() => setAutoFillCustomPriority(current => {
-                                     if (index === 0) return current;
-                                     const next = [...current];
-                                     [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                                     return next;
-                                   })}
-                                   disabled={index === 0}
-                                   className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                                   aria-label={`Move ${ION_MAP[id].name} up`}
-                                 >
-                                   ↑
-                                 </button>
-                                 <button
-                                   type="button"
-                                   onClick={() => setAutoFillCustomPriority(current => {
-                                     if (index === current.length - 1) return current;
-                                     const next = [...current];
-                                     [next[index], next[index + 1]] = [next[index + 1], next[index]];
-                                     return next;
-                                   })}
-                                   disabled={index === activeAutoFillPriority.length - 1}
-                                   className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                                   aria-label={`Move ${ION_MAP[id].name} down`}
-                                 >
-                                   ↓
-                                 </button>
-                               </>
-                             )}
-                            <div className="flex items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70 disabled:opacity-40">
-                              <HoldStepperButton
-                                onStep={() => setOvershootSettings(current => ({
-                                  ...current,
-                                  limits: {
-                                    ...current.limits,
-                                    [id]: Math.max(0, Number(((current.limits[id] ?? 0) - 0.1).toFixed(1))),
-                                  },
-                                }))}
-                                disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) <= 0}
-                                className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
-                              >
-                                −
-                              </HoldStepperButton>
-                              <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.1"
-                                inputMode="decimal"
-                                value={overshootSettings.limits[id] ?? 0}
-                                disabled={!overshootSettings.enabled || !allowed}
-                                onChange={e => {
-                                  const value = Number(e.target.value);
-                                  setOvershootSettings(current => ({
-                                    ...current,
-                                    limits: {
-                                      ...current.limits,
-                                      [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0,
-                                    },
-                                  }));
-                                }}
-                                className="w-12 border-x border-slate-700/70 bg-transparent px-1 py-1 text-center text-xs tabular-nums text-slate-200 outline-none disabled:cursor-not-allowed"
-                                aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
-                              />
-                              <HoldStepperButton
-                                onStep={() => setOvershootSettings(current => ({
-                                  ...current,
-                                  limits: {
-                                    ...current.limits,
-                                    [id]: Math.min(100, Number(((current.limits[id] ?? 0) + 0.1).toFixed(1))),
-                                  },
-                                }))}
-                                disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) >= 100}
-                                className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                label={`Increase ${ION_MAP[id].name} maximum overshoot`}
-                              >
-                                +
-                              </HoldStepperButton>
-                            </div>
-                            <span className="text-[10px] text-slate-600">ppm</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                       Priority order: <span className="text-slate-400">{activeAutoFillPriority.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>.
-                       Earlier ions receive priority when the policy has to spend limited overshoot.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
             {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">
@@ -4868,7 +4602,7 @@ function App() {
                  <div>
                    <p className="text-xs font-semibold text-cyan-100">Watermancer is using the best available match.</p>
                    <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
-                      Adjust the advanced controls, then recalculate to apply the complete matching strategy to the current target, water volumes, salts, and hydration forms.
+                       Adjust the matching controls below, then apply them or search all strategies for the lowest final deviation.
                    </p>
                  </div>
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
@@ -4889,6 +4623,246 @@ function App() {
                      </div>
                    </div>
                </div>
+                <div className="mt-3 rounded-xl border border-amber-500/25 bg-amber-950/15 p-3 sm:p-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAutoFillSettings(open => !open)}
+                    aria-expanded={showAutoFillSettings}
+                    className={`flex w-full items-center justify-between gap-3 rounded-lg text-left transition ${
+                      showAutoFillSettings ? 'text-amber-200' : 'text-slate-300 hover:text-amber-200'
+                    }`}
+                    title="Adjust Watermancer matching strategy"
+                  >
+                    <span className="flex items-center gap-2">
+                      <SlidersHorizontal className="h-4 w-4" />
+                      <span>
+                        <span className="block text-xs font-semibold uppercase tracking-wider">Advanced matching controls</span>
+                        <span className="mt-1 block text-[10px] font-normal text-slate-500">
+                          Strategy, salt objective, priority, deviation, and overshoot policy
+                        </span>
+                      </span>
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                      {showAutoFillSettings ? 'Hide' : 'Show'}
+                    </span>
+                  </button>
+                  {showAutoFillSettings && (
+                    <div className="mt-3 border-t border-amber-400/15 pt-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Matching strategy</span>
+                          <select
+                            value={autoCraftPreset}
+                            onChange={event => setAutoCraftPreset(event.target.value as AutoCraftPreset)}
+                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                          >
+                            <option value="closest-match">Closest match</option>
+                            <option value="water-first">Water-first</option>
+                            <option value="gh-kh-harmony">GH / KH harmony</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Salt objective</span>
+                          <select
+                            value={watermancerSaltObjective}
+                            onChange={event => setWatermancerSaltObjective(event.target.value as AutoCraftObjective)}
+                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                          >
+                            <option value="balanced">Balanced ions</option>
+                            <option value="coverage">Target coverage</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
+                          <select
+                            value={autoFillPriorityPreset}
+                            onChange={e => {
+                              const nextPreset = e.target.value as AutoFillPriorityPreset;
+                              if (nextPreset === 'custom') setAutoFillCustomPriority([...activeAutoFillPriority]);
+                              setAutoFillPriorityPreset(nextPreset);
+                            }}
+                            className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                          >
+                            {(Object.entries(AUTO_FILL_PRIORITY_PRESETS) as Array<[Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }]>).map(([value, preset]) => (
+                              <option key={value} value={value}>{preset.label}</option>
+                            ))}
+                            <option value="custom">Custom order</option>
+                          </select>
+                        </label>
+                        <label className="block">
+                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed deviation</span>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="1"
+                              inputMode="decimal"
+                              value={autoFillDeviationPpm}
+                              onChange={e => {
+                                const value = Number(e.target.value);
+                                setAutoFillDeviationPpm(Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0);
+                              }}
+                              className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                            />
+                            <span className="shrink-0 text-[11px] text-slate-500">ppm</span>
+                          </div>
+                        </label>
+                      </div>
+                      <div className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/[0.04] p-3">
+                        <label className="flex cursor-pointer items-start gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={overshootSettings.enabled}
+                            onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
+                            className="mt-0.5 h-4 w-4 accent-rose-400"
+                          />
+                          <span>
+                            <span className="block text-[11px] font-semibold uppercase tracking-wider text-rose-200">Allow controlled overshoot</span>
+                            <span className="mt-1 block text-[11px] leading-relaxed text-slate-400">
+                              Only the ions selected below may exceed target, and only up to their stated maximum. All other ions remain hard ceilings.
+                            </span>
+                          </span>
+                        </label>
+                        <div className="mt-3">
+                          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed overshoot ions</span>
+                              <span className="ml-2 text-[10px] text-slate-600">
+                                {autoFillPriorityPreset === 'custom' ? 'Drag or use arrows to set priority' : 'Priority follows the selected preset'}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-600">Maximum excess in ppm</span>
+                          </div>
+                          <div className="grid gap-1.5 sm:grid-cols-2">
+                            {activeAutoFillPriority.map((id, index) => {
+                              const allowed = overshootSettings.allowedIons.includes(id);
+                              return (
+                                <div
+                                  key={id}
+                                  draggable={autoFillPriorityPreset === 'custom'}
+                                  onDragStart={() => {
+                                    if (autoFillPriorityPreset === 'custom') setAutoFillDraggedIndex(index);
+                                  }}
+                                  onDragOver={e => {
+                                    if (autoFillPriorityPreset === 'custom') e.preventDefault();
+                                  }}
+                                  onDrop={() => {
+                                    if (autoFillPriorityPreset !== 'custom' || autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
+                                    setAutoFillCustomPriority(current => {
+                                      const next = [...current];
+                                      const [moved] = next.splice(autoFillDraggedIndex, 1);
+                                      next.splice(index, 0, moved);
+                                      return next;
+                                    });
+                                    setAutoFillDraggedIndex(null);
+                                  }}
+                                  className={`flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2 ${autoFillPriorityPreset === 'custom' ? 'cursor-grab' : ''}`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={allowed}
+                                    disabled={!overshootSettings.enabled}
+                                    onChange={e => setOvershootSettings(current => ({
+                                      ...current,
+                                      allowedIons: e.target.checked ? [...current.allowedIons, id] : current.allowedIons.filter(item => item !== id),
+                                    }))}
+                                    className="h-3.5 w-3.5 accent-rose-400"
+                                    aria-label={`Allow ${ION_MAP[id].name} overshoot`}
+                                  />
+                                  <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold tabular-nums ${index === 0 ? 'bg-amber-400/20 text-amber-200 ring-1 ring-amber-300/30' : 'bg-slate-800 text-slate-400'}`} aria-label={`Priority ${index + 1}`}>
+                                    {index + 1}
+                                  </span>
+                                  <span className="flex-1 text-xs text-slate-300">{ION_MAP[id].name}</span>
+                                  {autoFillPriorityPreset === 'custom' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => setAutoFillCustomPriority(current => {
+                                          if (index === 0) return current;
+                                          const next = [...current];
+                                          [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                                          return next;
+                                        })}
+                                        disabled={index === 0}
+                                        className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                                        aria-label={`Move ${ION_MAP[id].name} up`}
+                                      >
+                                        ↑
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setAutoFillCustomPriority(current => {
+                                          if (index === current.length - 1) return current;
+                                          const next = [...current];
+                                          [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                                          return next;
+                                        })}
+                                        disabled={index === activeAutoFillPriority.length - 1}
+                                        className="rounded px-1.5 py-0.5 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+                                        aria-label={`Move ${ION_MAP[id].name} down`}
+                                      >
+                                        ↓
+                                      </button>
+                                    </>
+                                  )}
+                                  <div className="flex items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70 disabled:opacity-40">
+                                    <HoldStepperButton
+                                      onStep={() => setOvershootSettings(current => ({
+                                        ...current,
+                                        limits: { ...current.limits, [id]: Math.max(0, Number(((current.limits[id] ?? 0) - 0.1).toFixed(1))) },
+                                      }))}
+                                      disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) <= 0}
+                                      className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                                      label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
+                                    >
+                                      −
+                                    </HoldStepperButton>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      step="0.1"
+                                      inputMode="decimal"
+                                      value={overshootSettings.limits[id] ?? 0}
+                                      disabled={!overshootSettings.enabled || !allowed}
+                                      onChange={e => {
+                                        const value = Number(e.target.value);
+                                        setOvershootSettings(current => ({
+                                          ...current,
+                                          limits: { ...current.limits, [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0 },
+                                        }));
+                                      }}
+                                      className="w-12 border-x border-slate-700/70 bg-transparent px-1 py-1 text-center text-xs tabular-nums text-slate-200 outline-none disabled:cursor-not-allowed"
+                                      aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
+                                    />
+                                    <HoldStepperButton
+                                      onStep={() => setOvershootSettings(current => ({
+                                        ...current,
+                                        limits: { ...current.limits, [id]: Math.min(100, Number(((current.limits[id] ?? 0) + 0.1).toFixed(1))) },
+                                      }))}
+                                      disabled={!overshootSettings.enabled || !allowed || (overshootSettings.limits[id] ?? 0) >= 100}
+                                      className="px-2 py-1 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
+                                      label={`Increase ${ION_MAP[id].name} maximum overshoot`}
+                                    >
+                                      +
+                                    </HoldStepperButton>
+                                  </div>
+                                  <span className="text-[10px] text-slate-600">ppm</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                            Priority order: <span className="text-slate-400">{activeAutoFillPriority.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>. Earlier ions receive priority when the policy has to spend limited overshoot.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {mineralWaters.length > 0 && batchMl > 0 && (
                     <button
