@@ -1630,6 +1630,7 @@ function App() {
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
   const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
   const [showAutoFillSettings, setShowAutoFillSettings] = useState(false);
+  const [fillWaterNudgeSeen, setFillWaterNudgeSeen] = useState(false);
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
@@ -1676,6 +1677,11 @@ function App() {
   const removeMineralWater = (id: string) => {
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
+  useEffect(() => {
+    if (mineralWaters.some(entry => num(entry.volumeMl) > 0)) {
+      setFillWaterNudgeSeen(true);
+    }
+  }, [mineralWaters]);
   const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     const entry: MineralWaterEntry = {
       id: newMwId(),
@@ -4966,42 +4972,43 @@ function App() {
                   {mineralWaters.length > 0 && batchMl > 0 && (
                     <button
                       type="button"
-                      onClick={() => setMineralWaters(prev => autoFillWaterVolumes(
-                        prev,
-                        batchMl,
-                        autoFillTargets,
-                        additionWaters,
-                        activeAutoFillPriority,
-                        effectiveAutoFillDeviationPpm,
-                        showAlchemist || noRecipeSelected,
-                        autoFillUsesRecipeTargets,
-                        showAlchemist ? 0.1 : 1,
-                        showAlchemist ? 0.5 : 0,
-                        {
-                          enabled: showWatermancer && overshootSettings.enabled,
-                          allowedIons: overshootSettings.allowedIons,
-                          maxPpm: overshootSettings.limits,
-                          softDeficitIons: showWatermancer && overshootSettings.enabled
-                            ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                            : [],
-                          softDeficitLimits: showWatermancer && overshootSettings.enabled
-                            ? Object.fromEntries(
-                              overshootSettings.allowedIons
-                                .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                                .map(id => [id, overshootSettings.limits[id] ?? 0]),
-                            )
-                            : {},
-                          priorityOrder: activeAutoFillPriority,
-                        },
-                      ))}
-                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20"
+                       onClick={() => {
+                         setFillWaterNudgeSeen(true);
+                         setMineralWaters(prev => autoFillWaterVolumes(
+                           prev,
+                           batchMl,
+                           autoFillTargets,
+                           additionWaters,
+                           activeAutoFillPriority,
+                           effectiveAutoFillDeviationPpm,
+                           showAlchemist || noRecipeSelected,
+                           autoFillUsesRecipeTargets,
+                           showAlchemist ? 0.1 : 1,
+                           showAlchemist ? 0.5 : 0,
+                           {
+                             enabled: showWatermancer && overshootSettings.enabled,
+                             allowedIons: overshootSettings.allowedIons,
+                             maxPpm: overshootSettings.limits,
+                             softDeficitIons: showWatermancer && overshootSettings.enabled
+                               ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                               : [],
+                             softDeficitLimits: showWatermancer && overshootSettings.enabled
+                               ? Object.fromEntries(
+                                 overshootSettings.allowedIons
+                                   .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+                                   .map(id => [id, overshootSettings.limits[id] ?? 0]),
+                               )
+                               : {},
+                             priorityOrder: activeAutoFillPriority,
+                           },
+                         ));
+                       }}
+                       className={`flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20 ${
+                         fillWaterNudgeSeen ? '' : 'fill-water-button--attention'
+                       }`}
                       title="Fill base waters toward the current Watermancer ion targets."
                     >
-                       <img
-                         src={fillWaterPromptImage}
-                         alt="Click to fill base waters"
-                         className="h-5 w-5 rounded-md object-contain"
-                       />
+                       <Droplet className="h-4 w-4" />
                       Fill base waters toward target
                     </button>
                   )}
@@ -5012,6 +5019,11 @@ function App() {
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
                     title="Try every strategy with strict and 10% ion deviation policies"
                   >
+                     <img
+                       src={fillWaterPromptImage}
+                       alt="Easy best match"
+                       className="h-5 w-5 rounded-md object-contain"
+                     />
                      <span aria-hidden="true" className="text-base leading-none">👉</span>
                     {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
                   </button>
