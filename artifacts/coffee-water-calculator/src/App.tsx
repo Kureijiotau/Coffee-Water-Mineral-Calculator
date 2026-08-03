@@ -925,6 +925,24 @@ function cloneWatermancerWaters(entries: MineralWaterEntry[]): MineralWaterEntry
   }));
 }
 
+function cloneWatermancerPlan(plan: WatermancerPlan): WatermancerPlan {
+  return {
+    ...plan,
+    targetIons: { ...plan.targetIons },
+    selectedWaters: cloneWatermancerWaters(plan.selectedWaters),
+    selectedSalts: [...plan.selectedSalts],
+    fixedWaterVolumes: { ...plan.fixedWaterVolumes },
+    fixedSaltDoses: { ...plan.fixedSaltDoses },
+    ionPriority: [...plan.ionPriority],
+    allowedOvershootIons: [...plan.allowedOvershootIons],
+    overshootLimits: { ...plan.overshootLimits },
+    softDeficitIons: plan.softDeficitIons ? [...plan.softDeficitIons] : undefined,
+    softDeficitLimits: plan.softDeficitLimits ? { ...plan.softDeficitLimits } : undefined,
+    minimumSaltDosePpm: plan.minimumSaltDosePpm ? { ...plan.minimumSaltDosePpm } : undefined,
+    overshootOrder: [...plan.overshootOrder],
+  };
+}
+
 export function watermancerRouteWaterInputs(
   currentBaseWaters: MineralWaterEntry[],
   currentAdditionWaters: MineralWaterEntry[],
@@ -1763,6 +1781,9 @@ function App() {
   } | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
+  const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
+  const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
+  const watermancerActionBusyRef = useRef(false);
   const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(true);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -2178,32 +2199,100 @@ function App() {
     }),
     [additionWaters, batchMl, mineralWaters, watermancerPlan, watermancerRecalculationNonce],
   );
-  const handleFindBestWatermancerMatch = () => {
-    setWatermancerBestMatchRunning(true);
-    setWatermancerBestMatchMessage(null);
-    const sweep = findBestWatermancerMatch({
-      plan: watermancerPlan,
-      batchMl,
-      baseWaters: mineralWaters,
-      additionWaters,
-    });
-    const winner = sweep.winner;
-    if (!winner) {
-      setWatermancerBestMatchSummary(null);
-      setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
-      setWatermancerBestMatchRunning(false);
-      return;
-    }
-    setAutoCraftPreset(winner.strategy);
-    setWatermancerBestMatchDeviationMode(winner.deviationMode);
-    setWatermancerBestMatchSummary({
-      strategy: winner.strategy,
-      deviationMode: winner.deviationMode,
-      totalDeviation: winner.totalDeviation,
-    });
+  const beginWatermancerAction = () => {
+    if (watermancerActionBusyRef.current) return false;
+    watermancerActionBusyRef.current = true;
+    setWatermancerActionRunning(true);
+    setWatermancerActionMessage(null);
+    return true;
+  };
+  const finishWatermancerAction = () => {
+    watermancerActionBusyRef.current = false;
+    setWatermancerActionRunning(false);
+  };
+  const finishWatermancerActionAfterPaint = () => {
+    window.setTimeout(finishWatermancerAction, 0);
+  };
+  const handleApplyCurrentWatermancerSettings = () => {
+    if (!beginWatermancerAction()) return;
+    setWatermancerBestMatchDeviationMode(null);
+    setWatermancerBestMatchSummary(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerRecalculationNonce(current => current + 1);
-    setWatermancerBestMatchRunning(false);
+    setWatermancerActionMessage('Current matching settings applied.');
+    finishWatermancerActionAfterPaint();
+  };
+  const handleFillBaseWaters = () => {
+    if (!beginWatermancerAction()) return;
+    setFillWaterNudgeSeen(true);
+    setMineralWaters(prev => autoFillWaterVolumes(
+      prev,
+      batchMl,
+      autoFillTargets,
+      additionWaters,
+      activeAutoFillPriority,
+      effectiveAutoFillDeviationPpm,
+      showAlchemist || noRecipeSelected,
+      autoFillUsesRecipeTargets,
+      showAlchemist ? 0.1 : 1,
+      showAlchemist ? 0.5 : 0,
+      {
+        enabled: showWatermancer && overshootSettings.enabled,
+        allowedIons: overshootSettings.allowedIons,
+        maxPpm: overshootSettings.limits,
+        softDeficitIons: showWatermancer && overshootSettings.enabled
+          ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+          : [],
+        softDeficitLimits: showWatermancer && overshootSettings.enabled
+          ? Object.fromEntries(
+            overshootSettings.allowedIons
+              .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
+              .map(id => [id, overshootSettings.limits[id] ?? 0]),
+          )
+          : {},
+        priorityOrder: activeAutoFillPriority,
+      },
+    ));
+    setWatermancerActionMessage('Base waters filled toward the current target.');
+    finishWatermancerActionAfterPaint();
+  };
+  const handleFindBestWatermancerMatch = () => {
+    if (!beginWatermancerAction()) return;
+    setWatermancerBestMatchRunning(true);
+    setWatermancerBestMatchMessage(null);
+    const snapshot = {
+      plan: cloneWatermancerPlan(watermancerPlan),
+      batchMl,
+      baseWaters: cloneWatermancerWaters(mineralWaters),
+      additionWaters: cloneWatermancerWaters(additionWaters),
+    };
+    window.setTimeout(() => {
+      try {
+        const sweep = findBestWatermancerMatch(snapshot);
+        const winner = sweep.winner;
+        if (!winner) {
+          setWatermancerBestMatchSummary(null);
+          setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
+          return;
+        }
+        setAutoCraftPreset(winner.strategy);
+        setWatermancerBestMatchDeviationMode(winner.deviationMode);
+        setWatermancerBestMatchSummary({
+          strategy: winner.strategy,
+          deviationMode: winner.deviationMode,
+          totalDeviation: winner.totalDeviation,
+        });
+        setWatermancerBestMatchMessage(null);
+        setWatermancerRecalculationNonce(current => current + 1);
+        setWatermancerActionMessage('Best match applied from the captured settings.');
+      } catch {
+        setWatermancerBestMatchSummary(null);
+        setWatermancerBestMatchMessage('The best-match search could not finish. Please try again.');
+      } finally {
+        setWatermancerBestMatchRunning(false);
+        finishWatermancerActionAfterPaint();
+      }
+    }, 0);
   };
   const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
   const activeWatermancerRoute = useMemo(
@@ -4950,71 +5039,37 @@ function App() {
                    <div className="mt-3 rounded-lg border border-cyan-300/35 bg-cyan-400/[0.08] p-2">
                      <button
                        type="button"
-                       disabled={watermancerBestMatchRunning}
-                       onClick={() => {
-                         setWatermancerBestMatchDeviationMode(null);
-                         setWatermancerBestMatchSummary(null);
-                         setWatermancerBestMatchMessage(null);
-                         setWatermancerRecalculationNonce(current => current + 1);
-                       }}
+                       disabled={watermancerActionRunning}
+                       onClick={handleApplyCurrentWatermancerSettings}
                        className="flex w-full items-center justify-center gap-2 rounded-md border border-cyan-200/50 bg-cyan-300/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-cyan-50 transition hover:border-cyan-100/80 hover:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-60"
                        title="Apply the selected strategy, priority, deviation, overshoot, waters, salts, and hydration settings to the automatic match."
                      >
-                       <RefreshCw className="h-3.5 w-3.5" />
-                       Apply current matching settings
+                       <RefreshCw className={`h-3.5 w-3.5 ${watermancerActionRunning ? 'animate-spin' : ''}`} />
+                       {watermancerActionRunning ? 'Applying matching settings…' : 'Apply current matching settings'}
                      </button>
                      <p className="mt-1.5 text-center text-[10px] font-medium text-cyan-200/70">
-                       Applies the matching controls above to the automatic match
+                       {watermancerActionMessage ?? 'Applies the matching controls above to the automatic match'}
                      </p>
                    </div>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {mineralWaters.length > 0 && batchMl > 0 && (
-                    <button
-                      type="button"
-                       onClick={() => {
-                         setFillWaterNudgeSeen(true);
-                         setMineralWaters(prev => autoFillWaterVolumes(
-                           prev,
-                           batchMl,
-                           autoFillTargets,
-                           additionWaters,
-                           activeAutoFillPriority,
-                           effectiveAutoFillDeviationPpm,
-                           showAlchemist || noRecipeSelected,
-                           autoFillUsesRecipeTargets,
-                           showAlchemist ? 0.1 : 1,
-                           showAlchemist ? 0.5 : 0,
-                           {
-                             enabled: showWatermancer && overshootSettings.enabled,
-                             allowedIons: overshootSettings.allowedIons,
-                             maxPpm: overshootSettings.limits,
-                             softDeficitIons: showWatermancer && overshootSettings.enabled
-                               ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                               : [],
-                             softDeficitLimits: showWatermancer && overshootSettings.enabled
-                               ? Object.fromEntries(
-                                 overshootSettings.allowedIons
-                                   .filter(id => (overshootSettings.limits[id] ?? 0) > 0)
-                                   .map(id => [id, overshootSettings.limits[id] ?? 0]),
-                               )
-                               : {},
-                             priorityOrder: activeAutoFillPriority,
-                           },
-                         ));
-                       }}
+                     <button
+                       type="button"
+                       disabled={watermancerActionRunning}
+                       onClick={handleFillBaseWaters}
                        className={`flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20 ${
                          fillWaterNudgeSeen ? '' : 'fill-water-button--attention'
                        }`}
                       title="Fill base waters toward the current Watermancer ion targets."
                     >
-                       <Droplet className="h-4 w-4" />
-                      Fill base waters toward target
+                       <Droplet className={`h-4 w-4 ${watermancerActionRunning ? 'animate-pulse' : ''}`} />
+                      {watermancerActionRunning ? 'Filling base waters…' : 'Fill base waters toward target'}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    disabled={watermancerBestMatchRunning}
+                   <button
+                     type="button"
+                     disabled={watermancerActionRunning}
                     onClick={handleFindBestWatermancerMatch}
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
                     title="Try every strategy with strict and 10% ion deviation policies"
@@ -5025,7 +5080,7 @@ function App() {
                        className="h-5 w-5 rounded-md object-contain"
                      />
                      <span aria-hidden="true" className="text-base leading-none">👉</span>
-                    {watermancerBestMatchRunning ? 'Finding best match…' : 'Find best match'}
+                    {watermancerActionRunning ? 'Finding best match…' : 'Find best match'}
                   </button>
                 </div>
                 {watermancerBestMatchSummary && (
