@@ -4714,7 +4714,7 @@ function App() {
                       </div>
                       <div className={`mt-4 rounded-lg border p-3 ${
                         overshootSettings.enabled
-                          ? 'border-rose-400/20 bg-rose-500/[0.04]'
+                          ? 'border-emerald-400/30 bg-emerald-500/[0.06]'
                           : 'border-slate-700/60 bg-slate-900/30'
                       }`}>
                         <label className="flex cursor-pointer items-start gap-2.5">
@@ -4722,29 +4722,29 @@ function App() {
                             type="checkbox"
                             checked={overshootSettings.enabled}
                             onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
-                            className="mt-0.5 h-4 w-4 accent-rose-400"
+                            className="mt-0.5 h-4 w-4 accent-emerald-400"
                           />
                           <span>
                             <span className={`block text-[11px] font-semibold uppercase tracking-wider ${
-                              overshootSettings.enabled ? 'text-rose-200' : 'text-slate-300'
+                              overshootSettings.enabled ? 'text-emerald-200' : 'text-slate-300'
                             }`}>
                               Allow controlled overshoot
                             </span>
                             <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">
-                              Let selected ions exceed target by a limited amount when that produces a closer match.
+                              A safe way to trade a small, controlled excess for a closer overall match.
                             </span>
                           </span>
                         </label>
                         {overshootSettings.enabled && (
-                          <div className="mt-4 border-t border-rose-400/15 pt-3">
+                          <div className="mt-4 border-t border-emerald-400/15 pt-3">
                             <div className="flex flex-wrap items-end justify-between gap-2">
                               <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Allowed overshoot ions</p>
                                 <p className="mt-1 text-[10px] text-slate-500">
-                                  Select ions first. Their order controls which limits get priority.
+                                  Choose which ions can flex. Everything else stays capped at target.
                                 </p>
                               </div>
-                              <span className="text-[10px] text-slate-600">
+                              <span className="text-[10px] text-emerald-300/70">
                                 {selectedOvershootIons.length} selected
                               </span>
                             </div>
@@ -4764,12 +4764,12 @@ function App() {
                                     }))}
                                     className={`flex min-h-11 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition ${
                                       allowed
-                                        ? 'border-rose-300/50 bg-rose-400/10 text-rose-100'
+                                        ? 'border-emerald-300/50 bg-emerald-400/10 text-emerald-100'
                                         : 'border-slate-700/70 bg-slate-950/30 text-slate-500 hover:border-slate-500 hover:text-slate-300'
                                     }`}
                                   >
                                     <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
-                                      allowed ? 'bg-rose-300/20 text-rose-200' : 'bg-slate-800 text-slate-500'
+                                      allowed ? 'bg-emerald-300/20 text-emerald-200' : 'bg-slate-800 text-slate-500'
                                     }`}>
                                       {allowed ? '✓' : '+'}
                                     </span>
@@ -4779,9 +4779,12 @@ function App() {
                               })}
                             </div>
                             {selectedOvershootIons.length > 0 ? (
-                              <div className="mt-4">
+                              <div className="mt-4 rounded-lg border border-amber-300/20 bg-amber-300/[0.035] p-3">
                                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Maximum excess</span>
+                                  <div>
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/80">Fine-tune maximum excess</span>
+                                    <p className="mt-1 text-[10px] text-slate-500">Optional expert control. The defaults are conservative.</p>
+                                  </div>
                                   <span className="text-[10px] text-slate-600">ppm</span>
                                 </div>
                                 <div className="space-y-2">
@@ -4894,7 +4897,7 @@ function App() {
                                   })}
                                 </div>
                                 <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                                  Priority: <span className="text-slate-400">{selectedOvershootIons.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>
+                                  Priority: <span className="text-slate-400">{selectedOvershootIons.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>. Earlier ions get first access to the allowed flex.
                                 </p>
                               </div>
                             ) : (
