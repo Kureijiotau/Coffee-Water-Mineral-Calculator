@@ -913,6 +913,18 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(targets.nacl).toBeUndefined();
   });
 
+  it('keeps a fixed salt dose out of the optimizer', () => {
+    const targets = autoCraftSaltTargets(
+      ['mgso4', 'mgcl2'],
+      {},
+      { magnesium: 20, sulfate: 20, chloride: 20 },
+      { mgso4: 10 },
+    );
+
+    expect(targets).not.toHaveProperty('mgso4');
+    expect(targets.mgcl2).toBeGreaterThanOrEqual(0);
+  });
+
   it('auto-crafts potassium chloride against potassium and chloride targets', () => {
     const targets = autoCraftSaltTargets(
       ['kcl'],

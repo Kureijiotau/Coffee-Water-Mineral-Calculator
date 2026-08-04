@@ -433,10 +433,13 @@ export function autoCraftSaltTargets(
   objective: AutoCraftObjective = 'balanced',
   overshootPolicy?: WatermancerOvershootPolicy,
 ): Record<string, number> {
-  // These salts are an allowed inventory, not a required recipe. The
-  // coordinate descent below always includes zero as a candidate dose, so a
-  // salt stays unused when another allowed salt gives a better overall fit.
-  const allowedSalts = SALTS.filter(salt => allowedSaltIds.includes(salt.id));
+  // These salts are an allowed inventory, not a required recipe. Fixed doses
+  // are user-owned overrides and are excluded from the optimizer; the
+  // coordinate descent below always includes zero for the remaining salts.
+  const allowedSalts = SALTS.filter(salt => (
+    allowedSaltIds.includes(salt.id)
+    && !Object.prototype.hasOwnProperty.call(fixedSaltTargets, salt.id)
+  ));
   if (allowedSalts.length === 0) return {};
 
   const targets = Object.fromEntries(
@@ -2052,7 +2055,7 @@ function App() {
   const [watermancerPrecisionPlan, setWatermancerPrecisionPlan] = useState<'dry' | 'concentrate' | 'dropper'>('dry');
   const watermancerActionBusyRef = useRef(false);
   const watermancerActionGenerationRef = useRef(0);
-  const [watermancerManualSaltAdditionsMg, setWatermancerManualSaltAdditionsMg] = useState<Record<string, number>>({});
+   const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
@@ -2197,7 +2200,7 @@ function App() {
       setWatermancerActionRunning(false);
       setWatermancerActionMessage(null);
       setWatermancerRecalculationNonce(0);
-      setWatermancerManualSaltAdditionsMg({});
+      setWatermancerDoseOverridesMg({});
       setWatermancerResultSticky(false);
       setSodiumCorrectionOn(false);
       setFillWaterNudgeSeen(false);
@@ -2403,6 +2406,21 @@ function App() {
         : 0,
     };
   }), [L, rows, watermancerIonGaps]);
+  const watermancerFixedSaltDoses = useMemo(() => {
+    const fixedDoses: Record<string, number> = {};
+    SALTS.forEach((salt, index) => {
+      const overrideMg = watermancerDoseOverridesMg[salt.id];
+      const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
+      if (
+        watermancerUsedSaltIds.includes(salt.id)
+        && Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id)
+        && L > 0
+      ) {
+        fixedDoses[salt.id] = Math.max(0, Number(overrideMg) || 0) * salt.anhydrousMass / (L * form.molarMass);
+      }
+    });
+    return fixedDoses;
+  }, [L, rows, watermancerDoseOverridesMg, watermancerUsedSaltIds]);
   const watermancerPlan = useMemo<WatermancerPlan>(() => ({
     targetIons: watermancerIonTargets,
     selectedWaters: [...mineralWaters, ...additionWaters],
@@ -2410,7 +2428,7 @@ function App() {
     fixedWaterVolumes: Object.fromEntries(
       [...mineralWaters, ...additionWaters].map(entry => [entry.id, num(entry.volumeMl)]),
     ),
-    fixedSaltDoses: {},
+    fixedSaltDoses: watermancerFixedSaltDoses,
     strategy: autoCraftPreset,
     saltObjective: watermancerSaltObjective,
     ionPriority: [...activeAutoFillPriority],
@@ -2463,14 +2481,8 @@ function App() {
     watermancerIonTargets,
     watermancerUsedSaltIds,
     watermancerBestMatchDeviationMode,
+    watermancerFixedSaltDoses,
   ]);
-  const selectedWatermancerSaltTargets = useMemo(() => ({
-    ...Object.fromEntries(
-      watermancerSaltOptions
-        .filter(option => watermancerUsedSaltIds.includes(option.salt.id) && option.targetPpm > 0)
-        .map(option => [option.salt.id, option.targetPpm]),
-    ),
-  }) as Record<string, number>, [watermancerSaltOptions, watermancerUsedSaltIds]);
   const watermancerLiveResult = useMemo(
     () => showWatermancer
       ? solveWatermancerRoutes({
@@ -2609,81 +2621,28 @@ function App() {
       watermancerLiveResult,
     ],
   );
-  const practicalWatermancerSaltTargets = useMemo(() => (
-    Object.fromEntries(
-      SALTS.map(salt => {
-        const target = Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0));
-        const minimum = Math.max(0, Number(activeWatermancerRoute.plan.minimumSaltDosePpm?.[salt.id] ?? 0));
-        return [salt.id, target > 0 && target < minimum ? 0 : target];
-      }),
-    ) as Record<string, number>
-  ), [activeWatermancerRoute]);
-  const watermancerManualSaltPpm = useMemo(() => Object.fromEntries(
-    SALTS.map((salt, index) => {
-      const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0];
-      const mg = Math.max(0, Number(watermancerManualSaltAdditionsMg[salt.id] ?? 0));
-      return [
-        salt.id,
-        L > 0 && mg > 0
-          ? mg * salt.anhydrousMass / (L * form.molarMass)
-          : 0,
-      ];
-    }),
-  ) as Record<string, number>, [L, rows, watermancerManualSaltAdditionsMg]);
-  const activeWatermancerRouteWithManualSalt = useMemo(() => {
-    const manualEntries = Object.entries(watermancerManualSaltPpm)
-      .filter(([, target]) => target > 0.000001);
-    const saltTargets = { ...practicalWatermancerSaltTargets };
-    for (const [saltId, target] of manualEntries) {
-      saltTargets[saltId] = (saltTargets[saltId] ?? 0) + target;
-    }
-    if (
-      manualEntries.length === 0
-      && Object.entries(saltTargets).every(([saltId, target]) => (
-        Math.abs(target - (activeWatermancerRoute.saltTargets[saltId] ?? 0)) < 0.000001
-      ))
-    ) {
-      return activeWatermancerRoute;
-    }
-    const automaticSaltIons = computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1);
-    const bottledIons = Object.fromEntries(
-      IONS.map(({ id }) => [id, Math.max((activeWatermancerRoute.finalIons[id] ?? 0) - (automaticSaltIons[id] ?? 0), 0)]),
-    ) as Record<IonId, number>;
-    const finalIons = computeIonTotals(saltTargets, bottledIons, 1);
-    return {
-      ...activeWatermancerRoute,
-      saltTargets,
-      finalIons,
-      deviations: watermancerRouteDeviations(finalIons, activeWatermancerRoute.plan.targetIons),
-      overshoots: findIonOvershoots(finalIons, activeWatermancerRoute.plan.targetIons),
-    };
-  }, [activeWatermancerRoute, practicalWatermancerSaltTargets, watermancerManualSaltPpm]);
   const watermancerPrecisionRecommendation = useMemo(
     () => showWatermancer
       ? buildWatermancerPrecisionRecommendation(
-        activeWatermancerRouteWithManualSalt.saltTargets,
+        activeWatermancerRoute.saltTargets,
         rows,
         L,
         brewerDropsPerMl,
       )
       : null,
     [
-      activeWatermancerRouteWithManualSalt.saltTargets,
+      activeWatermancerRoute.saltTargets,
       brewerDropsPerMl,
       L,
       rows,
       showWatermancer,
     ],
   );
-  const adjustWatermancerManualSalt = (saltId: string, deltaMg: number) => {
-    setWatermancerManualSaltAdditionsMg(current => {
-      const next = Math.max(0, Number((current[saltId] ?? 0) + deltaMg));
-      if (next <= 0) {
-        const { [saltId]: _removed, ...rest } = current;
-        return rest;
-      }
-      return { ...current, [saltId]: next };
-    });
+  const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
+    setWatermancerDoseOverridesMg(current => ({
+      ...current,
+      [saltId]: Math.max(0, currentMg + deltaMg),
+    }));
   };
     // Build the salt recommendation shown below the calculator. The sulfate /
     // chloride preference is a real source selection for magnesium, not merely
@@ -2780,20 +2739,13 @@ function App() {
      [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater],
    );
 
-  // Watermancer's allowed salt inventory is the source of truth for dosing.
+   // Watermancer's selected route is the source of truth for dosing.
   const selectedSuggestedSaltTargets = useMemo(() => {
     if (!showWatermancer) {
       return suggestedSaltTargets;
     }
-    return Object.fromEntries(
-      SALTS.map(salt => [
-        salt.id,
-        (
-          practicalWatermancerSaltTargets[salt.id] ?? 0
-        ) + (watermancerManualSaltPpm[salt.id] ?? 0),
-      ]),
-    );
-  }, [activeWatermancerSaltTargets, practicalWatermancerSaltTargets, showWatermancer, suggestedSaltTargets, watermancerManualSaltPpm]);
+     return activeWatermancerRoute.saltTargets;
+   }, [activeWatermancerRoute, showWatermancer, suggestedSaltTargets]);
   const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
@@ -2877,9 +2829,9 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
-  const reviewFinalIons = activeWatermancerRouteWithManualSalt?.finalIons ?? suggestedIonTotals;
-  const reviewSaltIons = activeWatermancerRouteWithManualSalt
-    ? computeIonTotals(activeWatermancerRouteWithManualSalt.saltTargets, {}, 1)
+  const reviewFinalIons = activeWatermancerRoute?.finalIons ?? suggestedIonTotals;
+  const reviewSaltIons = activeWatermancerRoute
+    ? computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1)
     : finalSaltIons;
   const reviewWaterIons = Object.fromEntries(
     IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
@@ -2893,18 +2845,18 @@ function App() {
   const reviewWaterGh = computeGH(reviewWaterIons);
   const reviewWaterKh = computeKH(reviewWaterIons);
   const reviewWaterTds = Object.values(reviewWaterIons).reduce((total, ppm) => total + ppm, 0);
-  const reviewTotalDeviation = activeWatermancerRouteWithManualSalt
+  const reviewTotalDeviation = activeWatermancerRoute
     ? totalWatermancerDeviation(
       reviewFinalIons,
       watermancerIonTargets,
-      activeWatermancerRouteWithManualSalt.plan,
+      activeWatermancerRoute.plan,
     )
     : 0;
-  const reviewDeviationCount = activeWatermancerRouteWithManualSalt
-    ? activeWatermancerRouteWithManualSalt.deviations.filter(deviation => (
+  const reviewDeviationCount = activeWatermancerRoute
+    ? activeWatermancerRoute.deviations.filter(deviation => (
       Math.abs(watermancerDeviationBeyondPolicy(
         deviation,
-        activeWatermancerRouteWithManualSalt.plan,
+        activeWatermancerRoute.plan,
       )) > 0.05
     )).length
     : 0;
@@ -3021,7 +2973,7 @@ function App() {
     setWatermancerBestMatchMessage(null);
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
-    setWatermancerManualSaltAdditionsMg({});
+    setWatermancerDoseOverridesMg({});
     setWatermancerResultSticky(false);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
@@ -5012,7 +4964,7 @@ function App() {
           {showWatermancer && activeWatermancerRoute && (
             <div className="order-5" data-watermancer-stage="results">
              <WatermancerIonCoverageBars
-               actualIons={activeWatermancerRouteWithManualSalt.finalIons}
+               actualIons={activeWatermancerRoute.finalIons}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
                sticky={watermancerResultSticky}
@@ -5114,24 +5066,23 @@ function App() {
             <div className="px-4 sm:px-6 py-4 space-y-4">
 
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-700/60">
-                   <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                   <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                     <span>Salt</span>
                     <span>Hydration form</span>
-                    <span>Route dose</span>
-                    <span>Add manually</span>
+                     <span>Dose</span>
                      <span>Use</span>
                   </div>
                   <div className="divide-y divide-slate-700/50">
                     {SALTS.map((salt, index) => {
                       const option = watermancerSaltOptions[index];
                       const used = watermancerUsedSaltIds.includes(salt.id);
-                      const activePpm = used ? (practicalWatermancerSaltTargets[salt.id] ?? option.targetPpm) : 0;
-                      const activeMg = activePpm > 0
-                        ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
+                       const doseIsAdjusted = Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id);
+                       const activePpm = used ? Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0)) : 0;
+                       const activeMg = activePpm > 0
+                         ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
-                      const manualMg = Math.max(0, Number(watermancerManualSaltAdditionsMg[salt.id] ?? 0));
                       return (
-                        <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] sm:items-center">
+                         <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] sm:items-center">
                           <div>
                             <div className="text-xs font-semibold text-slate-200">{salt.name}</div>
                             <div className="mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
@@ -5154,15 +5105,12 @@ function App() {
                               ))}
                             </select>
                           </label>
-                          <div className={`text-sm font-semibold tabular-nums ${used && activeMg > 0 ? 'text-emerald-300' : 'text-slate-600'}`}>
-                            {used && activeMg > 0 ? `${activeMg.toFixed(1)} mg` : '—'}
-                          </div>
                           <div className="flex min-w-0 items-center gap-1.5">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Add manually</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Dose</span>
                             <HoldStepperButton
-                              onStep={() => adjustWatermancerManualSalt(salt.id, -1)}
-                              disabled={manualMg <= 0}
-                              label={`Remove 1 mg of ${salt.name}`}
+                              onStep={() => adjustWatermancerDose(salt.id, activeMg, -1)}
+                              disabled={!used || activeMg <= 0}
+                              label={`Decrease ${salt.name} dose by 1 mg`}
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
                             >
                               <Minus className="h-3.5 w-3.5" />
@@ -5171,27 +5119,27 @@ function App() {
                               type="number"
                               min="0"
                               step="1"
-                              value={manualMg}
+                               value={used ? activeMg.toFixed(1) : '0.0'}
                               onChange={event => {
-                                const value = Math.max(0, Number(event.target.value) || 0);
-                                setWatermancerManualSaltAdditionsMg(current => (
-                                  value > 0
-                                    ? { ...current, [salt.id]: value }
-                                    : Object.fromEntries(Object.entries(current).filter(([id]) => id !== salt.id))
-                                ));
+                                 const value = Math.max(0, Number(event.target.value) || 0);
+                                 setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
                               }}
-                              className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70"
-                              aria-label={`Manual ${salt.name} addition in milligrams`}
+                               disabled={!used}
+                               className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                               aria-label={`${salt.name} dose in milligrams`}
                             />
                             <span className="text-[10px] text-slate-500">mg</span>
                             <HoldStepperButton
-                              onStep={() => adjustWatermancerManualSalt(salt.id, 1)}
-                              disabled={false}
-                              label={`Add 1 mg of ${salt.name}`}
+                              onStep={() => adjustWatermancerDose(salt.id, activeMg, 1)}
+                              disabled={!used}
+                              label={`Increase ${salt.name} dose by 1 mg`}
                               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:bg-cyan-500/20"
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
+                            <span className={`hidden text-[9px] font-semibold uppercase tracking-wider sm:inline ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
+                              {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
+                            </span>
                           </div>
                           <button
                             type="button"
@@ -5214,7 +5162,7 @@ function App() {
                     })}
                   </div>
                  <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
-                   Practical dosing rule: Watermancer omits any salt below {WATERMANCER_MIN_SALT_MG} mg of the selected physical form and searches for water or salt alternatives instead.
+                    The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.
                  </p>
                 </div>
             </div>

@@ -33,3 +33,4 @@
 - [TDS meter versus ion total](tds-meter-vs-ion-total.md) — modeled summed ions and conductivity-meter ppm are different measurements
 - [Visual polish direction](visual-polish-direction.md) — keep the current palette but make the instrument-console treatment more dramatic
 - [Taste starting recipe boundary](taste-starting-recipe-boundary.md) — coffee preferences generate a tunable Brewer recipe starting point, not bottled-water or roaster-specific chemistry
+- [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts
