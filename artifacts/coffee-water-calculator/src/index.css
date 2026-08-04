@@ -204,9 +204,9 @@ body {
 
 .watermancer-salt-table__dose {
   position: relative;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: center;
   min-height: 2rem;
 }
 
@@ -216,6 +216,7 @@ body {
 }
 
 .watermancer-salt-table__dose-controls {
+  grid-column: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -234,8 +235,8 @@ body {
 }
 
 .watermancer-salt-table__dose-status {
-  position: absolute;
-  right: 0;
+  grid-column: 3;
+  justify-self: end;
   width: 4.25rem;
   overflow: hidden;
   text-overflow: ellipsis;

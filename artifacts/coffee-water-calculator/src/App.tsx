@@ -6386,6 +6386,10 @@ function WatermancerIonCoverageBars({
             : actual > tolerance;
           const covered = target > 0 && actual >= target - tolerance;
           const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+          const coveragePercent = target > 0 ? (actual / target) * 100 : null;
+          const coverageLabel = coveragePercent === null
+            ? '—'
+            : `${Math.round(coveragePercent).toLocaleString()}%`;
           const barColor = overshoot
             ? 'bg-rose-400'
             : covered
@@ -6412,11 +6416,21 @@ function WatermancerIonCoverageBars({
             <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
               <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
               <div className="min-w-0">
-                <div className="h-2 overflow-hidden rounded-full bg-slate-700/70">
+                <div
+                  className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
+                  aria-label={coveragePercent === null
+                    ? `${ion.name}: no target set`
+                    : `${ion.name}: ${coverageLabel} of target`}
+                >
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                     style={{ width: `${percentage}%` }}
                   />
+                  <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
+                    covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
+                  }`}>
+                    {coverageLabel}
+                  </span>
                 </div>
                 <div className={`mt-1 text-[10px] ${valueColor}`}>
                   {status}
