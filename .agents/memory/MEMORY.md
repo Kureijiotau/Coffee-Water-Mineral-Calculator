@@ -27,3 +27,4 @@
 - [Mode switch reset boundary](mode-switch-reset-boundary.md) — Brewer resets to a lightweight default recipe and pauses Watermancer work without deleting saved preferences
 - [Watermancer result card default](watermancer-result-default.md) — keep automatic-match results in document flow by default; following remains an explicit toggle
 - [Community water share feedback](community-water-share-feedback.md) — show share request state and refresh the community catalog after success
+- [Preview/live database separation](preview-live-database-separation.md) — compare environment catalogs before diagnosing missing community data
