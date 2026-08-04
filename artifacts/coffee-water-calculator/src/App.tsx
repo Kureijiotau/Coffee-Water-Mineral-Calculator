@@ -5611,21 +5611,23 @@ function App() {
                       {watermancerActionRunning ? 'Filling base waters…' : 'Fill base waters toward target'}
                     </button>
                   )}
-                   <button
-                     type="button"
-                     disabled={watermancerActionRunning}
-                    onClick={handleFindBestWatermancerMatch}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
-                     title="Try all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
-                  >
-                     <img
-                       src={fillWaterPromptImage}
-                       alt="Easy best match"
-                       className="h-5 w-5 rounded-md object-contain"
-                     />
-                     <span aria-hidden="true" className="text-base leading-none">👉</span>
-                    {watermancerActionRunning ? 'Finding best match…' : 'Find best match'}
-                  </button>
+                   {(mineralWaters.length > 0 || additionWaters.length > 0 || watermancerUsedSaltIds.length > 0) && (
+                     <button
+                       type="button"
+                       disabled={watermancerActionRunning}
+                       onClick={handleFindBestWatermancerMatch}
+                       className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
+                       title="Try all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
+                     >
+                       <img
+                         src={fillWaterPromptImage}
+                         alt="Easy best match"
+                         className="h-5 w-5 rounded-md object-contain"
+                       />
+                       <span aria-hidden="true" className="text-base leading-none">👉</span>
+                       {watermancerActionRunning ? 'Finding best match…' : 'Find best match'}
+                     </button>
+                   )}
                 </div>
                 {watermancerBestMatchSummary && (
                   <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
