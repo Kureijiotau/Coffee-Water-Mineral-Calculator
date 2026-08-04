@@ -6,6 +6,7 @@ import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download
 import { GiSaltShaker } from 'react-icons/gi';
 import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
 import recommendedOvershootImage from '@assets/image_1785734539832.png';
+import fillWaterPromptImage from '@assets/ez_1785735003821.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -5605,9 +5606,14 @@ function App() {
                        className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                        title="Sweep all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
                      >
-                       <span className="watermancer-best-match-button__orb flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10">
-                         <Sparkles className={`h-3.5 w-3.5 ${watermancerActionRunning ? 'animate-spin' : 'transition-transform group-hover:rotate-12 group-hover:scale-110'}`} />
+                       <span className="watermancer-best-match-button__orb flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10">
+                         <img
+                           src={fillWaterPromptImage}
+                           alt="Easy best match"
+                           className="h-6 w-6 rounded-md object-contain"
+                         />
                        </span>
+                       <span aria-hidden="true" className="text-base leading-none">👉</span>
                        <span>{watermancerActionRunning ? 'Finding best match…' : 'Find best match'}</span>
                        {!watermancerActionRunning && (
                          <span className="hidden rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80 sm:inline">
