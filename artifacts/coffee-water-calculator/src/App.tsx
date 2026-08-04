@@ -6532,6 +6532,8 @@ function BrewerSimpleRecipeCard({
     const mass = Math.max(0, num(pantryBottleMl)) * UNIVERSAL_STOCK_MG_PER_ML / 1000;
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} kg` : `${mass.toFixed(1)} g`;
   };
+  const universalStockMassPerMlLabel = (saltLabel: string) =>
+    `1 mL = ${UNIVERSAL_STOCK_MG_PER_ML.toFixed(0)} mg ${saltLabel}`;
   const activeSimpleSalts = simpleSalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0);
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
@@ -6769,9 +6771,14 @@ function BrewerSimpleRecipeCard({
               )}
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {pantrySalts.filter(salt => calciumAvailable || salt.id !== 'cacl2').map(salt => (
-                  <div key={`prep-${salt.id}`} className="flex items-center justify-between rounded-lg bg-slate-950/25 px-3 py-2">
-                    <span className="text-xs text-slate-200">{salt.label}</span>
-                    <span className="font-mono text-xs font-semibold text-violet-200">{universalStockMassLabel()}</span>
+                  <div key={`prep-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-950/25 px-3 py-2">
+                    <div className="min-w-0">
+                      <span className="block text-xs text-slate-200">{salt.label}</span>
+                      <span className="mt-0.5 block text-[10px] text-slate-500">
+                        {universalStockMassPerMlLabel(salt.label)}
+                      </span>
+                    </div>
+                    <span className="shrink-0 font-mono text-xs font-semibold text-violet-200">{universalStockMassLabel()}</span>
                   </div>
                 ))}
               </div>
@@ -6779,7 +6786,7 @@ function BrewerSimpleRecipeCard({
                 Put <strong className="text-slate-200">{universalStockMassLabel()}</strong> of each listed salt into its own bottle, then fill each to <strong className="text-slate-200">{pantryBottleMl} mL</strong> with distilled or RO water. Cap and shake.
               </p>
               <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                 Label each bottle with the salt, {pantryBottleMl} mL, and the date. For consistent dosing, calibrate your dropper to about {dropsPerMl.toFixed(1)} drops per mL.
+                 Label each bottle with the salt, {pantryBottleMl} mL, 50 mg of that salt per mL, and the date. For consistent dosing, calibrate your dropper to about {dropsPerMl.toFixed(1)} drops per mL.
               </p>
               {calciumTarget > 0.05 && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
@@ -6834,8 +6841,15 @@ function BrewerSimpleRecipeCard({
                         Add {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
                       </span>
                     </span>
-                    <span className={`font-mono text-xs font-semibold ${isComplete ? 'text-emerald-300' : 'text-violet-200'}`}>
-                      {prepMethod === 'dropper' ? `${getUniversalDrops(salt.id)} drops` : getMassLabel(salt.id)}
+                    <span className={`text-right font-mono text-xs font-semibold ${isComplete ? 'text-emerald-300' : 'text-violet-200'}`}>
+                      {prepMethod === 'dropper' ? (
+                        <>
+                          <span className="block">{getUniversalDrops(salt.id)} drops</span>
+                          <span className="block text-[10px] font-normal text-slate-500">
+                            {universalStockMassPerMlLabel(salt.label)}
+                          </span>
+                        </>
+                      ) : getMassLabel(salt.id)}
                     </span>
                   </button>
                 );
