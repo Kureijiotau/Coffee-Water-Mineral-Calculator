@@ -7371,6 +7371,10 @@ function BrewerRecipeStepsModal({
           : 'Other mineral';
   const useMixingVessel = batchMl > 1000 && orderedRecipeSalts.length > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
+  const dosingLabel = dosingMethod === 'dry' ? 'Weighed salts' : 'Concentrate drops';
+  const recipeCardRef = useRef<HTMLDivElement>(null);
+  const [isSavingImage, setIsSavingImage] = useState(false);
+  const [saveImageError, setSaveImageError] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -7380,6 +7384,88 @@ function BrewerRecipeStepsModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const handleSaveImage = async () => {
+    const source = recipeCardRef.current;
+    if (!source || isSavingImage) return;
+
+    setIsSavingImage(true);
+    setSaveImageError(false);
+    let clone: HTMLDivElement | null = null;
+    let imageUrl: string | null = null;
+    let svgUrl: string | null = null;
+
+    try {
+      clone = source.cloneNode(true) as HTMLDivElement;
+      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
+        const sourceStyle = window.getComputedStyle(sourceNode);
+        const targetStyle = (targetNode as HTMLElement).style;
+        for (let index = 0; index < sourceStyle.length; index += 1) {
+          const property = sourceStyle.item(index);
+          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
+        }
+        const sourceChildren = Array.from(sourceNode.children);
+        const targetChildren = Array.from(targetNode.children);
+        sourceChildren.forEach((child, index) => {
+          const targetChild = targetChildren[index];
+          if (targetChild) copyComputedStyles(child, targetChild);
+        });
+      };
+
+      document.body.appendChild(clone);
+      copyComputedStyles(source, clone);
+      clone.style.position = 'fixed';
+      clone.style.left = '-100000px';
+      clone.style.top = '0';
+      clone.style.width = `${Math.ceil(source.getBoundingClientRect().width)}px`;
+      clone.style.maxHeight = 'none';
+      clone.style.height = 'auto';
+      clone.style.overflow = 'visible';
+      clone.querySelectorAll<HTMLElement>('[data-recipe-steps-scroll]').forEach(element => {
+        element.style.maxHeight = 'none';
+        element.style.overflow = 'visible';
+        element.style.flex = 'none';
+      });
+      clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
+
+      const width = Math.ceil(clone.getBoundingClientRect().width);
+      const height = Math.ceil(clone.scrollHeight);
+      const serialized = new XMLSerializer().serializeToString(clone);
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
+      const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+      svgUrl = URL.createObjectURL(svgBlob);
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Recipe card image could not be created.'));
+        image.src = svgUrl ?? '';
+      });
+
+      const canvas = document.createElement('canvas');
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas is unavailable.');
+      context.scale(scale, scale);
+      context.drawImage(image, 0, 0, width, height);
+      const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+      if (!png) throw new Error('Recipe card image could not be exported.');
+
+      imageUrl = URL.createObjectURL(png);
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = 'coffee-water-recipe-steps.png';
+      link.click();
+    } catch {
+      setSaveImageError(true);
+    } finally {
+      clone?.remove();
+      if (svgUrl) URL.revokeObjectURL(svgUrl);
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+      setIsSavingImage(false);
+    }
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-2 backdrop-blur-sm sm:p-4"
@@ -7387,6 +7473,7 @@ function BrewerRecipeStepsModal({
       role="presentation"
     >
       <div
+        ref={recipeCardRef}
         className="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
         role="dialog"
@@ -7395,22 +7482,48 @@ function BrewerRecipeStepsModal({
         aria-describedby="recipe-steps-description"
       >
         <div className="flex shrink-0 items-start justify-between border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-3 sm:px-5 sm:py-4">
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 text-sky-200">
               <ListChecks className="h-5 w-5" />
               <h2 id="recipe-steps-title" className="text-base font-semibold">Your recipe steps</h2>
             </div>
             <p id="recipe-steps-description" className="mt-1 text-xs text-slate-400">A simple guide for the recipe currently selected above.</p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-medium text-slate-300">
+              <span className="rounded-full border border-sky-300/20 bg-sky-400/10 px-2 py-1">{liters || 1} L final batch</span>
+              <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1">{dosingLabel}</span>
+              <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-1">{orderedRecipeSalts.length} mineral{orderedRecipeSalts.length === 1 ? '' : 's'}</span>
+            </div>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5" data-export-ignore>
+            <button
+              type="button"
+              onClick={handleSaveImage}
+              disabled={isSavingImage}
+              className="flex items-center gap-1.5 rounded-lg border border-sky-300/25 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-100 transition hover:border-sky-300/45 hover:bg-sky-400/20 disabled:cursor-wait disabled:opacity-60"
+              title="Download this recipe card as an image"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isSavingImage ? 'Saving…' : 'Save image'}
+            </button>
+            <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto" data-recipe-steps-scroll>
           <div className="space-y-4 p-4 sm:p-5">
+            <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-2.5">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Preparation flow</div>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                Prepare the water, add each mineral in order, then confirm everything is dissolved before brewing.
+              </p>
+            </div>
             {hasBaseWater ? (
-              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Minerals still needed</div>
+              <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Minerals still needed</div>
+                  <span className="text-[10px] text-emerald-200/70">After starting water</span>
+                </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {ACTIVE_ION_IDS.map(id => {
                     const target = saltOnlyIons[id] ?? 0;
@@ -7458,9 +7571,12 @@ function BrewerRecipeStepsModal({
                    <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
                  </div>
               </div>
-            ) : (
-              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
+             ) : (
+               <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 shadow-sm">
+                 <div className="flex items-center justify-between gap-3">
+                   <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
+                   <span className="text-[10px] text-emerald-200/70">Dose guide</span>
+                 </div>
                 <div className="mt-2 space-y-2">
                   {recipeSalts.map(salt => {
                     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
@@ -7512,10 +7628,14 @@ function BrewerRecipeStepsModal({
                 </div>
               </div>
             )}
-          <ol className="space-y-3">
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">1</span>
-              <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Step-by-step</div>
+            <div className="text-[10px] text-slate-500">{orderedRecipeSalts.length + (useMixingVessel ? 3 : 2)} actions</div>
+          </div>
+          <ol className="space-y-2.5">
+            <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">1</span>
+              <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Prepare the water</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
                   {remainingWaterMl > 0
@@ -7533,8 +7653,8 @@ function BrewerRecipeStepsModal({
               </div>
             </li>
             {orderedRecipeSalts.length > 0 && (
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">2</span>
+              <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">2</span>
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-slate-200">Add the minerals in order</div>
                   <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
@@ -7548,7 +7668,7 @@ function BrewerRecipeStepsModal({
                         : salt.defaultFormIdx ?? 0;
                       const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
                       return (
-                        <div key={`step-salt-${salt.id}`} className="rounded-lg bg-slate-900/45 px-3 py-2">
+                         <div key={`step-salt-${salt.id}`} className="rounded-lg border border-white/10 bg-slate-950/35 px-3 py-2.5">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <div className="text-xs font-medium text-slate-200">
@@ -7568,9 +7688,9 @@ function BrewerRecipeStepsModal({
               </li>
             )}
             {useMixingVessel && (
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">3</span>
-                <div>
+            <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">3</span>
+              <div className="min-w-0">
                   <div className="text-sm font-medium text-slate-200">Combine and top up</div>
                   <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
                     Dissolve the salts in {formatWaterVolume(mixingVesselMl)} first, then add the mineral concentrate to the remaining water and stir thoroughly.
@@ -7578,9 +7698,9 @@ function BrewerRecipeStepsModal({
                 </div>
               </li>
             )}
-            <li className="flex gap-3">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/20 text-xs font-semibold text-sky-200">{useMixingVessel ? 4 : orderedRecipeSalts.length > 0 ? 3 : 2}</span>
-              <div>
+            <li className="flex gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/20">{useMixingVessel ? 4 : orderedRecipeSalts.length > 0 ? 3 : 2}</span>
+              <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Verify and brew</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
                   Check for approximately {tdsTarget.toFixed(0)} ppm TDS. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
@@ -7588,7 +7708,12 @@ function BrewerRecipeStepsModal({
               </div>
             </li>
           </ol>
-          <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
+           {saveImageError && (
+             <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[10px] leading-relaxed text-amber-100" role="status">
+               This browser could not create the image. You can still use the recipe steps on screen.
+             </p>
+           )}
+           <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
             Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
           </p>
           </div>
