@@ -5065,12 +5065,12 @@ function App() {
             />
              <div className="app-card-body space-y-4">
 
-                <div className="mt-2 overflow-hidden rounded-xl border border-slate-700/60">
-                   <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                <div className="watermancer-salt-table mt-2 overflow-hidden rounded-xl border border-slate-700/60">
+                   <div className="watermancer-salt-table__header hidden bg-slate-950/50 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                     <span>Salt</span>
                     <span>Hydration form</span>
-                     <span>Dose</span>
-                     <span>Use</span>
+                    <span>Dose</span>
+                    <span>Use</span>
                   </div>
                   <div className="divide-y divide-slate-700/50">
                     {SALTS.map((salt, index) => {
@@ -5082,12 +5082,12 @@ function App() {
                          ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
                       return (
-                         <div key={salt.id} className="grid gap-3 bg-slate-900/25 px-3 py-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] sm:items-center">
-                          <div>
-                            <div className="text-xs font-semibold text-slate-200">{salt.name}</div>
-                            <div className="mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
+                         <div key={salt.id} className="watermancer-salt-table__row bg-slate-900/25">
+                           <div className="watermancer-salt-table__salt">
+                             <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-200">{salt.name}</div>
+                             <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
                           </div>
-                          <label className="flex items-center gap-2">
+                           <label className="watermancer-salt-table__hydration flex items-center gap-2">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Hydration form</span>
                             <select
                               value={rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0}
@@ -5105,7 +5105,7 @@ function App() {
                               ))}
                             </select>
                           </label>
-                          <div className="flex min-w-0 items-center gap-1.5">
+                           <div className="watermancer-salt-table__dose">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Dose</span>
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, -1)}
@@ -5128,7 +5128,7 @@ function App() {
                                className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-40"
                                aria-label={`${salt.name} dose in milligrams`}
                             />
-                            <span className="text-[10px] text-slate-500">mg</span>
+                             <span className="watermancer-salt-table__dose-unit text-[10px] text-slate-500">mg</span>
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, 1)}
                               disabled={!used}
@@ -5137,11 +5137,12 @@ function App() {
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
-                            <span className={`hidden text-[9px] font-semibold uppercase tracking-wider sm:inline ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
+                             <span className={`watermancer-salt-table__dose-status hidden text-[9px] font-semibold uppercase tracking-wider sm:inline ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
                               {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
                             </span>
                           </div>
-                          <button
+                           <div className="watermancer-salt-table__use">
+                           <button
                             type="button"
                             onClick={() => {
                               setWatermancerUsedSaltIds(current => used
@@ -5157,6 +5158,7 @@ function App() {
                           >
                              {used ? 'Use' : 'Not used'}
                           </button>
+                           </div>
                         </div>
                       );
                     })}
