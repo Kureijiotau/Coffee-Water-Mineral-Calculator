@@ -6,7 +6,6 @@ export type TasteGoal = 'clarity' | 'sweetness' | 'body' | 'balanced';
 export type AcidityGoal = 'bright' | 'round' | 'soft';
 
 export interface TastePreferenceAnswers {
-  roaster: string;
   roast: RoastLevel;
   process: Process;
   taste: TasteGoal;
@@ -49,7 +48,7 @@ export function inferTasteProfile(answers: TastePreferenceAnswers): TasteInferen
   };
 
   const rationale: string[] = [
-    `Starting from Aiki's light-roast pourover baseline, then tuning for ${answers.roaster || 'your roaster'}.`,
+    'Starting from Aiki’s light-roast pourover baseline, then tuning for the coffee and brew preferences you chose.',
   ];
 
   if (answers.roast === 'light') {
@@ -143,10 +142,10 @@ export function inferTasteProfile(answers: TastePreferenceAnswers): TasteInferen
   const title = `${roastLabel} roast · ${processLabel} · ${answers.taste} profile`;
   return {
     title,
-    summary: `A balanced starting water for ${answers.roaster || 'your coffee'}: ${round(profile.magnesium)} Mg, ${round(profile.calcium)} Ca, ${round(profile.sulfate)} SO₄, ${round(profile.chloride)} Cl, and ${round(profile.bicarbonate)} HCO₃ ppm.`,
+    summary: `A mineral recipe starting point for your coffee preferences: ${round(profile.magnesium)} Mg, ${round(profile.calcium)} Ca, ${round(profile.sulfate)} SO₄, ${round(profile.chloride)} Cl, and ${round(profile.bicarbonate)} HCO₃ ppm.`,
     rationale,
     profile,
-    recipe: { id: 'taste-match', name: `Taste match — ${title}`, salts },
+    recipe: { id: 'taste-starting-point', name: `Starting recipe — ${title}`, salts },
   };
 }
 

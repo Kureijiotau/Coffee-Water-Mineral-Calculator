@@ -8,12 +8,11 @@ interface Props {
 }
 
 const initialAnswers: TastePreferenceAnswers = {
-  roaster: '', roast: 'light', process: 'washed', taste: 'balanced',
+  roast: 'light', process: 'washed', taste: 'balanced',
   acidity: 'bright', body: 'medium', brewMethod: 'pourover',
 };
 
 const questions = [
-  { key: 'roaster', title: 'Who roasted the coffee?', description: 'The roaster helps anchor the recommendation to the style of coffee you actually drink.', options: [['', 'I rotate roasters'], ['Sey', 'Sey'], ['Passenger', 'Passenger'], ['Onyx', 'Onyx'], ['Tim Wendelboe', 'Tim Wendelboe'], ['Other', 'Another roaster']] },
   { key: 'roast', title: 'How dark is the roast?', description: 'Roast development changes how much extraction and buffering the coffee needs.', options: [['light', 'Light / Nordic'], ['medium', 'Medium'], ['dark', 'Medium-dark / dark']] },
   { key: 'process', title: 'How was the coffee processed?', description: 'Processing changes how much the water should emphasize clarity, fruit, or restraint.', options: [['washed', 'Washed'], ['natural', 'Natural / dry'], ['honey', 'Honey / pulped natural'], ['coferment', 'Co-ferment / anaerobic']] },
   { key: 'taste', title: 'What do you want more of?', description: 'Pick the cup character you reach for most often.', options: [['clarity', 'Clarity and sparkling acidity'], ['sweetness', 'Sweetness and balance'], ['body', 'Body and syrupy texture'], ['balanced', 'A little of everything']] },
@@ -45,8 +44,8 @@ export default function TastePreferenceModal({ onClose, onApply }: Props) {
           <div className="flex gap-3">
             <div className="p-2 rounded-xl bg-violet-500/20 text-violet-300"><Sparkles className="w-5 h-5" /></div>
             <div>
-              <h2 className="text-base font-semibold text-slate-100">Find your water taste</h2>
-              <p className="text-xs text-slate-400 mt-1">Aiki's profile is the starting point. Your coffee and preferences tune the result.</p>
+              <h2 className="text-base font-semibold text-slate-100">Build a starting recipe</h2>
+              <p className="text-xs text-slate-400 mt-1">Answer a few coffee questions to get a mineral recipe you can tune in Brewer mode.</p>
             </div>
           </div>
           <button onClick={onClose} className="text-slate-500 hover:text-slate-200 p-1"><X className="w-5 h-5" /></button>
@@ -71,9 +70,6 @@ export default function TastePreferenceModal({ onClose, onApply }: Props) {
                   </button>
                 ))}
               </div>
-              {question.key === 'roaster' && answers.roaster === 'Other' && (
-                <input autoFocus value={answers.roaster === 'Other' ? '' : answers.roaster} onChange={e => setAnswers(prev => ({ ...prev, roaster: e.target.value }))} placeholder="Roaster name (optional)" className="mt-3 w-full bg-slate-900/60 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-100" />
-              )}
             </div>
             <div className="flex items-center justify-between px-6 py-4 border-t border-slate-700/50">
               <button onClick={() => step > 0 ? setStep(prev => prev - 1) : onClose()} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"><ArrowLeft className="w-4 h-4" /> {step > 0 ? 'Back' : 'Cancel'}</button>
@@ -82,9 +78,12 @@ export default function TastePreferenceModal({ onClose, onApply }: Props) {
           </>
         ) : (
           <div className="overflow-y-auto px-6 py-6">
-            <div className="flex items-center gap-2 text-violet-300"><Coffee className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-semibold">Your inferred starting point</span></div>
+            <div className="flex items-center gap-2 text-violet-300"><Coffee className="w-4 h-4" /><span className="text-xs uppercase tracking-widest font-semibold">Your recipe starting point</span></div>
             <h3 className="text-xl font-semibold text-slate-100 mt-3">{result.title}</h3>
             <p className="text-sm text-slate-300 mt-2 leading-relaxed">{result.summary}</p>
+            <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.08] px-3 py-2 text-xs leading-relaxed text-amber-100">
+              This is a tunable starting point, not a guaranteed best recipe. Applying it will replace the current Brewer mineral recipe.
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-5">
               {([['Mg', result.profile.magnesium], ['Ca', result.profile.calcium], ['SO₄', result.profile.sulfate], ['Cl', result.profile.chloride], ['HCO₃', result.profile.bicarbonate], ['Na', result.profile.sodium]] as const).map(([label, value]) => (
                 <div key={label} className="rounded-xl bg-slate-900/50 border border-slate-700/50 px-3 py-2"><div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div><div className="font-mono text-sm text-sky-300 mt-1">{value} <span className="text-[10px] text-slate-500">ppm</span></div></div>
@@ -95,7 +94,7 @@ export default function TastePreferenceModal({ onClose, onApply }: Props) {
             </div>
             <div className="flex items-center justify-between gap-3 mt-6">
               <button onClick={() => setResult(null)} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200"><ArrowLeft className="w-4 h-4" /> Adjust answers</button>
-              <button onClick={() => onApply(result)} className="flex items-center gap-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2"><Check className="w-4 h-4" /> Apply to calculator</button>
+              <button onClick={() => onApply(result)} className="flex items-center gap-1.5 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg px-4 py-2"><Check className="w-4 h-4" /> Apply starting recipe</button>
             </div>
           </div>
         )}

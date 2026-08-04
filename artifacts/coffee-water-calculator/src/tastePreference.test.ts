@@ -3,7 +3,6 @@ import { computeIonTotals, SALTS } from './waterData';
 import { inferTasteProfile, type TastePreferenceAnswers } from './tastePreference';
 
 const lightWashed: TastePreferenceAnswers = {
-  roaster: 'Sey',
   roast: 'light',
   process: 'washed',
   taste: 'clarity',
