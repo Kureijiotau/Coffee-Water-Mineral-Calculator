@@ -5139,7 +5139,7 @@ function App() {
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
                              </div>
-                             <span className={`watermancer-salt-table__dose-status hidden text-[9px] font-semibold uppercase tracking-wider sm:inline ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
+                              <span className={`watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
                               {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
                             </span>
                           </div>
