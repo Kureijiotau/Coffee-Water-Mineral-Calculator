@@ -5116,19 +5116,24 @@ function App() {
                             >
                               <Minus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                               value={used ? activeMg.toFixed(1) : '0.0'}
-                              onChange={event => {
-                                 const value = Math.max(0, Number(event.target.value) || 0);
-                                 setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
-                              }}
-                               disabled={!used}
-                               className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-40"
-                               aria-label={`${salt.name} dose in milligrams`}
-                            />
+                            <div className="watermancer-salt-table__dose-value">
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={used ? activeMg.toFixed(1) : '0.0'}
+                                onChange={event => {
+                                  const value = Math.max(0, Number(event.target.value) || 0);
+                                  setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
+                                }}
+                                disabled={!used}
+                                className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                aria-label={`${salt.name} dose in milligrams`}
+                              />
+                              <span className={`watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
+                                {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
+                              </span>
+                            </div>
                              <span className="watermancer-salt-table__dose-unit text-[10px] text-slate-500">mg</span>
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, 1)}
@@ -5139,9 +5144,6 @@ function App() {
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
                              </div>
-                              <span className={`watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
-                              {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
-                            </span>
                           </div>
                            <div className="watermancer-salt-table__use">
                            <button

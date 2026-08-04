@@ -9,8 +9,8 @@ Watermancer shows one Dose control per salt: the solver supplies the initial sug
 
 **How to apply:** Keep Dose and Use separate; convert edited physical mg to fixed ppm in the plan, exclude fixed salts from automatic solving, and use the resulting route for review and ion totals.
 
-For the salt table, center the visible dose control group independently from mobile labels and render Suggested/Adjusted status beneath it, never in the same horizontal track.
+For the salt table, keep the visible dose controls together while rendering Suggested/Adjusted status directly beneath the numeric dose field.
 
-**Why:** Auxiliary labels have different widths and otherwise shift the − / value / mg / + controls away from the column center.
+**Why:** Auxiliary labels have different widths and otherwise shift the − / value / mg / + controls away from the column center; the status is most legible when tied to the number it describes.
 
-**How to apply:** Keep labels outside the control group’s flex flow, stack status below the controls at every breakpoint, and preserve the four-column table grid.
+**How to apply:** Wrap the numeric input and status in their own centered vertical stack, keep − / mg / + beside that stack, and preserve the four-column table grid.
