@@ -30,3 +30,4 @@
 - [Preview/live database separation](preview-live-database-separation.md) — compare environment catalogs before diagnosing missing community data
 - [Watermancer precision assistant](watermancer-precision-assistant.md) — guide dry batch, concentrate, then dropper preparation from the batch-volume card
 - [Standalone concentrate workspace](standalone-concentrate-workspace.md) — keep one-stock concentrate preparation independent from the recipe workflows
+- [TDS meter versus ion total](tds-meter-vs-ion-total.md) — modeled summed ions and conductivity-meter ppm are different measurements
