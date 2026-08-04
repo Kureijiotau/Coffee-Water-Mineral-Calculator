@@ -1513,7 +1513,7 @@ export function findBestWatermancerMatch({
             {
               id: 'best-match',
               kind: 'primary',
-              label: 'Best match',
+              label: 'Closest match',
               explanation: 'Evaluate this complete matching configuration with added waters fixed and base waters filled automatically.',
               fillWater: true,
               fillBaseOnly: true,
@@ -2097,7 +2097,7 @@ function App() {
           eyebrow: 'Flavor builder',
           title: 'Choose a starting direction',
           description: 'Shape the cup with a simple flavor-first recipe using RO / distilled 0 TDS water.',
-          tags: ['Flavor first', 'Dropper stocks', 'Simple dosing'],
+          tags: ['Flavor first', 'Concentrate drops', 'Simple dosing'],
           tone: 'border-sky-400/25 bg-sky-500/[0.06] text-sky-200',
         };
   const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => {
@@ -2576,7 +2576,7 @@ function App() {
         });
         setWatermancerBestMatchMessage(null);
         setWatermancerRecalculationNonce(current => current + 1);
-        setWatermancerActionMessage('Best match applied from the captured settings.');
+        setWatermancerActionMessage('Closest match applied from the captured settings.');
       } catch {
         setWatermancerBestMatchSummary(null);
         setWatermancerBestMatchMessage('The best-match search could not finish. Please try again.');
@@ -3641,13 +3641,13 @@ function App() {
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Experience Level</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Detail level</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {nerdLevel === 'alchemist'
                     ? 'A focused salt and concentrate workspace built from 0-TDS water.'
                     : nerdLevel === 'watermancer'
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
-                      : 'Choose how much calculator detail to show. Brewer mode uses salts only.'}
+                      : 'Choose how much detail to show. Brewer mode keeps the focus on simple salt recipes.'}
                 </div>
               </div>
             </div>
@@ -5235,7 +5235,7 @@ function App() {
            <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/30 shadow-xl overflow-hidden" data-watermancer-stage="match">
              <SectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
-               title="Automatic match"
+               title="Find closest match"
              />
              <div className="px-4 py-4 sm:px-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
@@ -5884,7 +5884,7 @@ function ConcentrateWorkspace() {
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
               <FlaskConical className="h-4 w-4 text-fuchsia-300" />
-              Concentrate one stock at a time
+              Make one mineral stock
             </div>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
               Make a repeatable mineral stock by weight, then use calibrated drops in your brew water.
@@ -5935,7 +5935,7 @@ function ConcentrateWorkspace() {
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="2" title="Set strength and stock size" />
+        <StepHeading number="2" title="Choose concentration and batch weight" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentration</span>
@@ -5982,7 +5982,7 @@ function ConcentrateWorkspace() {
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="3" title="Make and label the stock" />
+        <StepHeading number="3" title="Weigh, mix, and label" />
         <div className="mt-4 space-y-2">
           {[
             `Weigh ${saltMassLabel} of ${salt.name} (${form.label}).`,
@@ -6025,9 +6025,9 @@ function ConcentrateWorkspace() {
       </section>
 
       <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="5" title="See what drops contribute" />
+        <StepHeading number="5" title="Calculate your dose" />
         <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Dose a target salt amount</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Dose a target mineral amount</div>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
             Enter the salt mass you want to add. The recommendation rounds to a whole drop using this stock calibration.
           </p>
@@ -6222,13 +6222,13 @@ function WatermancerIonProfileCard({
       <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-indigo-400/15 text-slate-300">
         <div className="flex items-center gap-2">
           <Gauge className="w-4 h-4 text-indigo-300" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set ionic target</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={currentDropdownValue}
             onChange={e => handleDropdownChange(e.target.value)}
-            aria-label="Select ionic target profile"
+            aria-label="Select target water profile"
             className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
           >
             <optgroup label="Ion profiles">
@@ -6399,10 +6399,10 @@ function WatermancerIonCoverageBars({
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
-               Automatic match result
+               Closest match result
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-               Final ion contribution from the automatic Watermancer match.
+               Final mineral contribution from the closest Watermancer match.
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
@@ -6935,12 +6935,12 @@ function BrewerSimpleRecipeCard({
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
       <div className="rounded-xl border border-sky-400/20 bg-slate-900/30 p-2">
         <div className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
-          Choose your dosing method
+          Choose how you’ll measure minerals
         </div>
         <div role="tablist" aria-label="Recipe dosing method" className="grid gap-1 sm:grid-cols-2">
           {([
-            ['dry', 'Dry salt direct', 'Measure the recipe with a scale'],
-            ['dropper', 'Dropper stocks', 'Craft once, then dose by drops'],
+            ['dry', 'Weigh dry salts', 'Weigh the recipe on a scale'],
+            ['dropper', 'Use concentrate drops', 'Make stocks once, then dose by drops'],
           ] as const).map(([method, label, description]) => (
             <button
               key={method}
@@ -6969,10 +6969,10 @@ function BrewerSimpleRecipeCard({
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
               <Sparkles className="h-4 w-4 text-emerald-300" />
-              Your starting recipe
+              Your mineral recipe
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              {liters || 1} L batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Dropper stocks' : 'Dry salt direct'}
+              {liters || 1} L batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Concentrate drops' : 'Weighed salts'}
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs text-slate-300">
@@ -7410,7 +7410,7 @@ function BrewerRecipeStepsModal({
           <div className="space-y-4 p-4 sm:p-5">
             {hasBaseWater ? (
               <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Missing ions</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Minerals still needed</div>
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {ACTIVE_ION_IDS.map(id => {
                     const target = saltOnlyIons[id] ?? 0;
@@ -7430,7 +7430,7 @@ function BrewerRecipeStepsModal({
                     );
                   })}
                 </div>
-                <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Suggested salts</div>
+                <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Minerals to add</div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {suggestedSalts.map(salt => {
                     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
@@ -7454,7 +7454,7 @@ function BrewerRecipeStepsModal({
                   })}
                 </div>
                  <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
-                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Expected final TDS</span>
+                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Modeled mineral total</span>
                    <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
                  </div>
               </div>
@@ -7484,7 +7484,7 @@ function BrewerRecipeStepsModal({
                   })}
                 </div>
                  <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
-                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Expected final TDS</span>
+                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Modeled mineral total</span>
                    <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
                  </div>
               </div>
@@ -7501,7 +7501,7 @@ function BrewerRecipeStepsModal({
             )}
             {configuredBaseWaters.length > 0 && (
               <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">Base water used</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">Starting water</div>
                 <div className="mt-2 space-y-2">
                   {configuredBaseWaters.map(water => (
                     <div key={water.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/45 px-3 py-2">
@@ -7857,9 +7857,9 @@ function BrewerFlavorPanel({
     <div className="border-b border-slate-700/40 bg-sky-500/5 px-4 py-4 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build by flavor</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-sky-300">Build your water by flavor</div>
           <p className="mt-1 text-xs text-slate-400">
-            RO / distilled 0 TDS water · Click anywhere in the pyramid or drag the star. Your starting recipe updates instantly.
+            Start with RO / distilled water, then click the pyramid or drag the star. Your mineral recipe updates instantly.
           </p>
         </div>
       </div>
@@ -7887,7 +7887,7 @@ function BrewerFlavorPanel({
       </div>
       <div className="mt-4 grid gap-2 rounded-xl border border-slate-700/50 bg-slate-900/35 px-3 py-3 sm:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suggested direction</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Suggested flavor direction</div>
           <div className="mt-1 text-sm font-medium text-slate-200">{direction}</div>
         </div>
         <div>
