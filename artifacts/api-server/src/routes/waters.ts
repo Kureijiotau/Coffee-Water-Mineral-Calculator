@@ -137,10 +137,12 @@ router.get("/waters", async (_req: Request, res: Response) => {
     res.status(200).json({ waters: deduplicatePublicWaters(enrichedRows) });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
+    console.error("Water database failure:", classifyDatabaseError(err), getSafeDatabaseError(err));
     // The public catalog is bundled with the API so a missing Vercel
     // production schema cannot break the calculator's water selector.
     res.status(200).json({
       waters: deduplicatePublicWaters(SHARED_WATERS.filter(water => water.shared === "yes")),
+      source: "bundled-fallback",
     });
   }
 });
@@ -179,7 +181,12 @@ router.post("/waters", async (req: Request, res: Response) => {
     res.status(201).json({ water: saved });
   } catch (err: any) {
     console.error("Error saving water:", err);
-    res.status(500).json({ error: "Failed to save water" });
+    const code = classifyDatabaseError(err);
+    console.error("Water database failure:", code, getSafeDatabaseError(err));
+    res.status(503).json({
+      error: "Community sharing is temporarily unavailable because the production database could not save this water.",
+      code,
+    });
   }
 });
 
@@ -216,7 +223,12 @@ router.delete("/waters/:id", async (req: Request, res: Response) => {
     res.json({ ok: true });
   } catch (err: any) {
     console.error("Error deleting water:", err);
-    res.status(500).json({ error: "Failed to delete water" });
+    const code = classifyDatabaseError(err);
+    console.error("Water database failure:", code, getSafeDatabaseError(err));
+    res.status(503).json({
+      error: "Community water administration is temporarily unavailable because the production database could not complete this request.",
+      code,
+    });
   }
 });
 
