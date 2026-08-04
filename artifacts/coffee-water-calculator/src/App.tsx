@@ -49,6 +49,7 @@ type BrewerFlavorInput = {
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `reference:${string}`;
+type AppTab = 'calculator' | 'concentrate';
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
 type AutoCraftObjective = WatermancerSaltObjective;
 export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
@@ -369,6 +370,24 @@ export function buildWatermancerPrecisionRecommendation(
     stockDropsPerLiter: Math.max(1, Math.round(stockDoseMlPerLiter * safeDropsPerMl)),
     stockMasses: activeSalts.map(salt => ({ ...salt })),
   };
+}
+
+export function computeConcentrateStockMassMg(
+  strengthPercent: number,
+  volumeMl: number,
+): number {
+  if (!Number.isFinite(strengthPercent) || !Number.isFinite(volumeMl)) return 0;
+  return Math.max(0, strengthPercent) * 10 * Math.max(0, volumeMl);
+}
+
+export function computeConcentrateMgPerDrop(
+  strengthPercent: number,
+  dropsPerMl: number,
+): number {
+  const stockMgPerMl = Math.max(0, strengthPercent) * 10;
+  return stockMgPerMl > 0 && Number.isFinite(dropsPerMl) && dropsPerMl > 0
+    ? stockMgPerMl / dropsPerMl
+    : 0;
 }
 
 export function computeWatermancerBottledIons(
@@ -1995,6 +2014,7 @@ function App() {
   const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
+  const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
@@ -3535,28 +3555,72 @@ function App() {
     navigator.clipboard.writeText(text).catch(() => {});
   };
 
+  const appHeader = (
+    <div className={`bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden`}>
+      <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <Calculator className="w-6 h-6 text-white" />
+          <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
+        </div>
+        <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
+          <div role="tablist" aria-label="App workspace" className="flex rounded-lg border border-white/20 bg-black/10 p-0.5">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={appTab === 'calculator'}
+              onClick={() => setAppTab('calculator')}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'calculator' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              Calculator
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={appTab === 'concentrate'}
+              onClick={() => setAppTab('concentrate')}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'concentrate' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              Concentrate
+            </button>
+          </div>
+          <button
+            onClick={() => setShowTastePreference(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600/90 hover:bg-violet-500 border border-violet-400/40 rounded-lg px-3 py-1.5 transition-all shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95"
+            title="Answer a few questions to find your ideal water profile"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="hidden sm:inline">Find My Water</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (appTab === 'concentrate') {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
+        <div className="flex w-full max-w-5xl flex-col space-y-4">
+          {appHeader}
+          <ConcentrateWorkspace
+            dropsPerMl={brewerDropsPerMl}
+            onCalibrate={setBrewerDropsPerMl}
+          />
+        </div>
+        {showTastePreference && (
+          <TastePreferenceModal
+            onClose={() => setShowTastePreference(false)}
+            onApply={handleApplyTasteInference}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
       <div className="flex w-full max-w-5xl flex-col space-y-4">
         {/* Header */}
-         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden">
-          <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${modeAccent}`}>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Calculator className="w-6 h-6 text-white" />
-              <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
-            </div>
-            <div className="order-3 flex w-full items-center justify-end gap-2 sm:order-none sm:w-auto">
-              <button
-                onClick={() => setShowTastePreference(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600/90 hover:bg-violet-500 border border-violet-400/40 rounded-lg px-3 py-1.5 transition-all shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95"
-                title="Answer a few questions to find your ideal water profile"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline">Find My Water</span>
-              </button>
-            </div>
-          </div>
-        </div>
+        {appHeader}
 
         {/* Experience level */}
         <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 px-4 sm:px-6 py-3">
@@ -5750,6 +5814,287 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function ConcentrateWorkspace({
+  dropsPerMl,
+  onCalibrate,
+}: {
+  dropsPerMl: number;
+  onCalibrate: (value: number) => void;
+}) {
+  const [saltId, setSaltId] = useState('mgso4');
+  const [formIdx, setFormIdx] = useState(
+    SALTS.find(salt => salt.id === 'mgso4')?.defaultFormIdx ?? 0,
+  );
+  const [strengthInput, setStrengthInput] = useState('5');
+  const [volumeInput, setVolumeInput] = useState('50');
+  const [calibrationDrops, setCalibrationDrops] = useState('20');
+  const [calibrationVolume, setCalibrationVolume] = useState('1');
+  const [doseDrops, setDoseDrops] = useState('1');
+  const [doseLiters, setDoseLiters] = useState('1');
+  const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
+
+  const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
+  const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
+  const form = salt.hydrationForms[safeFormIdx] ?? salt.hydrationForms[0];
+  const strengthPercent = Math.max(0, Number(strengthInput) || 0);
+  const volumeMl = Math.max(0, Number(volumeInput) || 0);
+  const stockMgPerMl = strengthPercent * 10;
+  const stockMassMg = computeConcentrateStockMassMg(strengthPercent, volumeMl);
+  const stockMassLabel = stockMassMg >= 1000
+    ? `${(stockMassMg / 1000).toFixed(2)} g`
+    : `${stockMassMg.toFixed(0)} mg`;
+  const measuredDrops = Number(calibrationDrops);
+  const measuredVolume = Number(calibrationVolume);
+  const measuredDropsPerMl = measuredDrops > 0 && measuredVolume > 0
+    ? measuredDrops / measuredVolume
+    : 0;
+  const effectiveDropsPerMl = measuredDropsPerMl > 0 ? measuredDropsPerMl : dropsPerMl;
+  const mgPerDrop = computeConcentrateMgPerDrop(strengthPercent, effectiveDropsPerMl);
+  const finalDrops = Math.max(0, Number(doseDrops) || 0);
+  const finalLiters = Math.max(0, Number(doseLiters) || 0);
+  const resultingPpm = finalLiters > 0 ? finalDrops * mgPerDrop / finalLiters : 0;
+  const warnings = useMemo(
+    () => strengthPercent > 0
+      ? checkConcentrate(1000, { [salt.id]: stockMgPerMl })
+      : [],
+    [salt.id, stockMgPerMl, strengthPercent],
+  );
+  const hasError = warnings.some(warning => warning.severity === 'error');
+  const toggleStep = (step: number) => {
+    setCompletedSteps(prev => ({ ...prev, [step]: !prev[step] }));
+  };
+
+  return (
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
+              <FlaskConical className="h-4 w-4 text-fuchsia-300" />
+              Concentrate one stock at a time
+            </div>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
+              Make a repeatable mineral stock, then use its measured volume or calibrated drops in your brew water.
+            </p>
+          </div>
+          <span className="rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200">
+            Step-by-step
+          </span>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="1" title="Choose the mineral" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Salt</span>
+            <select
+              value={saltId}
+              onChange={event => {
+                const nextSalt = SALTS.find(item => item.id === event.target.value) ?? SALTS[0];
+                setSaltId(nextSalt.id);
+                setFormIdx(nextSalt.defaultFormIdx ?? 0);
+                setCompletedSteps({});
+              }}
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              aria-label="Concentrate salt"
+            >
+              {SALTS.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hydration form</span>
+            <select
+              value={safeFormIdx}
+              onChange={event => setFormIdx(Number(event.target.value))}
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              aria-label="Concentrate hydration form"
+            >
+              {salt.hydrationForms.map((hydration, index) => (
+                <option key={`${salt.id}-${hydration.label}`} value={index}>{hydration.label}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className="mt-3 text-[11px] text-slate-500">
+          Selected: {salt.formula} · {form.label} · {form.molarMass.toFixed(3)} g/mol
+        </p>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="2" title="Set strength and bottle size" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentration</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="0.1"
+                value={strengthInput}
+                onChange={event => setStrengthInput(event.target.value)}
+                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Concentrate strength percentage"
+              />
+              <span className="text-sm text-slate-400">%</span>
+            </div>
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Final bottle volume</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={volumeInput}
+                onChange={event => setVolumeInput(event.target.value)}
+                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Concentrate bottle volume in milliliters"
+              />
+              <span className="text-sm text-slate-400">mL</span>
+            </div>
+          </label>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <SummaryMetric label="Weigh this stock" value={stockMassLabel} detail={salt.name} tone="fuchsia" />
+          <SummaryMetric label="Salt per mL" value={`${stockMgPerMl.toFixed(1)} mg`} detail={salt.name} tone="slate" />
+          <SummaryMetric label="Stock multiplier" value={`×${(strengthPercent * 10).toFixed(1)}`} detail="relative to 1 mg/L" tone="slate" />
+        </div>
+        {warnings.length > 0 && (
+          <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${hasError ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200' : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'}`}>
+            <div className="font-semibold">{hasError ? 'Check this strength before mixing' : 'Mixing note'}</div>
+            {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="3" title="Make and label the stock" />
+        <div className="mt-4 space-y-2">
+          {[
+            `Weigh ${stockMassLabel} of ${salt.name} (${form.label}).`,
+            `Add the salt to a clean ${volumeMl || 0} mL bottle.`,
+            'Add distilled or RO water, then fill to the final bottle volume.',
+            `Shake until clear, then label: ${salt.name} · ${strengthPercent || 0}% · ${volumeMl || 0} mL.`,
+          ].map((step, index) => (
+            <button
+              key={step}
+              type="button"
+              onClick={() => toggleStep(index)}
+              className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${completedSteps[index] ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-slate-700/60 bg-slate-950/25 hover:border-fuchsia-400/30'}`}
+            >
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${completedSteps[index] ? 'border-emerald-300 bg-emerald-400 text-slate-950' : 'border-slate-600 text-transparent'}`}>
+                <Check className="h-3 w-3" />
+              </span>
+              <span className={`text-xs ${completedSteps[index] ? 'text-emerald-100 line-through' : 'text-slate-300'}`}>{step}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-sky-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="4" title="Calibrate this dropper" />
+        <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+          Dispense a known number of drops into a graduated measure, then enter the measured volume.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <CalibrationInput label="Drops dispensed" value={calibrationDrops} onChange={setCalibrationDrops} ariaLabel="Calibration drops dispensed" />
+          <CalibrationInput label="Measured volume (mL)" value={calibrationVolume} onChange={setCalibrationVolume} ariaLabel="Calibration measured volume" />
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <SummaryMetric label="Calibration" value={`${effectiveDropsPerMl.toFixed(1)} drops/mL`} detail="this dropper" tone="sky" />
+          <SummaryMetric label="Salt per drop" value={`${mgPerDrop.toFixed(2)} mg`} detail={salt.name} tone="sky" />
+          <SummaryMetric label="Volume per drop" value={effectiveDropsPerMl > 0 ? `${(1 / effectiveDropsPerMl).toFixed(3)} mL` : '—'} detail="measured volume" tone="sky" />
+        </div>
+        <button
+          type="button"
+          disabled={measuredDropsPerMl <= 0}
+          onClick={() => onCalibrate(measuredDropsPerMl)}
+          className="mt-3 rounded-xl border border-sky-300/40 bg-sky-400/15 px-4 py-2.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-400/25 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Use this calibration in the calculator
+        </button>
+      </section>
+
+      <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="5" title="See what drops contribute" />
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <CalibrationInput label="Drops added" value={doseDrops} onChange={setDoseDrops} ariaLabel="Drops added to final water" />
+          <CalibrationInput label="Final water (L)" value={doseLiters} onChange={setDoseLiters} ariaLabel="Final water volume for drop contribution" />
+        </div>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3">
+          <span className="text-xs text-slate-400">{finalDrops} drops × {mgPerDrop.toFixed(2)} mg/drop of {salt.name}</span>
+          <strong className="text-xl tabular-nums text-emerald-200">{resultingPpm.toFixed(2)} mg/L</strong>
+        </div>
+        <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+          Keep each mineral stock in its own bottle. Add individual stocks to the final water, especially for calcium, sulfate, bicarbonate, and citrate salts.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function StepHeading({ number, title }: { number: string; title: string }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-slate-700/50 pb-3">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fuchsia-400/15 text-xs font-bold text-fuchsia-200">{number}</span>
+      <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">{title}</h2>
+    </div>
+  );
+}
+
+function SummaryMetric({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: 'fuchsia' | 'sky' | 'slate';
+}) {
+  const toneClass = tone === 'fuchsia'
+    ? 'border-fuchsia-400/20 bg-fuchsia-500/[0.06] text-fuchsia-200'
+    : tone === 'sky'
+      ? 'border-sky-400/20 bg-sky-500/[0.06] text-sky-200'
+      : 'border-slate-700/60 bg-slate-950/25 text-slate-100';
+  return (
+    <div className={`rounded-xl border px-3 py-3 ${toneClass}`}>
+      <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
+      <div className="mt-1 text-lg font-bold tabular-nums">{value}</div>
+      <div className="mt-1 text-[10px] text-slate-500">{detail}</div>
+    </div>
+  );
+}
+
+function CalibrationInput({
+  label,
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
+      <span className="block text-[10px] text-slate-500">{label}</span>
+      <input
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={value}
+        onChange={event => onChange(event.target.value)}
+        className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+        aria-label={ariaLabel}
+      />
+    </label>
   );
 }
 

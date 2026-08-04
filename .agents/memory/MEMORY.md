@@ -29,3 +29,4 @@
 - [Community water share feedback](community-water-share-feedback.md) — show share request state and refresh the community catalog after success
 - [Preview/live database separation](preview-live-database-separation.md) — compare environment catalogs before diagnosing missing community data
 - [Watermancer precision assistant](watermancer-precision-assistant.md) — guide dry batch, concentrate, then dropper preparation from the batch-volume card
+- [Standalone concentrate workspace](standalone-concentrate-workspace.md) — keep one-stock concentrate preparation independent from the recipe workflows

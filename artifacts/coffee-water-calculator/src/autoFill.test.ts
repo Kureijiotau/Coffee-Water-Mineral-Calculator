@@ -3,6 +3,8 @@ import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
   buildWatermancerPrecisionRecommendation,
+  computeConcentrateStockMassMg,
+  computeConcentrateMgPerDrop,
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
@@ -1085,5 +1087,19 @@ describe('buildWatermancerPrecisionRecommendation', () => {
     expect(recommendation?.stockDoseMlPerLiter).toBe(2);
     expect(recommendation?.stockDropsPerLiter).toBe(40);
     expect(recommendation?.stockMasses[0].stockMassMg).toBeCloseTo(30_000, 5);
+  });
+});
+
+describe('concentrate calculations', () => {
+  it('calculates the salt mass for any percentage and bottle volume', () => {
+    expect(computeConcentrateStockMassMg(1, 50)).toBeCloseTo(500, 5);
+    expect(computeConcentrateStockMassMg(5, 50)).toBeCloseTo(2500, 5);
+    expect(computeConcentrateStockMassMg(10, 100)).toBeCloseTo(10000, 5);
+  });
+
+  it('calculates salt delivered by one calibrated drop', () => {
+    expect(computeConcentrateMgPerDrop(5, 20)).toBeCloseTo(2.5, 5);
+    expect(computeConcentrateMgPerDrop(1, 25)).toBeCloseTo(0.4, 5);
+    expect(computeConcentrateMgPerDrop(5, 0)).toBe(0);
   });
 });
