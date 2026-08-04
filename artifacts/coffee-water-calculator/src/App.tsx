@@ -6738,11 +6738,10 @@ function BrewerDropperCalibrationCard({
               setCollapsed(true);
             }}
             disabled={!canCalibrate}
-            className="calibration-apply-button group relative isolate flex shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-lg border px-3.5 py-2.5 text-xs font-bold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
+             className="group flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-cyan-300/45 bg-cyan-500/15 px-3.5 py-2.5 text-xs font-semibold text-cyan-50 transition hover:border-cyan-200/70 hover:bg-cyan-500/25 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span className="calibration-apply-button__shine" aria-hidden="true" />
-            <Sparkles className="relative z-10 h-3.5 w-3.5 transition-transform group-hover:rotate-12 group-hover:scale-110" />
-            <span className="relative z-10">Use this calibration</span>
+             <Check className="h-3.5 w-3.5 transition-transform group-hover:scale-105" />
+             <span>Use this calibration</span>
           </button>
         </div>
         <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.05] px-3 py-3">
