@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
+  buildWatermancerPrecisionRecommendation,
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
@@ -1050,5 +1051,39 @@ describe('Watermancer salt-to-ion helpers', () => {
 
     expect((targets.mgso4 ?? 0) + (targets.nahco3 ?? 0)).toBeGreaterThan(0);
     expect(Object.keys(targets).sort()).toEqual(['mgso4', 'nahco3']);
+  });
+});
+
+describe('buildWatermancerPrecisionRecommendation', () => {
+  it('recommends the smallest half-liter batch that brings the smallest dose above 100 mg', () => {
+    const recommendation = buildWatermancerPrecisionRecommendation(
+      { mgso4: 10, nahco3: 4 },
+      [
+        { target: '', formIdx: 0 },
+        { target: '', formIdx: 0 },
+      ],
+      1,
+      20,
+    );
+
+    expect(recommendation?.status).toBe('needs-volume');
+    expect(recommendation?.currentMinimumMassMg).toBeCloseTo(4, 5);
+    expect(recommendation?.recommendedBatchLiters).toBe(25);
+    expect(recommendation?.recommendedMinimumMassMg).toBeCloseTo(100, 5);
+  });
+
+  it('keeps a measurable recipe at its current volume and calculates the 500x stock dose', () => {
+    const recommendation = buildWatermancerPrecisionRecommendation(
+      { nahco3: 120 },
+      [{ target: '', formIdx: 0 }],
+      1,
+      20,
+    );
+
+    expect(recommendation?.status).toBe('ready');
+    expect(recommendation?.recommendedBatchLiters).toBe(1);
+    expect(recommendation?.stockDoseMlPerLiter).toBe(2);
+    expect(recommendation?.stockDropsPerLiter).toBe(40);
+    expect(recommendation?.stockMasses[0].stockMassMg).toBeCloseTo(30_000, 5);
   });
 });
