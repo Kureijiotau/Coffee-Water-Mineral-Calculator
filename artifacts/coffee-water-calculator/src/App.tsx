@@ -5105,8 +5105,9 @@ function App() {
                               ))}
                             </select>
                           </label>
-                           <div className="watermancer-salt-table__dose">
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Dose</span>
+                            <div className="watermancer-salt-table__dose">
+                             <span className="watermancer-salt-table__dose-label text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Dose</span>
+                             <div className="watermancer-salt-table__dose-controls">
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, -1)}
                               disabled={!used || activeMg <= 0}
@@ -5137,6 +5138,7 @@ function App() {
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
+                             </div>
                              <span className={`watermancer-salt-table__dose-status hidden text-[9px] font-semibold uppercase tracking-wider sm:inline ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
                               {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
                             </span>

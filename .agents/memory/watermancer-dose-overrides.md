@@ -8,3 +8,9 @@ Watermancer shows one Dose control per salt: the solver supplies the initial sug
 **Why:** Users need to experiment above or below the calculated dose while still letting Watermancer optimize the other selected salts.
 
 **How to apply:** Keep Dose and Use separate; convert edited physical mg to fixed ppm in the plan, exclude fixed salts from automatic solving, and use the resulting route for review and ion totals.
+
+For the salt table, center the visible dose control group independently from mobile labels and Suggested/Adjusted status text.
+
+**Why:** Auxiliary labels have different widths and otherwise shift the − / value / mg / + controls away from the column center.
+
+**How to apply:** Keep labels positioned outside the control group’s flex flow while preserving the four-column table grid.
