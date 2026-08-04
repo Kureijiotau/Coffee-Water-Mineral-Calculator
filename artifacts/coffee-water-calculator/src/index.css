@@ -248,6 +248,8 @@ body {
 @media (min-width: 640px) {
   .watermancer-salt-table__header {
     display: grid;
+    grid-template-columns: var(--salt-grid-columns);
+    column-gap: 1rem;
   }
 
   .watermancer-salt-table__row {
