@@ -7503,7 +7503,7 @@ function BrewerRecipeStepsModal({
               title="Download this recipe card as an image"
             >
               <Download className="h-3.5 w-3.5" />
-              {isSavingImage ? 'Saving…' : 'Save image'}
+              {isSavingImage ? 'Saving…' : 'Save recipe'}
             </button>
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
               <X className="h-4 w-4" />
