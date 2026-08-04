@@ -5,6 +5,7 @@ import {
   buildWatermancerPrecisionRecommendation,
   computeConcentrateStockSaltMassMg,
   computeConcentrateSaltMgPerDrop,
+  computeConcentrateDropsForSaltMass,
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
@@ -1101,5 +1102,11 @@ describe('concentrate calculations', () => {
     expect(computeConcentrateSaltMgPerDrop(5, 100, 5)).toBeCloseTo(2.5, 5);
     expect(computeConcentrateSaltMgPerDrop(1, 25, 1)).toBeCloseTo(0.4, 5);
     expect(computeConcentrateSaltMgPerDrop(5, 0, 1)).toBe(0);
+  });
+
+  it('converts a target salt mass into drops', () => {
+    expect(computeConcentrateDropsForSaltMass(40, 0.5)).toBeCloseTo(80, 5);
+    expect(computeConcentrateDropsForSaltMass(17.61, 0.55)).toBeCloseTo(32.018, 3);
+    expect(computeConcentrateDropsForSaltMass(40, 0)).toBe(0);
   });
 });

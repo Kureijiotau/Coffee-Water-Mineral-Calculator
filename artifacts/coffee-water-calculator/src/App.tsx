@@ -393,6 +393,18 @@ export function computeConcentrateSaltMgPerDrop(
     : 0;
 }
 
+export function computeConcentrateDropsForSaltMass(
+  saltMassMg: number,
+  saltMgPerDrop: number,
+): number {
+  return Number.isFinite(saltMassMg)
+    && Number.isFinite(saltMgPerDrop)
+    && saltMassMg > 0
+    && saltMgPerDrop > 0
+    ? saltMassMg / saltMgPerDrop
+    : 0;
+}
+
 export function computeWatermancerBottledIons(
   entries: MineralWaterEntry[],
   batchMl: number,
@@ -5827,6 +5839,7 @@ function ConcentrateWorkspace() {
   const [totalStockMassInput, setTotalStockMassInput] = useState('50');
   const [calibrationDrops, setCalibrationDrops] = useState('100');
   const [calibrationStockMass, setCalibrationStockMass] = useState('5');
+  const [targetSaltMass, setTargetSaltMass] = useState('40');
   const [doseDrops, setDoseDrops] = useState('1');
   const [doseLiters, setDoseLiters] = useState('1');
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
@@ -5846,6 +5859,10 @@ function ConcentrateWorkspace() {
     ? measuredStockMassG / measuredDrops
     : 0;
   const mgPerDrop = computeConcentrateSaltMgPerDrop(strengthPercent, measuredDrops, measuredStockMassG);
+  const targetSaltMassMg = Math.max(0, Number(targetSaltMass) || 0);
+  const exactDropsForTarget = computeConcentrateDropsForSaltMass(targetSaltMassMg, mgPerDrop);
+  const recommendedDrops = exactDropsForTarget > 0 ? Math.max(1, Math.round(exactDropsForTarget)) : 0;
+  const recommendedSaltMassMg = recommendedDrops * mgPerDrop;
   const finalDrops = Math.max(0, Number(doseDrops) || 0);
   const finalLiters = Math.max(0, Number(doseLiters) || 0);
   const resultingPpm = finalLiters > 0 ? finalDrops * mgPerDrop / finalLiters : 0;
@@ -6009,6 +6026,34 @@ function ConcentrateWorkspace() {
 
       <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
         <StepHeading number="5" title="See what drops contribute" />
+        <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Dose a target salt amount</div>
+          <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+            Enter the salt mass you want to add. The recommendation rounds to a whole drop using this stock calibration.
+          </p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <CalibrationInput
+              label={`Target ${salt.name} (mg)`}
+              value={targetSaltMass}
+              onChange={setTargetSaltMass}
+              ariaLabel={`Target ${salt.name} amount in milligrams`}
+            />
+            <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2">
+              <span className="block text-[10px] text-slate-500">Recommended dose</span>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <strong className="text-xl tabular-nums text-emerald-200">
+                  {recommendedDrops > 0 ? `${recommendedDrops} drops` : '—'}
+                </strong>
+                {recommendedDrops > 0 && (
+                  <span className="text-[11px] text-slate-400">
+                    delivers {recommendedSaltMassMg.toFixed(2)} mg
+                    {exactDropsForTarget > 0 ? ` · exact math: ${exactDropsForTarget.toFixed(1)} drops` : ''}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <CalibrationInput label="Drops added" value={doseDrops} onChange={setDoseDrops} ariaLabel="Drops added to final water" />
           <CalibrationInput label="Final water (L)" value={doseLiters} onChange={setDoseLiters} ariaLabel="Final water volume for drop contribution" />
