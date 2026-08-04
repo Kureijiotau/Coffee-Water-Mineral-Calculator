@@ -5606,13 +5606,11 @@ function App() {
                        className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                        title="Sweep all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
                      >
-                       <span className="watermancer-best-match-button__orb flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10">
-                         <img
-                           src={fillWaterPromptImage}
-                           alt="Easy best match"
-                           className="h-6 w-6 rounded-md object-contain"
-                         />
-                       </span>
+                       <img
+                         src={fillWaterPromptImage}
+                         alt="Easy best match"
+                         className="watermancer-best-match-button__image h-7 w-7 shrink-0 object-contain"
+                       />
                        <span aria-hidden="true" className="text-base leading-none">👉</span>
                        <span>{watermancerActionRunning ? 'Finding best match…' : 'Find best match'}</span>
                        {!watermancerActionRunning && (

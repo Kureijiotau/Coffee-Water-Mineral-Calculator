@@ -138,10 +138,16 @@ body {
     0 0 30px -10px rgb(34 211 238 / 0.95);
 }
 
-.watermancer-best-match-button__orb {
+.watermancer-best-match-button__image {
   position: relative;
   z-index: 1;
-  box-shadow: 0 0 16px -5px rgb(224 231 255 / 0.95);
+  filter: drop-shadow(0 0 7px rgb(224 231 255 / 0.7));
+  transition: filter 180ms ease, transform 180ms ease;
+}
+
+.watermancer-best-match-button:hover .watermancer-best-match-button__image {
+  filter: drop-shadow(0 0 9px rgb(224 231 255 / 0.9));
+  transform: scale(1.04);
 }
 
 /* Existing surface tokens receive one consistent material treatment. */
