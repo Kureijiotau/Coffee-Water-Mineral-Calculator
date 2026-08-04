@@ -3559,7 +3559,7 @@ function App() {
     return (
       <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
-        <div className="flex w-full max-w-5xl flex-col space-y-4">
+        <div className="app-page-stack flex w-full max-w-5xl flex-col">
           {appHeader}
           <ConcentrateWorkspace
           />
@@ -3572,12 +3572,12 @@ function App() {
   return (
     <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
-      <div className="flex w-full max-w-5xl flex-col space-y-4">
+      <div className="app-page-stack flex w-full max-w-5xl flex-col">
         {/* Header */}
         {appHeader}
 
         {/* Experience level */}
-        <div className="app-panel app-panel--quiet rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
+         <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
@@ -3622,7 +3622,7 @@ function App() {
         </div>
 
          {/* Mode guide */}
-         <div className={`mode-guide rounded-2xl border px-4 py-3 shadow-md backdrop-blur-xl ${modeGuide.tone}`}>
+          <div className={`mode-guide app-card rounded-2xl border px-4 py-3 shadow-md backdrop-blur-xl ${modeGuide.tone}`}>
            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
              <div className="min-w-0">
                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-75">{modeGuide.eyebrow}</div>
@@ -3691,8 +3691,8 @@ function App() {
           </div>
          )}
          {/* Mineral Table */}
-           {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
-           <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
+           {showAlchemist && <div className="app-card app-panel-surface order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
+            <div className="app-section-header flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <SaltSieveIcon />
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">
@@ -3806,7 +3806,7 @@ function App() {
             </div>
           </div>
             <>
-            <div className="border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-2.5 text-[11px] leading-relaxed text-slate-400 sm:px-6">
+            <div className="border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
                Build the recipe from 0-TDS water. Choose hydrated forms, then use the batch panel to prepare a safe concentrate.
             </div>
            {selectedSourceRecipe && (
@@ -3844,7 +3844,7 @@ function App() {
              </div>
            )}
          <>
-         <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-2.5 text-xs font-medium uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
+          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
             <span>Hydrated Form</span>
@@ -3865,7 +3865,7 @@ function App() {
               ? `${(displayMass / 1000).toFixed(2)} g`
               : `${displayMass.toFixed(2)} mg`;
             return (
-              <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-2.5 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
+              <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
                   <span className="text-sm font-medium text-slate-200">{salt.name}</span>
                   <span className="text-xs text-slate-500">{salt.formula}</span>
@@ -3942,7 +3942,7 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-            {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+             {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`app-card app-panel-surface order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
@@ -3965,7 +3965,7 @@ function App() {
                </div>
             }
           />
-              <div className="relative px-4 sm:px-6 py-4 space-y-4 bg-transparent">
+               <div className="app-card-body relative space-y-4 bg-transparent">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
               <input
@@ -4289,12 +4289,12 @@ function App() {
            </div>}
 
         {/* GH / KH Summary */}
-        {showAlchemist && <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showAlchemist && <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SectionHeader
             icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
             title="Base Salt Recipe Summary (as CaCO₃)"
           />
-          <div className="px-4 sm:px-6 py-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+           <div className="app-card-body grid grid-cols-1 sm:grid-cols-3 gap-4">
              <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
              <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
              <SimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
@@ -4342,7 +4342,7 @@ function App() {
         </div>
 
         {/* Mineral Water Base */}
-         {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`app-card app-panel-surface ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
              title={showWatermancer ? '2. Add waters — Base water' : 'Mineral Water Base'}
@@ -4404,7 +4404,7 @@ function App() {
             }} />
             </div>}
           />
-          <div className="px-6 py-4 space-y-4">
+           <div className="app-card-body space-y-4">
             {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">
@@ -4974,12 +4974,12 @@ function App() {
         )}
 
          {showWatermancer && activeWatermancerRoute && (
-            <div className="order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
+            <div className="app-card app-panel-surface order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
               <SectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
                The automatic match's modeled final mixture at the selected batch volume.
             </div>
-            <div className="px-4 sm:px-6 py-4">
+             <div className="app-card-body">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="space-y-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 p-3 lg:grid lg:grid-rows-[auto_repeat(3,minmax(0,1fr))_auto] lg:gap-3 lg:space-y-0">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200">
@@ -5058,12 +5058,12 @@ function App() {
 
         {/* Mineral Water Addition */}
         {showWatermancer && batchMl > 0 && (
-          <div className="order-3 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts">
+          <div className="app-card app-panel-surface order-3 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts">
             <SectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
              title="3. Choose salts"
             />
-            <div className="px-4 sm:px-6 py-4 space-y-4">
+             <div className="app-card-body space-y-4">
 
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-700/60">
                    <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
@@ -5170,12 +5170,12 @@ function App() {
         )}
 
          {showWatermancer && watermancerLiveResult && (
-           <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match">
+           <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match">
              <SectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                title="Find closest match"
              />
-             <div className="px-4 py-4 sm:px-6">
+              <div className="app-card-body">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                  <div>
                    <p className="text-xs font-semibold text-cyan-100">Watermancer is using the best available match.</p>
@@ -6163,9 +6163,9 @@ function WatermancerIonProfileCard({
   };
 
   return (
-    <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
+    <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-indigo-400/15 text-slate-300">
+      <div className="app-section-header flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 border-b border-indigo-400/15 text-slate-300">
         <div className="flex items-center gap-2">
           <Gauge className="w-4 h-4 text-indigo-300" />
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
@@ -6232,7 +6232,7 @@ function WatermancerIonProfileCard({
       </div>
 
       {/* Ion cards */}
-      <div className="px-4 sm:px-6 py-4 grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {ACTIVE_ION_IDS.map((id, idx) => {
           const ion = ION_MAP[id];
           const ppm = ions[id] ?? 0;
@@ -6339,9 +6339,9 @@ function WatermancerIonCoverageBars({
     <div
       className={`${sticky
         ? 'fixed inset-x-3 top-3 sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2'
-        : 'relative'} z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+        : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
     >
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-3 sm:px-6">
+      <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
@@ -6371,7 +6371,7 @@ function WatermancerIonCoverageBars({
           <span className="hidden sm:inline">{sticky ? 'Following screen' : 'Follow screen'}</span>
         </button>
       </div>
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-6">
+      <div className="app-card-body min-h-0 flex-1 space-y-3 overflow-y-auto">
         {ACTIVE_ION_IDS.map(id => {
           const ion = ION_MAP[id];
           const actual = actualIons[id] ?? 0;
@@ -6432,12 +6432,12 @@ function WatermancerIonCoverageBars({
 
 function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: string; after?: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 text-slate-300">
-      <div className="flex items-center gap-2">
+    <div className="app-section-header flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 border-b border-slate-700/40 text-slate-300">
+      <div className="app-section-header__title flex min-w-0 items-center gap-2">
         {icon}
-        <h2 className="text-sm font-semibold uppercase tracking-wider">{title}</h2>
+        <h2 className="truncate text-sm font-semibold uppercase tracking-wider">{title}</h2>
       </div>
-      {after}
+      {after && <div className="app-section-header__after flex max-w-full flex-wrap items-center justify-end gap-2">{after}</div>}
     </div>
   );
 }
@@ -8586,13 +8586,13 @@ function HardnessCard({ label, value, saltValue, bottledValue }: {
   label: string; value: number; saltValue: number; bottledValue: number;
 }) {
   return (
-    <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="text-xs text-slate-400 mb-1">{label}</div>
+    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
+      <div className="min-h-8 text-xs leading-relaxed text-slate-400">{label}</div>
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
         <span className="text-sm text-slate-400">ppm CaCO₃</span>
       </div>
-      <div className="flex gap-4 text-xs">
+      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span className="text-slate-400">Salts:</span>
@@ -8621,8 +8621,8 @@ function SimpleMetricCard({ label, value, unit, tone = 'tds' }: {
   }[tone];
 
   return (
-    <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="text-xs text-slate-400 mb-1">{label}</div>
+    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
+      <div className="min-h-8 text-xs leading-relaxed text-slate-400">{label}</div>
       <div className="flex items-baseline gap-2">
         <span className={`text-2xl font-bold ${valueTone}`}>{value.toFixed(1)}</span>
         <span className="text-sm text-slate-400">{unit}</span>
@@ -8635,13 +8635,13 @@ function TdsCard({ value, saltValue, bottledValue }: {
   value: number; saltValue: number; bottledValue: number;
 }) {
   return (
-    <div className="bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="text-xs text-slate-400 mb-1">Total Dissolved Solids (TDS)</div>
+    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
+      <div className="min-h-8 text-xs leading-relaxed text-slate-400">Total Dissolved Solids (TDS)</div>
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
         <span className="text-sm text-slate-400">mg/L</span>
       </div>
-      <div className="flex gap-4 text-xs">
+      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span className="text-slate-400">Salts:</span>
@@ -8674,8 +8674,8 @@ function WaterChemistryCard({
       : 'Add base-water alkalinity to estimate';
 
   return (
-    <details className="group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 sm:px-6 [&::-webkit-details-marker]:hidden">
+    <details className="app-card app-panel-surface group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+      <summary className="app-section-header flex cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-6 [&::-webkit-details-marker]:hidden">
         <div className="flex min-w-0 items-center gap-2">
           <Info className="h-4 w-4 shrink-0 text-sky-300" />
           <span className="text-sm font-semibold uppercase tracking-wider text-slate-300">Water Chemistry</span>
@@ -8686,22 +8686,22 @@ function WaterChemistryCard({
           <span className="text-slate-500 transition-transform group-open:rotate-180">⌄</span>
         </div>
       </summary>
-      <div className="border-t border-slate-700/40 px-4 py-4 sm:px-6">
+      <div className="app-card-body border-t border-slate-700/40">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="text-xs text-slate-400">Estimated final pH</div>
+          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Estimated final pH</div>
             <div className="mt-1 text-2xl font-bold text-cyan-300">
               {hasEstimate ? estimate.toFixed(2) : '—'}
             </div>
           </div>
-          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="text-xs text-slate-400">Base-water pH</div>
+          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Base-water pH</div>
             <div className="mt-1 text-2xl font-bold text-slate-200">
               {basePH !== undefined ? basePH.toFixed(2) : '—'}
             </div>
           </div>
-          <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="text-xs text-slate-400">Base alkalinity</div>
+          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
+            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Base alkalinity</div>
             <div className="mt-1 text-2xl font-bold text-slate-200">
               {baseAlkalinity !== undefined ? baseAlkalinity.toFixed(1) : '—'}
               <span className="ml-1 text-sm font-normal text-slate-500">mg/L CaCO₃</span>

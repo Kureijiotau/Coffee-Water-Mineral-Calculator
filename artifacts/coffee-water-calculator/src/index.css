@@ -107,6 +107,58 @@ body {
     0 0 0 1px rgb(129 140 248 / 0.06) inset;
 }
 
+/* Shared alignment tokens: every workspace reads like one instrument panel. */
+.app-page-stack {
+  gap: 1rem;
+}
+
+.app-card {
+  border-radius: 1rem;
+}
+
+.app-section-header {
+  min-height: 3.25rem;
+  padding-block: 0.875rem;
+}
+
+.app-section-header__title {
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.app-section-header__after {
+  min-width: 0;
+}
+
+.app-card-body {
+  padding: 1rem;
+}
+
+.app-card-body--dense {
+  padding-block: 0.875rem;
+}
+
+.app-control {
+  min-height: 2.5rem;
+}
+
+.app-data-card {
+  min-height: 100%;
+}
+
+@media (min-width: 640px) {
+  .app-card-body {
+    padding-inline: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-watermancer-card,
+  .app-data-card {
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .watermancer-best-match-button {
   border-color: rgb(196 181 253 / 0.55);
   background:
