@@ -5612,7 +5612,7 @@ function App() {
                          className="watermancer-best-match-button__image h-7 w-7 shrink-0 object-contain"
                        />
                        <span aria-hidden="true" className="text-base leading-none">👉</span>
-                       <span>{watermancerActionRunning ? 'Finding best match…' : 'Find best match'}</span>
+                       <span>{watermancerActionRunning ? 'Finding the best match…' : 'Find the best match'}</span>
                        {!watermancerActionRunning && (
                          <span className="hidden rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80 sm:inline">
                            36-route sweep
