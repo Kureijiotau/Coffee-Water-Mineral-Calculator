@@ -6,7 +6,6 @@ import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download
 import { GiSaltShaker } from 'react-icons/gi';
 import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
 import recommendedOvershootImage from '@assets/image_1785734539832.png';
-import fillWaterPromptImage from '@assets/ez_1785735003821.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -5114,12 +5113,12 @@ function App() {
             <div className="px-4 sm:px-6 py-4 space-y-4">
 
                 <div className="mt-2 overflow-hidden rounded-xl border border-slate-700/60">
-                  <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                   <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1.2fr)_minmax(0,0.75fr)] gap-3 bg-slate-950/50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                     <span>Salt</span>
                     <span>Hydration form</span>
                     <span>Route dose</span>
                     <span>Add manually</span>
-                    <span>Allowed</span>
+                     <span>Use</span>
                   </div>
                   <div className="divide-y divide-slate-700/50">
                     {SALTS.map((salt, index) => {
@@ -5207,7 +5206,7 @@ function App() {
                                 : 'border-slate-700 bg-slate-950/40 text-slate-500 hover:border-indigo-300/50 hover:bg-indigo-500/10 hover:text-indigo-200'
                             }`}
                           >
-                            {used ? 'Allowed' : 'Not allowed'}
+                             {used ? 'Use' : 'Not used'}
                           </button>
                         </div>
                       );
@@ -5603,16 +5602,18 @@ function App() {
                        type="button"
                        disabled={watermancerActionRunning}
                        onClick={handleFindBestWatermancerMatch}
-                       className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-violet-300/40 bg-violet-400/10 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/20 disabled:cursor-wait disabled:opacity-70"
-                       title="Try all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
+                       className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
+                       title="Sweep all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
                      >
-                       <img
-                         src={fillWaterPromptImage}
-                         alt="Easy best match"
-                         className="h-5 w-5 rounded-md object-contain"
-                       />
-                       <span aria-hidden="true" className="text-base leading-none">👉</span>
-                       {watermancerActionRunning ? 'Finding best match…' : 'Find best match'}
+                       <span className="watermancer-best-match-button__orb flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10">
+                         <Sparkles className={`h-3.5 w-3.5 ${watermancerActionRunning ? 'animate-spin' : 'transition-transform group-hover:rotate-12 group-hover:scale-110'}`} />
+                       </span>
+                       <span>{watermancerActionRunning ? 'Finding best match…' : 'Find best match'}</span>
+                       {!watermancerActionRunning && (
+                         <span className="hidden rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80 sm:inline">
+                           36-route sweep
+                         </span>
+                       )}
                      </button>
                    )}
                 </div>
