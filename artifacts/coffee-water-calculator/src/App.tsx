@@ -3571,20 +3571,20 @@ function App() {
   };
 
   const appHeader = (
-    <div className={`bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl border border-slate-700/60 overflow-hidden`}>
-      <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-6 py-4 bg-gradient-to-r ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
+    <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-4 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <Calculator className="w-6 h-6 text-white" />
           <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
         </div>
         <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
-          <div role="tablist" aria-label="App workspace" className="flex rounded-lg border border-white/20 bg-black/10 p-0.5">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
               role="tab"
               aria-selected={appTab === 'calculator'}
               onClick={() => setAppTab('calculator')}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'calculator' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Calculator
             </button>
@@ -3593,14 +3593,14 @@ function App() {
               role="tab"
               aria-selected={appTab === 'concentrate'}
               onClick={() => setAppTab('concentrate')}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'concentrate' ? 'bg-white/20 text-white' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Concentrate
             </button>
           </div>
           <button
             onClick={() => setShowTastePreference(true)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-violet-600/90 hover:bg-violet-500 border border-violet-400/40 rounded-lg px-3 py-1.5 transition-all shadow-lg hover:shadow-violet-500/20 hover:scale-105 active:scale-95"
+            className="app-header__cta flex items-center gap-1.5 rounded-lg border border-violet-300/50 bg-violet-600/90 px-3 py-1.5 text-xs font-semibold text-white shadow-lg shadow-violet-950/30 transition-all hover:scale-105 hover:bg-violet-500 hover:shadow-violet-500/30 active:scale-95"
             title="Answer a few questions to find your ideal water profile"
           >
             <Sparkles className="w-4 h-4" />
@@ -3613,11 +3613,13 @@ function App() {
 
   if (appTab === 'concentrate') {
     return (
-      <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="flex w-full max-w-5xl flex-col space-y-4">
           {appHeader}
           <ConcentrateWorkspace
           />
+        </div>
         </div>
         {showTastePreference && (
           <TastePreferenceModal
@@ -3630,13 +3632,14 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex items-start justify-center p-4 sm:p-6 font-sans">
+    <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+      <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
       <div className="flex w-full max-w-5xl flex-col space-y-4">
         {/* Header */}
         {appHeader}
 
         {/* Experience level */}
-        <div className="bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 px-4 sm:px-6 py-3">
+        <div className="app-panel app-panel--quiet rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
@@ -3651,7 +3654,7 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+            <div className="mode-switcher grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
               {([
                 ['brewer', 'Brewer', 'Flavor-first recipe'],
                 ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
@@ -3663,7 +3666,7 @@ function App() {
                   onClick={() => handleNerdLevelChange(value)}
                   aria-pressed={nerdLevel === value}
                   title={description}
-                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  className={`mode-switcher__button rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                     nerdLevel === value
                       ? value === 'alchemist'
                         ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
@@ -3681,7 +3684,7 @@ function App() {
         </div>
 
          {/* Mode guide */}
-         <div className={`rounded-2xl border px-4 py-3 shadow-md backdrop-blur ${modeGuide.tone}`}>
+         <div className={`mode-guide rounded-2xl border px-4 py-3 shadow-md backdrop-blur-xl ${modeGuide.tone}`}>
            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
              <div className="min-w-0">
                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-75">{modeGuide.eyebrow}</div>
@@ -3701,7 +3704,7 @@ function App() {
           {showWatermancer && (
             <nav
               aria-label="Watermancer workflow"
-              className="rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-sm"
+              className="workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-sm"
             >
               <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
@@ -5727,7 +5730,8 @@ function App() {
           </div>
         </div>
       )}
-      {showTastePreference && (
+      </div>
+        {showTastePreference && (
         <TastePreferenceModal
           onClose={() => setShowTastePreference(false)}
           onApply={handleApplyTasteInference}
@@ -8409,7 +8413,7 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
             );
           })
         )}
-      </div>
+    </div>
     </details>
   );
 }
