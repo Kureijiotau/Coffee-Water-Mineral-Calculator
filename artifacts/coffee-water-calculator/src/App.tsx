@@ -372,21 +372,24 @@ export function buildWatermancerPrecisionRecommendation(
   };
 }
 
-export function computeConcentrateStockMassMg(
+export function computeConcentrateStockSaltMassMg(
   strengthPercent: number,
-  volumeMl: number,
+  totalStockMassG: number,
 ): number {
-  if (!Number.isFinite(strengthPercent) || !Number.isFinite(volumeMl)) return 0;
-  return Math.max(0, strengthPercent) * 10 * Math.max(0, volumeMl);
+  if (!Number.isFinite(strengthPercent) || !Number.isFinite(totalStockMassG)) return 0;
+  return Math.max(0, strengthPercent) * 10 * Math.max(0, totalStockMassG);
 }
 
-export function computeConcentrateMgPerDrop(
+export function computeConcentrateSaltMgPerDrop(
   strengthPercent: number,
-  dropsPerMl: number,
+  measuredDrops: number,
+  measuredStockMassG: number,
 ): number {
-  const stockMgPerMl = Math.max(0, strengthPercent) * 10;
-  return stockMgPerMl > 0 && Number.isFinite(dropsPerMl) && dropsPerMl > 0
-    ? stockMgPerMl / dropsPerMl
+  const saltMgPerG = Math.max(0, strengthPercent) * 10;
+  return saltMgPerG > 0
+    && Number.isFinite(measuredDrops) && measuredDrops > 0
+    && Number.isFinite(measuredStockMassG) && measuredStockMassG > 0
+    ? saltMgPerG * measuredStockMassG / measuredDrops
     : 0;
 }
 
@@ -3602,8 +3605,6 @@ function App() {
         <div className="flex w-full max-w-5xl flex-col space-y-4">
           {appHeader}
           <ConcentrateWorkspace
-            dropsPerMl={brewerDropsPerMl}
-            onCalibrate={setBrewerDropsPerMl}
           />
         </div>
         {showTastePreference && (
@@ -5817,21 +5818,15 @@ function App() {
   );
 }
 
-function ConcentrateWorkspace({
-  dropsPerMl,
-  onCalibrate,
-}: {
-  dropsPerMl: number;
-  onCalibrate: (value: number) => void;
-}) {
+function ConcentrateWorkspace() {
   const [saltId, setSaltId] = useState('mgso4');
   const [formIdx, setFormIdx] = useState(
     SALTS.find(salt => salt.id === 'mgso4')?.defaultFormIdx ?? 0,
   );
   const [strengthInput, setStrengthInput] = useState('5');
-  const [volumeInput, setVolumeInput] = useState('50');
-  const [calibrationDrops, setCalibrationDrops] = useState('20');
-  const [calibrationVolume, setCalibrationVolume] = useState('1');
+  const [totalStockMassInput, setTotalStockMassInput] = useState('50');
+  const [calibrationDrops, setCalibrationDrops] = useState('100');
+  const [calibrationStockMass, setCalibrationStockMass] = useState('5');
   const [doseDrops, setDoseDrops] = useState('1');
   const [doseLiters, setDoseLiters] = useState('1');
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
@@ -5840,27 +5835,25 @@ function ConcentrateWorkspace({
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
   const form = salt.hydrationForms[safeFormIdx] ?? salt.hydrationForms[0];
   const strengthPercent = Math.max(0, Number(strengthInput) || 0);
-  const volumeMl = Math.max(0, Number(volumeInput) || 0);
-  const stockMgPerMl = strengthPercent * 10;
-  const stockMassMg = computeConcentrateStockMassMg(strengthPercent, volumeMl);
-  const stockMassLabel = stockMassMg >= 1000
-    ? `${(stockMassMg / 1000).toFixed(2)} g`
-    : `${stockMassMg.toFixed(0)} mg`;
+  const totalStockMassG = Math.max(0, Number(totalStockMassInput) || 0);
+  const saltMassG = computeConcentrateStockSaltMassMg(strengthPercent, totalStockMassG) / 1000;
+  const waterMassG = Math.max(0, totalStockMassG - saltMassG);
+  const saltMassLabel = saltMassG >= 1 ? `${saltMassG.toFixed(2)} g` : `${(saltMassG * 1000).toFixed(0)} mg`;
+  const saltMgPerStockG = strengthPercent * 10;
   const measuredDrops = Number(calibrationDrops);
-  const measuredVolume = Number(calibrationVolume);
-  const measuredDropsPerMl = measuredDrops > 0 && measuredVolume > 0
-    ? measuredDrops / measuredVolume
+  const measuredStockMassG = Number(calibrationStockMass);
+  const measuredGramsPerDrop = measuredDrops > 0 && measuredStockMassG > 0
+    ? measuredStockMassG / measuredDrops
     : 0;
-  const effectiveDropsPerMl = measuredDropsPerMl > 0 ? measuredDropsPerMl : dropsPerMl;
-  const mgPerDrop = computeConcentrateMgPerDrop(strengthPercent, effectiveDropsPerMl);
+  const mgPerDrop = computeConcentrateSaltMgPerDrop(strengthPercent, measuredDrops, measuredStockMassG);
   const finalDrops = Math.max(0, Number(doseDrops) || 0);
   const finalLiters = Math.max(0, Number(doseLiters) || 0);
   const resultingPpm = finalLiters > 0 ? finalDrops * mgPerDrop / finalLiters : 0;
   const warnings = useMemo(
     () => strengthPercent > 0
-      ? checkConcentrate(1000, { [salt.id]: stockMgPerMl })
+      ? checkConcentrate(1000, { [salt.id]: saltMgPerStockG })
       : [],
-    [salt.id, stockMgPerMl, strengthPercent],
+    [salt.id, saltMgPerStockG, strengthPercent],
   );
   const hasError = warnings.some(warning => warning.severity === 'error');
   const toggleStep = (step: number) => {
@@ -5877,7 +5870,7 @@ function ConcentrateWorkspace({
               Concentrate one stock at a time
             </div>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
-              Make a repeatable mineral stock, then use its measured volume or calibrated drops in your brew water.
+              Make a repeatable mineral stock by weight, then use calibrated drops in your brew water.
             </p>
           </div>
           <span className="rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200">
@@ -5925,7 +5918,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="2" title="Set strength and bottle size" />
+        <StepHeading number="2" title="Set strength and stock size" />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentration</span>
@@ -5943,25 +5936,25 @@ function ConcentrateWorkspace({
             </div>
           </label>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Final bottle volume</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total stock weight</span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
                 min="1"
                 step="1"
-                value={volumeInput}
-                onChange={event => setVolumeInput(event.target.value)}
+                value={totalStockMassInput}
+                onChange={event => setTotalStockMassInput(event.target.value)}
                 className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Concentrate bottle volume in milliliters"
+                aria-label="Total concentrate stock weight in grams"
               />
-              <span className="text-sm text-slate-400">mL</span>
+              <span className="text-sm text-slate-400">g</span>
             </div>
           </label>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <SummaryMetric label="Weigh this stock" value={stockMassLabel} detail={salt.name} tone="fuchsia" />
-          <SummaryMetric label="Salt per mL" value={`${stockMgPerMl.toFixed(1)} mg`} detail={salt.name} tone="slate" />
-          <SummaryMetric label="Stock multiplier" value={`×${(strengthPercent * 10).toFixed(1)}`} detail="relative to 1 mg/L" tone="slate" />
+          <SummaryMetric label="Salt to weigh" value={saltMassLabel} detail={salt.name} tone="fuchsia" />
+          <SummaryMetric label="Water to weigh" value={`${waterMassG.toFixed(2)} g`} detail="distilled or RO water" tone="slate" />
+          <SummaryMetric label="Salt per stock gram" value={`${saltMgPerStockG.toFixed(1)} mg`} detail={salt.name} tone="slate" />
         </div>
         {warnings.length > 0 && (
           <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${hasError ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200' : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'}`}>
@@ -5975,10 +5968,10 @@ function ConcentrateWorkspace({
         <StepHeading number="3" title="Make and label the stock" />
         <div className="mt-4 space-y-2">
           {[
-            `Weigh ${stockMassLabel} of ${salt.name} (${form.label}).`,
-            `Add the salt to a clean ${volumeMl || 0} mL bottle.`,
-            'Add distilled or RO water, then fill to the final bottle volume.',
-            `Shake until clear, then label: ${salt.name} · ${strengthPercent || 0}% · ${volumeMl || 0} mL.`,
+            `Weigh ${saltMassLabel} of ${salt.name} (${form.label}).`,
+            `Add ${waterMassG.toFixed(2)} g of distilled or RO water.`,
+            `Combine until the total stock weighs ${totalStockMassG.toFixed(2)} g.`,
+            `Shake until clear, then label: ${salt.name} · ${strengthPercent || 0}% w/w · ${totalStockMassG.toFixed(2)} g total.`,
           ].map((step, index) => (
             <button
               key={step}
@@ -5998,25 +5991,20 @@ function ConcentrateWorkspace({
       <section className="rounded-2xl border border-sky-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
         <StepHeading number="4" title="Calibrate this dropper" />
         <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-          Dispense a known number of drops into a graduated measure, then enter the measured volume.
+          Tare a small container, dispense a known number of drops, then weigh the drops.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <CalibrationInput label="Drops dispensed" value={calibrationDrops} onChange={setCalibrationDrops} ariaLabel="Calibration drops dispensed" />
-          <CalibrationInput label="Measured volume (mL)" value={calibrationVolume} onChange={setCalibrationVolume} ariaLabel="Calibration measured volume" />
+          <CalibrationInput label="Drops weight (g)" value={calibrationStockMass} onChange={setCalibrationStockMass} ariaLabel="Calibration drops weight in grams" />
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <SummaryMetric label="Calibration" value={`${effectiveDropsPerMl.toFixed(1)} drops/mL`} detail="this dropper" tone="sky" />
+          <SummaryMetric label="Weight per drop" value={`${measuredGramsPerDrop.toFixed(4)} g`} detail="this dropper" tone="sky" />
           <SummaryMetric label="Salt per drop" value={`${mgPerDrop.toFixed(2)} mg`} detail={salt.name} tone="sky" />
-          <SummaryMetric label="Volume per drop" value={effectiveDropsPerMl > 0 ? `${(1 / effectiveDropsPerMl).toFixed(3)} mL` : '—'} detail="measured volume" tone="sky" />
+          <SummaryMetric label="Drops per gram" value={measuredGramsPerDrop > 0 ? `${(1 / measuredGramsPerDrop).toFixed(1)}` : '—'} detail="this stock" tone="sky" />
         </div>
-        <button
-          type="button"
-          disabled={measuredDropsPerMl <= 0}
-          onClick={() => onCalibrate(measuredDropsPerMl)}
-          className="mt-3 rounded-xl border border-sky-300/40 bg-sky-400/15 px-4 py-2.5 text-xs font-semibold text-sky-100 transition hover:bg-sky-400/25 disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          Use this calibration in the calculator
-        </button>
+        <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+          This weight calibration applies to this stock. Recalibrate whenever you change the bottle, dropper, or technique.
+        </p>
       </section>
 
       <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">

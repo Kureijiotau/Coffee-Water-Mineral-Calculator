@@ -3,8 +3,8 @@ import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
   buildWatermancerPrecisionRecommendation,
-  computeConcentrateStockMassMg,
-  computeConcentrateMgPerDrop,
+  computeConcentrateStockSaltMassMg,
+  computeConcentrateSaltMgPerDrop,
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
   translateSaltTargetsToIonTargets,
@@ -1091,15 +1091,15 @@ describe('buildWatermancerPrecisionRecommendation', () => {
 });
 
 describe('concentrate calculations', () => {
-  it('calculates the salt mass for any percentage and bottle volume', () => {
-    expect(computeConcentrateStockMassMg(1, 50)).toBeCloseTo(500, 5);
-    expect(computeConcentrateStockMassMg(5, 50)).toBeCloseTo(2500, 5);
-    expect(computeConcentrateStockMassMg(10, 100)).toBeCloseTo(10000, 5);
+  it('calculates the salt mass for any percentage and total stock weight', () => {
+    expect(computeConcentrateStockSaltMassMg(1, 50)).toBeCloseTo(500, 5);
+    expect(computeConcentrateStockSaltMassMg(5, 50)).toBeCloseTo(2500, 5);
+    expect(computeConcentrateStockSaltMassMg(10, 100)).toBeCloseTo(10000, 5);
   });
 
-  it('calculates salt delivered by one calibrated drop', () => {
-    expect(computeConcentrateMgPerDrop(5, 20)).toBeCloseTo(2.5, 5);
-    expect(computeConcentrateMgPerDrop(1, 25)).toBeCloseTo(0.4, 5);
-    expect(computeConcentrateMgPerDrop(5, 0)).toBe(0);
+  it('calculates salt delivered by a weighed group of calibrated drops', () => {
+    expect(computeConcentrateSaltMgPerDrop(5, 100, 5)).toBeCloseTo(2.5, 5);
+    expect(computeConcentrateSaltMgPerDrop(1, 25, 1)).toBeCloseTo(0.4, 5);
+    expect(computeConcentrateSaltMgPerDrop(5, 0, 1)).toBe(0);
   });
 });
