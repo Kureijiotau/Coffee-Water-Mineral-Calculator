@@ -3681,7 +3681,7 @@ function App() {
         </div>
 
          {/* Mode guide */}
-         <div className={`rounded-2xl border px-4 py-3 shadow-xl backdrop-blur ${modeGuide.tone}`}>
+         <div className={`rounded-2xl border px-4 py-3 shadow-md backdrop-blur ${modeGuide.tone}`}>
            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
              <div className="min-w-0">
                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-75">{modeGuide.eyebrow}</div>
@@ -3701,7 +3701,7 @@ function App() {
           {showWatermancer && (
             <nav
               aria-label="Watermancer workflow"
-              className="rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-lg"
+              className="rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-sm"
             >
               <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
@@ -3750,7 +3750,7 @@ function App() {
           </div>
          )}
          {/* Mineral Table */}
-           {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-emerald-400/20 overflow-hidden">
+           {showAlchemist && <div className="order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
            <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <SaltSieveIcon />
@@ -5232,7 +5232,7 @@ function App() {
         )}
 
          {showWatermancer && watermancerLiveResult && (
-           <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/30 shadow-xl overflow-hidden" data-watermancer-stage="match">
+           <div className="order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match">
              <SectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                title="Find closest match"
@@ -6964,7 +6964,7 @@ function BrewerSimpleRecipeCard({
           ))}
         </div>
       </div>
-      <div className="mt-3 rounded-2xl border border-emerald-300/30 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_24px_-12px_rgba(52,211,153,0.5)]">
+      <div className="mt-3 rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_30px_-10px_rgba(52,211,153,0.55)] ring-1 ring-emerald-300/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
