@@ -7250,7 +7250,7 @@ function BrewerSimpleRecipeCard({
               <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
                  Label each bottle with the salt, {pantryBottleMl} mL, 50 mg of that salt per mL, and the date. For consistent dosing, calibrate your dropper to about {dropsPerMl.toFixed(1)} drops per mL.
               </p>
-              {calciumTarget > 0.05 && (
+              {!guideRecipe && calciumTarget > 0.05 && (
                 <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
                   <input
                     type="checkbox"

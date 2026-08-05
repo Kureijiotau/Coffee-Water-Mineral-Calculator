@@ -20,3 +20,9 @@ The guide pantry builder must filter its full salt catalog by the active recipe 
 **Why:** A pantry entry implies a stock the user needs to prepare; showing inactive salts makes the guide recipe disagree with its mineral card and adds unnecessary work.
 
 **How to apply:** For an active guide override, derive both the mineral card and pantry entries from the same positive-target salt set.
+
+While a Robert guide recipe is active, do not show the Brewer calcium-chloride opt-out toggle in the pantry; keep that control available for normal Brewer recipes.
+
+**Why:** Guide recipes are authored as fixed sourced comparisons, while the calcium substitution option belongs to the tunable everyday Brewer workflow.
+
+**How to apply:** Gate only the toggle’s rendering on the presence of the Week 1 override; do not alter calcium calculations or normal Brewer fallback behavior.
