@@ -6977,7 +6977,8 @@ function BrewerSimpleRecipeCard({
   const recipeSalts = [...activeSimpleSalts, ...activeGuideOnlySalts]
     .filter(salt => calciumAvailable || salt.id !== 'cacl2');
   const visiblePantrySalts = guideRecipe
-    ? [...pantrySalts, ...guideOnlySalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0)]
+    ? [...pantrySalts, ...guideOnlySalts]
+      .filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0)
     : pantrySalts;
   const completedRecipeSaltCount = recipeSalts.filter(salt => completedSteps[salt.id]).length;
   const waterReady = recipeSalts.length > 0

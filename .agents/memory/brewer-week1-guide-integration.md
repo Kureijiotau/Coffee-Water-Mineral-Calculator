@@ -14,3 +14,9 @@ The normal Brewer mineral card remains intentionally lightweight. While a Week 1
 **Why:** Robert’s guide teaches mineral choices outside the default Brewer subset, but exposing those salts globally would change the lightweight Brewer experience.
 
 **How to apply:** Gate guide-only salt visibility on the active Week 1 override; return to the original Brewer salt set as soon as the override is cleared.
+
+The guide pantry builder must filter its full salt catalog by the active recipe targets, so unused default salts such as KCl do not appear beside a Robert recipe.
+
+**Why:** A pantry entry implies a stock the user needs to prepare; showing inactive salts makes the guide recipe disagree with its mineral card and adds unnecessary work.
+
+**How to apply:** For an active guide override, derive both the mineral card and pantry entries from the same positive-target salt set.
