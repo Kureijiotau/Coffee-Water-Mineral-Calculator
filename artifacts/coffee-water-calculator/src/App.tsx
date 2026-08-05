@@ -6969,12 +6969,20 @@ function BrewerSimpleRecipeCard({
   const waterReady = recipeSalts.length > 0
     && completedRecipeSaltCount === recipeSalts.length
     && (prepMethod !== 'dropper' || stocksReady);
+  const triggerChecklistAttention = () => {
+    setMakeWaterChecklistFlash(false);
+    window.requestAnimationFrame(() => setMakeWaterChecklistFlash(true));
+    window.setTimeout(() => setMakeWaterChecklistFlash(false), 1200);
+  };
   const openMakeWaterChecklist = () => {
+    setMakeWaterAttention(false);
     setCompletedSteps({});
     setMakeWaterOpen(true);
     setMakeWaterStage(prepMethod === 'dropper' && !stocksReady ? 'choice' : 'dose');
+    triggerChecklistAttention();
   };
   const [makeWaterAttention, setMakeWaterAttention] = useState(false);
+  const [makeWaterChecklistFlash, setMakeWaterChecklistFlash] = useState(false);
 
   useEffect(() => {
     if (recipeHandoffToken === 0) return;
@@ -6982,8 +6990,6 @@ function BrewerSimpleRecipeCard({
     if (!recipeCard) return;
     recipeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setMakeWaterAttention(true);
-    const attentionTimer = window.setTimeout(() => setMakeWaterAttention(false), 1800);
-    return () => window.clearTimeout(attentionTimer);
   }, [recipeHandoffToken]);
 
   return (
@@ -7072,7 +7078,7 @@ function BrewerSimpleRecipeCard({
             onClick={openMakeWaterChecklist}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99] ${
               makeWaterAttention
-                ? 'animate-pulse ring-4 ring-emerald-200/80 shadow-[0_0_32px_rgba(110,231,183,0.75)]'
+                ? 'brewer-make-water-attention ring-4 ring-emerald-200/80 shadow-[0_0_32px_rgba(110,231,183,0.75)]'
                 : ''
             }`}
           >
@@ -7094,7 +7100,9 @@ function BrewerSimpleRecipeCard({
         </p>
       </div>
       {makeWaterOpen && (
-        <div className="mt-3 rounded-xl border border-emerald-400/25 bg-slate-950/25 p-3">
+        <div className={`mt-3 rounded-xl border border-emerald-400/25 bg-slate-950/25 p-3 ${
+          makeWaterChecklistFlash ? 'brewer-make-water-checklist-flash' : ''
+        }`}>
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <div className="text-xs font-semibold uppercase tracking-wider text-emerald-200">

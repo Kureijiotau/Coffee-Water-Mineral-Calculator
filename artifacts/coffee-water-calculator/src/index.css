@@ -380,6 +380,45 @@ body {
   }
 }
 
+@keyframes brewer-make-water-attention {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.68;
+    transform: scale(1.025);
+  }
+}
+
+.brewer-make-water-attention {
+  animation: brewer-make-water-attention 900ms ease-in-out 10;
+}
+
+@keyframes brewer-make-water-checklist-flash {
+  0%, 100% {
+    border-color: rgb(52 211 153 / 0.25);
+    box-shadow: 0 0 0 rgb(110 231 183 / 0);
+    filter: brightness(1);
+  }
+  50% {
+    border-color: rgb(167 243 208 / 0.95);
+    box-shadow: 0 0 28px rgb(110 231 183 / 0.65);
+    filter: brightness(1.3);
+  }
+}
+
+.brewer-make-water-checklist-flash {
+  animation: brewer-make-water-checklist-flash 400ms ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brewer-make-water-attention,
+  .brewer-make-water-checklist-flash {
+    animation: none !important;
+  }
+}
+
 /* The sodium correction control is a tiny playful salt-shaker interaction:
    resting upright when off, inverted when active, and shaking out grains on
    hover without changing the toggle's actual click behavior. */
