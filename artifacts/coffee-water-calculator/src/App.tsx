@@ -18,6 +18,7 @@ import {
 } from '@/recipes';
 import LabelScanner from '@/LabelScanner';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
+import Week1Guide, { type Week1Recipe } from './Week1Guide';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadNerdLevel, saveNerdLevel, createProfile,
@@ -1916,6 +1917,7 @@ function App() {
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
+  const [brewerRecipeOverride, setBrewerRecipeOverride] = useState<Week1Recipe | null>(null);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
     const entry: MineralWaterEntry = {
@@ -2182,6 +2184,7 @@ function App() {
       // active Watermancer recipe and source-water graph into it: that keeps
       // hidden calculations alive and makes the builder feel sluggish.
       setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
+      setBrewerRecipeOverride(null);
       setRows(defaultBrewerRows());
       setMineralWaters([]);
       setAdditionWaters([]);
@@ -2238,6 +2241,15 @@ function App() {
   const handleApplyTasteInference = (inference: TasteInference) => {
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
+    setBrewerRecipeOverride({
+      id: inference.recipe.id,
+      targets: Object.fromEntries(
+        Object.entries(inference.recipe.salts).map(([id, entry]) => [id, num(entry.target)]),
+      ),
+      formIdx: Object.fromEntries(
+        Object.entries(inference.recipe.salts).map(([id, entry]) => [id, entry.formIdx]),
+      ),
+    });
     setRows(SALTS.map(salt => {
       const entry = inference.recipe.salts[salt.id];
       return entry
@@ -2280,6 +2292,7 @@ function App() {
   );
   const applyBrewerFlavor = (flavor: BrewerFlavorInput) => {
     const suggestedSaltTargets = brewerSaltSuggestion(flavor);
+    setBrewerRecipeOverride(null);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
     setRows(SALTS.map(salt => ({
@@ -2292,6 +2305,15 @@ function App() {
   const handleBrewerFlavorChange = (flavor: BrewerFlavorInput) => {
     setBrewerFlavor(flavor);
     applyBrewerFlavor(flavor);
+  };
+  const handleApplyWeek1Recipe = (recipe: Week1Recipe) => {
+    setBrewerRecipeOverride(recipe);
+    setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
+    setRows(SALTS.map(salt => ({
+      target: recipe.targets[salt.id] ? String(recipe.targets[salt.id]) : '',
+      formIdx: recipe.formIdx[salt.id] ?? salt.defaultFormIdx ?? 0,
+    })));
   };
 
   // Weighted-average concentrations across all bottled water sources. Base
@@ -2323,8 +2345,16 @@ function App() {
   // Brewer is intentionally a simple RO / distilled water workflow. Keep its
   // flavor-generated recipe independent from the advanced water-aware targets
   // used by Alchemist and Watermancer.
-  const brewerModeSaltTargets = nerdLevel === 'brewer' ? brewerSuggestedSaltTargets : saltTargets;
-  const brewerModeIonTotals = nerdLevel === 'brewer' ? brewerSuggestedIons : ionTotals;
+  const brewerActiveSaltTargets = useMemo(
+    () => brewerRecipeOverride?.targets ?? brewerSuggestedSaltTargets,
+    [brewerRecipeOverride, brewerSuggestedSaltTargets],
+  );
+  const brewerActiveIons = useMemo(
+    () => computeIonTotals(brewerActiveSaltTargets, {}, 1),
+    [brewerActiveSaltTargets],
+  );
+  const brewerModeSaltTargets = nerdLevel === 'brewer' ? brewerActiveSaltTargets : saltTargets;
+  const brewerModeIonTotals = nerdLevel === 'brewer' ? brewerActiveIons : ionTotals;
   const brewerModeGh = computeGH(brewerModeIonTotals);
   const brewerModeKh = computeKH(brewerModeIonTotals);
   const brewerModeTds = Object.values(brewerModeIonTotals).reduce((total, ppm) => total + ppm, 0);
@@ -2954,6 +2984,7 @@ function App() {
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
     setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
+    setBrewerRecipeOverride(null);
     setMineralWaters([]);
     setAdditionWaters([]);
     setLiters('1');
@@ -3044,6 +3075,7 @@ function App() {
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
   }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
   const applyRecipeObject = (recipe: SaltRecipe) => {
+    setBrewerRecipeOverride(null);
     setActiveRecipeId(recipe.id);
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
     if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
@@ -3064,12 +3096,17 @@ function App() {
 
   const applyRecipe = (recipeId: string) => {
     setExternalRecipeId('custom');
-    if (recipeId === 'custom') { setActiveRecipeId('custom'); return; }
+    if (recipeId === 'custom') {
+      setBrewerRecipeOverride(null);
+      setActiveRecipeId('custom');
+      return;
+    }
     const recipe = allRecipes.find(r => r.id === recipeId);
     if (recipe) applyRecipeObject(recipe);
   };
 
   const applyExternalRecipe = (recipeId: string) => {
+    setBrewerRecipeOverride(null);
     setExternalRecipeId(recipeId);
     if (recipeId === 'custom') return;
     const recipe = ROBERT_ASAMI_RECIPES.find(r => r.id === recipeId);
@@ -3177,6 +3214,7 @@ function App() {
   };
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
+    setBrewerRecipeOverride(null);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
     const safePatch = patch.target === undefined
@@ -3920,14 +3958,15 @@ function App() {
            </div>}
          {nerdLevel === 'brewer' && (
            <>
-      <BrewerFlavorPanel
+              <BrewerFlavorPanel
                flavor={brewerFlavor}
-               suggestedIons={brewerSuggestedIons}
+                suggestedIons={brewerActiveIons}
                onChange={handleBrewerFlavorChange}
-        onOpenStartingRecipe={() => setShowTastePreference(true)}
+                onOpenStartingRecipe={() => setShowTastePreference(true)}
              />
+              <Week1Guide onApplyRecipe={handleApplyWeek1Recipe} />
              <BrewerSimpleRecipeCard
-               saltTargets={brewerSuggestedSaltTargets}
+                saltTargets={brewerActiveSaltTargets}
                recipeRows={rows}
                liters={L}
                volumeInput={liters}
