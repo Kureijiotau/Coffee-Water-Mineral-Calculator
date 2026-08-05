@@ -23,6 +23,11 @@ export default defineConfig({
         'src',
         'testAssetMock.ts',
       ),
+      '@assets/robert-asami-logo-transparent.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
     },
   },
 });

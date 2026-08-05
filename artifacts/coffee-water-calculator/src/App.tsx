@@ -2315,6 +2315,12 @@ function App() {
       formIdx: recipe.formIdx[salt.id] ?? salt.defaultFormIdx ?? 0,
     })));
   };
+  const scrollToWeek1Guide = () => {
+    const guide = document.getElementById('brewer-week1-guide');
+    if (!guide) return;
+    guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => guide.focus({ preventScroll: true }), 450);
+  };
 
   // Weighted-average concentrations across all bottled water sources. Base
   // water and addition water are both part of the final batch composition.
@@ -3676,6 +3682,35 @@ function App() {
              </div>
            </div>
          </div>
+
+          {nerdLevel === 'brewer' && (
+            <section className="relative overflow-hidden rounded-2xl border border-teal-300/25 bg-gradient-to-br from-teal-950/80 via-slate-900/80 to-indigo-950/70 px-5 py-5 shadow-xl shadow-teal-950/15 sm:px-6">
+              <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-teal-300/10 blur-3xl" />
+              <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-indigo-400/10 blur-3xl" />
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-200/75">
+                    <FlaskConical className="h-4 w-4 text-teal-300" />
+                    New to water?
+                  </div>
+                  <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                    Hey, new to water? Start here <span aria-hidden="true">👉</span>
+                  </h2>
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
+                    Robert Asami&apos;s one-week crash course turns mineral choices into seven small, easy-to-taste experiments.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={scrollToWeek1Guide}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-teal-200/35 bg-teal-300/15 px-4 py-3 text-sm font-semibold text-teal-100 transition hover:-translate-y-0.5 hover:border-teal-200/65 hover:bg-teal-300/25 hover:shadow-lg hover:shadow-teal-950/25 focus:outline-none focus:ring-2 focus:ring-teal-200/70 focus:ring-offset-2 focus:ring-offset-slate-900"
+                >
+                  Start the 7-day crash course
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            </section>
+          )}
 
           {showWatermancer && (
             <nav
