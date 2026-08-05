@@ -7242,7 +7242,7 @@ function BrewerSimpleRecipeCard({
                     className="mt-0.5 h-3.5 w-3.5 accent-violet-400"
                   />
                   <span>
-                    I don’t have calcium chloride
+                    I don’t have calcium chloride 😔
                     <span className="mt-0.5 block text-[10px] text-slate-500">Skip it and make a lighter-bodied version.</span>
                   </span>
                 </label>
