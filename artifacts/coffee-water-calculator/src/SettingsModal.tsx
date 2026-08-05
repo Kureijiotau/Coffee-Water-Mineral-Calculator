@@ -157,9 +157,9 @@ export function SettingsModal({
                   </button>
                   <button
                     onClick={cancelNaming}
-                    className="flex items-center justify-center w-9 h-9 text-slate-400 bg-slate-700/40 border border-slate-600/40 rounded-lg hover:bg-slate-700/60 transition"
+                    className="flex items-center justify-center gap-1.5 h-9 px-3 text-sm text-slate-300 bg-slate-700/40 border border-slate-600/40 rounded-lg hover:bg-slate-700/60 transition"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" /> Cancel
                   </button>
                 </div>
               )}
