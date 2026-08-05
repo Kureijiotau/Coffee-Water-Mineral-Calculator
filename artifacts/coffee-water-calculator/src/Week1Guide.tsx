@@ -78,7 +78,7 @@ const styles = `
   .week1-attribution { display: flex; align-items: center; gap: 13px; min-width: 0; }
   .week1-attribution-link { display: inline-flex; align-items: center; padding: 7px 10px; border: 1px solid rgba(142,228,220,.22); border-radius: 9px; background: linear-gradient(135deg, rgba(15, 68, 75, .62), rgba(29, 55, 99, .56)); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 22px rgba(0,0,0,.14); transition: border-color .2s ease, background .2s ease, transform .2s ease; }
   .week1-attribution-link:hover { border-color: rgba(142,228,220,.52); background: linear-gradient(135deg, rgba(19, 88, 91, .78), rgba(38, 70, 121, .72)); transform: translateY(-1px); }
-  .week1-attribution-link img { display: block; width: 132px; height: auto; max-width: 100%; opacity: .92; }
+  .week1-attribution-link img { display: block; width: 148px; height: auto; max-width: 100%; opacity: .92; }
   .week1-kicker { display: flex; align-items: center; gap: 10px; color: var(--week1-cyan); font: 700 10px/1 "Space Mono", monospace; letter-spacing: .16em; }
   .week1-kicker-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(142,228,220,.4); border-radius: 8px; background: rgba(142,228,220,.08); }
   .week1-kicker-mark svg { width: 14px; height: 14px; }
@@ -170,7 +170,7 @@ const styles = `
     .week1-top-note { display: none; }
     .week1-attribution { gap: 0; }
     .week1-attribution-link { padding: 6px 8px; }
-    .week1-attribution-link img { width: 112px; }
+    .week1-attribution-link img { width: 126px; }
     .week1-header { display: block; margin-bottom: 23px; }
     .week1-header h2 { max-width: 340px; font-size: 40px; }
     .week1-lesson-badge { display: inline-flex; margin-top: 17px; }
