@@ -1918,6 +1918,7 @@ function App() {
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [brewerRecipeOverride, setBrewerRecipeOverride] = useState<Week1Recipe | null>(null);
+  const [brewerRecipeHandoffToken, setBrewerRecipeHandoffToken] = useState(0);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
     const entry: MineralWaterEntry = {
@@ -2310,6 +2311,7 @@ function App() {
     setBrewerRecipeOverride(recipe);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
+    setBrewerRecipeHandoffToken(token => token + 1);
     setRows(SALTS.map(salt => ({
       target: recipe.targets[salt.id] ? String(recipe.targets[salt.id]) : '',
       formIdx: recipe.formIdx[salt.id] ?? salt.defaultFormIdx ?? 0,
@@ -4001,6 +4003,7 @@ function App() {
              />
               <Week1Guide onApplyRecipe={handleApplyWeek1Recipe} />
              <BrewerSimpleRecipeCard
+                recipeHandoffToken={brewerRecipeHandoffToken}
                 saltTargets={brewerActiveSaltTargets}
                recipeRows={rows}
                liters={L}
@@ -6855,6 +6858,7 @@ function BrewerDropperCalibrationCard({
 }
 
 function BrewerSimpleRecipeCard({
+  recipeHandoffToken,
   saltTargets,
   recipeRows,
   liters,
@@ -6866,6 +6870,7 @@ function BrewerSimpleRecipeCard({
   dropsPerMl,
   onOpenSteps,
 }: {
+  recipeHandoffToken: number;
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
@@ -6969,6 +6974,17 @@ function BrewerSimpleRecipeCard({
     setMakeWaterOpen(true);
     setMakeWaterStage(prepMethod === 'dropper' && !stocksReady ? 'choice' : 'dose');
   };
+  const [makeWaterAttention, setMakeWaterAttention] = useState(false);
+
+  useEffect(() => {
+    if (recipeHandoffToken === 0) return;
+    const recipeCard = document.getElementById('brewer-mineral-recipe');
+    if (!recipeCard) return;
+    recipeCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setMakeWaterAttention(true);
+    const attentionTimer = window.setTimeout(() => setMakeWaterAttention(false), 1800);
+    return () => window.clearTimeout(attentionTimer);
+  }, [recipeHandoffToken]);
 
   return (
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
@@ -7003,7 +7019,7 @@ function BrewerSimpleRecipeCard({
           ))}
         </div>
       </div>
-      <div className="mt-3 rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_30px_-10px_rgba(52,211,153,0.55)] ring-1 ring-emerald-300/10">
+      <div id="brewer-mineral-recipe" className="mt-3 scroll-mt-6 rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_30px_-10px_rgba(52,211,153,0.55)] ring-1 ring-emerald-300/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
@@ -7054,7 +7070,11 @@ function BrewerSimpleRecipeCard({
           <button
             type="button"
             onClick={openMakeWaterChecklist}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99]"
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-400/20 px-4 py-3 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-400/30 hover:shadow-lg hover:shadow-emerald-500/10 active:scale-[0.99] ${
+              makeWaterAttention
+                ? 'animate-pulse ring-4 ring-emerald-200/80 shadow-[0_0_32px_rgba(110,231,183,0.75)]'
+                : ''
+            }`}
           >
             <Check className="h-4 w-4" />
             Make this water
