@@ -10,7 +10,6 @@ import {
   FlaskConical,
   Info,
   LockKeyhole,
-  Sparkles,
   Target,
 } from 'lucide-react';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
@@ -88,7 +87,7 @@ const styles = `
   .week1-header h2 { margin: 0 0 10px; color: var(--week1-text); font: 500 clamp(30px, 4vw, 48px)/.98 "Bricolage Grotesque", "Trebuchet MS", sans-serif; letter-spacing: -.045em; }
   .week1-header p { margin: 0; max-width: 535px; color: var(--week1-muted); font-size: 13px; line-height: 1.65; }
   .week1-lesson-badge { flex: 0 0 auto; display: flex; align-items: center; gap: 9px; padding: 10px 13px; color: var(--week1-cyan-soft); border: 1px solid rgba(142,228,220,.25); border-radius: 10px; background: rgba(16, 58, 63, .52); font: 600 10px/1 "Space Mono", monospace; letter-spacing: .08em; text-transform: uppercase; }
-  .week1-lesson-badge svg { color: var(--week1-emerald); width: 14px; height: 14px; }
+  .week1-lesson-mark { flex: 0 0 14px; width: 14px; height: 14px; display: block; background-image: url(${robertAsamiLogo}); background-position: left center; background-repeat: no-repeat; background-size: auto 14px; }
   .week1-rail { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 18px; padding: 15px 17px 14px; border: 1px solid var(--week1-line); border-radius: 14px; background: rgba(13, 32, 39, .77); box-shadow: 0 16px 46px rgba(0,0,0,.12); }
   .week1-step { min-width: 0; appearance: none; border: 0; padding: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
   .week1-step:focus-visible, .week1-button:focus-visible, .week1-recipe-button:focus-visible, .week1-summary:focus-visible, .week1-source:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
@@ -381,7 +380,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
               <h2 id="week1-title">Build your water intuition.</h2>
               <p>Seven small experiments to make mineral choices feel less like a formula and more like a taste you can recognize.</p>
             </div>
-            <div className="week1-lesson-badge"><Sparkles /> Robert Asami · 7 day path</div>
+            <div className="week1-lesson-badge"><span className="week1-lesson-mark" aria-hidden="true" /> Robert Asami · 7 day path</div>
           </section>
 
           <nav className="week1-rail" aria-label="Week 1 lesson progress">
