@@ -132,7 +132,9 @@ const styles = `
   .week1-learning { position: relative; overflow: hidden; padding: 24px; background: linear-gradient(145deg, rgba(39, 48, 104, .83), rgba(20, 48, 60, .92)); }
   .week1-learning::after { content: ""; position: absolute; width: 160px; height: 160px; right: -54px; top: -54px; border: 1px solid rgba(159,169,255,.24); border-radius: 50%; box-shadow: 0 0 0 20px rgba(159,169,255,.035), 0 0 0 42px rgba(159,169,255,.025); pointer-events: none; }
   .week1-learning > * { position: relative; z-index: 1; }
-  .week1-prompt-mark { width: 35px; height: 35px; display: grid; place-items: center; margin-bottom: 20px; border-radius: 10px; color: #c9ceff; background: rgba(159,169,255,.13); }
+  .week1-prompt-mark { width: 35px; height: 35px; display: grid; place-items: center; margin-bottom: 20px; border-radius: 10px; color: #c9ceff; background: rgba(159,169,255,.13); transition: color .2s ease, background .2s ease, transform .2s ease; }
+  .week1-prompt-mark:hover { color: #f0f0ff; background: rgba(159,169,255,.25); transform: translateY(-1px); }
+  .week1-prompt-mark:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
   .week1-prompt-mark svg { width: 17px; height: 17px; }
   .week1-learning h4 { max-width: 270px; margin: 0 0 13px; color: #f0f0ff; font: 500 22px/1.1 "Bricolage Grotesque", sans-serif; letter-spacing: -.025em; }
   .week1-learning p { margin: 0; color: #b6c1d1; font-size: 12px; line-height: 1.65; }
@@ -446,7 +448,16 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
 
             <aside className="week1-side">
               <section className="week1-card week1-learning" aria-labelledby="week1-prompt-title">
-                <div className="week1-prompt-mark"><CircleHelp /></div>
+                <a
+                  className="week1-prompt-mark"
+                  href="https://www.robertasami.com/water#rasamifilter"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Open Robert Asami's original Week 1 water guide"
+                  title="Open Robert Asami's original Week 1 water guide"
+                >
+                  <CircleHelp />
+                </a>
                 <div className="week1-eyebrow">TODAY&apos;S TASTING PROMPT</div>
                 <h4 id="week1-prompt-title">{currentDay.prompt}</h4>
                 <p>{currentDay.description}</p>
