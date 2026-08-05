@@ -116,7 +116,7 @@ const styles = `
   .week1-ingredient { padding: 14px 7px; border-top: 1px solid rgba(151,223,215,.1); }
   .week1-ingredient-name { display: flex; min-width: 0; align-items: center; gap: 11px; }
   .week1-ingredient-icon { width: 32px; height: 32px; display: grid; flex: 0 0 auto; align-items: center; justify-items: center; padding: 0; border: 1px solid rgba(142,228,220,.18); border-radius: 9px; background: rgba(142,228,220,.07); color: var(--week1-cyan); line-height: 0; }
-  .week1-ingredient-icon svg { display: block; width: 15px; height: 15px; margin: 0; }
+  .week1-ingredient-icon svg { display: block; width: 15px; height: 15px; margin: 0; transform: translateY(1px); }
   .week1-ingredient-name strong { display: block; color: var(--week1-text); font-size: 13px; font-weight: 600; line-height: 1.3; }
   .week1-ingredient-name span { display: block; margin-top: 4px; color: var(--week1-faint); font-size: 11px; line-height: 1.3; }
   .week1-amount { color: var(--week1-text); font: 600 12px/1.2 "Space Mono", monospace; }
