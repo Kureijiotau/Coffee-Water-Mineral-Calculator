@@ -18,6 +18,7 @@ import {
   totalWatermancerDeviation,
   executeWatermancerRouteCandidate,
   watermancerRouteWaterInputs,
+  watermancerRouteMatchesCurrentInputs,
   isWatermancerActionSnapshotCurrent,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
@@ -348,6 +349,37 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(isWatermancerActionSnapshotCurrent(4, 4, 'same', 'same')).toBe(true);
     expect(isWatermancerActionSnapshotCurrent(4, 5, 'same', 'same')).toBe(false);
     expect(isWatermancerActionSnapshotCurrent(4, 4, 'old', 'new')).toBe(false);
+  });
+
+  it('keeps the exact swept route identifiable after the winner is applied', () => {
+    const base = water('base', { calcium: 10 });
+    const winner = findBestWatermancerMatch({
+      plan: {
+        targetIons: { calcium: 10 },
+        selectedWaters: [base],
+        selectedSalts: ['cacl2'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [base],
+      additionWaters: [],
+    }).winner;
+
+    expect(winner).toBeDefined();
+    expect(watermancerRouteMatchesCurrentInputs(
+      winner!.route,
+      winner!.route.plan,
+      winner!.route.baseWaters,
+      winner!.route.additionWaters,
+    )).toBe(true);
   });
 
   it('benchmarks every strategy with strict and permissive deviation modes', () => {

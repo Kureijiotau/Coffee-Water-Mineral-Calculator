@@ -1022,6 +1022,42 @@ export type WatermancerRouteInputs = {
   additionWaters: MineralWaterEntry[];
 };
 
+function watermancerPlanComparisonSignature(plan: WatermancerPlan): string {
+  return JSON.stringify({
+    targetIons: plan.targetIons,
+    selectedSalts: plan.selectedSalts,
+    fixedSaltDoses: plan.fixedSaltDoses,
+    strategy: plan.strategy,
+    saltObjective: plan.saltObjective,
+    ionPriority: plan.ionPriority,
+    allowOvershoot: plan.allowOvershoot,
+    allowedOvershootIons: plan.allowedOvershootIons,
+    overshootLimits: plan.overshootLimits,
+    softDeficitIons: plan.softDeficitIons,
+    softDeficitLimits: plan.softDeficitLimits,
+    minimumSaltDosePpm: plan.minimumSaltDosePpm,
+    overshootOrder: plan.overshootOrder,
+  });
+}
+
+function watermancerWaterComparisonSignature(entries: MineralWaterEntry[]): string {
+  return JSON.stringify(entries.map(entry => ({
+    id: entry.id,
+    volumeMl: entry.volumeMl,
+  })));
+}
+
+export function watermancerRouteMatchesCurrentInputs(
+  route: WatermancerRouteCandidate,
+  plan: WatermancerPlan,
+  baseWaters: MineralWaterEntry[],
+  additionWaters: MineralWaterEntry[],
+): boolean {
+  return watermancerPlanComparisonSignature(route.plan) === watermancerPlanComparisonSignature(plan)
+    && watermancerWaterComparisonSignature(route.baseWaters) === watermancerWaterComparisonSignature(baseWaters)
+    && watermancerWaterComparisonSignature(route.additionWaters) === watermancerWaterComparisonSignature(additionWaters);
+}
+
 export function isWatermancerActionSnapshotCurrent(
   actionGeneration: number,
   currentGeneration: number,
@@ -2059,6 +2095,7 @@ function App() {
     deviationMode: WatermancerBestMatchDeviationMode;
     totalDeviation: number;
   } | null>(null);
+  const [watermancerBestMatchRoute, setWatermancerBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
@@ -2208,6 +2245,7 @@ function App() {
       setWatermancerSaltObjective('balanced');
       setWatermancerBestMatchDeviationMode(null);
       setWatermancerBestMatchSummary(null);
+      setWatermancerBestMatchRoute(null);
       setWatermancerBestMatchMessage(null);
       setWatermancerBestMatchRunning(false);
       setWatermancerActionRunning(false);
@@ -2570,6 +2608,7 @@ function App() {
     if (!beginWatermancerAction()) return;
     setWatermancerBestMatchDeviationMode(null);
     setWatermancerBestMatchSummary(null);
+      setWatermancerBestMatchRoute(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerRecalculationNonce(current => current + 1);
     setWatermancerActionMessage('Current matching settings applied.');
@@ -2647,6 +2686,7 @@ function App() {
         const winner = sweep.winner;
         if (!winner) {
           setWatermancerBestMatchSummary(null);
+          setWatermancerBestMatchRoute(null);
           setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
           return;
         }
@@ -2656,6 +2696,7 @@ function App() {
         setAutoFillCustomPriority([...winner.priority]);
         setWatermancerBestMatchDeviationMode(winner.deviationMode);
         setMineralWaters(winner.route.baseWaters);
+        setWatermancerBestMatchRoute(winner.route);
         setWatermancerBestMatchSummary({
           strategy: winner.strategy,
           saltObjective: winner.saltObjective,
@@ -2678,7 +2719,15 @@ function App() {
     // synchronous 36-route sweep starts.
     window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
-  const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
+  const appliedBestMatchRoute = watermancerBestMatchRoute
+    && watermancerRouteMatchesCurrentInputs(
+      watermancerBestMatchRoute,
+      watermancerPlan,
+      mineralWaters,
+      additionWaters,
+    )
+    ? watermancerBestMatchRoute
+    : null;
   const activeWatermancerRoute = useMemo(
     () => showWatermancer
       ? recalculateWatermancerRouteAtCurrentVolumes(
@@ -2688,12 +2737,13 @@ function App() {
           baseWaters: mineralWaters,
           additionWaters,
         },
-        watermancerLiveResult.primaryPlan,
-        watermancerLiveResult.primaryPlan.saltTargets,
+        appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan,
+        (appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan).saltTargets,
       )
       : watermancerLiveResult.primaryPlan,
     [
       additionWaters,
+      appliedBestMatchRoute,
       batchMl,
       mineralWaters,
       showWatermancer,
@@ -2701,6 +2751,7 @@ function App() {
       watermancerLiveResult,
     ],
   );
+  const activeWatermancerSaltTargets = activeWatermancerRoute.saltTargets;
   const watermancerPrecisionRecommendation = useMemo(
     () => showWatermancer
       ? buildWatermancerPrecisionRecommendation(
@@ -3051,6 +3102,7 @@ function App() {
     setAutoCraftPreset('closest-match');
     setWatermancerBestMatchDeviationMode(null);
     setWatermancerBestMatchSummary(null);
+    setWatermancerBestMatchRoute(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
@@ -5686,9 +5738,11 @@ function App() {
                          className="watermancer-best-match-button__image h-7 w-7 shrink-0 object-contain"
                        />
                        <span aria-hidden="true" className="text-base leading-none">👉</span>
-                       <span>{watermancerActionRunning ? 'Finding the best match…' : 'Find the best match'}</span>
+                        <span aria-live="polite">
+                          {watermancerActionRunning ? 'Sweeping 36 routes…' : 'Find the best match'}
+                        </span>
                        {!watermancerActionRunning && (
-                         <span className="hidden rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80 sm:inline">
+                          <span className="rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80">
                            36-route sweep
                          </span>
                        )}

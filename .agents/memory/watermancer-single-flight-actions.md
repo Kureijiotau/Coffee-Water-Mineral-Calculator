@@ -14,3 +14,9 @@ Best-match actions should also capture an input signature and validate it before
 **Why:** Mobile browsers can accept a touch, repaint, and process a nearby edit before the deferred route sweep runs, so committing the old winner creates apparently random builds.
 
 **How to apply:** Yield one paint before expensive sweeps, compare the captured signature with the latest one, and always release the shared busy lock through the completion path.
+
+The 36-route winner must remain the active displayed route after the sweep; do not apply only its settings and then fall back to the ordinary four-route primary solver.
+
+**Why:** Re-solving after selection can produce a different recipe from the candidate that was scored, making the button appear not to have performed the best-match sweep.
+
+**How to apply:** Retain the winning route, verify it still matches the current inputs, and use its evaluated salt targets and water volumes for the active Watermancer result.
