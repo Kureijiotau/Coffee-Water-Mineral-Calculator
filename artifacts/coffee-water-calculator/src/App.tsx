@@ -4004,6 +4004,7 @@ function App() {
               <Week1Guide onApplyRecipe={handleApplyWeek1Recipe} />
              <BrewerSimpleRecipeCard
                 recipeHandoffToken={brewerRecipeHandoffToken}
+                 guideRecipe={brewerRecipeOverride}
                 saltTargets={brewerActiveSaltTargets}
                recipeRows={rows}
                liters={L}
@@ -6859,6 +6860,7 @@ function BrewerDropperCalibrationCard({
 
 function BrewerSimpleRecipeCard({
   recipeHandoffToken,
+  guideRecipe,
   saltTargets,
   recipeRows,
   liters,
@@ -6871,6 +6873,7 @@ function BrewerSimpleRecipeCard({
   onOpenSteps,
 }: {
   recipeHandoffToken: number;
+  guideRecipe: Week1Recipe | null;
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
@@ -6922,6 +6925,10 @@ function BrewerSimpleRecipeCard({
   if (calciumTarget > 0.05) {
     simpleSalts.push({ id: 'cacl2', label: 'Calcium chloride', note: 'optional extra body' });
   }
+  const guideOnlySalts = [
+    { id: 'mgcl2', label: 'Magnesium chloride', note: 'magnesium & structure' },
+    { id: 'khco3', label: 'Potassium bicarbonate', note: 'alternate buffer' },
+  ];
 
   const getMassLabel = (id: string) => {
     const salt = SALTS.find(item => item.id === id);
@@ -6957,6 +6964,9 @@ function BrewerSimpleRecipeCard({
   const universalStockMassPerMlLabel = (saltLabel: string) =>
     `1 mL = ${UNIVERSAL_STOCK_MG_PER_ML.toFixed(0)} mg ${saltLabel}`;
   const activeSimpleSalts = simpleSalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0);
+  const activeGuideOnlySalts = guideRecipe
+    ? guideOnlySalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0)
+    : [];
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
     { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
@@ -6964,7 +6974,11 @@ function BrewerSimpleRecipeCard({
     { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
     { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
   ];
-  const recipeSalts = activeSimpleSalts.filter(salt => calciumAvailable || salt.id !== 'cacl2');
+  const recipeSalts = [...activeSimpleSalts, ...activeGuideOnlySalts]
+    .filter(salt => calciumAvailable || salt.id !== 'cacl2');
+  const visiblePantrySalts = guideRecipe
+    ? [...pantrySalts, ...guideOnlySalts.filter(salt => (effectiveSaltTargets[salt.id] ?? 0) > 0)]
+    : pantrySalts;
   const completedRecipeSaltCount = recipeSalts.filter(salt => completedSteps[salt.id]).length;
   const waterReady = recipeSalts.length > 0
     && completedRecipeSaltCount === recipeSalts.length
@@ -7215,7 +7229,9 @@ function BrewerSimpleRecipeCard({
                 </label>
               )}
               <div className="grid gap-1.5 sm:grid-cols-2">
-                {pantrySalts.filter(salt => calciumAvailable || salt.id !== 'cacl2').map(salt => (
+                {visiblePantrySalts
+                  .filter(salt => calciumAvailable || salt.id !== 'cacl2')
+                  .map(salt => (
                   <div key={`prep-${salt.id}`} className="flex items-center justify-between gap-3 rounded-lg bg-slate-950/25 px-3 py-2">
                     <div className="min-w-0">
                       <span className="block text-xs text-slate-200">{salt.label}</span>
