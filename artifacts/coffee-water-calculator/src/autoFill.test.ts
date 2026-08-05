@@ -18,6 +18,7 @@ import {
   totalWatermancerDeviation,
   executeWatermancerRouteCandidate,
   watermancerRouteWaterInputs,
+  isWatermancerActionSnapshotCurrent,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -343,6 +344,12 @@ describe('autoFillWaterVolumes', () => {
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
+  it('rejects best-match results when the action generation or inputs changed', () => {
+    expect(isWatermancerActionSnapshotCurrent(4, 4, 'same', 'same')).toBe(true);
+    expect(isWatermancerActionSnapshotCurrent(4, 5, 'same', 'same')).toBe(false);
+    expect(isWatermancerActionSnapshotCurrent(4, 4, 'old', 'new')).toBe(false);
+  });
+
   it('benchmarks every strategy with strict and permissive deviation modes', () => {
     const source = water('source', { calcium: 10, sulfate: 20 });
     const plan = {

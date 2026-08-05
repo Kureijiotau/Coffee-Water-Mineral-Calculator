@@ -8,3 +8,9 @@ Watermancer actions that trigger expensive matching must use a shared immediate 
 **Why:** Repeated clicks previously felt unresponsive and could run against successive state renders, causing competing results and apparent nondeterminism.
 
 **How to apply:** Guard Apply, Fill, and Find-best-match together; ignore duplicate clicks while busy, preserve existing solver determinism, and show explicit accepted/completed feedback.
+
+Best-match actions should also capture an input signature and validate it before and after deferred synchronous work; if waters, targets, salts, or settings changed, discard the result and explain that nothing was applied.
+
+**Why:** Mobile browsers can accept a touch, repaint, and process a nearby edit before the deferred route sweep runs, so committing the old winner creates apparently random builds.
+
+**How to apply:** Yield one paint before expensive sweeps, compare the captured signature with the latest one, and always release the shared busy lock through the completion path.

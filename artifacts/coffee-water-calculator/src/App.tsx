@@ -1022,6 +1022,15 @@ export type WatermancerRouteInputs = {
   additionWaters: MineralWaterEntry[];
 };
 
+export function isWatermancerActionSnapshotCurrent(
+  actionGeneration: number,
+  currentGeneration: number,
+  snapshotSignature: string,
+  currentSignature: string,
+): boolean {
+  return actionGeneration === currentGeneration && snapshotSignature === currentSignature;
+}
+
 type WatermancerRouteDefinition = {
   id: string;
   kind: WatermancerRouteCandidate['kind'];
@@ -2521,6 +2530,17 @@ function App() {
     watermancerBestMatchDeviationMode,
     watermancerFixedSaltDoses,
   ]);
+  const watermancerInputSignature = useMemo(
+    () => JSON.stringify({
+      plan: watermancerPlan,
+      batchMl,
+      baseWaters: mineralWaters,
+      additionWaters,
+    }),
+    [additionWaters, batchMl, mineralWaters, watermancerPlan],
+  );
+  const watermancerInputSignatureRef = useRef(watermancerInputSignature);
+  watermancerInputSignatureRef.current = watermancerInputSignature;
   const watermancerLiveResult = useMemo(
     () => showWatermancer
       ? solveWatermancerRoutes({
@@ -2599,12 +2619,31 @@ function App() {
       batchMl,
       baseWaters: cloneWatermancerWaters(mineralWaters),
       additionWaters: cloneWatermancerWaters(additionWaters),
+      inputSignature: watermancerInputSignature,
     };
-    window.setTimeout(() => {
+    const runSweep = () => {
       try {
-        if (actionGeneration !== watermancerActionGenerationRef.current) return;
+        const isSnapshotCurrent = () => (
+          isWatermancerActionSnapshotCurrent(
+            actionGeneration,
+            watermancerActionGenerationRef.current,
+            snapshot.inputSignature,
+            watermancerInputSignatureRef.current,
+          )
+        );
+        if (!isSnapshotCurrent()) {
+          if (actionGeneration === watermancerActionGenerationRef.current) {
+            setWatermancerBestMatchMessage('Matching inputs changed before the sweep finished. Nothing was applied.');
+          }
+          return;
+        }
         const sweep = findBestWatermancerMatch(snapshot);
-        if (actionGeneration !== watermancerActionGenerationRef.current) return;
+        if (!isSnapshotCurrent()) {
+          if (actionGeneration === watermancerActionGenerationRef.current) {
+            setWatermancerBestMatchMessage('Matching inputs changed during the sweep. Nothing was applied.');
+          }
+          return;
+        }
         const winner = sweep.winner;
         if (!winner) {
           setWatermancerBestMatchSummary(null);
@@ -2634,7 +2673,10 @@ function App() {
         setWatermancerBestMatchRunning(false);
         finishWatermancerActionAfterPaint();
       }
-    }, 0);
+    };
+    // Give touch browsers one paint to show the busy state before the
+    // synchronous 36-route sweep starts.
+    window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
   const activeWatermancerSaltTargets = watermancerLiveResult.primaryPlan.saltTargets;
   const activeWatermancerRoute = useMemo(
