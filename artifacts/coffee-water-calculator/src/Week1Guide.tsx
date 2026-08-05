@@ -13,7 +13,7 @@ import {
   Sparkles,
   Target,
 } from 'lucide-react';
-import robertAsamiLogo from '@assets/robert-asami-logo-white.png';
+import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import { computeGH, computeIonTotals, computeKH, SALTS } from './waterData';
 
 export type Week1Recipe = {
@@ -76,9 +76,9 @@ const styles = `
   }
   .week1-topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 22px; }
   .week1-attribution { display: flex; align-items: center; gap: 13px; min-width: 0; }
-  .week1-attribution-link { display: inline-flex; align-items: center; padding: 7px 10px; border: 1px solid rgba(142,228,220,.18); border-radius: 9px; background: rgba(8, 27, 33, .42); transition: border-color .2s ease, background .2s ease, transform .2s ease; }
-  .week1-attribution-link:hover { border-color: rgba(142,228,220,.48); background: rgba(16, 58, 63, .72); transform: translateY(-1px); }
-  .week1-attribution-link img { display: block; width: 132px; height: auto; max-width: 100%; opacity: .9; }
+  .week1-attribution-link { display: inline-flex; align-items: center; padding: 7px 10px; border: 1px solid rgba(142,228,220,.22); border-radius: 9px; background: linear-gradient(135deg, rgba(15, 68, 75, .62), rgba(29, 55, 99, .56)); box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 8px 22px rgba(0,0,0,.14); transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+  .week1-attribution-link:hover { border-color: rgba(142,228,220,.52); background: linear-gradient(135deg, rgba(19, 88, 91, .78), rgba(38, 70, 121, .72)); transform: translateY(-1px); }
+  .week1-attribution-link img { display: block; width: 132px; height: auto; max-width: 100%; opacity: .92; }
   .week1-kicker { display: flex; align-items: center; gap: 10px; color: var(--week1-cyan); font: 700 10px/1 "Space Mono", monospace; letter-spacing: .16em; }
   .week1-kicker-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(142,228,220,.4); border-radius: 8px; background: rgba(142,228,220,.08); }
   .week1-kicker-mark svg { width: 14px; height: 14px; }
