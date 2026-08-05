@@ -6897,10 +6897,18 @@ function BrewerSimpleRecipeCard({
   const [pantryBottleMl, setPantryBottleMl] = useState('60');
   const [pantryCustomMl, setPantryCustomMl] = useState('150');
   const [calciumAvailable, setCalciumAvailable] = useState(true);
+  const guideSaltLabels: Record<string, string> = {
+    mgso4: 'Epsom salt',
+    mgcl2: 'Magnesium chloride',
+    cacl2: 'Calcium chloride',
+    nahco3: 'Sodium bicarbonate',
+    khco3: 'Potassium bicarbonate',
+    nacl: 'Sodium chloride',
+  };
   const simpleSalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
-    { id: 'nahco3', label: 'Baking soda', note: 'softens acidity' },
-    { id: 'nacl', label: 'Table salt', note: 'sweetness & balance' },
+    { id: 'nahco3', label: guideRecipe ? guideSaltLabels.nahco3 : 'Baking soda', note: 'softens acidity' },
+    { id: 'nacl', label: guideRecipe ? guideSaltLabels.nacl : 'Table salt', note: 'sweetness & balance' },
     { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
   ];
   const calciumTarget = saltTargets.cacl2 ?? 0;
@@ -6923,11 +6931,11 @@ function BrewerSimpleRecipeCard({
     };
   })();
   if (calciumTarget > 0.05) {
-    simpleSalts.push({ id: 'cacl2', label: 'Calcium chloride', note: 'optional extra body' });
+    simpleSalts.push({ id: 'cacl2', label: guideRecipe ? guideSaltLabels.cacl2 : 'Calcium chloride', note: 'optional extra body' });
   }
   const guideOnlySalts = [
-    { id: 'mgcl2', label: 'Magnesium chloride', note: 'magnesium & structure' },
-    { id: 'khco3', label: 'Potassium bicarbonate', note: 'alternate buffer' },
+    { id: 'mgcl2', label: guideSaltLabels.mgcl2, note: 'magnesium & structure' },
+    { id: 'khco3', label: guideSaltLabels.khco3, note: 'alternate buffer' },
   ];
 
   const getMassLabel = (id: string) => {
@@ -6969,10 +6977,10 @@ function BrewerSimpleRecipeCard({
     : [];
   const pantrySalts = [
     { id: 'mgso4', label: 'Epsom salt', note: 'brightness & fruit' },
-    { id: 'nahco3', label: 'Baking soda', note: 'buffer & sweetness' },
-    { id: 'nacl', label: 'Table salt', note: 'roundness & balance' },
+    { id: 'nahco3', label: guideRecipe ? guideSaltLabels.nahco3 : 'Baking soda', note: 'buffer & sweetness' },
+    { id: 'nacl', label: guideRecipe ? guideSaltLabels.nacl : 'Table salt', note: 'roundness & balance' },
     { id: 'kcl', label: 'Potassium chloride', note: 'potassium & structure' },
-    { id: 'cacl2', label: 'Calcium chloride', note: 'body & structure' },
+    { id: 'cacl2', label: guideRecipe ? guideSaltLabels.cacl2 : 'Calcium chloride', note: 'body & structure' },
   ];
   const recipeSalts = [...activeSimpleSalts, ...activeGuideOnlySalts]
     .filter(salt => calciumAvailable || salt.id !== 'cacl2');

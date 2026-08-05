@@ -26,3 +26,9 @@ While a Robert guide recipe is active, do not show the Brewer calcium-chloride o
 **Why:** Guide recipes are authored as fixed sourced comparisons, while the calcium substitution option belongs to the tunable everyday Brewer workflow.
 
 **How to apply:** Gate only the toggle’s rendering on the presence of the Week 1 override; do not alter calcium calculations or normal Brewer fallback behavior.
+
+When a Robert guide override is active, use the guide’s full mineral names in the recipe card, pantry builder, and dosing checklist; keep the shorter everyday Brewer labels outside the guide.
+
+**Why:** The sourced guide names minerals as sodium bicarbonate and sodium chloride, while the normal Brewer workflow intentionally uses friendlier labels such as baking soda and table salt.
+
+**How to apply:** Conditionalize labels on the active guide override without changing salt IDs, targets, hydration forms, or dose calculations.
