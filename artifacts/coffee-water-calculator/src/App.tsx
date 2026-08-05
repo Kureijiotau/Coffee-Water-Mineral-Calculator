@@ -6399,14 +6399,24 @@ function WatermancerIonProfileCard({
               Add new
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={() => setNaming(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Save
-            </button>
+             <div className="flex items-center gap-2">
+               <button
+                 type="button"
+                 onClick={() => setNaming(true)}
+                 className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
+               >
+                 <Save className="w-3.5 h-3.5" />
+                 Save
+               </button>
+               <button
+                 type="button"
+                 onClick={cancelEditing}
+                 className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+               >
+                 <X className="w-3.5 h-3.5" />
+                 Cancel
+               </button>
+             </div>
           )}
         </div>
       </div>
