@@ -192,7 +192,7 @@ export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
     id: 'lactate',
     name: 'Lactate',
     formula: 'C₃H₅O₃⁻',
-    note: 'Lactate is the companion ion supplied by Calcium Lactate. This value is shown for transparency, but it is not a Watermancer target and is not included in solver, GH/KH, or ion-watch calculations.',
+    note: 'Usually subtle at the levels used in coffee water; lactate may contribute a soft, rounded mouthfeel rather than a distinct flavor. At higher levels, a faint tangy or sour edge may appear.',
   },
 ];
 
