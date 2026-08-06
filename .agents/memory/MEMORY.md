@@ -36,3 +36,4 @@
 - [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts
 - [Brewer Week 1 guide integration](brewer-week1-guide-integration.md) — keep sourced lesson recipes on the shared chemistry engine behind a temporary Brewer override
 - [Calcium Lactate boundary](calcium-lactate-boundary.md) — model calcium normally while keeping lactate display-only and outside Watermancer solver dimensions
+- [Glacial-style matching placeholder](watermancer-glacial-placeholder.md) — keep the phased Glacial heuristic separate from Closest match until automated
