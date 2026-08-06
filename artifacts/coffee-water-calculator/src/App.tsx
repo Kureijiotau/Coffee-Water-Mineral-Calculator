@@ -6586,7 +6586,7 @@ function WatermancerIonProfileCard({
             aria-label="Select target water profile"
             className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
           >
-            <optgroup label="Published water profiles">
+            <optgroup label="Empirical Water Profiles">
               {profiles.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id).map(p => (
                 <option key={`profile:${p.id}`} value={`profile:${p.id}`}>
                   {p.name
@@ -6603,7 +6603,7 @@ function WatermancerIonProfileCard({
                 ))}
               </optgroup>
             )}
-            <optgroup label="Salt recipes">
+            <optgroup label="Kimoi.coffee Recipes">
               {allRecipes.map(r => (
                  <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
                    {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
