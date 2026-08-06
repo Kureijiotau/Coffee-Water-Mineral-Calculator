@@ -40,6 +40,20 @@ export interface IonContribution {
   fraction: number;
 }
 
+export type SupplementalIonId = 'lactate';
+
+export interface SupplementalIonInfo {
+  id: SupplementalIonId;
+  name: string;
+  formula: string;
+  note: string;
+}
+
+export interface SupplementalIonContribution {
+  ionId: SupplementalIonId;
+  fraction: number;
+}
+
 export interface SaltInfo {
   id: string;
   name: string;
@@ -49,6 +63,7 @@ export interface SaltInfo {
   /** Index into hydrationForms selected by default (common commercial form). */
   defaultFormIdx?: number;
   ions: IonContribution[];
+  supplementalIons?: SupplementalIonContribution[];
 }
 
 export const IONS: IonInfo[] = [
@@ -172,6 +187,19 @@ export const AIKI_DEFAULT_PROFILE: WaterProfile = {
 
 export const ION_MAP = Object.fromEntries(IONS.map(i => [i.id, i])) as Record<IonId, IonInfo>;
 
+export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
+  {
+    id: 'lactate',
+    name: 'Lactate',
+    formula: 'C₃H₅O₃⁻',
+    note: 'Shown only when Calcium Lactate is part of the current salt dose; it is not used as a Watermancer target or solver ion.',
+  },
+];
+
+export const SUPPLEMENTAL_ION_MAP = Object.fromEntries(
+  SUPPLEMENTAL_IONS.map(ion => [ion.id, ion]),
+) as Record<SupplementalIonId, SupplementalIonInfo>;
+
 export const SALTS: SaltInfo[] = [
   {
     id: 'mgso4', name: 'Magnesium Sulfate', formula: 'MgSO₄', anhydrousMass: 120.365,
@@ -219,6 +247,20 @@ export const SALTS: SaltInfo[] = [
     ions: [
       { ionId: 'calcium',  fraction: 40.078 / 110.978 },
       { ionId: 'chloride', fraction: 70.90  / 110.978 },
+    ],
+  },
+  {
+    id: 'calact', name: 'Calcium Lactate', formula: 'Ca(C₃H₅O₃)₂', anhydrousMass: 218.22,
+    hydrationForms: [
+      { label: 'Anhydrous', molarMass: 218.22 },
+      { label: 'Pentahydrate', molarMass: 308.298 },
+    ],
+    defaultFormIdx: 1,
+    ions: [
+      { ionId: 'calcium', fraction: 40.078 / 218.22 },
+    ],
+    supplementalIons: [
+      { ionId: 'lactate', fraction: (2 * 89.07) / 218.22 },
     ],
   },
   {
@@ -307,6 +349,23 @@ export function computeIonTotals(
     for (const c of salt.ions) totals[c.ionId] += target * c.fraction;
   }
   for (const ion of IONS) totals[ion.id] += (baseIons[ion.id] || 0) * dilution;
+  return totals;
+}
+
+export function computeSupplementalIonTotals(
+  saltTargets: Record<string, number>,
+): Record<SupplementalIonId, number> {
+  const totals = Object.fromEntries(
+    SUPPLEMENTAL_IONS.map(ion => [ion.id, 0]),
+  ) as Record<SupplementalIonId, number>;
+
+  for (const salt of SALTS) {
+    const target = saltTargets[salt.id] || 0;
+    for (const contribution of salt.supplementalIons ?? []) {
+      totals[contribution.ionId] += target * contribution.fraction;
+    }
+  }
+
   return totals;
 }
 

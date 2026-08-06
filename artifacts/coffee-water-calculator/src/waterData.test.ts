@@ -9,6 +9,8 @@ import {
   computeKH,
   SALTS,
   IONS,
+  ACTIVE_ION_IDS,
+  computeSupplementalIonTotals,
 } from './waterData';
 
 // ─── computeSaltMg ────────────────────────────────────────────────────────────
@@ -115,6 +117,25 @@ describe('computeIonTotals', () => {
   it('clamps dilution contributions when dilution is 0 (no bottled water)', () => {
     const totals = computeIonTotals({}, { calcium: 99 }, 0);
     expect(totals.calcium).toBe(0);
+  });
+
+  it('models Calcium Lactate calcium without adding lactate to core ion totals', () => {
+    const calciumLactate = SALTS.find(s => s.id === 'calact')!;
+    const totals = computeIonTotals({ calact: 10 }, {}, 0);
+
+    expect(SALTS[SALTS.findIndex(s => s.id === 'cacl2') + 1].id).toBe('calact');
+    expect(calciumLactate.defaultFormIdx).toBe(1);
+    expect(calciumLactate.hydrationForms[1].label).toBe('Pentahydrate');
+    expect(totals.calcium).toBeCloseTo(10 * (40.078 / 218.22), 5);
+    expect(Object.prototype.hasOwnProperty.call(totals, 'lactate')).toBe(false);
+    expect(ACTIVE_ION_IDS.includes('lactate' as never)).toBe(false);
+  });
+
+  it('calculates Calcium Lactate lactate as a supplemental display-only ion', () => {
+    const totals = computeSupplementalIonTotals({ calact: 10 });
+
+    expect(totals.lactate).toBeCloseTo(10 * ((2 * 89.07) / 218.22), 5);
+    expect(computeSupplementalIonTotals({ calact: 0 }).lactate).toBe(0);
   });
 });
 

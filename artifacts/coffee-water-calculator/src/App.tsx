@@ -9,8 +9,8 @@ import recommendedOvershootImage from '@assets/image_1785734539832.png';
 import fillWaterPromptImage from '@assets/ez_1785735003821.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
-  computeIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
-  type IonId, type TrafficLevel, type WaterProfile, type RangeSet,
+  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
+  SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
 import {
@@ -1950,6 +1950,15 @@ function App() {
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
+  // Keep calculations/rendering safe across hot reloads and older in-memory
+  // state when a new salt is added to the shared catalog.
+  const safeRows = useMemo(
+    () => SALTS.map((salt, index) => rows[index] ?? {
+      target: '',
+      formIdx: salt.defaultFormIdx ?? 0,
+    }),
+    [rows],
+  );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
@@ -2326,9 +2335,9 @@ function App() {
 
   const saltTargets = useMemo(() => {
     const m: Record<string, number> = {};
-    SALTS.forEach((s, i) => { m[s.id] = num(rows[i].target); });
+    SALTS.forEach((s, i) => { m[s.id] = num(safeRows[i].target); });
     return m;
-  }, [rows]);
+  }, [safeRows]);
 
   const brewerSuggestedSaltTargets = useMemo(
     () => brewerSaltSuggestion(brewerFlavor),
@@ -2781,7 +2790,7 @@ function App() {
     // choose to edit or apply the recommendation.
    const buildSuggestedSaltTargets = (currentBottledIons: Record<IonId, number>, waterIsPresent = hasMineralWater) => {
     const targets: Record<string, number> = {};
-    SALTS.forEach((salt, i) => { targets[salt.id] = num(rows[i].target); });
+     SALTS.forEach((salt, i) => { targets[salt.id] = num(safeRows[i].target); });
 
     // Mineral water is part of the final batch, so reduce salts whose primary
     // ions are already supplied by that water. Co-ions remain visible in the
@@ -2912,6 +2921,10 @@ function App() {
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
     [effectiveSuggestedSaltTargets, combinedBottledIons, dil],
+  );
+  const supplementalIonTotals = useMemo(
+    () => computeSupplementalIonTotals(effectiveSuggestedSaltTargets),
+    [effectiveSuggestedSaltTargets],
   );
   const finalMixtureOvershoots = useMemo(
     () => findIonOvershoots(suggestedIonTotals, finalMixtureTargetIons),
@@ -3231,7 +3244,7 @@ function App() {
   const buildCurrentSalts = (): Record<string, SaltRecipeEntry> => {
     const m: Record<string, SaltRecipeEntry> = {};
     SALTS.forEach((s, i) => {
-      if (num(rows[i].target) > 0) m[s.id] = { target: rows[i].target, formIdx: rows[i].formIdx };
+      if (num(safeRows[i].target) > 0) m[s.id] = { target: safeRows[i].target, formIdx: safeRows[i].formIdx };
     });
     return m;
   };
@@ -3353,7 +3366,7 @@ function App() {
     line('MINERAL SALTS  (per-batch direct amounts)');
     divider();
     const saltLines = SALTS.map((salt, i) => {
-      const row = rows[i];
+      const row = safeRows[i];
       const form = salt.hydrationForms[row.formIdx];
       const target = dosingSaltTargets[salt.id] ?? 0;
       if (target === 0) return null;
@@ -3384,7 +3397,7 @@ function App() {
       line('');
       line('  Weigh into stock:');
       const concSaltLines = SALTS.map((salt, i) => {
-        const row = rows[i];
+        const row = safeRows[i];
         const form = salt.hydrationForms[row.formIdx];
         const target = dosingSaltTargets[salt.id] ?? 0;
         if (target === 0) return null;
@@ -3428,7 +3441,10 @@ function App() {
           const salt = SALTS.find(s => s.id === saltId);
           if (!salt) continue;
           const saltIdx = SALTS.indexOf(salt);
-          const row = rows[saltIdx];
+          const row = rows[saltIdx] ?? {
+            target: '',
+            formIdx: salt.defaultFormIdx ?? 0,
+          };
           const form = salt.hydrationForms[row.formIdx];
            const target = dosingSaltTargets[saltId] ?? 0;
           if (target === 0) continue;
@@ -3581,7 +3597,7 @@ function App() {
     const activeSalts = SALTS.map((s, i) => {
       const tgt = guideSaltTargets[s.id] ?? 0;
       if (tgt <= 0) return null;
-      const form = s.hydrationForms[rows[i].formIdx];
+      const form = s.hydrationForms[safeRows[i].formIdx];
       const mg = l > 0 ? computeSaltMg(tgt, l, form.molarMass, s.anhydrousMass) : 0;
       const isBicarbonate = s.formula.includes('HCO₃') || s.formula.includes('CO₃');
       const isSulfate = s.formula.includes('SO₄');
@@ -3845,6 +3861,7 @@ function App() {
           <div className="order-1" data-watermancer-stage="target">
             <WatermancerIonProfileCard
               ions={ionProfileIons}
+              supplementalIons={supplementalIonTotals}
               targetIons={watermancerIonTargets}
               profiles={profiles}
               activeProfileId={activeProfileId}
@@ -4020,7 +4037,7 @@ function App() {
             <span>{concentrateOn ? 'Amount' : 'Amount (mg)'}</span>
           </div>
           {SALTS.map((salt, i) => {
-            const row = rows[i];
+            const row = safeRows[i];
             const form = salt.hydrationForms[row.formIdx];
             const target = dosingSaltTargets[salt.id] ?? 0;
             const mg = L > 0 && target > 0
@@ -5102,7 +5119,7 @@ function App() {
                    {SALTS.map((salt, index) => {
                      const target = dosingSaltTargets[salt.id] ?? 0;
                      if (target <= 0) return null;
-                     const form = salt.hydrationForms[rows[index].formIdx];
+                      const form = salt.hydrationForms[safeRows[index].formIdx];
                      const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
                      const affectsGH = salt.ions.some(contribution => contribution.ionId === 'calcium' || contribution.ionId === 'magnesium');
                      const affectsKH = salt.ions.some(contribution => contribution.ionId === 'bicarbonate');
@@ -6259,6 +6276,7 @@ function CalibrationInput({
 
 function WatermancerIonProfileCard({
   ions,
+  supplementalIons,
   targetIons,
   profiles,
   activeProfileId,
@@ -6272,6 +6290,7 @@ function WatermancerIonProfileCard({
   onSaveWmProfile,
 }: {
   ions: Partial<Record<IonId, number>>;
+  supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   profiles: WaterProfile[];
   activeProfileId: string;
@@ -6469,6 +6488,37 @@ function WatermancerIonProfileCard({
             </div>
           );
         })}
+        {(() => {
+          const lactatePpm = supplementalIons.lactate ?? 0;
+          return lactatePpm > 0 && (
+          <div
+            key="supplemental-lactate"
+            className="group/ion relative rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3"
+          >
+            <div className="mb-1 flex items-center justify-between">
+              <span className="cursor-help text-sm font-medium text-slate-200">
+                {SUPPLEMENTAL_ION_MAP.lactate.name}
+              </span>
+              <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-bold text-violet-300">
+                {lactatePpm.toFixed(1)}
+              </span>
+              <span className="text-xs text-slate-400">ppm</span>
+            </div>
+            <div className="mt-0.5 text-[10px] text-violet-200/70">
+              {SUPPLEMENTAL_ION_MAP.lactate.formula}
+            </div>
+            <div className="mt-1 text-[10px] text-slate-500">
+              Supplemental ion · no target set
+            </div>
+            <span className="pointer-events-none absolute left-0 top-full z-10 mt-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
+              {SUPPLEMENTAL_ION_MAP.lactate.note}
+            </span>
+          </div>
+          );
+        })()}
       </div>
 
       {/* Naming dialog */}
@@ -8798,7 +8848,10 @@ function SplitStockCard({
         {group.saltIds.map(saltId => {
           const salt = SALTS.find(s => s.id === saltId)!;
           const saltIdx = SALTS.indexOf(salt);
-          const row = rows[saltIdx];
+           const row = rows[saltIdx] ?? {
+             target: '',
+             formIdx: salt.defaultFormIdx ?? 0,
+           };
           const form = salt.hydrationForms[row.formIdx];
           const target = saltTargets[saltId] ?? 0;
           const mg = strength > 0 && stockL > 0 && target > 0
