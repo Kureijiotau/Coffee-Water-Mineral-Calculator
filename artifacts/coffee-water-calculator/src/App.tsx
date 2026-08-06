@@ -8586,7 +8586,15 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
       </summary>
       <div className="space-y-2 border-t border-indigo-400/10 px-4 py-3 sm:px-6">
         <p className="text-[11px] leading-relaxed text-slate-500">
-          Based on the final source-water-plus-salts mixture and Aiki&apos;s light-roast pourover ranges.
+          Based on the final source-water-plus-salts mixture and Aiki&apos;s light-roast pourover ranges.{' '}
+          <a
+            href="https://discord.com/channels/1194136643637096508/1423022322465505380/1504865270882373775"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-indigo-300 underline decoration-indigo-300/40 underline-offset-2 transition hover:text-indigo-200"
+          >
+            View Aiki&apos;s original Discord post
+          </a>
         </p>
         {flaggedIons.length === 0 ? (
           <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-[11px] text-emerald-200">
