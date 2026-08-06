@@ -6617,19 +6617,32 @@ function WatermancerIonProfileCard({
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={currentDropdownValue}
-            onChange={e => handleDropdownChange(e.target.value)}
-            aria-label="Select target water profile"
-            className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-          >
+           <div className="flex items-start gap-1">
+             {selectedTargetSourceUrl && (
+               <a
+                 href={selectedTargetSourceUrl}
+                 target="_blank"
+                 rel="noreferrer"
+                 aria-label={`Open source page for ${selectedTargetSourceName}`}
+                 title={`Open source page for ${selectedTargetSourceName}`}
+                 className="mt-[6px] flex h-4 w-4 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[9px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+               >
+                 ?
+               </a>
+             )}
+             <div className="flex flex-col items-start gap-1">
+             <select
+               value={currentDropdownValue}
+               onChange={e => handleDropdownChange(e.target.value)}
+               aria-label="Select target water profile"
+               className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+             >
             <optgroup label="Empirical Water Profiles">
               {profiles.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id).map(p => (
                 <option key={`profile:${p.id}`} value={`profile:${p.id}`}>
                   {p.name
                     .replace(/^Empirical Water — /, '')
                     .replace(/ ionic profile$/, '')}
-                  {p.locked ? ' · built-in' : ''}
                 </option>
               ))}
             </optgroup>
@@ -6668,19 +6681,9 @@ function WatermancerIonProfileCard({
                 </option>
               ))}
             </optgroup>
-          </select>
-           {selectedTargetSourceUrl && (
-             <a
-               href={selectedTargetSourceUrl}
-               target="_blank"
-               rel="noreferrer"
-               aria-label={`Open source page for ${selectedTargetSourceName}`}
-               title={`Open source page for ${selectedTargetSourceName}`}
-               className="flex h-7 w-7 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
-             >
-               ?
-             </a>
-           )}
+             </select>
+             </div>
+           </div>
           {!editing ? (
             <button
               type="button"
