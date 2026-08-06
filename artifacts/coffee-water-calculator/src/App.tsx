@@ -2866,38 +2866,6 @@ function App() {
     setWatermancerActionMessage('Base waters filled toward the current target.');
     finishWatermancerActionAfterPaint();
   };
-  const handleGlacialCraftMatch = () => {
-    if (!beginWatermancerAction()) return;
-    setWatermancerBestMatchSummary(null);
-    setWatermancerBestMatchRoute(null);
-    setWatermancerBestMatchMessage(null);
-
-    try {
-      const candidate = craftGlacialStyleWatermancerMatch({
-        plan: cloneWatermancerPlan(watermancerPlan),
-        batchMl,
-        baseWaters: cloneWatermancerWaters(mineralWaters),
-        additionWaters: cloneWatermancerWaters(additionWaters),
-      });
-      if (!candidate) {
-        setWatermancerActionMessage(
-          'Glacial-style matching needs a batch volume and at least one selected water or salt.',
-        );
-        return;
-      }
-
-      setMineralWaters(candidate.baseWaters);
-      setWatermancerBestMatchRoute(candidate);
-      setWatermancerRecalculationNonce(current => current + 1);
-      setWatermancerActionMessage(
-        `Glacial-style match applied to ${watermancerTargetSourceLabel}. Calcium → magnesium → sodium phases completed.`,
-      );
-    } catch {
-      setWatermancerActionMessage('Glacial-style matching could not finish. Please check the selected waters and salts.');
-    } finally {
-      finishWatermancerActionAfterPaint();
-    }
-  };
   const handleFindBestWatermancerMatch = () => {
     if (!beginWatermancerAction()) return;
     setWatermancerBestMatchRunning(true);
@@ -6007,21 +5975,6 @@ function App() {
                        )}
                      </button>
                    )}
-                    {(mineralWaters.length > 0 || additionWaters.length > 0 || watermancerUsedSaltIds.length > 0) && (
-                      <button
-                        type="button"
-                        disabled={watermancerActionRunning}
-                        onClick={handleGlacialCraftMatch}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-fuchsia-300/45 bg-fuchsia-500/15 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 transition hover:border-fuchsia-200/80 hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
-                        title="Automate the Glacial-style matching strategy"
-                      >
-                        <Sparkles className="h-4 w-4" />
-                        Craft Glacial-style match
-                        <span className="rounded-full border border-fuchsia-200/20 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
-                          Calcium → Mg → Na
-                        </span>
-                      </button>
-                    )}
                 </div>
                 {watermancerBestMatchSummary && (
                   <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
