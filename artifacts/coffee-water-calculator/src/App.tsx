@@ -6373,7 +6373,9 @@ function WatermancerIonProfileCard({
             )}
             <optgroup label="Salt recipes → ions">
               {allRecipes.map(r => (
-                <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>{r.name} → ions</option>
+                 <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
+                   {r.id === 'kimoi' ? '⭐ ' : ''}{r.name} → ions
+                 </option>
               ))}
             </optgroup>
             <optgroup label="Robert Asami's Watering Hole">
