@@ -76,6 +76,11 @@ function HoldStepperButton({
   const timeoutRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
+  const onStepRef = useRef(onStep);
+
+  useEffect(() => {
+    onStepRef.current = onStep;
+  }, [onStep]);
 
   const clearHold = useCallback(() => {
     if (timeoutRef.current !== null) {
@@ -90,18 +95,25 @@ function HoldStepperButton({
 
   useEffect(() => clearHold, [clearHold]);
 
-  const startHold = () => {
+  const startHold = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (disabled) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
     suppressClickRef.current = true;
-    onStep();
+    onStepRef.current();
     clearHold();
     timeoutRef.current = window.setTimeout(() => {
-      intervalRef.current = window.setInterval(onStep, 90);
+      intervalRef.current = window.setInterval(() => onStepRef.current(), 90);
     }, 350);
   };
 
-  const finishHold = () => {
+  const finishHold = (event?: React.PointerEvent<HTMLButtonElement>) => {
     clearHold();
+    if (
+      event
+      && event.currentTarget.hasPointerCapture(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   return (
@@ -109,8 +121,10 @@ function HoldStepperButton({
       type="button"
       onPointerDown={startHold}
       onPointerUp={finishHold}
-      onPointerLeave={finishHold}
-      onPointerCancel={finishHold}
+      onPointerCancel={event => {
+        finishHold(event);
+        suppressClickRef.current = false;
+      }}
       onClick={() => {
         if (suppressClickRef.current) {
           suppressClickRef.current = false;
@@ -5154,6 +5168,7 @@ function App() {
             <div className="order-5" data-watermancer-stage="results">
              <WatermancerIonCoverageBars
                actualIons={activeWatermancerRoute.finalIons}
+              supplementalIons={computeSupplementalIonTotals(activeWatermancerRoute.saltTargets)}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
                sticky={watermancerResultSticky}
@@ -6559,12 +6574,14 @@ function WatermancerIonProfileCard({
 
 function WatermancerIonCoverageBars({
   actualIons,
+  supplementalIons,
   targetIons,
   targetLabel,
   sticky,
   onToggleSticky,
 }: {
   actualIons: Partial<Record<IonId, number>>;
+  supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
   sticky: boolean;
@@ -6674,6 +6691,36 @@ function WatermancerIonCoverageBars({
             </div>
           );
         })}
+        {(() => {
+          const lactatePpm = supplementalIons.lactate ?? 0;
+          if (lactatePpm <= 0) return null;
+          return (
+            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
+              <span className="truncate text-xs text-violet-200" title="Lactate">Lactate</span>
+              <div className="min-w-0">
+                <div
+                  className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
+                  aria-label={`Lactate: ${formatLiveIonPpm(lactatePpm)} ppm, display only`}
+                >
+                  <div
+                    className="h-full rounded-full bg-violet-400/80 transition-all duration-300"
+                    style={{ width: '100%' }}
+                  />
+                  <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-slate-950/80">
+                    display only
+                  </span>
+                </div>
+                <div className="mt-1 text-[10px] text-violet-200">
+                  {formatLiveIonPpm(lactatePpm)} ppm · no target set
+                </div>
+              </div>
+              <span className="text-right text-xs font-semibold tabular-nums text-violet-200">
+                {formatLiveIonPpm(lactatePpm)}
+                <span className="font-normal text-slate-500"> ppm</span>
+              </span>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
