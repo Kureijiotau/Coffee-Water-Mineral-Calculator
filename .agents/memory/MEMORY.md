@@ -38,3 +38,4 @@
 - [Calcium Lactate boundary](calcium-lactate-boundary.md) — model calcium normally while keeping lactate display-only and outside Watermancer solver dimensions
 - [Glacial-style matching strategy](watermancer-glacial-placeholder.md) — separate phased matcher uses calcium → MgCl2 → NaCl priorities with explicit overshoot allowances
 - [Added-water mineral-first matching](added-water-mineral-first.md) — quality-first Added-water dosing protects bicarbonate, caps water overshoot at 30%, and salts at 10%
+- [Watermancer ion source preferences](watermancer-ion-source-preferences.md) — source choices live in the unified plan and default to neutral Don’t care behavior

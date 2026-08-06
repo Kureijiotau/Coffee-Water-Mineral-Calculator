@@ -893,6 +893,76 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(first.map(entry => entry.volumeMl)).not.toEqual(second.map(entry => entry.volumeMl));
   });
 
+  it('keeps a water-only ion out of automatic salt contributions', () => {
+    const targets = autoCraftSaltTargets(
+      ['cacl2'],
+      {},
+      { calcium: 10, chloride: 15 },
+      {},
+      'closest-match',
+      'balanced',
+      {
+        enabled: false,
+        allowedIons: [],
+        maxPpm: {},
+        priorityOrder: ['calcium', 'chloride'],
+        ionSourcePreferences: { calcium: 'water-only' },
+      },
+    );
+
+    expect(targets.cacl2 ?? 0).toBe(0);
+  });
+
+  it('keeps a salt-only ion out of automatic water filling', () => {
+    const source = water('calcium-water', { calcium: 20 });
+    const filled = autoFillWaterVolumes(
+      [source],
+      1000,
+      { calcium: 10 },
+      [],
+      ['calcium'],
+      0,
+      true,
+      false,
+      1,
+      0,
+      {
+        enabled: false,
+        allowedIons: [],
+        maxPpm: {},
+        priorityOrder: ['calcium'],
+        ionSourcePreferences: { calcium: 'salt-only' },
+      },
+    );
+
+    expect(filled[0].volumeMl).toBe('0');
+  });
+
+  it('allows water-then-salt to use water before salt finishing', () => {
+    const source = water('calcium-water', { calcium: 20 });
+    const filled = autoFillWaterVolumes(
+      [source],
+      1000,
+      { calcium: 10 },
+      [],
+      ['calcium'],
+      0,
+      true,
+      false,
+      1,
+      0,
+      {
+        enabled: false,
+        allowedIons: [],
+        maxPpm: {},
+        priorityOrder: ['calcium'],
+        ionSourcePreferences: { calcium: 'water-then-salt' },
+      },
+    );
+
+    expect(Number(filled[0].volumeMl)).toBeGreaterThan(0);
+  });
+
   it('translates a salt recipe into its modeled ion target profile', () => {
     const targets = translateSaltTargetsToIonTargets({ mgso4: 10 });
     const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;

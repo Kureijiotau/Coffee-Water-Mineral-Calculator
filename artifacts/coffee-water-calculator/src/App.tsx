@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
+import pepeImage from '@assets/ez_1785735003821.png';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import {
@@ -29,7 +30,9 @@ import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
   normalizeWatermancerIonOrder,
+  normalizeWatermancerIonSourcePreferences,
   type WatermancerIonDeviation,
+  type WatermancerIonSourcePreference,
   type WatermancerRouteCandidate,
   type WatermancerStrategy,
   type WatermancerSaltObjective,
@@ -81,6 +84,48 @@ type OvershootSettings = {
   allowedIons: IonId[];
   limits: Partial<Record<IonId, number>>;
 };
+
+const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-preferences';
+const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
+  value: WatermancerIonSourcePreference;
+  label: string;
+}> = [
+  { value: 'water-only', label: 'Water only' },
+  { value: 'water-then-salt', label: 'Water then salt' },
+  { value: 'salt-only', label: 'Salt only' },
+  { value: 'dont-care', label: "Don't care" },
+];
+
+function loadWatermancerIonSourcePreferences(): Record<IonId, WatermancerIonSourcePreference> {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(WATERMANCER_ION_SOURCE_STORAGE_KEY) ?? 'null',
+    ) as Partial<Record<IonId, WatermancerIonSourcePreference>> | null;
+    return normalizeWatermancerIonSourcePreferences(stored ?? undefined);
+  } catch {
+    return normalizeWatermancerIonSourcePreferences();
+  }
+}
+
+function watermancerSourcePreferencePenalty(
+  plan: WatermancerPlan,
+  waterIons: Partial<Record<IonId, number>>,
+  saltTargets: Record<string, number>,
+): number {
+  const saltIons = computeIonTotals(saltTargets, {}, 1);
+  return ACTIVE_ION_IDS.reduce((total, id) => {
+    const preference = plan.ionSourcePreferences?.[id] ?? 'dont-care';
+    const water = Math.max(waterIons[id] ?? 0, 0);
+    const salt = Math.max(saltIons[id] ?? 0, 0);
+    const target = Math.max(plan.targetIons[id] ?? 0, 0);
+    if (preference === 'water-only') return total + salt * 1000;
+    if (preference === 'salt-only') return total + water * 1000;
+    if (preference === 'water-then-salt') {
+      return total + Math.max(salt - Math.max(target - water, 0), 0) * 20;
+    }
+    return total;
+  }, 0);
+}
 
 function HoldStepperButton({
   onStep,
@@ -476,6 +521,10 @@ export function autoCraftSaltTargets(
   const allowedSalts = SALTS.filter(salt => (
     allowedSaltIds.includes(salt.id)
     && !Object.prototype.hasOwnProperty.call(fixedSaltTargets, salt.id)
+    && !salt.ions.some(contribution => (
+      (overshootPolicy?.ionSourcePreferences?.[contribution.ionId] ?? 'dont-care') === 'water-only'
+      && contribution.fraction > 0
+    ))
   ));
   if (allowedSalts.length === 0) return {};
 
@@ -522,6 +571,9 @@ export function autoCraftSaltTargets(
     const value = Number(overshootPolicy.maxPpm[ionId] ?? 0);
     return Number.isFinite(value) ? Math.max(0, value) : 0;
   };
+  const sourcePreferenceFor = (ionId: IonId): WatermancerIonSourcePreference => (
+    overshootPolicy?.ionSourcePreferences?.[ionId] ?? 'dont-care'
+  );
   const softDeficitAllowanceFor = (ionId: IonId): number => {
     if (!controlledOvershootEnabled || !overshootPolicy?.softDeficitIons?.includes(ionId)) return 0;
     const value = Number(overshootPolicy.softDeficitLimits?.[ionId] ?? 0);
@@ -546,6 +598,21 @@ export function autoCraftSaltTargets(
         + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length)
       : deficit * (deficitWeight + priorityWeight / normalizedOvershootOrder.length)
         + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length);
+  };
+  const sourcePreferencePenalty = (saltTargets: Record<string, number>): number => {
+    const saltIons = computeIonTotals(saltTargets, {}, 1);
+    return ACTIVE_ION_IDS.reduce((total, ionId) => {
+      const preference = sourcePreferenceFor(ionId);
+      const saltContribution = Math.max(saltIons[ionId] ?? 0, 0);
+      const waterContribution = Math.max(waterIons[ionId] ?? 0, 0);
+      const target = Math.max(targetIons[ionId] ?? 0, 0);
+      if (preference === 'water-only') return total + saltContribution * 1000;
+      if (preference === 'salt-only') return total + waterContribution * 1000;
+      if (preference === 'water-then-salt') {
+        return total + Math.max(saltContribution - Math.max(target - waterContribution, 0), 0) * 20;
+      }
+      return total;
+    }, 0);
   };
   const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
     let value = fixedIonTotals[ionId] ?? 0;
@@ -586,7 +653,7 @@ export function autoCraftSaltTargets(
         )
         * ((targetGh + targetKh) / 2);
     }
-    return score;
+    return score + sourcePreferencePenalty({ ...targets, [salt.id]: candidate });
   };
 
   const scoreForSaltTargets = (saltTargets: Record<string, number>): number => {
@@ -608,7 +675,7 @@ export function autoCraftSaltTargets(
         )
         * ((targetGh + targetKh) / 2);
     }
-    return score;
+    return score + sourcePreferencePenalty(saltTargets);
   };
 
   const solveLinearSystem = (matrix: number[][], vector: number[]): number[] | null => {
@@ -946,6 +1013,9 @@ export function autoFillWaterVolumes(
     const limit = Number(overshootPolicy.maxPpm[id] ?? 0);
     return Number.isFinite(limit) ? Math.max(0, limit) * batchMl : 0;
   };
+  const sourcePreferenceFor = (id: IonId): WatermancerIonSourcePreference => (
+    overshootPolicy?.ionSourcePreferences?.[id] ?? 'dont-care'
+  );
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
   const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
   const fixedContributions = Object.fromEntries(
@@ -959,10 +1029,17 @@ export function autoFillWaterVolumes(
       ? ACTIVE_ION_IDS.filter(id => (targetAmounts[id] ?? 0) > 0)
       : ACTIVE_ION_IDS
     : ['bicarbonate' as IonId];
-  const fixedWaterAlreadyExceedsLimit = ceilingIonIds
+  const waterCeilingIonIds = enforceAllIonCeilings
+    ? ceilingIonIds
+    : ceilingIonIds;
+  const waterOnlyIonIds = ACTIVE_ION_IDS.filter(id => sourcePreferenceFor(id) === 'salt-only');
+  const effectiveWaterCeilingIonIds = [...new Set([...waterCeilingIonIds, ...waterOnlyIonIds])];
+  const fixedWaterAlreadyExceedsLimit = effectiveWaterCeilingIonIds
     .some(id => fixedContributions[id] > (
       enforceAllIonCeilings
-        ? (targetAmounts[id] ?? 0) + ((targetAmounts[id] ?? 0) > 0 ? positiveTargetWiggleAmount : 0)
+        ? sourcePreferenceFor(id) === 'salt-only'
+          ? 0
+          : (targetAmounts[id] ?? 0) + ((targetAmounts[id] ?? 0) > 0 ? positiveTargetWiggleAmount : 0)
         + overshootAllowanceAmount(id)
         : bicarbonateLimit
     ) + 1e-8);
@@ -973,6 +1050,23 @@ export function autoFillWaterVolumes(
   const sortedEntries = entries
     .map((entry, index) => ({ entry, index }))
     .sort((a, b) => {
+      const sourcePreferenceScore = (entry: MineralWaterEntry): number => (
+        ACTIVE_ION_IDS.reduce((total, id) => {
+          const concentration = num(entry.ions[id] ?? '');
+          const target = Math.max(targets[id] ?? 0, 0);
+          const preference = sourcePreferenceFor(id);
+          const weight = preference === 'water-only'
+            ? 100
+            : preference === 'water-then-salt'
+              ? 25
+              : preference === 'salt-only'
+                ? -100
+                : 0;
+          return total + concentration * Math.max(target, 1) * weight;
+        }, 0)
+      );
+      const preferenceDifference = sourcePreferenceScore(b.entry) - sourcePreferenceScore(a.entry);
+      if (Math.abs(preferenceDifference) > 1e-8) return preferenceDifference > 0 ? -1 : 1;
       for (const id of sourcePriority) {
         const difference = num(b.entry.ions[id] ?? '') - num(a.entry.ions[id] ?? '');
         if (Math.abs(difference) > 1e-8) return difference;
@@ -992,8 +1086,8 @@ export function autoFillWaterVolumes(
   // priorities; no-recipe mode protects every active ion at its safe ceiling.
   for (const { entry, index } of sortedEntries) {
     if (remainingVolume <= 0.01) break;
-    const limitingIds: IonId[] = enforceAllIonCeilings
-      ? ceilingIonIds
+      const limitingIds: IonId[] = enforceAllIonCeilings
+        ? effectiveWaterCeilingIonIds
       : ['bicarbonate', ...priorityIonIds];
     const availableAmount = Math.min(AUTO_FILL_MAX_ML, remainingVolume);
     const amountToCeiling = (allowPositiveTargetWiggle: boolean): number => {
@@ -1003,14 +1097,16 @@ export function autoFillWaterVolumes(
         if (concentration <= 0) continue;
         const target = targetAmounts[id] ?? 0;
         const ceiling = enforceAllIonCeilings
-          ? target + (
-            allowPositiveTargetWiggle && target > 0
-              ? positiveTargetWiggleAmount
-              : 0
-          ) + overshootAllowanceAmount(id)
+          ? sourcePreferenceFor(id) === 'salt-only'
+            ? 0
+            : target + (
+                allowPositiveTargetWiggle && target > 0
+                  ? positiveTargetWiggleAmount
+                  : 0
+              ) + overshootAllowanceAmount(id)
           : id === 'bicarbonate'
-          ? bicarbonateLimit
-          : target + deviationAmount;
+            ? bicarbonateLimit
+            : target + deviationAmount;
         const remaining = Math.max(ceiling - covered[id], 0);
         candidateAmount = Math.min(candidateAmount, remaining / concentration);
       }
@@ -1073,6 +1169,7 @@ function watermancerPlanComparisonSignature(plan: WatermancerPlan): string {
     softDeficitLimits: plan.softDeficitLimits,
     minimumSaltDosePpm: plan.minimumSaltDosePpm,
     overshootOrder: plan.overshootOrder,
+    ionSourcePreferences: normalizeWatermancerIonSourcePreferences(plan.ionSourcePreferences),
   });
 }
 
@@ -1143,6 +1240,7 @@ function cloneWatermancerPlan(plan: WatermancerPlan): WatermancerPlan {
     softDeficitLimits: plan.softDeficitLimits ? { ...plan.softDeficitLimits } : undefined,
     minimumSaltDosePpm: plan.minimumSaltDosePpm ? { ...plan.minimumSaltDosePpm } : undefined,
     overshootOrder: [...plan.overshootOrder],
+    ionSourcePreferences: normalizeWatermancerIonSourcePreferences(plan.ionSourcePreferences),
   };
 }
 
@@ -1262,7 +1360,9 @@ function compareAddedWaterMineralCandidates(
 function addedWaterPhaseLimit(
   id: IonId,
   target: Partial<Record<IonId, number>>,
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>,
 ): number {
+  if ((ionSourcePreferences?.[id] ?? 'dont-care') === 'salt-only') return 0;
   const targetValue = Math.max(target[id] ?? 0, 0);
   if (id === 'bicarbonate' || targetValue === 0) return targetValue;
   return targetValue * (1 + ADDED_WATER_MINERAL_OVERSHOOT_RATIO);
@@ -1271,16 +1371,18 @@ function addedWaterPhaseLimit(
 function addedWaterPhaseIsValid(
   ions: Record<IonId, number>,
   target: Partial<Record<IonId, number>>,
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>,
 ): boolean {
   return ACTIVE_ION_IDS.every(id => {
     const actual = ions[id] ?? 0;
-    return actual <= addedWaterPhaseLimit(id, target) + 1e-7;
+    return actual <= addedWaterPhaseLimit(id, target, ionSourcePreferences) + 1e-7;
   });
 }
 
 function addedWaterSaltPolicy(
   target: Partial<Record<IonId, number>>,
   deviationMode: WatermancerBestMatchDeviationMode | undefined,
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>,
 ): WatermancerOvershootPolicy {
   const spectatorIons = ACTIVE_ION_IDS.filter(id => (
     id !== 'bicarbonate'
@@ -1303,6 +1405,7 @@ function addedWaterSaltPolicy(
       softDeficitIons.map(id => [id, (target[id] ?? 0) * 0.1]),
     ),
     priorityOrder: [...ACTIVE_ION_IDS],
+    ionSourcePreferences: normalizeWatermancerIonSourcePreferences(ionSourcePreferences),
   };
 }
 
@@ -1320,7 +1423,7 @@ function addedWaterFinalResultIsValid(
         ? targetValue + Math.max(saltPolicy.maxPpm[id] ?? 0, 0)
         : 0;
     const allowedLimit = Math.max(
-      addedWaterPhaseLimit(id, target),
+      addedWaterPhaseLimit(id, target, saltPolicy.ionSourcePreferences),
       saltPhaseLimit,
       waterIons[id] ?? 0,
     );
@@ -1340,7 +1443,11 @@ function executeAddedWaterMineralFirstRoute(
     [...baseWaters, ...workingAdditions],
     batchMl,
   );
-  let waterPhaseValid = addedWaterPhaseIsValid(waterOnlyIons, target);
+  let waterPhaseValid = addedWaterPhaseIsValid(
+    waterOnlyIons,
+    target,
+    plan.ionSourcePreferences,
+  );
 
   for (let index = 0; index < workingAdditions.length && waterPhaseValid; index += 1) {
     const currentVolume = num(workingAdditions[index].volumeMl);
@@ -1371,7 +1478,7 @@ function executeAddedWaterMineralFirstRoute(
         [...baseWaters, ...candidateAdditions],
         batchMl,
       );
-      if (!addedWaterPhaseIsValid(candidateIons, target)) continue;
+       if (!addedWaterPhaseIsValid(candidateIons, target, plan.ionSourcePreferences)) continue;
       const candidateScore = scoreAddedWaterMineralCandidate(
         candidateIons,
         target,
@@ -1393,6 +1500,7 @@ function executeAddedWaterMineralFirstRoute(
   const saltPolicy = addedWaterSaltPolicy(
     target,
     plan.softDeficitIons && plan.softDeficitIons.length > 0 ? 'permissive' : 'strict',
+    plan.ionSourcePreferences,
   );
   const routePlan: WatermancerPlan = {
     ...cloneWatermancerPlan(plan),
@@ -1490,6 +1598,7 @@ function fillWatermancerRoute(
         softDeficitIons: inputs.plan.softDeficitIons,
         softDeficitLimits: inputs.plan.softDeficitLimits,
         priorityOrder: inputs.plan.overshootOrder,
+        ionSourcePreferences: inputs.plan.ionSourcePreferences,
       },
     );
     return {
@@ -1530,6 +1639,7 @@ function fillWatermancerRoute(
       softDeficitIons: inputs.plan.softDeficitIons,
       softDeficitLimits: inputs.plan.softDeficitLimits,
       priorityOrder: inputs.plan.overshootOrder,
+      ionSourcePreferences: inputs.plan.ionSourcePreferences,
     },
   );
 
@@ -1582,6 +1692,7 @@ function executeWatermancerRoute(
       softDeficitLimits: routePlan.softDeficitLimits,
       minimumSaltDosePpm: routePlan.minimumSaltDosePpm,
       priorityOrder: routePlan.overshootOrder,
+      ionSourcePreferences: routePlan.ionSourcePreferences,
     },
   );
   const allSaltTargets = { ...routePlan.fixedSaltDoses, ...saltTargets };
@@ -2597,6 +2708,15 @@ function App() {
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
   const [watermancerBestMatchDeviationMode, setWatermancerBestMatchDeviationMode] = useState<WatermancerBestMatchDeviationMode | null>(null);
+  const [watermancerIonSourcePreferences, setWatermancerIonSourcePreferences] = useState<Record<IonId, WatermancerIonSourcePreference>>(
+    () => loadWatermancerIonSourcePreferences(),
+  );
+  useEffect(() => {
+    localStorage.setItem(
+      WATERMANCER_ION_SOURCE_STORAGE_KEY,
+      JSON.stringify(watermancerIonSourcePreferences),
+    );
+  }, [watermancerIonSourcePreferences]);
   const [watermancerBestMatchPreview, setWatermancerBestMatchPreview] = useState<WatermancerBestMatchPreview | null>(null);
   const [watermancerAppliedBestMatchRoute, setWatermancerAppliedBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
@@ -3056,6 +3176,7 @@ function App() {
       }),
     ),
     overshootOrder: [...activeAutoFillPriority],
+    ionSourcePreferences: { ...watermancerIonSourcePreferences },
   }), [
     activeAutoFillPriority,
     additionWaters,
@@ -3069,6 +3190,7 @@ function App() {
     watermancerUsedSaltIds,
     watermancerBestMatchDeviationMode,
     watermancerFixedSaltDoses,
+    watermancerIonSourcePreferences,
   ]);
   const watermancerInputSignature = useMemo(
     () => JSON.stringify({
@@ -5930,6 +6052,63 @@ function App() {
                      </div>
                    </div>
                </div>
+                <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
+                  <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
+                    Guide the match
+                    <span className="ml-2 text-[10px] font-normal text-slate-400">
+                      Tell Watermancer where each ion should come from.
+                    </span>
+                  </summary>
+                  <div className="border-t border-indigo-400/15 px-3 py-3">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {ACTIVE_ION_IDS.map(id => {
+                        const preference = watermancerIonSourcePreferences[id] ?? 'dont-care';
+                        return (
+                          <div
+                            key={id}
+                            className="rounded-lg border border-slate-700/60 bg-slate-950/25 px-2.5 py-2"
+                          >
+                            <div className="mb-1.5 flex items-center justify-between gap-2">
+                              <span className="text-[11px] font-semibold text-slate-200">
+                                Where should {ION_MAP[id].name} come from?
+                              </span>
+                              <span className="shrink-0 text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+                              {WATERMANCER_ION_SOURCE_OPTIONS.map(option => {
+                                const selected = preference === option.value;
+                                return (
+                                  <button
+                                    key={option.value}
+                                    type="button"
+                                    aria-pressed={selected}
+                                    onClick={() => {
+                                      setWatermancerIonSourcePreferences(current => ({
+                                        ...current,
+                                        [id]: option.value,
+                                      }));
+                                      setWatermancerBestMatchMessage(null);
+                                    }}
+                                    className={`rounded-md border px-1.5 py-1.5 text-[10px] font-medium leading-tight transition ${
+                                      selected
+                                        ? 'border-cyan-300/70 bg-cyan-400/15 text-cyan-100 shadow-[0_0_10px_rgba(34,211,238,0.16)]'
+                                        : 'border-slate-700/70 bg-slate-900/40 text-slate-500 hover:border-cyan-400/40 hover:text-cyan-200'
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
+                      Water only avoids salt contribution where possible. Salt only keeps the selected water out of that ion’s target. Coupled ions may still be reported as gaps or overshoots.
+                    </p>
+                  </div>
+                </details>
                   <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                   <button
                     type="button"
@@ -5938,7 +6117,12 @@ function App() {
                      className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                      title="Search your selected waters and salts for the best safe match."
                   >
-                     <span aria-hidden="true" className="text-base leading-none">👉</span>
+                      <img
+                        src={pepeImage}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-8 w-8 rounded-full border border-white/20 object-cover shadow-lg"
+                      />
                      <span aria-live="polite">
                        {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
                      </span>

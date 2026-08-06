@@ -3,6 +3,11 @@ import type { MineralWaterEntry } from './App';
 
 export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 export type WatermancerSaltObjective = 'balanced' | 'coverage';
+export type WatermancerIonSourcePreference =
+  | 'water-only'
+  | 'water-then-salt'
+  | 'salt-only'
+  | 'dont-care';
 export type WatermancerOvershootPolicy = {
   enabled: boolean;
   allowedIons: IonId[];
@@ -13,6 +18,7 @@ export type WatermancerOvershootPolicy = {
   /** A salt is either omitted or dosed at/above this ppm floor. */
   minimumSaltDosePpm?: Partial<Record<string, number>>;
   priorityOrder: IonId[];
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>;
 };
 
 export type WatermancerPlan = {
@@ -32,6 +38,7 @@ export type WatermancerPlan = {
   softDeficitLimits?: Partial<Record<IonId, number>>;
   minimumSaltDosePpm?: Partial<Record<string, number>>;
   overshootOrder: IonId[];
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>;
 };
 
 export type WatermancerRouteKind =
@@ -87,6 +94,25 @@ export function normalizeWatermancerIonOrder(order: IonId[]): IonId[] {
   ];
 }
 
+export function normalizeWatermancerIonSourcePreferences(
+  preferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>,
+): Record<IonId, WatermancerIonSourcePreference> {
+  const validValues: WatermancerIonSourcePreference[] = [
+    'water-only',
+    'water-then-salt',
+    'salt-only',
+    'dont-care',
+  ];
+  return Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [
+      id,
+      preferences?.[id] && validValues.includes(preferences[id]!)
+        ? preferences[id]
+        : 'dont-care',
+    ]),
+  ) as Record<IonId, WatermancerIonSourcePreference>;
+}
+
 export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
   return JSON.stringify({
     targetIons: Object.fromEntries(
@@ -136,5 +162,6 @@ export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
         .map(([id, value]) => [id, round(value ?? 0)]),
     ),
     overshootOrder: normalizeWatermancerIonOrder(plan.overshootOrder ?? []),
+    ionSourcePreferences: normalizeWatermancerIonSourcePreferences(plan.ionSourcePreferences),
   });
 }
