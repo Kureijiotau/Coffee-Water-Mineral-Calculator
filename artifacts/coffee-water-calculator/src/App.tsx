@@ -6522,6 +6522,43 @@ function WatermancerIonProfileCard({
     ? `profile:${activeProfileId}`
     : watermancerTargetSource;
 
+  const selectedTargetSourceUrl = (() => {
+    if (currentDropdownValue.startsWith('profile:')) {
+      const profileId = currentDropdownValue.slice('profile:'.length);
+      const referenceWater = referenceWaters.find(
+        water => `${water.id}-ionic-profile` === profileId,
+      );
+      return referenceWater?.sourceUrl;
+    }
+    if (currentDropdownValue.startsWith('recipe:')) {
+      return allRecipes.find(
+        recipe => recipe.id === currentDropdownValue.slice('recipe:'.length),
+      )?.sourceUrl;
+    }
+    if (currentDropdownValue.startsWith('external:')) {
+      return externalRecipes.find(
+        recipe => recipe.id === currentDropdownValue.slice('external:'.length),
+      )?.sourceUrl;
+    }
+    return undefined;
+  })();
+
+  const selectedTargetSourceName = (() => {
+    if (currentDropdownValue.startsWith('profile:')) {
+      return profiles.find(
+        profile => profile.id === currentDropdownValue.slice('profile:'.length),
+      )?.name ?? 'selected Empirical Water profile';
+    }
+    if (currentDropdownValue.startsWith('recipe:')) {
+      return allRecipes.find(
+        recipe => recipe.id === currentDropdownValue.slice('recipe:'.length),
+      )?.name ?? 'selected recipe';
+    }
+    return externalRecipes.find(
+      recipe => recipe.id === currentDropdownValue.slice('external:'.length),
+    )?.name ?? 'selected Watering Hole recipe';
+  })();
+
   const handleDropdownChange = (value: string) => {
     if (value.startsWith('profile:')) {
       const profileId = value.slice('profile:'.length);
@@ -6632,6 +6669,18 @@ function WatermancerIonProfileCard({
               ))}
             </optgroup>
           </select>
+           {selectedTargetSourceUrl && (
+             <a
+               href={selectedTargetSourceUrl}
+               target="_blank"
+               rel="noreferrer"
+               aria-label={`Open source page for ${selectedTargetSourceName}`}
+               title={`Open source page for ${selectedTargetSourceName}`}
+               className="flex h-7 w-7 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-sm font-bold text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+             >
+               ?
+             </a>
+           )}
           {!editing ? (
             <button
               type="button"
