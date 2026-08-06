@@ -6586,30 +6586,49 @@ function WatermancerIonProfileCard({
             aria-label="Select target water profile"
             className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
           >
-            <optgroup label="Ion profiles">
+            <optgroup label="Published water profiles">
               {profiles.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id).map(p => (
                 <option key={`profile:${p.id}`} value={`profile:${p.id}`}>
-                  {p.name}{p.locked ? ' (default)' : ''}
+                  {p.name
+                    .replace(/^Empirical Water — /, '')
+                    .replace(/ ionic profile$/, '')}
+                  {p.locked ? ' · built-in' : ''}
                 </option>
               ))}
             </optgroup>
             {wmProfiles.length > 0 && (
-              <optgroup label="My profiles">
+              <optgroup label="My saved profiles">
                 {wmProfiles.map(p => (
                   <option key={`saved:${p.id}`} value={`saved:${p.id}`}>{p.name}</option>
                 ))}
               </optgroup>
             )}
-            <optgroup label="Salt recipes → ions">
+            <optgroup label="Salt recipes">
               {allRecipes.map(r => (
                  <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                   {r.id === 'kimoi' ? '⭐ ' : ''}{r.name} → ions
+                   {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
                  </option>
               ))}
             </optgroup>
-            <optgroup label="Robert Asami's Watering Hole">
-              {externalRecipes.map(r => (
-                <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name} → ions</option>
+            <optgroup label="Watering Hole · Filter">
+              {externalRecipes.filter(r => r.method === 'Filter').map(r => (
+                <option key={`external:${r.id}`} value={`external:${r.id}`}>
+                  {r.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Watering Hole · Espresso">
+              {externalRecipes.filter(r => r.method === 'Espresso').map(r => (
+                <option key={`external:${r.id}`} value={`external:${r.id}`}>
+                  {r.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Watering Hole · Tap-water proxy">
+              {externalRecipes.filter(r => r.method.includes('tap-water')).map(r => (
+                <option key={`external:${r.id}`} value={`external:${r.id}`}>
+                  {r.name}
+                </option>
               ))}
             </optgroup>
           </select>
