@@ -6383,13 +6383,6 @@ function WatermancerIonProfileCard({
                 <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name} → ions</option>
               ))}
             </optgroup>
-            <optgroup label="Empirical reference waters">
-              {referenceWaters.map(water => (
-                <option key={`reference:${water.id}`} value={`reference:${water.id}`}>
-                  {water.name} → ions
-                </option>
-              ))}
-            </optgroup>
           </select>
           {!editing ? (
             <button
