@@ -6121,8 +6121,9 @@ function App() {
                         src={pepeImage}
                         alt=""
                         aria-hidden="true"
-                        className="h-8 w-8 rounded-full border border-white/20 object-cover shadow-lg"
+                        className="h-8 w-8 object-contain"
                       />
+                      <span aria-hidden="true" className="text-base leading-none">👉</span>
                      <span aria-live="polite">
                        {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
                      </span>
