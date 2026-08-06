@@ -1353,6 +1353,201 @@ function executeWatermancerRoute(
   };
 }
 
+const GLACIAL_WATER_PRIORITY: IonId[] = [
+  'calcium',
+  'bicarbonate',
+  'magnesium',
+  'sodium',
+  'potassium',
+  'chloride',
+  'sulfate',
+  'citrates',
+];
+
+const GLACIAL_WATER_OVERSHOOT_POLICY: WatermancerOvershootPolicy = {
+  enabled: true,
+  allowedIons: ['potassium', 'chloride', 'sulfate'],
+  // These are deliberately generous for the two ions the user is
+  // disregarding. Potassium is limited to 3 ppm beyond its target.
+  maxPpm: { potassium: 3, chloride: 100, sulfate: 100 },
+  priorityOrder: GLACIAL_WATER_PRIORITY,
+};
+
+function saltIonFraction(saltId: string, ionId: IonId): number {
+  return SALTS.find(salt => salt.id === saltId)
+    ?.ions.find(contribution => contribution.ionId === ionId)
+    ?.fraction ?? 0;
+}
+
+function glacialPracticalSaltDose(
+  saltId: string,
+  desiredPpm: number,
+  plan: WatermancerPlan,
+): number {
+  if (!Number.isFinite(desiredPpm) || desiredPpm <= 0) return 0;
+  const minimum = Math.max(0, Number(plan.minimumSaltDosePpm?.[saltId] ?? 0));
+  return Number(Math.max(desiredPpm, minimum).toFixed(6));
+}
+
+function glacialSaltOrder(
+  selectedSaltIds: string[],
+  preferredIds: string[],
+  ionId: IonId,
+): string[] {
+  return preferredIds
+    .filter(id => selectedSaltIds.includes(id) && saltIonFraction(id, ionId) > 0);
+}
+
+function glacialAddSaltForIon(
+  saltTargets: Record<string, number>,
+  saltIds: string[],
+  ionId: IonId,
+  targetIons: Partial<Record<IonId, number>>,
+  bottledIons: Record<IonId, number>,
+  plan: WatermancerPlan,
+  extraCeiling?: (saltId: string, dose: number, currentIons: Record<IonId, number>) => boolean,
+): void {
+  const currentIons = computeIonTotals(saltTargets, bottledIons, 1);
+  const gap = Math.max((targetIons[ionId] ?? 0) - (currentIons[ionId] ?? 0), 0);
+  if (gap <= 0.000001) return;
+
+  for (const saltId of saltIds) {
+    if (Object.prototype.hasOwnProperty.call(plan.fixedSaltDoses, saltId)) continue;
+    const fraction = saltIonFraction(saltId, ionId);
+    if (fraction <= 0) continue;
+    const dose = glacialPracticalSaltDose(saltId, gap / fraction, plan);
+    if (dose <= 0 || extraCeiling && !extraCeiling(saltId, dose, currentIons)) continue;
+    saltTargets[saltId] = dose;
+    return;
+  }
+}
+
+function glacialCandidateScore(
+  finalIons: Record<IonId, number>,
+  targetIons: Partial<Record<IonId, number>>,
+): number {
+  const target = (id: IonId) => Math.max(targetIons[id] ?? 0, 0);
+  const deficit = (id: IonId) => Math.max(target(id) - (finalIons[id] ?? 0), 0);
+  const excess = (id: IonId) => Math.max((finalIons[id] ?? 0) - target(id), 0);
+  const potassiumBeyondAllowance = Math.max(excess('potassium') - 3, 0);
+  const sodiumBeyondAllowance = Math.max(excess('sodium') - 2, 0);
+
+  // The weights encode the user's stop order: calcium and bicarbonate first,
+  // then magnesium, then sodium. Sulfate and chloride intentionally have no
+  // penalty; potassium only matters above the requested 3 ppm allowance.
+  return deficit('calcium') * 10000
+    + excess('bicarbonate') * 10000
+    + potassiumBeyondAllowance * 10000
+    + deficit('magnesium') * 1000
+    + deficit('sodium') * 100
+    + sodiumBeyondAllowance * 100
+    + deficit('potassium') * 5
+    + deficit('sulfate') * 0.25
+    + deficit('chloride') * 0.1
+    + deficit('bicarbonate') * 0.5;
+}
+
+export function craftGlacialStyleWatermancerMatch(
+  inputs: WatermancerRouteInputs,
+): WatermancerRouteCandidate | undefined {
+  const { plan, batchMl, baseWaters, additionWaters } = inputs;
+  if (batchMl <= 0 || (baseWaters.length === 0 && additionWaters.length === 0 && plan.selectedSalts.length === 0)) {
+    return undefined;
+  }
+
+  const priorityVariants: IonId[][] = [
+    GLACIAL_WATER_PRIORITY,
+    ['calcium', 'bicarbonate', 'sodium', 'magnesium', 'potassium', 'chloride', 'sulfate', 'citrates'],
+    ['calcium', 'magnesium', 'bicarbonate', 'sodium', 'potassium', 'chloride', 'sulfate', 'citrates'],
+  ];
+  const seenWaterSignatures = new Set<string>();
+  const candidates: WatermancerRouteCandidate[] = [];
+
+  for (const priority of priorityVariants) {
+    const filledBaseWaters = autoFillWaterVolumes(
+      baseWaters.map(entry => ({ ...entry })),
+      batchMl,
+      plan.targetIons,
+      additionWaters.map(entry => ({ ...entry })),
+      priority,
+      0,
+      true,
+      false,
+      1,
+      0,
+      GLACIAL_WATER_OVERSHOOT_POLICY,
+    );
+    const waterSignature = watermancerWaterComparisonSignature(filledBaseWaters);
+    if (seenWaterSignatures.has(waterSignature)) continue;
+    seenWaterSignatures.add(waterSignature);
+
+    const selectedWaters = [...filledBaseWaters, ...additionWaters.map(entry => ({ ...entry }))];
+    const bottledIons = computeWatermancerBottledIons(selectedWaters, batchMl);
+    const saltTargets = { ...plan.fixedSaltDoses };
+
+    // Phase 1: close calcium using the preferred calcium salts. Calcium
+    // chloride is first because chloride overshoot is explicitly acceptable.
+    glacialAddSaltForIon(
+      saltTargets,
+      glacialSaltOrder(plan.selectedSalts, ['cacl2', 'calact', 'cacit'], 'calcium'),
+      'calcium',
+      plan.targetIons,
+      bottledIons,
+      plan,
+    );
+
+    // Phase 2: finish magnesium with MgCl2 first, accepting its chloride.
+    glacialAddSaltForIon(
+      saltTargets,
+      glacialSaltOrder(plan.selectedSalts, ['mgcl2', 'mgso4', 'mgcit'], 'magnesium'),
+      'magnesium',
+      plan.targetIons,
+      bottledIons,
+      plan,
+    );
+
+    // Phase 3: close sodium with NaCl. Sodium bicarbonate is only a fallback
+    // when NaCl is not allowed and it cannot push bicarbonate above target.
+    glacialAddSaltForIon(
+      saltTargets,
+      glacialSaltOrder(plan.selectedSalts, ['nacl', 'nahco3'], 'sodium'),
+      'sodium',
+      plan.targetIons,
+      bottledIons,
+      plan,
+      (saltId, dose, currentIons) => saltId !== 'nahco3'
+        || currentIons.bicarbonate + dose * saltIonFraction('nahco3', 'bicarbonate')
+          <= (plan.targetIons.bicarbonate ?? 0) + 0.000001,
+    );
+
+    const finalIons = computeIonTotals(saltTargets, bottledIons, 1);
+    const routePlan: WatermancerPlan = {
+      ...cloneWatermancerPlan(plan),
+      selectedWaters,
+      fixedWaterVolumes: Object.fromEntries(
+        selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+      ),
+    };
+    const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
+    candidates.push({
+      id: 'glacial-style',
+      kind: 'primary',
+      label: 'Glacial-style match',
+      explanation: 'Phased match: calcium was covered while protecting bicarbonate, then magnesium with MgCl₂, then sodium with NaCl. Sulfate and chloride excess are disregarded; potassium is allowed up to 3 ppm beyond target.',
+      plan: routePlan,
+      baseWaters: filledBaseWaters,
+      additionWaters: additionWaters.map(entry => ({ ...entry })),
+      saltTargets,
+      finalIons,
+      deviations,
+      overshoots: findIonOvershoots(finalIons, routePlan.targetIons),
+      score: glacialCandidateScore(finalIons, routePlan.targetIons),
+    });
+  }
+
+  return [...candidates].sort((a, b) => a.score - b.score)[0];
+}
+
 export function recalculateWatermancerRouteAtCurrentVolumes(
   inputs: WatermancerRouteInputs,
   selectedCandidate: WatermancerRouteCandidate,
@@ -2671,11 +2866,37 @@ function App() {
     setWatermancerActionMessage('Base waters filled toward the current target.');
     finishWatermancerActionAfterPaint();
   };
-  const handleGlacialCraftPlaceholder = () => {
-    if (watermancerActionRunning) return;
-    setWatermancerActionMessage(
-      'Glacial-style matching is coming soon. Your current recipe was left unchanged.',
-    );
+  const handleGlacialCraftMatch = () => {
+    if (!beginWatermancerAction()) return;
+    setWatermancerBestMatchSummary(null);
+    setWatermancerBestMatchRoute(null);
+    setWatermancerBestMatchMessage(null);
+
+    try {
+      const candidate = craftGlacialStyleWatermancerMatch({
+        plan: cloneWatermancerPlan(watermancerPlan),
+        batchMl,
+        baseWaters: cloneWatermancerWaters(mineralWaters),
+        additionWaters: cloneWatermancerWaters(additionWaters),
+      });
+      if (!candidate) {
+        setWatermancerActionMessage(
+          'Glacial-style matching needs a batch volume and at least one selected water or salt.',
+        );
+        return;
+      }
+
+      setMineralWaters(candidate.baseWaters);
+      setWatermancerBestMatchRoute(candidate);
+      setWatermancerRecalculationNonce(current => current + 1);
+      setWatermancerActionMessage(
+        `Glacial-style match applied to ${watermancerTargetSourceLabel}. Calcium → magnesium → sodium phases completed.`,
+      );
+    } catch {
+      setWatermancerActionMessage('Glacial-style matching could not finish. Please check the selected waters and salts.');
+    } finally {
+      finishWatermancerActionAfterPaint();
+    }
   };
   const handleFindBestWatermancerMatch = () => {
     if (!beginWatermancerAction()) return;
@@ -5790,14 +6011,14 @@ function App() {
                       <button
                         type="button"
                         disabled={watermancerActionRunning}
-                        onClick={handleGlacialCraftPlaceholder}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-fuchsia-300/35 bg-fuchsia-500/10 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 transition hover:border-fuchsia-200/70 hover:bg-fuchsia-500/20 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
+                        onClick={handleGlacialCraftMatch}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-fuchsia-300/45 bg-fuchsia-500/15 px-4 py-2.5 text-sm font-semibold text-fuchsia-100 transition hover:border-fuchsia-200/80 hover:bg-fuchsia-500/25 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
                         title="Automate the Glacial-style matching strategy"
                       >
                         <Sparkles className="h-4 w-4" />
                         Craft Glacial-style match
                         <span className="rounded-full border border-fuchsia-200/20 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
-                          Coming soon
+                          Calcium → Mg → Na
                         </span>
                       </button>
                     )}

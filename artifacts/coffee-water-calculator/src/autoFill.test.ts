@@ -8,6 +8,7 @@ import {
   computeConcentrateDropsForSaltMass,
   computeWatermancerBottledIons,
   computeSaltGapOptionPpm,
+  craftGlacialStyleWatermancerMatch,
   translateSaltTargetsToIonTargets,
   solveWatermancerRoutes,
   applyWatermancerBestMatchDeviationMode,
@@ -345,6 +346,45 @@ describe('autoFillWaterVolumes', () => {
 });
 
 describe('Watermancer salt-to-ion helpers', () => {
+  it('crafts a phased Glacial-style match with calcium-safe water and preferred salts', () => {
+    const base = water('base', { calcium: 20, bicarbonate: 20 });
+    const result = craftGlacialStyleWatermancerMatch({
+      plan: {
+        targetIons: {
+          calcium: 10,
+          magnesium: 5,
+          sodium: 3,
+          potassium: 0,
+          bicarbonate: 10,
+        },
+        selectedWaters: [base],
+        selectedSalts: ['cacl2', 'mgcl2', 'nacl'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'magnesium', 'sodium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'magnesium', 'sodium'],
+      },
+      batchMl: 1000,
+      baseWaters: [base],
+      additionWaters: [],
+    });
+
+    expect(result).toBeDefined();
+    expect(Number(result!.baseWaters[0].volumeMl)).toBe(500);
+    expect(result!.finalIons.calcium).toBeCloseTo(10, 5);
+    expect(result!.finalIons.bicarbonate).toBeLessThanOrEqual(10.000001);
+    expect(result!.finalIons.magnesium).toBeGreaterThanOrEqual(4.999);
+    expect(result!.finalIons.sodium).toBeGreaterThanOrEqual(2.999);
+    expect(result!.saltTargets.mgcl2).toBeGreaterThan(0);
+    expect(result!.saltTargets.nacl).toBeGreaterThan(0);
+    expect(result!.explanation).toContain('calcium');
+  });
+
   it('rejects best-match results when the action generation or inputs changed', () => {
     expect(isWatermancerActionSnapshotCurrent(4, 4, 'same', 'same')).toBe(true);
     expect(isWatermancerActionSnapshotCurrent(4, 5, 'same', 'same')).toBe(false);
