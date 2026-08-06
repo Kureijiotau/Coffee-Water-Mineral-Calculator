@@ -6511,7 +6511,7 @@ function WatermancerIonProfileCard({
               {SUPPLEMENTAL_ION_MAP.lactate.formula}
             </div>
             <div className="mt-1 text-[10px] text-slate-500">
-              Supplemental ion · no target set
+              From Calcium Lactate · display only
             </div>
             <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
               {SUPPLEMENTAL_ION_MAP.lactate.note}

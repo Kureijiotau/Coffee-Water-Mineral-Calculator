@@ -192,7 +192,7 @@ export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
     id: 'lactate',
     name: 'Lactate',
     formula: 'C₃H₅O₃⁻',
-    note: 'Shown only when Calcium Lactate is part of the current salt dose; it is not used as a Watermancer target or solver ion.',
+    note: 'Lactate is the companion ion supplied by Calcium Lactate. This value is shown for transparency, but it is not a Watermancer target and is not included in solver, GH/KH, or ion-watch calculations.',
   },
 ];
 
