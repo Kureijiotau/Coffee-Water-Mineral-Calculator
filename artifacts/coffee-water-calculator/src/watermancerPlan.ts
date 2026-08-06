@@ -60,7 +60,8 @@ export type WatermancerRouteCandidate = {
   deviations: WatermancerIonDeviation[];
   overshoots: IonOvershoot[];
   score: number;
-  valid?: boolean;
+  /** Set only by quality-gated routes, such as Added-water mineral-first. */
+  qualityValid?: boolean;
 };
 
 export type WatermancerSolverStatus = 'matched' | 'partial' | 'blocked';

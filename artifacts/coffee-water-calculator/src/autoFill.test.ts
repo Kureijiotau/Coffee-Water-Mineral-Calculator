@@ -531,7 +531,7 @@ describe('Watermancer salt-to-ion helpers', () => {
 
     expect(route).toBeDefined();
     expect(Number(route!.additionWaters[0].volumeMl)).toBeGreaterThan(0);
-    expect(route!.valid).toBe(true);
+    expect(route!.qualityValid).toBe(true);
     expect(route!.finalIons.bicarbonate).toBeLessThanOrEqual(10.000001);
     expect(route!.finalIons.chloride).toBeLessThanOrEqual(0.000001);
   });
@@ -564,7 +564,7 @@ describe('Watermancer salt-to-ion helpers', () => {
       item => item.strategy === 'added-water-mineral-first',
     );
 
-    expect(candidate?.route.valid).toBe(false);
+    expect(candidate?.route.qualityValid).toBe(false);
     expect(candidate?.result.status).toBe('blocked');
     expect(sweep.winner?.strategy).not.toBe('added-water-mineral-first');
   });
