@@ -1,0 +1,45 @@
+You've found a real bug: `saltIonFraction()` treats each salt's ion fraction as static, but that fraction was computed against `anhydrousMass` while the salt itself carries multiple `hydrationForms` with different molar masses — and a `defaultFormIdx` telling you which one is actually weighed out.
+
+For calcium chloride:
+- `ions[].fraction` for calcium is `40.078 / 110.978` ≈ 0.361 (based on the **anhydrous** molar mass)
+- but `defaultFormIdx: 1` selects the **Dihydrate** (molar mass 147.008), which the user actually measures
+
+Dihydrate has more mass per mole (water of hydration adds weight), so its true calcium fraction is `40.078 / 147.008` ≈ 0.273 — about 24% lower than what `saltIonFraction()` returns.
+
+**Why this matters downstream:** in `glacialAddSaltForIon()`, dose is computed as `gap / fraction`. If `fraction` is inflated (anhydrous-based) while the user is actually going to weigh out dihydrate, the computed dose will be too low — every batch built from this route will be calcium-deficient by roughly that same ~24%, even though the algorithm's ppm bookkeeping looks internally consistent. The same problem exists for any other salt in `SALTS` whose `defaultFormIdx` doesn't point at the anhydrous entry (worth auditing `mgcl2`, `mgso4`, etc. too).
+
+**Fix:** don't store `fraction` against a hardcoded reference mass — derive it against whichever hydration form is actually being dosed.
+
+```typescript
+function saltMolarMass(saltId: string, formIdx?: number): number {
+  const salt = SALTS.find(s => s.id === saltId);
+  if (!salt) return NaN;
+  const idx = formIdx ?? salt.defaultFormIdx ?? 0;
+  return salt.hydrationForms[idx]?.molarMass ?? salt.anhydrousMass;
+}
+
+function saltIonFraction(
+  saltId: string,
+  ionId: IonId,
+  formIdx?: number,
+): number {
+  const salt = SALTS.find(s => s.id === saltId);
+  const contribution = salt?.ions.find(c => c.ionId === ionId);
+
+  if (!salt || !contribution) {
+    return 0;
+  }
+
+  // contribution.fraction was authored against anhydrousMass, so recover the
+  // ion's absolute mass contribution first, then re-express it as a fraction
+  // of whatever form is actually being weighed out.
+  const ionMassPerFormulaUnit = contribution.fraction * salt.anhydrousMass;
+  const dosedMolarMass = saltMolarMass(saltId, formIdx);
+
+  return ionMassPerFormulaUnit / dosedMolarMass;
+}
+```
+
+Every call site in `craftGlacialStyleWatermancerMatch` (`glacialSaltOrder`, `glacialAddSaltForIon`, the `nahco3` ceiling check) calls `saltIonFraction(saltId, ionId)` with no form index, so they'll silently pick up `defaultFormIdx` once this fix lands — no call-site changes needed unless you want to let a plan override which hydration form is in use per salt (in which case you'd thread a `formIdx` from `plan` through those calls instead of relying on the default).
+
+One thing worth checking: is `contribution.fraction` in `SALTS` *always* authored against `anhydrousMass`, or does that convention vary by entry? If some entries were manually computed against their default hydrated form already, this fix would double-correct those and under-dose in the opposite direction. Worth a quick audit of `SALTS` before rolling this out broadly.
