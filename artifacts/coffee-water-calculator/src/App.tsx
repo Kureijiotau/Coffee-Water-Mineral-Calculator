@@ -51,7 +51,7 @@ type BrewerFlavorInput = {
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `reference:${string}`;
 type AppTab = 'calculator' | 'concentrate';
-export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony';
+export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 type AutoCraftObjective = WatermancerSaltObjective;
 export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
 type OvershootSettings = {
@@ -1172,6 +1172,246 @@ export function executeWatermancerRouteCandidate(
   });
 }
 
+const ADDED_WATER_MINERAL_OVERSHOOT_RATIO = 0.3;
+const ADDED_WATER_SALT_OVERSHOOT_RATIO = 0.1;
+const ADDED_WATER_VOLUME_STEP_ML = 1;
+
+type AddedWaterCandidateScore = {
+  calciumCoverage: number;
+  magnesiumCoverage: number;
+  totalCoverage: number;
+  totalExcess: number;
+  totalVolume: number;
+};
+
+function scoreAddedWaterMineralCandidate(
+  ions: Record<IonId, number>,
+  target: Partial<Record<IonId, number>>,
+  waters: MineralWaterEntry[],
+): AddedWaterCandidateScore {
+  const coverageFor = (id: IonId): number => {
+    const targetValue = Math.max(target[id] ?? 0, 0);
+    return targetValue > 0
+      ? Math.min(Math.max(ions[id] ?? 0, 0) / targetValue, 1)
+      : 0;
+  };
+  const totalCoverage = ACTIVE_ION_IDS.reduce(
+    (total, id) => total + coverageFor(id),
+    0,
+  );
+  const totalExcess = ACTIVE_ION_IDS.reduce((total, id) => (
+    total + Math.max((ions[id] ?? 0) - Math.max(target[id] ?? 0, 0), 0)
+  ), 0);
+  return {
+    calciumCoverage: coverageFor('calcium'),
+    magnesiumCoverage: coverageFor('magnesium'),
+    totalCoverage,
+    totalExcess,
+    totalVolume: waters.reduce((total, water) => total + num(water.volumeMl), 0),
+  };
+}
+
+function compareAddedWaterMineralCandidates(
+  left: AddedWaterCandidateScore,
+  right: AddedWaterCandidateScore,
+): number {
+  return (
+    right.calciumCoverage - left.calciumCoverage
+    || right.magnesiumCoverage - left.magnesiumCoverage
+    || right.totalCoverage - left.totalCoverage
+    || left.totalExcess - right.totalExcess
+    || left.totalVolume - right.totalVolume
+  );
+}
+
+function addedWaterPhaseIsValid(
+  ions: Record<IonId, number>,
+  target: Partial<Record<IonId, number>>,
+): boolean {
+  return ACTIVE_ION_IDS.every(id => {
+    const actual = ions[id] ?? 0;
+    const targetValue = Math.max(target[id] ?? 0, 0);
+    const limit = id === 'bicarbonate'
+      ? targetValue
+      : targetValue > 0
+        ? targetValue * (1 + ADDED_WATER_MINERAL_OVERSHOOT_RATIO)
+        : 0;
+    return actual <= limit + 1e-7;
+  });
+}
+
+function addedWaterSaltPolicy(
+  waterIons: Record<IonId, number>,
+  target: Partial<Record<IonId, number>>,
+  deviationMode: WatermancerBestMatchDeviationMode | undefined,
+): WatermancerOvershootPolicy {
+  const spectatorIons = ACTIVE_ION_IDS.filter(id => (
+    id !== 'bicarbonate'
+    && (target[id] ?? 0) > 0
+  ));
+  const softDeficitIons = deviationMode === 'permissive'
+    ? ACTIVE_ION_IDS.filter(id => (target[id] ?? 0) > 0)
+    : [];
+  return {
+    enabled: true,
+    allowedIons: spectatorIons,
+    maxPpm: Object.fromEntries(
+      spectatorIons.map(id => [
+        id,
+        (target[id] ?? 0) * ADDED_WATER_SALT_OVERSHOOT_RATIO,
+      ]),
+    ),
+    softDeficitIons,
+    softDeficitLimits: Object.fromEntries(
+      softDeficitIons.map(id => [id, (target[id] ?? 0) * 0.1]),
+    ),
+    priorityOrder: [...ACTIVE_ION_IDS],
+  };
+}
+
+function executeAddedWaterMineralFirstRoute(
+  inputs: WatermancerRouteInputs,
+  definition: WatermancerRouteDefinition,
+): WatermancerRouteCandidate {
+  const { plan, batchMl, baseWaters, additionWaters } = inputs;
+  const startingAdditions = cloneWatermancerWaters(additionWaters);
+  const target = plan.targetIons;
+  let workingAdditions = startingAdditions;
+  let waterOnlyIons = computeWatermancerBottledIons(
+    [...baseWaters, ...workingAdditions],
+    batchMl,
+  );
+  let waterPhaseValid = addedWaterPhaseIsValid(waterOnlyIons, target);
+
+  for (let index = 0; index < workingAdditions.length && waterPhaseValid; index += 1) {
+    const currentVolume = num(workingAdditions[index].volumeMl);
+    const otherVolume = baseWaters.reduce((total, water) => total + num(water.volumeMl), 0)
+      + workingAdditions.reduce(
+        (total, water, otherIndex) => otherIndex === index ? total : total + num(water.volumeMl),
+        0,
+      );
+    const availableVolume = Math.max(batchMl - otherVolume, currentVolume);
+    const maximumVolume = Math.max(
+      currentVolume,
+      Math.min(AUTO_FILL_MAX_ML, availableVolume),
+    );
+    let bestCandidate = workingAdditions;
+    let bestScore = scoreAddedWaterMineralCandidate(waterOnlyIons, target, workingAdditions);
+
+    for (
+      let candidateVolume = currentVolume + ADDED_WATER_VOLUME_STEP_ML;
+      candidateVolume <= maximumVolume + 1e-7;
+      candidateVolume += ADDED_WATER_VOLUME_STEP_ML
+    ) {
+      const candidateAdditions = workingAdditions.map((water, candidateIndex) => (
+        candidateIndex === index
+          ? { ...water, volumeMl: String(candidateVolume) }
+          : { ...water }
+      ));
+      const candidateIons = computeWatermancerBottledIons(
+        [...baseWaters, ...candidateAdditions],
+        batchMl,
+      );
+      if (!addedWaterPhaseIsValid(candidateIons, target)) continue;
+      const candidateScore = scoreAddedWaterMineralCandidate(
+        candidateIons,
+        target,
+        candidateAdditions,
+      );
+      if (compareAddedWaterMineralCandidates(bestScore, candidateScore) > 0) {
+        bestCandidate = candidateAdditions;
+        bestScore = candidateScore;
+        waterOnlyIons = candidateIons;
+      }
+    }
+    workingAdditions = bestCandidate;
+    waterOnlyIons = computeWatermancerBottledIons(
+      [...baseWaters, ...workingAdditions],
+      batchMl,
+    );
+    waterPhaseValid = addedWaterPhaseIsValid(waterOnlyIons, target);
+  }
+
+  const saltPolicy = addedWaterSaltPolicy(
+    waterOnlyIons,
+    target,
+    plan.softDeficitIons && plan.softDeficitIons.length > 0 ? 'permissive' : 'strict',
+  );
+  const routePlan: WatermancerPlan = {
+    ...cloneWatermancerPlan(plan),
+    strategy: 'added-water-mineral-first',
+    saltObjective: definition.saltObjective,
+    ionPriority: [...definition.priority],
+    overshootOrder: [...definition.priority],
+    allowOvershoot: true,
+    allowedOvershootIons: [...saltPolicy.allowedIons],
+    overshootLimits: { ...saltPolicy.maxPpm },
+    softDeficitIons: [...(saltPolicy.softDeficitIons ?? [])],
+    softDeficitLimits: { ...(saltPolicy.softDeficitLimits ?? {}) },
+  };
+  const saltTargets = autoCraftSaltTargets(
+    routePlan.selectedSalts,
+    waterOnlyIons,
+    routePlan.targetIons,
+    routePlan.fixedSaltDoses,
+    'closest-match',
+    routePlan.saltObjective,
+    saltPolicy,
+  );
+  const allSaltTargets = {
+    ...routePlan.fixedSaltDoses,
+    ...saltTargets,
+  };
+  const selectedWaters = [...baseWaters, ...workingAdditions];
+  const finalIons = computeIonTotals(allSaltTargets, waterOnlyIons, 1);
+  const deviations = watermancerRouteDeviations(finalIons, routePlan.targetIons);
+  const overshoots = findIonOvershoots(finalIons, routePlan.targetIons);
+  const finalWithinCeilings = ACTIVE_ION_IDS.every(id => {
+    const actual = finalIons[id] ?? 0;
+    const targetValue = Math.max(routePlan.targetIons[id] ?? 0, 0);
+    const waterPhaseLimit = id === 'bicarbonate'
+      ? targetValue
+      : targetValue > 0
+        ? targetValue * (1 + ADDED_WATER_MINERAL_OVERSHOOT_RATIO)
+        : 0;
+    const saltPhaseLimit = id === 'bicarbonate'
+      ? targetValue
+      : targetValue > 0
+        ? targetValue + Math.max(saltPolicy.maxPpm[id] ?? 0, 0)
+        : 0;
+    const limit = Math.max(waterOnlyIons[id] ?? 0, saltPhaseLimit);
+    return actual <= limit + 1e-7;
+  });
+  const valid = waterPhaseValid && finalWithinCeilings;
+  const score = totalWatermancerDeviation(
+    finalIons,
+    routePlan.targetIons,
+    routePlan,
+  ) + (valid ? 0 : 1_000_000);
+
+  return {
+    id: definition.id,
+    kind: definition.kind,
+    label: 'Added-water mineral-first',
+    explanation: 'Added waters maximize calcium and magnesium first while protecting bicarbonate; salts finish the remaining gaps with tighter spectator-ion limits.',
+    plan: {
+      ...routePlan,
+      selectedWaters,
+      fixedWaterVolumes: Object.fromEntries(
+        selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+      ),
+    },
+    baseWaters: baseWaters.map(entry => ({ ...entry })),
+    additionWaters: workingAdditions,
+    saltTargets: allSaltTargets,
+    finalIons,
+    deviations,
+    overshoots,
+    score,
+    valid,
+  };
+}
+
 function fillWatermancerRoute(
   inputs: WatermancerRouteInputs,
   fillWater: boolean,
@@ -1261,6 +1501,9 @@ function executeWatermancerRoute(
   inputs: WatermancerRouteInputs,
   definition: WatermancerRouteDefinition,
 ): WatermancerRouteCandidate {
+  if (definition.strategy === 'added-water-mineral-first') {
+    return executeAddedWaterMineralFirstRoute(inputs, definition);
+  }
   const routePlan: WatermancerPlan = {
     ...inputs.plan,
     strategy: definition.strategy,
@@ -1673,6 +1916,7 @@ const WATERMANCER_BEST_MATCH_STRATEGIES: WatermancerStrategy[] = [
   'closest-match',
   'water-first',
   'gh-kh-harmony',
+  'added-water-mineral-first',
 ];
 
 const WATERMANCER_BEST_MATCH_DEVIATION_MODES: WatermancerBestMatchDeviationMode[] = [
@@ -1701,7 +1945,9 @@ export function selectBestWatermancerMatchCandidate(
   currentSaltObjective: WatermancerSaltObjective = 'balanced',
   currentPriorityPreset: Exclude<AutoFillPriorityPreset, 'custom'> = 'mineral-first',
 ): WatermancerBestMatchCandidate | undefined {
-  return [...candidates].sort((a, b) => {
+  return candidates
+    .filter(candidate => candidate.route.valid !== false)
+    .sort((a, b) => {
     const scoreDifference = a.totalDeviation - b.totalDeviation;
     if (Math.abs(scoreDifference) > 1e-7) return scoreDifference;
 
@@ -1734,7 +1980,7 @@ export function selectBestWatermancerMatchCandidate(
       WATERMANCER_BEST_MATCH_PRIORITY_PRESETS.indexOf(a.priorityPreset)
       - WATERMANCER_BEST_MATCH_PRIORITY_PRESETS.indexOf(b.priorityPreset)
     );
-  })[0];
+    })[0];
 }
 
 export function findBestWatermancerMatch({
@@ -1785,6 +2031,7 @@ export function findBestWatermancerMatch({
           ));
           const status: WatermancerSolverResult['status'] = batchMl <= 0
             || (candidatePlan.selectedWaters.length === 0 && candidatePlan.selectedSalts.length === 0)
+            || route.valid === false
             ? 'blocked'
             : meaningfulDeviations.length === 0
               ? 'matched'
@@ -2914,6 +3161,9 @@ function App() {
         setAutoFillCustomPriority([...winner.priority]);
         setWatermancerBestMatchDeviationMode(winner.deviationMode);
         setMineralWaters(winner.route.baseWaters);
+        if (winner.strategy === 'added-water-mineral-first') {
+          setAdditionWaters(winner.route.additionWaters);
+        }
         setWatermancerBestMatchRoute(winner.route);
         setWatermancerBestMatchSummary({
           strategy: winner.strategy,
@@ -2934,7 +3184,7 @@ function App() {
       }
     };
     // Give touch browsers one paint to show the busy state before the
-    // synchronous 36-route sweep starts.
+    // synchronous 48-route sweep starts.
     window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
   const appliedBestMatchRoute = watermancerBestMatchRoute
@@ -5642,6 +5892,7 @@ function App() {
                             <option value="closest-match">Closest match</option>
                             <option value="water-first">Water-first</option>
                             <option value="gh-kh-harmony">GH / KH harmony</option>
+                            <option value="added-water-mineral-first">Added-water mineral-first</option>
                           </select>
                         </label>
                         <label className="block">
@@ -5957,7 +6208,7 @@ function App() {
                        disabled={watermancerActionRunning}
                        onClick={handleFindBestWatermancerMatch}
                        className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
-                       title="Sweep all 36 strategy, salt objective, priority, and deviation combinations with base-water filling"
+                        title="Sweep all 48 strategy, salt objective, priority, and deviation combinations with quality-checked Added-water mineral matching"
                      >
                        <img
                          src={fillWaterPromptImage}
@@ -5966,11 +6217,11 @@ function App() {
                        />
                        <span aria-hidden="true" className="text-base leading-none">👉</span>
                         <span aria-live="polite">
-                          {watermancerActionRunning ? 'Sweeping 36 routes…' : 'Find the best match'}
+                           {watermancerActionRunning ? 'Sweeping 48 routes…' : 'Find the best match'}
                         </span>
                        {!watermancerActionRunning && (
                           <span className="rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80">
-                           36-route sweep
+                            48-route quality sweep
                          </span>
                        )}
                      </button>
@@ -5978,12 +6229,14 @@ function App() {
                 </div>
                 {watermancerBestMatchSummary && (
                   <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
-                    Best of 36 matches: <span className="font-semibold">
+                     Best of 48 matches: <span className="font-semibold">
                       {watermancerBestMatchSummary.strategy === 'closest-match'
                         ? 'Closest match'
                         : watermancerBestMatchSummary.strategy === 'water-first'
                           ? 'Water-first'
-                          : 'GH / KH harmony'}
+                          : watermancerBestMatchSummary.strategy === 'gh-kh-harmony'
+                            ? 'GH / KH harmony'
+                            : 'Added-water mineral-first'}
                     </span>
                     <span className="mx-1.5 text-violet-300/60">·</span>
                     <span className="font-semibold">

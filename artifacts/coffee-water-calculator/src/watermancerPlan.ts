@@ -1,7 +1,7 @@
 import { ACTIVE_ION_IDS, type IonId, type IonOvershoot } from './waterData';
 import type { MineralWaterEntry } from './App';
 
-export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony';
+export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 export type WatermancerSaltObjective = 'balanced' | 'coverage';
 export type WatermancerOvershootPolicy = {
   enabled: boolean;
@@ -60,6 +60,7 @@ export type WatermancerRouteCandidate = {
   deviations: WatermancerIonDeviation[];
   overshoots: IonOvershoot[];
   score: number;
+  valid?: boolean;
 };
 
 export type WatermancerSolverStatus = 'matched' | 'partial' | 'blocked';

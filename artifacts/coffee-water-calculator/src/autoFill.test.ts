@@ -446,9 +446,9 @@ describe('Watermancer salt-to-ion helpers', () => {
       additionWaters: [],
     });
 
-    expect(sweep.candidates).toHaveLength(36);
+    expect(sweep.candidates).toHaveLength(48);
     expect(new Set(sweep.candidates.map(candidate => candidate.strategy))).toEqual(
-      new Set(['closest-match', 'water-first', 'gh-kh-harmony']),
+      new Set(['closest-match', 'water-first', 'gh-kh-harmony', 'added-water-mineral-first']),
     );
     expect(new Set(sweep.candidates.map(candidate => candidate.deviationMode))).toEqual(
       new Set(['strict', 'permissive']),
@@ -486,9 +486,87 @@ describe('Watermancer salt-to-ion helpers', () => {
       additionWaters: [added],
     });
 
-    expect(sweep.candidates).toHaveLength(36);
-    expect(sweep.candidates.every(candidate => candidate.route.additionWaters[0].volumeMl === '250')).toBe(true);
+    expect(sweep.candidates).toHaveLength(48);
+    expect(sweep.candidates
+      .filter(candidate => candidate.strategy !== 'added-water-mineral-first')
+      .every(candidate => candidate.route.additionWaters[0].volumeMl === '250')).toBe(true);
     expect(sweep.candidates.some(candidate => Number(candidate.route.baseWaters[0].volumeMl) > 0)).toBe(true);
+  });
+
+  it('adds selected Added water for the mineral-first strategy without crossing its water ceilings', () => {
+    const added = water('added', {
+      calcium: 20,
+      magnesium: 10,
+      bicarbonate: 10,
+      sulfate: 20,
+    });
+    const base = water('base', { calcium: 2 });
+    const plan = {
+      targetIons: {
+        calcium: 10,
+        magnesium: 5,
+        bicarbonate: 10,
+        sulfate: 10,
+        chloride: 0,
+      },
+      selectedWaters: [base, added],
+      selectedSalts: [],
+      fixedWaterVolumes: { base: 500, added: 0 },
+      fixedSaltDoses: {},
+      strategy: 'added-water-mineral-first' as const,
+      saltObjective: 'balanced' as const,
+      ionPriority: ['calcium', 'magnesium', 'bicarbonate', 'sulfate'] as const,
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      overshootOrder: ['calcium', 'magnesium', 'bicarbonate', 'sulfate'] as const,
+    };
+
+    const route = findBestWatermancerMatch({
+      plan,
+      batchMl: 1000,
+      baseWaters: [base],
+      additionWaters: [added],
+    }).candidates.find(candidate => candidate.strategy === 'added-water-mineral-first')?.route;
+
+    expect(route).toBeDefined();
+    expect(Number(route!.additionWaters[0].volumeMl)).toBeGreaterThan(0);
+    expect(route!.valid).toBe(true);
+    expect(route!.finalIons.bicarbonate).toBeLessThanOrEqual(10.000001);
+    expect(route!.finalIons.chloride).toBeLessThanOrEqual(0.000001);
+  });
+
+  it('rejects Added-water mineral-first when the current Added water already violates a hard ceiling', () => {
+    const added = water('added', { bicarbonate: 20 });
+    added.volumeMl = '1000';
+    const plan = {
+      targetIons: { bicarbonate: 10 },
+      selectedWaters: [added],
+      selectedSalts: [],
+      fixedWaterVolumes: { added: 1000 },
+      fixedSaltDoses: {},
+      strategy: 'added-water-mineral-first' as const,
+      saltObjective: 'balanced' as const,
+      ionPriority: ['bicarbonate'] as const,
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      overshootOrder: ['bicarbonate'] as const,
+    };
+
+    const sweep = findBestWatermancerMatch({
+      plan,
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [added],
+    });
+    const candidate = sweep.candidates.find(
+      item => item.strategy === 'added-water-mineral-first',
+    );
+
+    expect(candidate?.route.valid).toBe(false);
+    expect(candidate?.result.status).toBe('blocked');
+    expect(sweep.winner?.strategy).not.toBe('added-water-mineral-first');
   });
 
   it('uses zero tolerance for strict mode and target-scaled tolerance for permissive mode', () => {
