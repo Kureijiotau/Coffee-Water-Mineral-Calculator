@@ -7683,6 +7683,20 @@ function BrewerRecipeStepsModal({
     let clone: HTMLDivElement | null = null;
     let imageUrl: string | null = null;
     let svgUrl: string | null = null;
+    const downloadUrl = (url: string, filename: string) => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
+    const downloadBlob = (blob: Blob, filename: string) => {
+      const url = URL.createObjectURL(blob);
+      downloadUrl(url, filename);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
 
     try {
       clone = source.cloneNode(true) as HTMLDivElement;
@@ -7723,31 +7737,45 @@ function BrewerRecipeStepsModal({
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
       const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
       svgUrl = URL.createObjectURL(svgBlob);
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error('Recipe card image could not be created.'));
-        image.src = svgUrl ?? '';
-      });
+      try {
+        const image = new Image();
+        await new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new Error('Recipe card image could not be created.'));
+          image.src = svgUrl ?? '';
+        });
 
-      const canvas = document.createElement('canvas');
-      const scale = 2;
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Canvas is unavailable.');
-      context.scale(scale, scale);
-      context.drawImage(image, 0, 0, width, height);
-      const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-      if (!png) throw new Error('Recipe card image could not be exported.');
+        const canvas = document.createElement('canvas');
+        const scale = 2;
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable.');
+        context.scale(scale, scale);
+        context.drawImage(image, 0, 0, width, height);
+        const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!png) throw new Error('Recipe card image could not be exported.');
 
-      imageUrl = URL.createObjectURL(png);
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = 'coffee-water-recipe-steps.png';
-      link.click();
+        imageUrl = URL.createObjectURL(png);
+        downloadUrl(imageUrl, 'coffee-water-recipe-steps.png');
+      } catch {
+        // Some browsers block SVG foreignObject rasterization. The SVG itself
+        // is still a complete, readable export, so save it instead of failing
+        // silently.
+        if (!svgUrl) throw new Error('Recipe card SVG could not be exported.');
+        downloadUrl(svgUrl, 'coffee-water-recipe-steps.svg');
+      }
     } catch {
-      setSaveImageError(true);
+      try {
+        const text = source.innerText.trim();
+        if (!text) throw new Error('Recipe steps are empty.');
+        downloadBlob(
+          new Blob([text], { type: 'text/plain;charset=utf-8' }),
+          'coffee-water-recipe-steps.txt',
+        );
+      } catch {
+        setSaveImageError(true);
+      }
     } finally {
       clone?.remove();
       if (svgUrl) URL.revokeObjectURL(svgUrl);
