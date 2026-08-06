@@ -105,6 +105,12 @@ Manual Watermancer salt additions are physical-mass overrides layered on top of 
 
 **How to apply:** Keep manual additions separate from route candidates, convert them to the current hydration form only for chemistry calculations, and preserve the physical mg value when routes or automatic inputs change.
 
+Best-match search should be review-first: hold a cloned, signature-bound winner separately, keep the editable plan unchanged until confirmation, and apply the full candidate atomically.
+
+**Why:** Applying a background recommendation immediately makes it easy for users to lose deliberate target, water, salt, hydration, or dose choices before they can inspect the chemistry.
+
+**How to apply:** Search from an immutable snapshot, invalidate previews when the signature changes, show waters/salts/ions/gaps/overshoots in the review card, and make “Use this match” the only mutation step.
+
 The selected Watermancer route must be tracked by both its stable route kind and its displayed ID, because the best-ranked candidate can be promoted into the primary card and receive a rewritten ID.
 
 **Why:** Ranking can move Prioritize ions into the primary slot; matching only the old ID then makes the result card show a different candidate's chemistry.

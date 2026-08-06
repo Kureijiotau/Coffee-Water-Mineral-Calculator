@@ -2,11 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, SlidersHorizontal, Pin, PinOff, RefreshCw } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
-import monkasOvershootImage from '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png';
-import recommendedOvershootImage from '@assets/image_1785734539832.png';
-import fillWaterPromptImage from '@assets/ez_1785735003821.png';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -54,6 +51,25 @@ type AppTab = 'calculator' | 'concentrate';
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 type AutoCraftObjective = WatermancerSaltObjective;
 export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
+export type WatermancerBestMatchPreview = {
+  route: WatermancerRouteCandidate;
+  strategy: WatermancerStrategy;
+  saltObjective: WatermancerSaltObjective;
+  priorityPreset: Exclude<AutoFillPriorityPreset, 'custom'>;
+  deviationMode: WatermancerBestMatchDeviationMode;
+  totalDeviation: number;
+  status: 'matched' | 'partial';
+  explanation: string;
+  inputSignature: string;
+};
+
+export function watermancerBestMatchPreviewIsCurrent(
+  preview: Pick<WatermancerBestMatchPreview, 'inputSignature'> | null,
+  currentInputSignature: string,
+): boolean {
+  return Boolean(preview && preview.inputSignature === currentInputSignature);
+}
+
 const WATERMANCER_STRATEGY_LABELS: Record<WatermancerStrategy, string> = {
   'closest-match': 'Closest match',
   'water-first': 'Water-first',
@@ -1127,6 +1143,19 @@ function cloneWatermancerPlan(plan: WatermancerPlan): WatermancerPlan {
     softDeficitLimits: plan.softDeficitLimits ? { ...plan.softDeficitLimits } : undefined,
     minimumSaltDosePpm: plan.minimumSaltDosePpm ? { ...plan.minimumSaltDosePpm } : undefined,
     overshootOrder: [...plan.overshootOrder],
+  };
+}
+
+function cloneWatermancerRouteCandidate(route: WatermancerRouteCandidate): WatermancerRouteCandidate {
+  return {
+    ...route,
+    plan: cloneWatermancerPlan(route.plan),
+    baseWaters: cloneWatermancerWaters(route.baseWaters),
+    additionWaters: cloneWatermancerWaters(route.additionWaters),
+    saltTargets: { ...route.saltTargets },
+    finalIons: { ...route.finalIons },
+    deviations: route.deviations.map(deviation => ({ ...deviation })),
+    overshoots: route.overshoots.map(overshoot => ({ ...overshoot })),
   };
 }
 
@@ -2438,8 +2467,6 @@ function App() {
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
-  const [autoFillDraggedIndex, setAutoFillDraggedIndex] = useState<number | null>(null);
-  const [showAutoFillSettings, setShowAutoFillSettings] = useState(false);
   const [fillWaterNudgeSeen, setFillWaterNudgeSeen] = useState(false);
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
@@ -2570,14 +2597,8 @@ function App() {
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
   const [watermancerBestMatchDeviationMode, setWatermancerBestMatchDeviationMode] = useState<WatermancerBestMatchDeviationMode | null>(null);
-  const [watermancerBestMatchSummary, setWatermancerBestMatchSummary] = useState<{
-    strategy: WatermancerStrategy;
-    saltObjective: WatermancerSaltObjective;
-    priorityPreset: Exclude<AutoFillPriorityPreset, 'custom'>;
-    deviationMode: WatermancerBestMatchDeviationMode;
-    totalDeviation: number;
-  } | null>(null);
-  const [watermancerBestMatchRoute, setWatermancerBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
+  const [watermancerBestMatchPreview, setWatermancerBestMatchPreview] = useState<WatermancerBestMatchPreview | null>(null);
+  const [watermancerAppliedBestMatchRoute, setWatermancerAppliedBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
@@ -2604,7 +2625,6 @@ function App() {
   const activeAutoFillPriority = effectiveAutoFillPreset === 'custom'
     ? autoFillCustomPriority
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
-  const selectedOvershootIons = activeAutoFillPriority.filter(id => overshootSettings.allowedIons.includes(id));
   const effectiveAutoFillDeviationPpm = showAlchemist ? 0 : autoFillDeviationPpm;
   const modeAccent = nerdLevel === 'alchemist'
     ? 'from-emerald-600 to-teal-500'
@@ -2726,8 +2746,8 @@ function App() {
       setAutoCraftPreset('closest-match');
       setWatermancerSaltObjective('balanced');
       setWatermancerBestMatchDeviationMode(null);
-      setWatermancerBestMatchSummary(null);
-      setWatermancerBestMatchRoute(null);
+      setWatermancerBestMatchPreview(null);
+      setWatermancerAppliedBestMatchRoute(null);
       setWatermancerBestMatchMessage(null);
       setWatermancerBestMatchRunning(false);
       setWatermancerActionRunning(false);
@@ -3086,16 +3106,6 @@ function App() {
   const finishWatermancerActionAfterPaint = () => {
     window.setTimeout(finishWatermancerAction, 0);
   };
-  const handleApplyCurrentWatermancerSettings = () => {
-    if (!beginWatermancerAction()) return;
-    setWatermancerBestMatchDeviationMode(null);
-    setWatermancerBestMatchSummary(null);
-      setWatermancerBestMatchRoute(null);
-    setWatermancerBestMatchMessage(null);
-    setWatermancerRecalculationNonce(current => current + 1);
-    setWatermancerActionMessage('Current matching settings applied.');
-    finishWatermancerActionAfterPaint();
-  };
   const handleFillBaseWaters = () => {
     if (!beginWatermancerAction()) return;
     setFillWaterNudgeSeen(true);
@@ -3167,33 +3177,24 @@ function App() {
         }
         const winner = sweep.winner;
         if (!winner) {
-          setWatermancerBestMatchSummary(null);
-          setWatermancerBestMatchRoute(null);
+          setWatermancerBestMatchPreview(null);
           setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
           return;
         }
-        setAutoCraftPreset(winner.strategy);
-        setWatermancerSaltObjective(winner.saltObjective);
-        setAutoFillPriorityPreset(winner.priorityPreset);
-        setAutoFillCustomPriority([...winner.priority]);
-        setWatermancerBestMatchDeviationMode(winner.deviationMode);
-        setMineralWaters(winner.route.baseWaters);
-        if (winner.strategy === 'added-water-mineral-first') {
-          setAdditionWaters(winner.route.additionWaters);
-        }
-        setWatermancerBestMatchRoute(winner.route);
-        setWatermancerBestMatchSummary({
+        setWatermancerBestMatchPreview({
+          route: cloneWatermancerRouteCandidate(winner.route),
           strategy: winner.strategy,
           saltObjective: winner.saltObjective,
           priorityPreset: winner.priorityPreset,
           deviationMode: winner.deviationMode,
           totalDeviation: winner.totalDeviation,
+          status: winner.result.status === 'matched' ? 'matched' : 'partial',
+          explanation: winner.result.explanation,
+          inputSignature: snapshot.inputSignature,
         });
         setWatermancerBestMatchMessage(null);
-        setWatermancerRecalculationNonce(current => current + 1);
-        setWatermancerActionMessage('Closest match applied from the captured settings.');
       } catch {
-        setWatermancerBestMatchSummary(null);
+        setWatermancerBestMatchPreview(null);
         setWatermancerBestMatchMessage('The best-match search could not finish. Please try again.');
       } finally {
         setWatermancerBestMatchRunning(false);
@@ -3204,14 +3205,70 @@ function App() {
     // synchronous 48-route sweep starts.
     window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
-  const appliedBestMatchRoute = watermancerBestMatchRoute
+  const handleUseWatermancerBestMatch = () => {
+    const preview = watermancerBestMatchPreview;
+    if (!watermancerBestMatchPreviewIsCurrent(preview, watermancerInputSignature)) {
+      setWatermancerBestMatchPreview(null);
+      setWatermancerBestMatchMessage('This recommendation is out of date. Find a new best match.');
+      return;
+    }
+    if (!preview) return;
+    const route = cloneWatermancerRouteCandidate(preview.route);
+    setAutoCraftPreset(preview.strategy);
+    setWatermancerSaltObjective(preview.saltObjective);
+    setAutoFillPriorityPreset(preview.priorityPreset);
+    setAutoFillCustomPriority([...route.plan.ionPriority]);
+    setWatermancerBestMatchDeviationMode(preview.deviationMode);
+    setWatermancerUsedSaltIds([...route.plan.selectedSalts]);
+    setRows(currentRows => SALTS.map((salt, index) => ({
+      target: (route.saltTargets[salt.id] ?? 0) > 0.000001
+        ? String(Number(route.saltTargets[salt.id].toFixed(4)))
+        : '',
+      formIdx: currentRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0,
+    })));
+    setWatermancerDoseOverridesMg(Object.fromEntries(
+      Object.entries(route.plan.fixedSaltDoses).map(([saltId, dosePpm]) => {
+        const saltIndex = SALTS.findIndex(salt => salt.id === saltId);
+        const salt = SALTS[saltIndex];
+        const formIdx = saltIndex >= 0
+          ? rows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+          : 0;
+        const form = salt?.hydrationForms[formIdx] ?? salt?.hydrationForms[salt.defaultFormIdx ?? 0];
+        const massMg = salt && form && L > 0
+          ? dosePpm * L * form.molarMass / salt.anhydrousMass
+          : 0;
+        return [saltId, massMg];
+      }).filter(([, massMg]) => Number(massMg) > 0),
+    ));
+    setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
+    setMineralWaters(cloneWatermancerWaters(route.baseWaters));
+    setAdditionWaters(cloneWatermancerWaters(route.additionWaters));
+    setWatermancerAppliedBestMatchRoute(route);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerActionMessage('Recommended match applied.');
+    setWatermancerRecalculationNonce(current => current + 1);
+  };
+  const handleDismissWatermancerBestMatch = () => {
+    setWatermancerBestMatchPreview(null);
+    setWatermancerBestMatchMessage(null);
+  };
+  useEffect(() => {
+    if (
+      !watermancerBestMatchPreviewIsCurrent(watermancerBestMatchPreview, watermancerInputSignature)
+    ) {
+      setWatermancerBestMatchPreview(null);
+    }
+  }, [watermancerBestMatchPreview, watermancerInputSignature]);
+  const appliedBestMatchRoute = watermancerAppliedBestMatchRoute
     && watermancerRouteMatchesCurrentInputs(
-      watermancerBestMatchRoute,
+      watermancerAppliedBestMatchRoute,
       watermancerPlan,
       mineralWaters,
       additionWaters,
     )
-    ? watermancerBestMatchRoute
+    ? watermancerAppliedBestMatchRoute
     : null;
   const activeWatermancerRoute = useMemo(
     () => showWatermancer
@@ -3590,8 +3647,8 @@ function App() {
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerBestMatchDeviationMode(null);
-    setWatermancerBestMatchSummary(null);
-    setWatermancerBestMatchRoute(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerAppliedBestMatchRoute(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
@@ -5845,14 +5902,14 @@ function App() {
            <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match">
              <SectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
-               title="Find closest match"
+                title="Find your best match"
              />
               <div className="app-card-body">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                  <div>
-                   <p className="text-xs font-semibold text-cyan-100">Watermancer is using the best available match.</p>
+                    <p className="text-xs font-semibold text-cyan-100">Search your selected waters and salts for a safe, useful match.</p>
                    <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
-                       Adjust the matching controls below, then apply them or search all strategies for the lowest final deviation.
+                        The calculator compares the available options behind the scenes, then lets you review the recommendation before using it.
                    </p>
                  </div>
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
@@ -5873,336 +5930,19 @@ function App() {
                      </div>
                    </div>
                </div>
-                 <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
+                  <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                   <button
                     type="button"
-                    onClick={() => setShowAutoFillSettings(open => !open)}
-                    aria-expanded={showAutoFillSettings}
-                    className={`flex w-full items-center justify-between gap-3 rounded-lg text-left transition ${
-                       showAutoFillSettings ? 'text-cyan-200' : 'text-slate-300 hover:text-cyan-200'
-                    }`}
-                    title="Adjust Watermancer matching strategy"
+                     onClick={handleFindBestWatermancerMatch}
+                     disabled={watermancerActionRunning}
+                     className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
+                     title="Search your selected waters and salts for the best safe match."
                   >
-                    <span className="flex items-center gap-2">
-                      <SlidersHorizontal className="h-4 w-4" />
-                      <span>
-                        <span className="block text-xs font-semibold uppercase tracking-wider">Advanced matching controls</span>
-                        <span className="mt-1 block text-[10px] font-normal text-slate-500">
-                          Strategy, salt objective, priority, deviation, and overshoot policy
-                        </span>
-                      </span>
-                    </span>
-                    <span className="text-[10px] uppercase tracking-wider text-slate-500">
-                      {showAutoFillSettings ? 'Hide' : 'Show'}
-                    </span>
+                     <span aria-hidden="true" className="text-base leading-none">👉</span>
+                     <span aria-live="polite">
+                       {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
+                     </span>
                   </button>
-                  {showAutoFillSettings && (
-                     <div className="mt-3 border-t border-cyan-400/20 pt-3">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Matching strategy</span>
-                          <select
-                            value={autoCraftPreset}
-                            onChange={event => setAutoCraftPreset(event.target.value as AutoCraftPreset)}
-                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                          >
-                            <option value="closest-match">Closest match</option>
-                            <option value="water-first">Water-first</option>
-                            <option value="gh-kh-harmony">GH / KH harmony</option>
-                            <option value="added-water-mineral-first">Added-water mineral-first</option>
-                          </select>
-                        </label>
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Salt objective</span>
-                          <select
-                            value={watermancerSaltObjective}
-                            onChange={event => setWatermancerSaltObjective(event.target.value as AutoCraftObjective)}
-                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                          >
-                            <option value="balanced">Balanced ions</option>
-                            <option value="coverage">Target coverage</option>
-                          </select>
-                        </label>
-                      </div>
-                      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Priority preset</span>
-                          <select
-                            value={autoFillPriorityPreset}
-                            onChange={e => {
-                              const nextPreset = e.target.value as AutoFillPriorityPreset;
-                              if (nextPreset === 'custom') setAutoFillCustomPriority([...activeAutoFillPriority]);
-                              setAutoFillPriorityPreset(nextPreset);
-                            }}
-                             className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                          >
-                            {(Object.entries(AUTO_FILL_PRIORITY_PRESETS) as Array<[Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }]>).map(([value, preset]) => (
-                              <option key={value} value={value}>{preset.label}</option>
-                            ))}
-                            <option value="custom">Custom order</option>
-                          </select>
-                        </label>
-                        <label className="block">
-                          <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Allowed deviation</span>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="1"
-                              inputMode="decimal"
-                              value={autoFillDeviationPpm}
-                              onChange={e => {
-                                const value = Number(e.target.value);
-                                setAutoFillDeviationPpm(Number.isFinite(value) ? Math.max(0, Math.min(100, Math.round(value))) : 0);
-                              }}
-                               className="w-full rounded-lg border border-slate-600/60 bg-slate-900/70 px-3 py-2 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                            />
-                            <span className="shrink-0 text-[11px] text-slate-500">ppm</span>
-                          </div>
-                        </label>
-                      </div>
-                      <div className={`mt-4 rounded-lg border p-3 ${
-                        overshootSettings.enabled
-                          ? 'border-emerald-400/30 bg-emerald-500/[0.06]'
-                          : 'border-slate-700/60 bg-slate-900/30'
-                      }`}>
-                        <label className="flex cursor-pointer items-start gap-2.5">
-                          <input
-                            type="checkbox"
-                            checked={overshootSettings.enabled}
-                            onChange={e => setOvershootSettings(current => ({ ...current, enabled: e.target.checked }))}
-                            className="mt-0.5 h-4 w-4 accent-emerald-400"
-                          />
-                          <span className="group relative">
-                            <span className={`block text-[11px] font-semibold uppercase tracking-wider ${
-                              overshootSettings.enabled ? 'text-emerald-200' : 'text-slate-300'
-                            }`}>
-                              Allow controlled overshoot
-                            </span>
-                            <span className="mt-1 block text-[11px] leading-relaxed text-slate-500">
-                              A safe way to trade a small, controlled excess for a closer overall match.
-                            </span>
-                            <span
-                              role="tooltip"
-                              className="pointer-events-none absolute bottom-[calc(100%+8px)] left-0 z-30 w-48 -translate-y-1 rounded-xl border border-emerald-400/30 bg-slate-950/95 p-2.5 text-center opacity-0 shadow-2xl backdrop-blur transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
-                            >
-                              <img
-                                src={recommendedOvershootImage}
-                                alt=""
-                                className="mx-auto h-20 w-20 rounded-lg object-contain"
-                              />
-                              <span className="mt-1.5 block text-[11px] font-semibold leading-tight text-emerald-200">
-                                Recommended for most recipes.
-                              </span>
-                            </span>
-                          </span>
-                        </label>
-                        {overshootSettings.enabled && (
-                          <div className="mt-4 border-t border-emerald-400/15 pt-3">
-                            <div className="flex flex-wrap items-end justify-between gap-2">
-                              <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Allowed overshoot ions</p>
-                                <p className="mt-1 text-[10px] text-slate-500">
-                                  Choose which ions can flex. Everything else stays capped at target.
-                                </p>
-                              </div>
-                              <span className="text-[10px] text-emerald-300/70">
-                                {selectedOvershootIons.length} selected
-                              </span>
-                            </div>
-                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                              {activeAutoFillPriority.map((id, index) => {
-                                const allowed = overshootSettings.allowedIons.includes(id);
-                                return (
-                                  <div key={id} className="group relative min-w-0">
-                                    <button
-                                      type="button"
-                                      aria-pressed={allowed}
-                                      aria-label={`${ION_MAP[id].name}; hover for overshoot guidance`}
-                                      onClick={() => setOvershootSettings(current => ({
-                                        ...current,
-                                        allowedIons: allowed
-                                          ? current.allowedIons.filter(item => item !== id)
-                                          : [...current.allowedIons, id],
-                                      }))}
-                                      className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition ${
-                                        allowed
-                                          ? 'border-emerald-300/50 bg-emerald-400/10 text-emerald-100'
-                                          : 'border-slate-700/70 bg-slate-950/30 text-slate-500 hover:border-slate-500 hover:text-slate-300'
-                                      }`}
-                                    >
-                                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ${
-                                        allowed ? 'bg-emerald-300/20 text-emerald-200' : 'bg-slate-800 text-slate-500'
-                                      }`}>
-                                        {allowed ? '✓' : '+'}
-                                      </span>
-                                      <span className="truncate text-[11px] font-medium">{ION_MAP[id].name}</span>
-                                    </button>
-                                    <div
-                                      role="tooltip"
-                                      className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-48 -translate-x-1/2 translate-y-1 rounded-xl border border-slate-600/80 bg-slate-950/95 p-2.5 text-center opacity-0 shadow-2xl backdrop-blur transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:translate-y-0 group-focus-within:opacity-100"
-                                    >
-                                      <img
-                                        src={monkasOvershootImage}
-                                        alt=""
-                                        className="mx-auto h-20 w-20 rounded-lg object-contain"
-                                      />
-                                      <p className="mt-1.5 text-[11px] font-semibold leading-tight text-amber-200">
-                                        You better know what you’re doing
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                            {selectedOvershootIons.length > 0 ? (
-                              <div className="mt-4 rounded-lg border border-amber-300/20 bg-amber-300/[0.035] p-3">
-                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                                  <div>
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/80">Fine-tune maximum excess</span>
-                                    <p className="mt-1 text-[10px] text-slate-500">Optional expert control. The defaults are conservative.</p>
-                                  </div>
-                                  <span className="text-[10px] text-slate-600">ppm</span>
-                                </div>
-                                <div className="space-y-2">
-                                  {selectedOvershootIons.map(id => {
-                                    const index = activeAutoFillPriority.indexOf(id);
-                                    return (
-                                      <div
-                                        key={id}
-                                        draggable={autoFillPriorityPreset === 'custom'}
-                                        onDragStart={() => {
-                                          if (autoFillPriorityPreset === 'custom') setAutoFillDraggedIndex(index);
-                                        }}
-                                        onDragOver={e => {
-                                          if (autoFillPriorityPreset === 'custom') e.preventDefault();
-                                        }}
-                                        onDrop={() => {
-                                          if (autoFillPriorityPreset !== 'custom' || autoFillDraggedIndex === null || autoFillDraggedIndex === index) return;
-                                          setAutoFillCustomPriority(current => {
-                                            const next = [...current];
-                                            const [moved] = next.splice(autoFillDraggedIndex, 1);
-                                            next.splice(index, 0, moved);
-                                            return next;
-                                          });
-                                          setAutoFillDraggedIndex(null);
-                                        }}
-                                        className={`flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-900/45 px-2.5 py-2.5 ${
-                                          autoFillPriorityPreset === 'custom' ? 'cursor-grab' : ''
-                                        }`}
-                                      >
-                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-rose-400/15 text-xs font-bold tabular-nums text-rose-200">
-                                          {index + 1}
-                                        </span>
-                                        <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-200">{ION_MAP[id].name}</span>
-                                        {autoFillPriorityPreset === 'custom' && (
-                                          <div className="flex shrink-0 items-center gap-0.5">
-                                            <button
-                                              type="button"
-                                              onClick={() => setAutoFillCustomPriority(current => {
-                                                if (index === 0) return current;
-                                                const next = [...current];
-                                                [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                                                return next;
-                                              })}
-                                              disabled={index === 0}
-                                              className="rounded px-1.5 py-1 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                                              aria-label={`Move ${ION_MAP[id].name} up`}
-                                            >
-                                              ↑
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => setAutoFillCustomPriority(current => {
-                                                if (index === current.length - 1) return current;
-                                                const next = [...current];
-                                                [next[index], next[index + 1]] = [next[index + 1], next[index]];
-                                                return next;
-                                              })}
-                                              disabled={index === activeAutoFillPriority.length - 1}
-                                              className="rounded px-1.5 py-1 text-slate-500 hover:bg-slate-700/60 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
-                                              aria-label={`Move ${ION_MAP[id].name} down`}
-                                            >
-                                              ↓
-                                            </button>
-                                          </div>
-                                        )}
-                                        <div className="flex shrink-0 items-center overflow-hidden rounded-md border border-slate-600/60 bg-slate-950/70">
-                                          <HoldStepperButton
-                                            onStep={() => setOvershootSettings(current => ({
-                                              ...current,
-                                              limits: { ...current.limits, [id]: Math.max(0, Number(((current.limits[id] ?? 0) - 0.1).toFixed(1))) },
-                                            }))}
-                                            disabled={(overshootSettings.limits[id] ?? 0) <= 0}
-                                            className="px-2 py-1.5 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                            label={`Decrease ${ION_MAP[id].name} maximum overshoot`}
-                                          >
-                                            −
-                                          </HoldStepperButton>
-                                          <input
-                                            type="number"
-                                            min="0"
-                                            max="100"
-                                            step="0.1"
-                                            inputMode="decimal"
-                                            value={overshootSettings.limits[id] ?? 0}
-                                            onChange={e => {
-                                              const value = Number(e.target.value);
-                                              setOvershootSettings(current => ({
-                                                ...current,
-                                                limits: { ...current.limits, [id]: Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0 },
-                                              }));
-                                            }}
-                                            className="w-12 border-x border-slate-700/70 bg-transparent px-1 py-1.5 text-center text-xs tabular-nums text-slate-200 outline-none"
-                                            aria-label={`${ION_MAP[id].name} maximum overshoot ppm`}
-                                          />
-                                          <HoldStepperButton
-                                            onStep={() => setOvershootSettings(current => ({
-                                              ...current,
-                                              limits: { ...current.limits, [id]: Math.min(100, Number(((current.limits[id] ?? 0) + 0.1).toFixed(1))) },
-                                            }))}
-                                            disabled={(overshootSettings.limits[id] ?? 0) >= 100}
-                                            className="px-2 py-1.5 text-sm leading-none text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-30"
-                                            label={`Increase ${ION_MAP[id].name} maximum overshoot`}
-                                          >
-                                            +
-                                          </HoldStepperButton>
-                                        </div>
-                                        <span className="shrink-0 text-[10px] text-slate-600">ppm</span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                                <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
-                                  Priority: <span className="text-slate-400">{selectedOvershootIons.map((id, index) => `${index + 1}. ${ION_MAP[id].name}`).join(' → ')}</span>. Earlier ions get first access to the allowed flex.
-                                </p>
-                              </div>
-                            ) : (
-                              <p className="mt-3 rounded-lg border border-dashed border-slate-700/70 px-3 py-2 text-[10px] text-slate-500">
-                                Select at least one ion to set a maximum excess.
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                   <div className="mt-3 rounded-lg border border-cyan-300/35 bg-cyan-400/[0.08] p-2">
-                     <button
-                       type="button"
-                       disabled={watermancerActionRunning}
-                       onClick={handleApplyCurrentWatermancerSettings}
-                       className="flex w-full items-center justify-center gap-2 rounded-md border border-cyan-200/50 bg-cyan-300/15 px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-cyan-50 transition hover:border-cyan-100/80 hover:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-60"
-                       title="Apply the selected strategy, priority, deviation, overshoot, waters, salts, and hydration settings to the automatic match."
-                     >
-                       <RefreshCw className={`h-3.5 w-3.5 ${watermancerActionRunning ? 'animate-spin' : ''}`} />
-                       {watermancerActionRunning ? 'Applying matching settings…' : 'Apply current matching settings'}
-                     </button>
-                     <p className="mt-1.5 text-center text-[10px] font-medium text-cyan-200/70">
-                       {watermancerActionMessage ?? 'Applies the matching controls above to the automatic match'}
-                     </p>
-                   </div>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {mineralWaters.length > 0 && batchMl > 0 && (
@@ -6219,58 +5959,155 @@ function App() {
                       {watermancerActionRunning ? 'Filling base waters…' : 'Fill base waters toward target'}
                     </button>
                   )}
-                   {(mineralWaters.length > 0 || additionWaters.length > 0 || watermancerUsedSaltIds.length > 0) && (
-                     <button
-                       type="button"
-                       disabled={watermancerActionRunning}
-                       onClick={handleFindBestWatermancerMatch}
-                       className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
-                        title="Sweep all 48 strategy, salt objective, priority, and deviation combinations with quality-checked Added-water mineral matching"
-                     >
-                       <img
-                         src={fillWaterPromptImage}
-                         alt="Easy best match"
-                         className="watermancer-best-match-button__image h-7 w-7 shrink-0 object-contain"
-                       />
-                       <span aria-hidden="true" className="text-base leading-none">👉</span>
-                        <span aria-live="polite">
-                           {watermancerActionRunning ? 'Sweeping 48 routes…' : 'Find the best match'}
-                        </span>
-                       {!watermancerActionRunning && (
-                          <span className="rounded-full border border-white/15 bg-black/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-violet-100/80">
-                            48-route quality sweep
-                         </span>
-                       )}
-                     </button>
-                   )}
                 </div>
-                {watermancerBestMatchSummary && (
-                  <div className="mt-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] px-3 py-2 text-[10px] text-violet-100">
-                     Best of 48 matches: <span className="font-semibold">
-                       {WATERMANCER_STRATEGY_LABELS[watermancerBestMatchSummary.strategy]}
-                    </span>
-                    <span className="mx-1.5 text-violet-300/60">·</span>
-                    <span className="font-semibold">
-                      {watermancerBestMatchSummary.saltObjective === 'balanced'
-                        ? 'Balanced ions'
-                        : 'Target coverage'}
-                    </span>
-                    <span className="mx-1.5 text-violet-300/60">·</span>
-                    <span className="font-semibold">
-                      {watermancerBestMatchSummary.priorityPreset === 'mineral-first'
-                        ? 'Mineral-first'
-                        : watermancerBestMatchSummary.priorityPreset === 'bicarbonate-first'
-                          ? 'Bicarbonate-first'
-                          : 'Balanced GH / KH'}
-                    </span>
-                    <span className="mx-1.5 text-violet-300/60">·</span>
-                    <span className="font-semibold">
-                      {watermancerBestMatchSummary.deviationMode === 'strict'
-                        ? 'strict 0 ppm'
-                        : 'permissive 10% of target'}
-                    </span>
-                    <span className="mx-1.5 text-violet-300/60">·</span>
-                    {watermancerBestMatchSummary.totalDeviation.toFixed(2)} ppm final deviation
+                {watermancerBestMatchPreview && (
+                  <div className="mt-3 rounded-xl border border-violet-400/30 bg-violet-500/[0.08] p-4 text-violet-100">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/80">
+                          Review your recommended match
+                        </div>
+                        <p className="mt-1 text-xs font-semibold text-violet-50">
+                          This match prioritizes useful mineral coverage while keeping bicarbonate within its limit.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-violet-300/25 bg-violet-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-violet-200">
+                         {watermancerBestMatchPreview.status === 'matched' ? 'Matched' : 'Partial match'}
+                      </span>
+                    </div>
+                     <p className="mt-2 max-w-3xl text-[11px] leading-relaxed text-violet-100/80">
+                       {watermancerBestMatchPreview.explanation}
+                     </p>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      <div className="rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wider text-violet-200/60">Recommended water</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums">
+                          {[...watermancerBestMatchPreview.route.baseWaters, ...watermancerBestMatchPreview.route.additionWaters]
+                            .reduce((total, water) => total + num(water.volumeMl), 0)
+                            .toFixed(0)} mL
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wider text-violet-200/60">Salt doses</div>
+                        <div className="mt-1 text-sm font-semibold">
+                          {Object.values(watermancerBestMatchPreview.route.saltTargets).filter(target => target > 0.000001).length} selected
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-2">
+                        <div className="text-[10px] uppercase tracking-wider text-violet-200/60">Final deviation</div>
+                        <div className="mt-1 text-sm font-semibold tabular-nums">
+                          {watermancerBestMatchPreview.totalDeviation.toFixed(2)} ppm
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      <div className="rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/60">Recommended waters</div>
+                        <div className="mt-2 space-y-1.5">
+                          {[...watermancerBestMatchPreview.route.baseWaters, ...watermancerBestMatchPreview.route.additionWaters].length > 0 ? (
+                            [...watermancerBestMatchPreview.route.baseWaters, ...watermancerBestMatchPreview.route.additionWaters].map(water => (
+                              <div key={water.id} className="flex items-center justify-between gap-3 text-[11px]">
+                                <span className="min-w-0 truncate text-slate-200">
+                                  {water.name || 'Unnamed water'}
+                                  {watermancerBestMatchPreview.route.additionWaters.some(entry => entry.id === water.id) && (
+                                    <span className="ml-1 text-[9px] uppercase tracking-wider text-cyan-300/70">added</span>
+                                  )}
+                                </span>
+                                <span className="shrink-0 font-semibold tabular-nums text-violet-100">{num(water.volumeMl).toFixed(0)} mL</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-[11px] text-slate-500">No mineral water selected.</div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/60">Recommended salts</div>
+                        <div className="mt-2 space-y-1.5">
+                          {SALTS.some(salt => (watermancerBestMatchPreview.route.saltTargets[salt.id] ?? 0) > 0.000001) ? (
+                            SALTS.map((salt, index) => {
+                              const targetPpm = watermancerBestMatchPreview.route.saltTargets[salt.id] ?? 0;
+                              if (targetPpm <= 0.000001) return null;
+                              const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                              const massMg = form && L > 0
+                                ? computeSaltMg(targetPpm, L, form.molarMass, salt.anhydrousMass)
+                                : 0;
+                              return (
+                                <div key={salt.id} className="flex items-center justify-between gap-3 text-[11px]">
+                                  <span className="min-w-0 truncate text-slate-200">{salt.name}<span className="ml-1 text-[9px] text-slate-500">{form?.label ?? ''}</span></span>
+                                  <span className="shrink-0 font-semibold tabular-nums text-violet-100">{massMg.toFixed(1)} mg</span>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="text-[11px] text-slate-500">No salt dose needed.</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 rounded-lg border border-violet-300/15 bg-slate-950/20 px-3 py-3">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/60">Final ions versus target</div>
+                      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
+                        {watermancerBestMatchPreview.route.deviations
+                          .filter(deviation => deviation.target > 0 || deviation.actual > 0.05)
+                          .map(deviation => (
+                            <div key={deviation.id} className="flex items-center justify-between gap-2 text-[10px]">
+                              <span className="truncate text-slate-400">{ION_MAP[deviation.id].name}</span>
+                              <span className={`shrink-0 tabular-nums ${
+                                Math.abs(deviation.delta) <= 0.05 ? 'text-emerald-300' : deviation.delta > 0 ? 'text-amber-300' : 'text-rose-300'
+                              }`}>
+                                {deviation.actual.toFixed(1)} / {deviation.target.toFixed(1)}
+                              </span>
+                            </div>
+                          ))}
+                      </div>
+                      <div className="mt-3 grid gap-3 border-t border-violet-300/10 pt-3 sm:grid-cols-2">
+                        <div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/70">Remaining gaps</div>
+                          <div className="mt-1 space-y-1">
+                            {watermancerBestMatchPreview.route.deviations.filter(deviation => deviation.delta < -0.05).length > 0 ? (
+                              watermancerBestMatchPreview.route.deviations.filter(deviation => deviation.delta < -0.05).map(deviation => (
+                                <div key={deviation.id} className="text-[10px] text-rose-200">
+                                  {ION_MAP[deviation.id].name}: {Math.abs(deviation.delta).toFixed(1)} ppm below
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[10px] text-slate-500">No meaningful gaps.</div>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/70">Overshoots</div>
+                          <div className="mt-1 space-y-1">
+                            {watermancerBestMatchPreview.route.overshoots.length > 0 ? (
+                              watermancerBestMatchPreview.route.overshoots.map(overshoot => (
+                                <div key={overshoot.id} className="text-[10px] text-amber-200">
+                                  {ION_MAP[overshoot.id].name}: {overshoot.amount.toFixed(1)} ppm over
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-[10px] text-slate-500">No meaningful overshoots.</div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleDismissWatermancerBestMatch}
+                        className="rounded-lg border border-violet-300/25 px-3 py-2 text-xs font-semibold text-violet-200 transition hover:bg-violet-300/10"
+                      >
+                        Keep current plan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleUseWatermancerBestMatch}
+                        className="rounded-lg border border-violet-200/50 bg-violet-300/20 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-300/30"
+                      >
+                        Use this match
+                      </button>
+                    </div>
                   </div>
                 )}
                 {watermancerBestMatchMessage && (

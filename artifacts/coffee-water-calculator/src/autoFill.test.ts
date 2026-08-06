@@ -21,6 +21,7 @@ import {
   watermancerRouteWaterInputs,
   watermancerRouteMatchesCurrentInputs,
   isWatermancerActionSnapshotCurrent,
+  watermancerBestMatchPreviewIsCurrent,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -389,6 +390,12 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(isWatermancerActionSnapshotCurrent(4, 4, 'same', 'same')).toBe(true);
     expect(isWatermancerActionSnapshotCurrent(4, 5, 'same', 'same')).toBe(false);
     expect(isWatermancerActionSnapshotCurrent(4, 4, 'old', 'new')).toBe(false);
+  });
+
+  it('keeps review previews isolated from changed inputs', () => {
+    expect(watermancerBestMatchPreviewIsCurrent({ inputSignature: 'same' }, 'same')).toBe(true);
+    expect(watermancerBestMatchPreviewIsCurrent({ inputSignature: 'old' }, 'new')).toBe(false);
+    expect(watermancerBestMatchPreviewIsCurrent(null, 'same')).toBe(false);
   });
 
   it('keeps the exact swept route identifiable after the winner is applied', () => {
