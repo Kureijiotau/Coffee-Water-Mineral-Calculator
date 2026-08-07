@@ -5669,12 +5669,16 @@ function App() {
 
              {/* Coverage bars — recipe targets or active profile safe limits */}
             {batchMl > 0 && (
-              <div className="border-t border-slate-700/40 pt-4 space-y-2.5">
-                 <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                   {noRecipeSelected
-                     ? `Mineral water coverage of ${activeProfile.name} safe limits`
-                     : `Mineral water coverage of ${activeRecipe?.name ?? 'Custom'}`}
-                 </span>
+              <details className="group/coverage border-t border-slate-700/40 pt-4">
+                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:text-slate-200 [&::-webkit-details-marker]:hidden">
+                  <span className="text-slate-600 transition-transform group-open/coverage:rotate-90">▶</span>
+                  <span>
+                    {noRecipeSelected
+                      ? `Mineral water coverage of ${activeProfile.name} safe limits`
+                      : `Mineral water coverage of ${activeRecipe?.name ?? 'Custom'}`}
+                  </span>
+                </summary>
+                <div className="mt-2.5 space-y-2.5">
                 {ACTIVE_ION_IDS.map(id => {
                   const ion = ION_MAP[id];
                    const target = autoFillTargets[id] ?? 0;
@@ -5770,7 +5774,8 @@ function App() {
                     </div>
                   );
                 })}
-              </div>
+                </div>
+              </details>
             )}
             {mineralWaters.length > 0 && batchMl <= 0 && (
               <div className="border-t border-slate-700/40 pt-4">

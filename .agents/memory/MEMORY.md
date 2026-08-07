@@ -40,3 +40,4 @@
 - [Added-water mineral-first matching](added-water-mineral-first.md) — quality-first Added-water dosing protects bicarbonate, caps water overshoot at 30%, and salts at 10%
 - [Watermancer ion source preferences](watermancer-ion-source-preferences.md) — source choices live in the unified plan and default to neutral Don’t care behavior
 - [Aiki hover reference range](aiki-hover-reference-range.md) — Watermancer bars compare to Aiki’s green ceiling only on hover/focus, with over-100% values and range markers
+- [Watermancer coverage disclosure](watermancer-coverage-disclosure.md) — keep mineral-water coverage details collapsed behind a visible rotating arrow
