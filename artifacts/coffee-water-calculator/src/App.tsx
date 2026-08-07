@@ -2992,6 +2992,14 @@ function App() {
     guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => guide.focus({ preventScroll: true }), 450);
   };
+  const scrollToWatermancerStage = (
+    stage: 'target' | 'waters' | 'salts' | 'match' | 'results',
+  ) => {
+    const section = document.querySelector<HTMLElement>(`[data-watermancer-stage="${stage}"]`);
+    if (!section) return;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => section.focus({ preventScroll: true }), 450);
+  };
 
   // Weighted-average concentrations across all bottled water sources. Base
   // water and addition water are both part of the final batch composition.
@@ -4521,26 +4529,33 @@ function App() {
             >
               <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 {[
-                  { number: '1', label: 'Set target', complete: true },
-                  { number: '2', label: 'Add waters', complete: mineralWaters.length + additionWaters.length > 0 },
-                  { number: '3', label: 'Add salts', complete: watermancerUsedSaltIds.length > 0 },
-                  { number: '4', label: 'Choose route', complete: batchMl > 0 },
-                  { number: '5', label: 'Review result', complete: batchMl > 0 },
+                  { number: '1', label: 'Set target', stage: 'target' as const, complete: true },
+                  { number: '2', label: 'Add waters', stage: 'waters' as const, complete: mineralWaters.length + additionWaters.length > 0 },
+                  { number: '3', label: 'Add salts', stage: 'salts' as const, complete: watermancerUsedSaltIds.length > 0 },
+                  { number: '4', label: 'Choose route', stage: 'match' as const, complete: batchMl > 0 },
+                  { number: '5', label: 'Review result', stage: 'results' as const, complete: batchMl > 0 },
                 ].map(step => (
                   <li
                     key={step.number}
-                    className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 text-[11px] ${
+                    className={`rounded-xl border text-[11px] ${
                       step.complete
                         ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
                         : 'border-slate-700/60 bg-slate-900/35 text-slate-500'
                     }`}
                   >
-                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                      step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
-                    }`}>
-                      {step.number}
-                    </span>
-                    <span className="truncate">{step.label}</span>
+                    <button
+                      type="button"
+                      onClick={() => scrollToWatermancerStage(step.stage)}
+                      className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
+                      aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
+                    >
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
+                      }`}>
+                        {step.number}
+                      </span>
+                      <span className="truncate">{step.label}</span>
+                    </button>
                   </li>
                 ))}
               </ol>
@@ -4548,7 +4563,7 @@ function App() {
           )}
 
          {showWatermancer && (
-          <div className="order-1" data-watermancer-stage="target">
+           <div className="order-1 scroll-mt-4 outline-none" data-watermancer-stage="target" tabIndex={-1}>
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               supplementalIons={supplementalIonTotals}
@@ -4822,7 +4837,7 @@ function App() {
          )}
 
          {/* Water amount + Concentrate */}
-             {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`app-card app-panel-surface order-2 relative overflow-hidden rounded-2xl border ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+              {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface order-2 relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SectionHeader
@@ -5222,7 +5237,7 @@ function App() {
         </div>
 
         {/* Mineral Water Base */}
-          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} className={`app-card app-panel-surface ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
              title={showWatermancer ? '2. Add waters — Base water' : 'Mineral Water Base'}
@@ -5898,7 +5913,7 @@ function App() {
         </div>}
 
           {showWatermancer && activeWatermancerRoute && (
-            <div className="order-5" data-watermancer-stage="results">
+             <div className="order-5 scroll-mt-4 outline-none" data-watermancer-stage="results" tabIndex={-1}>
              <WatermancerIonCoverageBars
                actualIons={activeWatermancerRoute.finalIons}
               supplementalIons={computeSupplementalIonTotals(activeWatermancerRoute.saltTargets)}
@@ -5911,7 +5926,7 @@ function App() {
         )}
 
          {showWatermancer && activeWatermancerRoute && (
-            <div className="app-card app-panel-surface order-5 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results">
+             <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results" tabIndex={-1}>
               <SectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
                The automatic match's modeled final mixture at the selected batch volume.
@@ -5995,7 +6010,7 @@ function App() {
 
         {/* Mineral Water Addition */}
         {showWatermancer && batchMl > 0 && (
-          <div className="app-card app-panel-surface order-3 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts">
+           <div className="app-card app-panel-surface order-3 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts" tabIndex={-1}>
             <SectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
              title="3. Choose salts"
@@ -6113,7 +6128,7 @@ function App() {
         )}
 
          {showWatermancer && watermancerLiveResult && (
-           <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match">
+           <div className="app-card app-panel-surface order-4 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match" tabIndex={-1}>
              <SectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                 title="Find your best match"
