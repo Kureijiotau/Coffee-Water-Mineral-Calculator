@@ -93,7 +93,7 @@ const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   { value: 'water-only', label: 'Water only' },
   { value: 'water-then-salt', label: 'Water then salt' },
   { value: 'salt-only', label: 'Salt only' },
-  { value: 'dont-care', label: "Don't care" },
+  { value: 'dont-care', label: 'Optimized' },
 ];
 
 function loadWatermancerIonSourcePreferences(): Record<IonId, WatermancerIonSourcePreference> {
