@@ -7313,6 +7313,24 @@ function WatermancerIonCoverageBars({
           const coverageLabel = coveragePercent === null
             ? '—'
             : `${Math.round(coveragePercent).toLocaleString()}%`;
+           const aikiRange = AIKI_DEFAULT_PROFILE.ranges[id];
+           const aikiGreenMax = aikiRange.greenMax;
+           const aikiYellowPercent = aikiGreenMax > 0
+             ? (aikiRange.yellowMax / aikiGreenMax) * 100
+             : 100;
+           const aikiPercent = aikiGreenMax > 0
+             ? (actual / aikiGreenMax) * 100
+             : 0;
+           const aikiScalePercent = Math.max(100, aikiYellowPercent, aikiPercent);
+           const aikiFillPercent = aikiScalePercent > 0
+             ? Math.min((aikiPercent / aikiScalePercent) * 100, 100)
+             : 0;
+           const aikiGreenMarkerPercent = aikiScalePercent > 0
+             ? Math.min((100 / aikiScalePercent) * 100, 100)
+             : 100;
+           const aikiYellowMarkerPercent = aikiScalePercent > 0
+             ? Math.min((aikiYellowPercent / aikiScalePercent) * 100, 100)
+             : 100;
           const barColor = overshoot
             ? 'bg-rose-400'
             : covered
@@ -7340,20 +7358,45 @@ function WatermancerIonCoverageBars({
               <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
               <div className="min-w-0">
                 <div
-                  className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
+                   className="group/aiki-result-bar relative min-w-0 cursor-help outline-none"
+                   tabIndex={0}
+                   role="img"
                   aria-label={coveragePercent === null
-                    ? `${ion.name}: no target set`
-                    : `${ion.name}: ${coverageLabel} of target`}
+                     ? `${ion.name}: no target set; hover to compare with Aiki's reference range`
+                     : `${ion.name}: ${coverageLabel} of target; hover to compare with Aiki's reference range`}
+                   title={`Hover to compare ${ion.name} with Aiki's reference range`}
                 >
-                  <div
-                    className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                  <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
-                    covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
-                  }`}>
-                    {coverageLabel}
-                  </span>
+                   <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/aiki-result-bar:hidden group-focus/aiki-result-bar:hidden">
+                     <div
+                       className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                       style={{ width: `${percentage}%` }}
+                     />
+                     <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
+                       covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
+                     }`}>
+                       {coverageLabel}
+                     </span>
+                   </div>
+                   <div
+                     className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/aiki-result-bar:block group-focus/aiki-result-bar:block"
+                     aria-hidden="true"
+                   >
+                     <div
+                       className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
+                       style={{ width: `${aikiFillPercent}%` }}
+                     />
+                     <div
+                       className="absolute inset-y-0 w-px bg-emerald-200 shadow-[0_0_4px_rgba(167,243,208,0.8)]"
+                       style={{ left: `${aikiGreenMarkerPercent}%` }}
+                     />
+                     <div
+                       className="absolute inset-y-0 w-px bg-rose-300 shadow-[0_0_4px_rgba(253,164,175,0.8)]"
+                       style={{ left: `${aikiYellowMarkerPercent}%` }}
+                     />
+                     <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-slate-950">
+                       {Math.round(aikiPercent)}%
+                     </span>
+                   </div>
                 </div>
                 <div className={`mt-1 text-[10px] ${valueColor}`}>
                   {status}
