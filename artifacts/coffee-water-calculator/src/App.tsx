@@ -6129,22 +6129,6 @@ function App() {
                      </span>
                   </button>
                 </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {mineralWaters.length > 0 && batchMl > 0 && (
-                     <button
-                       type="button"
-                       disabled={watermancerActionRunning}
-                       onClick={handleFillBaseWaters}
-                       className={`flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-300 transition hover:bg-amber-500/20 ${
-                         fillWaterNudgeSeen ? '' : 'fill-water-button--attention'
-                       }`}
-                      title="Fill base waters toward the current Watermancer ion targets."
-                    >
-                       <Droplet className={`h-4 w-4 ${watermancerActionRunning ? 'animate-pulse' : ''}`} />
-                      {watermancerActionRunning ? 'Filling base waters…' : 'Fill base waters toward target'}
-                    </button>
-                  )}
-                </div>
                 {watermancerBestMatchPreview && (
                   <div className="mt-3 rounded-xl border border-violet-400/30 bg-violet-500/[0.08] p-4 text-violet-100">
                     <div className="flex flex-wrap items-start justify-between gap-3">
