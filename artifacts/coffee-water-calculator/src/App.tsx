@@ -2729,6 +2729,11 @@ function App() {
   const watermancerActionGenerationRef = useRef(0);
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
+  const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
+  const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
+  const watermancerWorkflowRailPinnedRef = useRef(false);
+  const watermancerWorkflowRailHeightRef = useRef(0);
+  const watermancerWorkflowRailTriggerRef = useRef<number | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -3000,6 +3005,53 @@ function App() {
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => section.focus({ preventScroll: true }), 450);
   };
+  useEffect(() => {
+    const rail = watermancerWorkflowRailRef.current;
+    if (!showWatermancer || !rail) {
+      watermancerWorkflowRailPinnedRef.current = false;
+      setWatermancerWorkflowRailPinned(false);
+      watermancerWorkflowRailHeightRef.current = 0;
+      watermancerWorkflowRailTriggerRef.current = null;
+      return;
+    }
+
+    let frame = 0;
+    const updateRailPosition = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const isWideScreen = window.matchMedia('(min-width: 1280px)').matches;
+        if (!isWideScreen) {
+          watermancerWorkflowRailPinnedRef.current = false;
+          watermancerWorkflowRailTriggerRef.current = null;
+          watermancerWorkflowRailHeightRef.current = 0;
+          setWatermancerWorkflowRailPinned(false);
+          return;
+        }
+
+        const rect = rail.getBoundingClientRect();
+        if (!watermancerWorkflowRailPinnedRef.current && rect.height > 0) {
+          watermancerWorkflowRailHeightRef.current = rect.height;
+          watermancerWorkflowRailTriggerRef.current = window.scrollY + rect.bottom;
+        }
+        const shouldPin = watermancerWorkflowRailPinnedRef.current
+          ? window.scrollY >= (watermancerWorkflowRailTriggerRef.current ?? window.scrollY)
+          : rect.bottom <= 0;
+        if (watermancerWorkflowRailPinnedRef.current !== shouldPin) {
+          watermancerWorkflowRailPinnedRef.current = shouldPin;
+          setWatermancerWorkflowRailPinned(shouldPin);
+        }
+      });
+    };
+
+    updateRailPosition();
+    window.addEventListener('scroll', updateRailPosition, { passive: true });
+    window.addEventListener('resize', updateRailPosition);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', updateRailPosition);
+      window.removeEventListener('resize', updateRailPosition);
+    };
+  }, [showWatermancer]);
 
   // Weighted-average concentrations across all bottled water sources. Base
   // water and addition water are both part of the final batch composition.
@@ -4523,44 +4575,58 @@ function App() {
           )}
 
           {showWatermancer && (
-            <nav
-              aria-label="Watermancer workflow"
-              className="workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/90 px-3 py-3 shadow-sm backdrop-blur-xl xl:fixed xl:right-5 xl:top-1/2 xl:z-40 xl:w-48 xl:-translate-y-1/2"
+            <div
+              ref={watermancerWorkflowRailRef}
+              className="relative"
+              style={{
+                minHeight: watermancerWorkflowRailPinned && watermancerWorkflowRailHeightRef.current > 0
+                  ? `${watermancerWorkflowRailHeightRef.current}px`
+                  : undefined,
+              }}
             >
-              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-1">
-                {[
-                  { number: '1', label: 'Set target', stage: 'target' as const, complete: true },
-                  { number: '2', label: 'Add waters', stage: 'waters' as const, complete: mineralWaters.length + additionWaters.length > 0 },
-                  { number: '3', label: 'Add salts', stage: 'salts' as const, complete: watermancerUsedSaltIds.length > 0 },
-                  { number: '4', label: 'Choose route', stage: 'match' as const, complete: batchMl > 0 },
-                  { number: '5', label: 'Closest match', stage: 'closest-match' as const, complete: batchMl > 0 },
-                  { number: '6', label: 'Final mixture', stage: 'final-mixture' as const, complete: batchMl > 0 },
-                ].map(step => (
-                  <li
-                    key={step.number}
-                    className={`rounded-xl border text-[11px] ${
-                      step.complete
-                        ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
-                        : 'border-slate-700/60 bg-slate-900/35 text-slate-500'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => scrollToWatermancerStage(step.stage)}
-                      className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
-                      aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
+              <nav
+                aria-label="Watermancer workflow"
+                className={`workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/90 px-3 py-3 shadow-sm backdrop-blur-xl ${
+                  watermancerWorkflowRailPinned
+                    ? 'xl:fixed xl:right-5 xl:top-1/2 xl:z-40 xl:w-48 xl:-translate-y-1/2'
+                    : ''
+                }`}
+              >
+                <ol className={`grid grid-cols-2 gap-2 sm:grid-cols-6 ${watermancerWorkflowRailPinned ? 'xl:grid-cols-1' : ''}`}>
+                  {[
+                    { number: '1', label: 'Set target', stage: 'target' as const, complete: true },
+                    { number: '2', label: 'Add waters', stage: 'waters' as const, complete: mineralWaters.length + additionWaters.length > 0 },
+                    { number: '3', label: 'Add salts', stage: 'salts' as const, complete: watermancerUsedSaltIds.length > 0 },
+                    { number: '4', label: 'Choose route', stage: 'match' as const, complete: batchMl > 0 },
+                    { number: '5', label: 'Closest match', stage: 'closest-match' as const, complete: batchMl > 0 },
+                    { number: '6', label: 'Final mixture', stage: 'final-mixture' as const, complete: batchMl > 0 },
+                  ].map(step => (
+                    <li
+                      key={step.number}
+                      className={`rounded-xl border text-[11px] ${
+                        step.complete
+                          ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
+                          : 'border-slate-700/60 bg-slate-900/35 text-slate-500'
+                      }`}
                     >
-                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                        step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
-                      }`}>
-                        {step.number}
-                      </span>
-                      <span className="truncate">{step.label}</span>
-                    </button>
-                  </li>
-                ))}
-              </ol>
-            </nav>
+                      <button
+                        type="button"
+                        onClick={() => scrollToWatermancerStage(step.stage)}
+                        className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
+                        aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
+                      >
+                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                          step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
+                        }`}>
+                          {step.number}
+                        </span>
+                        <span className="truncate">{step.label}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </div>
           )}
 
          {showWatermancer && (

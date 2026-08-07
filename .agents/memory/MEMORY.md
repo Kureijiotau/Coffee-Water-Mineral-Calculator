@@ -43,3 +43,4 @@
 - [Watermancer coverage disclosure](watermancer-coverage-disclosure.md) — keep mineral-water coverage details collapsed behind a visible rotating arrow
 - [Watermancer workflow navigation](watermancer-workflow-navigation.md) — workflow rail steps smooth-scroll to and focus their matching Watermancer sections
 - [Watermancer rail layout](watermancer-rail-layout.md) — six-step workflow rail becomes a sticky right-side column on wide desktop and stays horizontal on smaller screens
+- [Watermancer rail transition](watermancer-rail-transition.md) — rail starts inline, pins right after its original position leaves view, and returns inline when scrolling back
