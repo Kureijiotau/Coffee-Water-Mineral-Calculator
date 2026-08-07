@@ -8657,28 +8657,41 @@ function BrewerRecipeStepsModal({
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">1</span>
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Prepare the water</div>
-                <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                  {remainingWaterMl > 0
-                    ? `Measure ${formatWaterVolume(remainingWaterMl)} of RO / distilled water.`
-                    : `Prepare ${volumeLabel} of water.`}
-                </div>
-                <div className="mt-3 space-y-2">
-                  {configuredBaseWaters.map((water, index) => (
+                {remainingWaterMl > 0 ? (
+                  <div className={`mt-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[0]}`}>
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">RO / distilled water</div>
+                      <div className="mt-0.5 text-sm font-semibold sm:text-base">Add purified water</div>
+                    </div>
+                    <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[0]}`}>
+                      {formatWaterVolume(remainingWaterMl)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
+                    Prepare {volumeLabel} of water.
+                  </div>
+                )}
+                <div className="mt-2 space-y-2">
+                  {configuredBaseWaters.map((water, index) => {
+                    const styleIndex = (index + 1) % waterStepStyles.length;
+                    return (
                     <div
                       key={`step-base-${water.id}`}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[index % waterStepStyles.length]}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[styleIndex]}`}
                     >
                       <div className="min-w-0">
                         <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
                         <div className="mt-0.5 truncate text-sm font-semibold sm:text-base">{water.name || 'Unnamed base water'}</div>
                       </div>
-                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[index % waterStepValueStyles.length]}`}>
+                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
                       </span>
                     </div>
-                  ))}
+                    );
+                  })}
                   {configuredAdditionWaters.map((water, index) => {
-                    const styleIndex = (configuredBaseWaters.length + index) % waterStepStyles.length;
+                    const styleIndex = (configuredBaseWaters.length + index + 1) % waterStepStyles.length;
                     return (
                     <div
                       key={`step-addition-${water.id}`}
