@@ -5691,6 +5691,26 @@ function App() {
                    const target = autoFillTargets[id] ?? 0;
                   const covered = bottledIons[id] ?? 0;
                   const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
+                   const aikiRange = AIKI_DEFAULT_PROFILE.ranges[id];
+                   const aikiGreenMax = aikiRange.greenMax;
+                   const aikiYellowPercent = aikiGreenMax > 0
+                     ? (aikiRange.yellowMax / aikiGreenMax) * 100
+                     : 100;
+                   const aikiPercent = aikiGreenMax > 0
+                     ? (covered / aikiGreenMax) * 100
+                     : 0;
+                   // Keep enough track beyond the green ceiling to show
+                   // over-100% values while preserving both Aiki markers.
+                   const aikiScalePercent = Math.max(100, aikiYellowPercent, aikiPercent);
+                   const aikiFillPercent = aikiScalePercent > 0
+                     ? Math.min((aikiPercent / aikiScalePercent) * 100, 100)
+                     : 0;
+                   const aikiGreenMarkerPercent = aikiScalePercent > 0
+                     ? Math.min((100 / aikiScalePercent) * 100, 100)
+                     : 100;
+                   const aikiYellowMarkerPercent = aikiScalePercent > 0
+                     ? Math.min((aikiYellowPercent / aikiScalePercent) * 100, 100)
+                     : 100;
                   // Coverage is displayed to one decimal place, so classify
                   // against that same precision instead of exposing tiny
                   // floating-point differences (e.g. 3.9999 / 4.0) as partial.
@@ -5718,8 +5738,36 @@ function App() {
                       <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-slate-700/60 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                           <div
+                             className="group/aiki-bar relative min-w-0 flex-1 cursor-help outline-none"
+                             tabIndex={0}
+                             role="img"
+                             aria-label={`${ion.name}: hover comparison with Aiki's reference range`}
+                             title={`Hover to compare ${ion.name} with Aiki's reference range`}
+                           >
+                             <div className="h-2 overflow-hidden rounded-full bg-slate-700/60 transition-opacity group-hover/aiki-bar:hidden group-focus/aiki-bar:hidden">
+                               <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                             </div>
+                             <div
+                               className="relative hidden h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-indigo-300/20 group-hover/aiki-bar:block group-focus/aiki-bar:block"
+                               aria-hidden="true"
+                             >
+                               <div
+                                 className="relative h-full rounded-full bg-emerald-400 transition-all"
+                                 style={{ width: `${aikiFillPercent}%` }}
+                               />
+                               <div
+                                 className="absolute inset-y-0 w-px bg-emerald-200 shadow-[0_0_4px_rgba(167,243,208,0.8)]"
+                                 style={{ left: `${aikiGreenMarkerPercent}%` }}
+                               />
+                               <div
+                                 className="absolute inset-y-0 w-px bg-rose-300 shadow-[0_0_4px_rgba(253,164,175,0.8)]"
+                                 style={{ left: `${aikiYellowMarkerPercent}%` }}
+                               />
+                               <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-slate-950">
+                                 {Math.round(aikiPercent)}%
+                               </span>
+                             </div>
                           </div>
                           <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
                             {covered.toFixed(1)}
