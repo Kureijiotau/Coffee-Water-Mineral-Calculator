@@ -4766,7 +4766,7 @@ function App() {
           </div>
             <>
             <div className="border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
-               Build the recipe from 0-TDS water. Choose hydrated forms, then use the batch panel to prepare a safe concentrate.
+               Build the recipe from 0-TDS water. Choose hydration forms, then use the batch panel to prepare a safe concentrate.
             </div>
            {selectedSourceRecipe && (
              <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
@@ -4806,8 +4806,8 @@ function App() {
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>Target (ppm)</span>
-            <span>Hydrated Form</span>
-            <span>{concentrateOn ? 'Amount' : 'Amount (mg)'}</span>
+             <span>Hydration form</span>
+             <span>Dose</span>
           </div>
           {SALTS.map((salt, i) => {
             const row = safeRows[i];
@@ -4847,11 +4847,11 @@ function App() {
                   />
                 </div>
                 <div>
-                  <label htmlFor={salt.hydrationForms.length > 1 ? `salt-form-${salt.id}` : undefined} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Hydrated Form</label>
+                  <label htmlFor={salt.hydrationForms.length > 1 ? `salt-form-${salt.id}` : undefined} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Hydration form</label>
                   {salt.hydrationForms.length > 1 ? (
                     <select
                       id={`salt-form-${salt.id}`}
-                      aria-label={`${salt.name} hydrated form`}
+                       aria-label={`${salt.name} hydration form`}
                       value={row.formIdx}
                       onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
                       className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
@@ -4865,7 +4865,7 @@ function App() {
                   )}
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
-                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">{concentrateOn ? 'Amount' : 'Amount (mg)'}</span>
+                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
                   <span className="text-sm font-mono text-emerald-300">
                     {displayMass > 0 ? massLabel : '—'}
                   </span>
@@ -4909,11 +4909,11 @@ function App() {
            <div className="relative z-10">
            <SectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
-               title={showAlchemist ? 'Batch & Concentrate' : '2. Add waters — Batch volume'}
+               title="2. Add waters — Batch volume"
              after={
                <div className="flex items-center gap-2">
                 {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                 <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Concentrate</span>
+                 <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Preparation route</span>
                  <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
                   <input
                     type="checkbox"
@@ -5870,7 +5870,7 @@ function App() {
                <div className="border-t border-slate-700/40 pt-4">
                  <div className="flex flex-wrap items-center justify-between gap-2">
                    <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                     Still needed from salts
+                      Salt contribution
                    </span>
                    <span className="text-[10px] text-slate-500">
                      {activeProfile.name} safe limits
@@ -5899,23 +5899,23 @@ function App() {
                    })}
                  </div>
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Salts needed to finish the recipe</span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">3. Choose salts</span>
                     <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
                       {([
                         {
                           value: 'sulfates' as const,
-                          label: 'Sulfate leaning',
+                          label: 'Prefer sulfate',
                           explanation: 'Favor magnesium sulfate to add more sulfate and a brighter, crisper mineral balance.',
                         },
                         {
                           value: 'chlorides' as const,
-                          label: 'Chloride leaning',
+                          label: 'Prefer chloride',
                           explanation: 'Favor magnesium chloride to add more chloride and a rounder, fuller mineral balance.',
                         },
                         {
                           value: 'original' as const,
-                          label: 'Original',
-                          explanation: 'Keep the original sulfate-to-chloride balance from this recipe.',
+                          label: 'Don’t care',
+                          explanation: 'No preference between sulfate and chloride.',
                         },
                       ]).map(option => {
                         const selected = magnesiumPreference === option.value;
