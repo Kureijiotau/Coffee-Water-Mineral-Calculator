@@ -8382,7 +8382,7 @@ function BrewerRecipeStepsModal({
                 Prepare the water, add each mineral in order, then confirm everything is dissolved before brewing.
               </p>
             </div>
-            {hasBaseWater ? (
+            {hasBaseWater && (
               <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Minerals still needed</div>
@@ -8425,7 +8425,7 @@ function BrewerRecipeStepsModal({
                         </div>
                         {nerdLevel !== 'brewer' && (
                           <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
-                        )}
+              )}
                       </div>
                     );
                   })}
@@ -8435,40 +8435,7 @@ function BrewerRecipeStepsModal({
                    <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
                  </div>
               </div>
-             ) : (
-               <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 shadow-sm">
-                 <div className="flex items-center justify-between gap-3">
-                   <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Add to {volumeLabel}</div>
-                   <span className="text-[10px] text-emerald-200/70">Dose guide</span>
-                 </div>
-                <div className="mt-2 space-y-2">
-                   {stepSalts.map(salt => {
-                    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
-                    const formIndex = saltIndex >= 0
-                      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
-                      : salt.defaultFormIdx ?? 0;
-                    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
-                    return (
-                      <div key={salt.id} className="rounded-lg bg-slate-900/45 px-3 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-slate-200">
-                            {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
-                          </span>
-                            <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
-                        </div>
-                        {nerdLevel !== 'brewer' && (
-                          <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                 <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
-                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Modeled mineral total</span>
-                   <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
-                 </div>
-              </div>
-            )}
+             )}
             {bicarbonateWaterOvershoot && (
               <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
                 <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">Stop before adding bicarbonate</div>
