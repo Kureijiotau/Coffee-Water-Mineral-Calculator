@@ -2993,7 +2993,7 @@ function App() {
     window.setTimeout(() => guide.focus({ preventScroll: true }), 450);
   };
   const scrollToWatermancerStage = (
-    stage: 'target' | 'waters' | 'salts' | 'match' | 'results',
+    stage: 'target' | 'waters' | 'salts' | 'match' | 'closest-match' | 'final-mixture',
   ) => {
     const section = document.querySelector<HTMLElement>(`[data-watermancer-stage="${stage}"]`);
     if (!section) return;
@@ -4525,15 +4525,16 @@ function App() {
           {showWatermancer && (
             <nav
               aria-label="Watermancer workflow"
-              className="workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-3 py-3 shadow-sm"
+              className="workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/90 px-3 py-3 shadow-sm backdrop-blur-xl xl:fixed xl:right-5 xl:top-1/2 xl:z-40 xl:w-48 xl:-translate-y-1/2"
             >
-              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5 xl:grid-cols-1">
                 {[
                   { number: '1', label: 'Set target', stage: 'target' as const, complete: true },
                   { number: '2', label: 'Add waters', stage: 'waters' as const, complete: mineralWaters.length + additionWaters.length > 0 },
                   { number: '3', label: 'Add salts', stage: 'salts' as const, complete: watermancerUsedSaltIds.length > 0 },
                   { number: '4', label: 'Choose route', stage: 'match' as const, complete: batchMl > 0 },
-                  { number: '5', label: 'Review result', stage: 'results' as const, complete: batchMl > 0 },
+                  { number: '5', label: 'Closest match', stage: 'closest-match' as const, complete: batchMl > 0 },
+                  { number: '6', label: 'Final mixture', stage: 'final-mixture' as const, complete: batchMl > 0 },
                 ].map(step => (
                   <li
                     key={step.number}
@@ -5913,7 +5914,7 @@ function App() {
         </div>}
 
           {showWatermancer && activeWatermancerRoute && (
-             <div className="order-5 scroll-mt-4 outline-none" data-watermancer-stage="results" tabIndex={-1}>
+             <div className="order-5 scroll-mt-4 outline-none" data-watermancer-stage="closest-match" tabIndex={-1}>
              <WatermancerIonCoverageBars
                actualIons={activeWatermancerRoute.finalIons}
               supplementalIons={computeSupplementalIonTotals(activeWatermancerRoute.saltTargets)}
@@ -5926,7 +5927,7 @@ function App() {
         )}
 
          {showWatermancer && activeWatermancerRoute && (
-             <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="results" tabIndex={-1}>
+             <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="final-mixture" tabIndex={-1}>
               <SectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
                The automatic match's modeled final mixture at the selected batch volume.

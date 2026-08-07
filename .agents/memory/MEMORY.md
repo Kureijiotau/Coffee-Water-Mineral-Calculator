@@ -42,3 +42,4 @@
 - [Aiki hover reference range](aiki-hover-reference-range.md) — Watermancer bars compare to Aiki’s green ceiling only on hover/focus, with over-100% values and range markers
 - [Watermancer coverage disclosure](watermancer-coverage-disclosure.md) — keep mineral-water coverage details collapsed behind a visible rotating arrow
 - [Watermancer workflow navigation](watermancer-workflow-navigation.md) — workflow rail steps smooth-scroll to and focus their matching Watermancer sections
+- [Watermancer rail layout](watermancer-rail-layout.md) — six-step workflow rail becomes a sticky right-side column on wide desktop and stays horizontal on smaller screens
