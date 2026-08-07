@@ -2677,6 +2677,7 @@ function App() {
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
   const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
   const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
+  const [alchemistMineralWaterOpen, setAlchemistMineralWaterOpen] = useState(false);
   const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
   const loadCommunityWaters = async () => {
     setCommunityLoading(true);
@@ -5309,6 +5310,18 @@ function App() {
             icon={<MineralWaterBeaker active={hasMineralWater} />}
              title={showWatermancer ? '2. Add waters — Base water' : 'Mineral Water Base'}
             after={<div className="flex items-center gap-2">
+              {showAlchemist && (
+                <button
+                  type="button"
+                  onClick={() => setAlchemistMineralWaterOpen(open => !open)}
+                  aria-expanded={alchemistMineralWaterOpen}
+                  aria-controls="alchemist-mineral-water-content"
+                  className="flex items-center gap-1.5 rounded-lg border border-emerald-300/25 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-200 transition hover:border-emerald-200/50 hover:bg-emerald-500/20"
+                >
+                  <span className={`transition-transform ${alchemistMineralWaterOpen ? 'rotate-90' : ''}`}>▶</span>
+                  {alchemistMineralWaterOpen ? 'Hide waters' : 'Show waters'}
+                </button>
+              )}
              {showWatermancer && (
                <button
                  onClick={() => {
@@ -5365,8 +5378,9 @@ function App() {
               }
             }} />
             </div>}
-          />
-           <div className="app-card-body space-y-4">
+           />
+           {(!showAlchemist || alchemistMineralWaterOpen) && (
+            <div id="alchemist-mineral-water-content" className="app-card-body space-y-4">
             {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">
@@ -5976,7 +5990,8 @@ function App() {
                   />
                </div>
              )}
-          </div>
+           </div>
+           )}
         </div>}
 
           {showWatermancer && activeWatermancerRoute && (
