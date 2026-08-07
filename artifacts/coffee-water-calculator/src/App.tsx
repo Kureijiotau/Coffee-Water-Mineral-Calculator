@@ -6583,10 +6583,7 @@ function App() {
           additionWaters={nerdLevel === 'brewer' ? [] : additionWaters}
           baseWaterScale={sourceScale}
           batchMl={batchMl}
-          saltOnlyIons={nerdLevel === 'brewer' ? brewerModeIonTotals : saltOnlyIons}
-          bottledIons={nerdLevel === 'brewer' ? {} as Record<IonId, number> : bottledIons}
           suggestedSaltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : effectiveSuggestedSaltTargets}
-          bicarbonateWaterOvershoot={nerdLevel === 'brewer' ? false : bicarbonateWaterOvershoot}
           nerdLevel={nerdLevel}
           tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
@@ -8352,10 +8349,7 @@ function BrewerRecipeStepsModal({
   additionWaters,
   baseWaterScale,
   batchMl,
-  saltOnlyIons,
-  bottledIons,
   suggestedSaltTargets,
-  bicarbonateWaterOvershoot,
   nerdLevel,
   tdsTarget,
   dropsPerMl,
@@ -8372,10 +8366,7 @@ function BrewerRecipeStepsModal({
   additionWaters: MineralWaterEntry[];
   baseWaterScale: number;
   batchMl: number;
-  saltOnlyIons: Record<IonId, number>;
-  bottledIons: Record<IonId, number>;
   suggestedSaltTargets: Record<string, number>;
-  bicarbonateWaterOvershoot: boolean;
   nerdLevel: NerdLevel;
   tdsTarget: number;
   dropsPerMl: number;
@@ -8388,15 +8379,12 @@ function BrewerRecipeStepsModal({
       volume: num(water.volumeMl) * baseWaterScale,
     }))
     .filter(water => water.volume > 0);
-  const hasBaseWater = configuredBaseWaters.length > 0 && batchMl > 0;
   const configuredAdditionWaters = additionWaters
     .map(water => ({
       ...water,
       volume: num(water.volumeMl) * baseWaterScale,
     }))
     .filter(water => water.volume > 0);
-  const recipeSalts = SALTS.filter(salt => (saltTargets[salt.id] ?? 0) > 0);
-  const suggestedSalts = SALTS.filter(salt => (suggestedSaltTargets[salt.id] ?? 0) > 0);
   const simpleSaltNames: Record<string, string> = {
     mgso4: 'Epsom salt',
     mgcl2: 'Magnesium chloride',
@@ -8446,8 +8434,6 @@ function BrewerRecipeStepsModal({
       - configuredAdditionWaters.reduce((sum, water) => sum + water.volume, 0),
     0,
   );
-  const bicarbonateTarget = saltOnlyIons.bicarbonate ?? 0;
-  const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
   // Keep salts from the selected recipe visible even when source water covers
   // their remaining dose. Also include salts introduced by an adjusted route
   // (for example, an optional sodium correction) so the instructions never
@@ -8476,7 +8462,6 @@ function BrewerRecipeStepsModal({
           : 'Other mineral';
   const useMixingVessel = batchMl > 1000 && dosedStepSaltCount > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
-  const dosingLabel = dosingMethod === 'dry' ? 'Weighed salts' : 'Concentrate drops';
   const recipeCardRef = useRef<HTMLDivElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [saveImageError, setSaveImageError] = useState(false);
@@ -8611,22 +8596,8 @@ function BrewerRecipeStepsModal({
         onClick={event => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="recipe-steps-title"
-        aria-describedby="recipe-steps-description"
       >
-        <div className="flex shrink-0 items-start justify-between border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-3 sm:px-5 sm:py-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sky-200">
-              <ListChecks className="h-5 w-5" />
-              <h2 id="recipe-steps-title" className="text-base font-semibold">Your recipe steps</h2>
-            </div>
-            <p id="recipe-steps-description" className="mt-1 text-xs text-slate-400">A simple guide for the recipe currently selected above.</p>
-            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-medium text-slate-300">
-              <span className="rounded-full border border-sky-300/20 bg-sky-400/10 px-2 py-1">{liters || 1} L final batch</span>
-              <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1">{dosingLabel}</span>
-              <span className="rounded-full border border-violet-300/20 bg-violet-400/10 px-2 py-1">{orderedRecipeSalts.length} mineral{orderedRecipeSalts.length === 1 ? '' : 's'}</span>
-            </div>
-          </div>
+        <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5">
           <div className="flex shrink-0 items-center gap-1.5" data-export-ignore>
             <button
               type="button"
@@ -8645,89 +8616,6 @@ function BrewerRecipeStepsModal({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto" data-recipe-steps-scroll>
           <div className="space-y-4 p-4 sm:p-5">
-            <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300">Preparation flow</div>
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                Prepare the water, add each mineral in order, then confirm everything is dissolved before brewing.
-              </p>
-            </div>
-            {hasBaseWater && (
-              <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 shadow-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Minerals still needed</div>
-                  <span className="text-[10px] text-emerald-200/70">After starting water</span>
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {ACTIVE_ION_IDS.map(id => {
-                    const target = saltOnlyIons[id] ?? 0;
-                    if (target <= 0) return null;
-                    const remaining = Math.max(target - (bottledIons[id] ?? 0), 0);
-                    const covered = remaining <= 0.01;
-                    const bicarbonateBlocked = id === 'bicarbonate' && bicarbonateWaterOvershoot;
-                    return (
-                      <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
-                        <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
-                        <span className={`text-sm font-semibold tabular-nums ${bicarbonateBlocked ? 'text-rose-300' : covered ? 'text-emerald-300' : 'text-amber-300'}`}>
-                          {bicarbonateBlocked
-                            ? `Blocked: ${bicarbonateFromWater.toFixed(1)} ppm`
-                            : covered ? 'Covered' : `${remaining.toFixed(1)} ppm`}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Minerals to add</div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {stepSalts.map(salt => {
-                    const saltIndex = SALTS.findIndex(item => item.id === salt.id);
-                    const formIndex = saltIndex >= 0
-                      ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
-                      : salt.defaultFormIdx ?? 0;
-                    const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
-                    return (
-                      <div key={salt.id} className="rounded-lg bg-slate-900/45 px-3 py-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-slate-200">
-                            {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
-                          </span>
-                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
-                        </div>
-                        {nerdLevel !== 'brewer' && (
-                          <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
-              )}
-                      </div>
-                    );
-                  })}
-                </div>
-                 <div className="mt-3 flex items-center justify-between border-t border-emerald-400/15 pt-3">
-                   <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Modeled mineral total</span>
-                   <span className="font-mono text-sm font-semibold text-emerald-200">{tdsTarget.toFixed(0)} ppm</span>
-                 </div>
-              </div>
-             )}
-            {bicarbonateWaterOvershoot && (
-              <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-300">Stop before adding bicarbonate</div>
-                <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                  The selected source water already exceeds the recipe’s bicarbonate target
-                  ({bicarbonateFromWater.toFixed(1)} ppm HCO₃⁻ supplied vs {bicarbonateTarget.toFixed(1)} ppm allowed).
-                  Do not add baking soda or potassium bicarbonate. Reduce the source-water volume or choose a lower-alkalinity water.
-                </p>
-              </div>
-            )}
-            {configuredBaseWaters.length > 0 && (
-              <div className="rounded-xl border border-sky-400/20 bg-sky-500/10 p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">Starting water</div>
-                <div className="mt-2 space-y-2">
-                  {configuredBaseWaters.map(water => (
-                    <div key={water.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-900/45 px-3 py-2">
-                      <span className="min-w-0 truncate text-xs text-slate-200">{water.name || 'Unnamed base water'}</span>
-                      <span className="shrink-0 font-mono text-xs text-sky-300">{formatWaterVolume(water.volume)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           <div className="flex items-center justify-between gap-3">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Step-by-step</div>
             <div className="text-[10px] text-slate-500">{orderedRecipeSalts.length + (useMixingVessel ? 3 : 2)} actions</div>
