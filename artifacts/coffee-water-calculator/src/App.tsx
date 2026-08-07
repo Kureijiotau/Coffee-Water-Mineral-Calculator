@@ -8141,6 +8141,7 @@ function BrewerRecipeStepsModal({
   };
   const amount = (salt: typeof SALTS[number], targets = saltTargets) => {
     const target = targets[salt.id] ?? 0;
+    if (target <= 0) return 'None needed';
     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
     const formIndex = saltIndex >= 0
       ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
@@ -8152,8 +8153,9 @@ function BrewerRecipeStepsModal({
     return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
   };
   const amountLabel = (salt: typeof SALTS[number], targets = saltTargets) => {
-    if (dosingMethod === 'dry') return amount(salt, targets);
     const target = targets[salt.id] ?? 0;
+    if (target <= 0) return 'None needed';
+    if (dosingMethod === 'dry') return amount(salt, targets);
     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
     const formIndex = saltIndex >= 0
       ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
@@ -8177,8 +8179,16 @@ function BrewerRecipeStepsModal({
   );
   const bicarbonateTarget = saltOnlyIons.bicarbonate ?? 0;
   const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
-  const stepSalts = hasBaseWater ? suggestedSalts : recipeSalts;
-  const stepSaltTargets = hasBaseWater ? suggestedSaltTargets : saltTargets;
+  // Keep salts from the selected recipe visible even when source water covers
+  // their remaining dose. Also include salts introduced by an adjusted route
+  // (for example, an optional sodium correction) so the instructions never
+  // omit a mineral that the active dose map actually requires.
+  const stepSalts = SALTS.filter(salt => (
+    (saltTargets[salt.id] ?? 0) > 0
+    || (suggestedSaltTargets[salt.id] ?? 0) > 0
+  ));
+  const stepSaltTargets = suggestedSaltTargets;
+  const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
   const orderedRecipeSalts = [
     ...stepSalts.filter(salt => salt.formula.includes('SO₄')),
     ...stepSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄')),
@@ -8195,7 +8205,7 @@ function BrewerRecipeStepsModal({
       : salt.formula.includes('Cl') ? 'Chloride'
         : salt.formula.includes('HCO₃') || salt.formula.includes('CO₃') ? 'Bicarbonate / carbonate'
           : 'Other mineral';
-  const useMixingVessel = batchMl > 1000 && orderedRecipeSalts.length > 0;
+  const useMixingVessel = batchMl > 1000 && dosedStepSaltCount > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
   const dosingLabel = dosingMethod === 'dry' ? 'Weighed salts' : 'Concentrate drops';
   const recipeCardRef = useRef<HTMLDivElement>(null);
@@ -8399,7 +8409,7 @@ function BrewerRecipeStepsModal({
                 </div>
                 <div className="mt-4 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Minerals to add</div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {suggestedSalts.map(salt => {
+                  {stepSalts.map(salt => {
                     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
                     const formIndex = saltIndex >= 0
                       ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
@@ -8411,7 +8421,7 @@ function BrewerRecipeStepsModal({
                           <span className="text-xs font-medium text-slate-200">
                             {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                           </span>
-                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, suggestedSaltTargets)}</span>
+                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
                         </div>
                         {nerdLevel !== 'brewer' && (
                           <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
@@ -8432,7 +8442,7 @@ function BrewerRecipeStepsModal({
                    <span className="text-[10px] text-emerald-200/70">Dose guide</span>
                  </div>
                 <div className="mt-2 space-y-2">
-                  {recipeSalts.map(salt => {
+                   {stepSalts.map(salt => {
                     const saltIndex = SALTS.findIndex(item => item.id === salt.id);
                     const formIndex = saltIndex >= 0
                       ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
@@ -8444,7 +8454,7 @@ function BrewerRecipeStepsModal({
                           <span className="text-xs font-medium text-slate-200">
                             {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                           </span>
-                           <span className="font-mono text-xs text-emerald-300">{amountLabel(salt)}</span>
+                            <span className="font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
                         </div>
                         {nerdLevel !== 'brewer' && (
                           <div className="mt-0.5 text-[11px] text-slate-500">{salt.formula} · {form.label}</div>
