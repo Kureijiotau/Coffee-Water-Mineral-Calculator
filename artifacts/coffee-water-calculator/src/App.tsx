@@ -5746,14 +5746,14 @@ function App() {
                                  style={{ width: `${aikiFillPercent}%` }}
                                />
                                <div
-                                 className="absolute inset-y-0 w-px bg-emerald-200 shadow-[0_0_4px_rgba(167,243,208,0.8)]"
+                                 className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
                                  style={{ left: `${aikiGreenMarkerPercent}%` }}
                                />
                                <div
-                                 className="absolute inset-y-0 w-px bg-rose-300 shadow-[0_0_4px_rgba(253,164,175,0.8)]"
+                                 className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
                                  style={{ left: `${aikiYellowMarkerPercent}%` }}
                                />
-                               <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-slate-950">
+                               <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
                                  {Math.round(aikiPercent)}%
                                </span>
                              </div>
@@ -7386,14 +7386,14 @@ function WatermancerIonCoverageBars({
                        style={{ width: `${aikiFillPercent}%` }}
                      />
                      <div
-                       className="absolute inset-y-0 w-px bg-emerald-200 shadow-[0_0_4px_rgba(167,243,208,0.8)]"
+                       className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
                        style={{ left: `${aikiGreenMarkerPercent}%` }}
                      />
                      <div
-                       className="absolute inset-y-0 w-px bg-rose-300 shadow-[0_0_4px_rgba(253,164,175,0.8)]"
+                       className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
                        style={{ left: `${aikiYellowMarkerPercent}%` }}
                      />
-                     <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums text-slate-950">
+                     <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
                        {Math.round(aikiPercent)}%
                      </span>
                    </div>
