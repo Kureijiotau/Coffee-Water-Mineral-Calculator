@@ -4563,6 +4563,7 @@ function App() {
               onSelectProfile={handleSelectProfile}
               onTargetSourceChange={setWatermancerTargetSource}
               onSaveWmProfile={handleSaveWmProfile}
+               onReset={() => setShowResetConfirm(true)}
             />
           </div>
          )}
@@ -6858,6 +6859,7 @@ function WatermancerIonProfileCard({
   onSelectProfile,
   onTargetSourceChange,
   onSaveWmProfile,
+  onReset,
 }: {
   ions: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
@@ -6872,6 +6874,7 @@ function WatermancerIonProfileCard({
   onSelectProfile: (id: string) => void;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
+  onReset: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
@@ -7043,6 +7046,15 @@ function WatermancerIonProfileCard({
             </optgroup>
              </select>
              </div>
+              <button
+                type="button"
+                onClick={onReset}
+                className="flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-200 transition hover:border-amber-300/45 hover:bg-amber-500/20 hover:text-amber-100"
+                title="Reset all inputs to defaults"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Reset</span>
+              </button>
            </div>
           {!editing ? (
             <button
