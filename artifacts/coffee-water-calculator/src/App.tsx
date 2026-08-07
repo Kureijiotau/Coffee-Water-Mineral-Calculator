@@ -8658,12 +8658,12 @@ function BrewerRecipeStepsModal({
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Prepare the water</div>
                 {remainingWaterMl > 0 ? (
-                  <div className={`mt-3 flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[0]}`}>
+                  <div className={`mt-3 flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[0]}`}>
                     <div className="min-w-0">
-                      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">RO / distilled water</div>
-                      <div className="mt-0.5 text-sm font-semibold sm:text-base">Add purified water</div>
+                      <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">RO / distilled water</div>
+                      <div className="mt-0.5 text-xs font-semibold sm:text-sm">Add purified water</div>
                     </div>
-                    <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[0]}`}>
+                    <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[0]}`}>
                       {formatWaterVolume(remainingWaterMl)}
                     </span>
                   </div>
@@ -8672,19 +8672,19 @@ function BrewerRecipeStepsModal({
                     Prepare {volumeLabel} of water.
                   </div>
                 )}
-                <div className="mt-2 space-y-2">
+                <div className="mt-2 space-y-1.5">
                   {configuredBaseWaters.map((water, index) => {
                     const styleIndex = (index + 1) % waterStepStyles.length;
                     return (
                     <div
                       key={`step-base-${water.id}`}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[styleIndex]}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[styleIndex]}`}
                     >
                       <div className="min-w-0">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
-                        <div className="mt-0.5 truncate text-sm font-semibold sm:text-base">{water.name || 'Unnamed base water'}</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
+                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed base water'}</div>
                       </div>
-                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[styleIndex]}`}>
+                      <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
                       </span>
                     </div>
@@ -8695,13 +8695,13 @@ function BrewerRecipeStepsModal({
                     return (
                     <div
                       key={`step-addition-${water.id}`}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[styleIndex]}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[styleIndex]}`}
                     >
                       <div className="min-w-0">
-                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
-                        <div className="mt-0.5 truncate text-sm font-semibold sm:text-base">{water.name || 'Unnamed addition water'}</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
+                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed addition water'}</div>
                       </div>
-                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[styleIndex]}`}>
+                      <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
                       </span>
                     </div>
@@ -8728,17 +8728,17 @@ function BrewerRecipeStepsModal({
                       const saltStyle = saltStepStyles[index % saltStepStyles.length];
                       const saltValueStyle = saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                         <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-3 py-2.5 ${saltStyle}`}>
+                         <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2.5 py-2 ${saltStyle}`}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                               <div className="text-sm font-semibold sm:text-base">
+                               <div className="text-xs font-semibold sm:text-sm">
                                 {index + 1}. {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                               </div>
-                               <div className="mt-1 text-[11px] text-slate-300/65">
+                               <div className="mt-0.5 text-[10px] text-slate-300/65">
                                 {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
                               </div>
                             </div>
-                              <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${saltValueStyle}`}>
+                              <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${saltValueStyle}`}>
                                 {amountLabel(salt, stepSaltTargets)}
                               </span>
                           </div>
