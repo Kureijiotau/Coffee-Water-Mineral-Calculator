@@ -8462,6 +8462,38 @@ function BrewerRecipeStepsModal({
           : 'Other mineral';
   const useMixingVessel = batchMl > 1000 && dosedStepSaltCount > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
+  const waterStepStyles = [
+    'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',
+    'border-sky-300/35 bg-sky-400/[0.08] text-sky-100',
+    'border-teal-300/35 bg-teal-400/[0.08] text-teal-100',
+    'border-blue-300/35 bg-blue-400/[0.08] text-blue-100',
+    'border-indigo-300/35 bg-indigo-400/[0.08] text-indigo-100',
+    'border-emerald-300/35 bg-emerald-400/[0.08] text-emerald-100',
+  ];
+  const waterStepValueStyles = [
+    'border-cyan-300/30 bg-cyan-400/15 text-cyan-100',
+    'border-sky-300/30 bg-sky-400/15 text-sky-100',
+    'border-teal-300/30 bg-teal-400/15 text-teal-100',
+    'border-blue-300/30 bg-blue-400/15 text-blue-100',
+    'border-indigo-300/30 bg-indigo-400/15 text-indigo-100',
+    'border-emerald-300/30 bg-emerald-400/15 text-emerald-100',
+  ];
+  const saltStepStyles = [
+    'border-violet-300/35 bg-violet-400/[0.08] text-violet-100',
+    'border-fuchsia-300/35 bg-fuchsia-400/[0.08] text-fuchsia-100',
+    'border-amber-300/35 bg-amber-400/[0.08] text-amber-100',
+    'border-rose-300/35 bg-rose-400/[0.08] text-rose-100',
+    'border-lime-300/35 bg-lime-400/[0.08] text-lime-100',
+    'border-orange-300/35 bg-orange-400/[0.08] text-orange-100',
+  ];
+  const saltStepValueStyles = [
+    'border-violet-300/30 bg-violet-400/15 text-violet-100',
+    'border-fuchsia-300/30 bg-fuchsia-400/15 text-fuchsia-100',
+    'border-amber-300/30 bg-amber-400/15 text-amber-100',
+    'border-rose-300/30 bg-rose-400/15 text-rose-100',
+    'border-lime-300/30 bg-lime-400/15 text-lime-100',
+    'border-orange-300/30 bg-orange-400/15 text-orange-100',
+  ];
   const recipeCardRef = useRef<HTMLDivElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [saveImageError, setSaveImageError] = useState(false);
@@ -8630,13 +8662,38 @@ function BrewerRecipeStepsModal({
                     ? `Measure ${formatWaterVolume(remainingWaterMl)} of RO / distilled water.`
                     : `Prepare ${volumeLabel} of water.`}
                 </div>
-                <div className="mt-1 space-y-0.5 text-xs leading-relaxed text-slate-400">
-                  {configuredBaseWaters.map(water => (
-                    <div key={`step-base-${water.id}`}>• Add {formatWaterVolume(water.volume)} of {water.name || 'base water'}.</div>
+                <div className="mt-3 space-y-2">
+                  {configuredBaseWaters.map((water, index) => (
+                    <div
+                      key={`step-base-${water.id}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[index % waterStepStyles.length]}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
+                        <div className="mt-0.5 truncate text-sm font-semibold sm:text-base">{water.name || 'Unnamed base water'}</div>
+                      </div>
+                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[index % waterStepValueStyles.length]}`}>
+                        {formatWaterVolume(water.volume)}
+                      </span>
+                    </div>
                   ))}
-                  {configuredAdditionWaters.map(water => (
-                    <div key={`step-addition-${water.id}`}>• Add {formatWaterVolume(water.volume)} of {water.name || 'addition water'}.</div>
-                  ))}
+                  {configuredAdditionWaters.map((water, index) => {
+                    const styleIndex = (configuredBaseWaters.length + index) % waterStepStyles.length;
+                    return (
+                    <div
+                      key={`step-addition-${water.id}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 ${waterStepStyles[styleIndex]}`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
+                        <div className="mt-0.5 truncate text-sm font-semibold sm:text-base">{water.name || 'Unnamed addition water'}</div>
+                      </div>
+                      <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${waterStepValueStyles[styleIndex]}`}>
+                        {formatWaterVolume(water.volume)}
+                      </span>
+                    </div>
+                    );
+                  })}
                 </div>
               </div>
             </li>
@@ -8655,18 +8712,22 @@ function BrewerRecipeStepsModal({
                         ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
                         : salt.defaultFormIdx ?? 0;
                       const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                      const saltStyle = saltStepStyles[index % saltStepStyles.length];
+                      const saltValueStyle = saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                         <div key={`step-salt-${salt.id}`} className="rounded-lg border border-white/10 bg-slate-950/35 px-3 py-2.5">
+                         <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-3 py-2.5 ${saltStyle}`}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="text-xs font-medium text-slate-200">
+                               <div className="text-sm font-semibold sm:text-base">
                                 {index + 1}. {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                               </div>
-                              <div className="mt-0.5 text-[11px] text-slate-500">
+                               <div className="mt-1 text-[11px] text-slate-300/65">
                                 {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
                               </div>
                             </div>
-                             <span className="shrink-0 font-mono text-xs text-emerald-300">{amountLabel(salt, stepSaltTargets)}</span>
+                              <span className={`shrink-0 rounded-md border px-2.5 py-1 font-mono text-lg font-bold leading-none tabular-nums sm:text-xl ${saltValueStyle}`}>
+                                {amountLabel(salt, stepSaltTargets)}
+                              </span>
                           </div>
                         </div>
                       );
