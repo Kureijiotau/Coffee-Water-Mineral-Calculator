@@ -3750,6 +3750,7 @@ function App() {
 
   // ── Reset state ────────────────────────────────────
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showWatermancerResetConfirm, setShowWatermancerResetConfirm] = useState(false);
   const handleReset = () => {
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
     setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
@@ -3778,6 +3779,40 @@ function App() {
     setWatermancerResultSticky(false);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
+  };
+  const handleResetWatermancer = () => {
+    // Invalidate deferred solver work before clearing the workspace so an
+    // in-flight match cannot write stale results back into the reset state.
+    watermancerActionGenerationRef.current += 1;
+    watermancerActionBusyRef.current = false;
+    setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
+    setMineralWaters([]);
+    setAdditionWaters([]);
+    setLiters('1');
+    setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
+    setMagnesiumPreference('original');
+    setWatermancerTargetSource('safe-profile');
+    setWatermancerUsedSaltIds([]);
+    setAutoCraftPreset('closest-match');
+    setWatermancerSaltObjective('balanced');
+    setWatermancerBestMatchDeviationMode(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerAppliedBestMatchRoute(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerBestMatchRunning(false);
+    setWatermancerActionRunning(false);
+    setWatermancerActionMessage(null);
+    setWatermancerPrecisionOpen(false);
+    setWatermancerPrecisionPlan('dry');
+    setWatermancerRecalculationNonce(0);
+    setWatermancerDoseOverridesMg({});
+    setWatermancerResultSticky(false);
+    setSodiumCorrectionOn(false);
+    setWaterComparisonOpen(false);
+    setSelectedWaterComparisonKey('');
+    setFillWaterNudgeSeen(false);
+    setShowWatermancerResetConfirm(false);
   };
 
   // ── Split stocks derived state ──────────────────────
@@ -5396,13 +5431,27 @@ function App() {
             </div>
 
              {/* Add button */}
-             <button
-               onClick={() => addMineralWater()}
-               className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
-             >
-               <Droplet className="w-4 h-4" />
-               Add water source
-             </button>
+             <div className={`grid gap-2 ${showWatermancer ? 'sm:grid-cols-2' : ''}`}>
+               <button
+                 type="button"
+                 onClick={() => addMineralWater()}
+                 className="flex items-center justify-center gap-2 text-sm text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-xl px-4 py-3 transition w-full"
+               >
+                 <Droplet className="w-4 h-4" />
+                 Add water source
+               </button>
+               {showWatermancer && (
+                 <button
+                   type="button"
+                   onClick={() => setShowWatermancerResetConfirm(true)}
+                   className="flex items-center justify-center gap-2 rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:border-rose-300/45 hover:bg-rose-500/20 hover:text-rose-100"
+                   title="Reset the active Watermancer workspace"
+                 >
+                   <RotateCcw className="h-4 w-4" />
+                   Reset Watermancer
+                 </button>
+               )}
+             </div>
 
             {/* Built-in reference waters */}
             <div>
@@ -6344,6 +6393,47 @@ function App() {
                 className="text-sm font-medium text-white bg-rose-600 hover:bg-rose-500 rounded-lg px-4 py-2 transition"
               >
                 Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showWatermancerResetConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+          onClick={() => setShowWatermancerResetConfirm(false)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-600/60 bg-slate-800 p-6 shadow-2xl"
+            onClick={event => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="watermancer-reset-title"
+          >
+            <div className="flex items-start gap-3">
+              <RotateCcw className="mt-0.5 h-5 w-5 shrink-0 text-rose-300" />
+              <div>
+                <h3 id="watermancer-reset-title" className="text-base font-semibold text-slate-100">Reset Watermancer?</h3>
+                <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                  This clears the active waters, salt choices, target inputs, and match results. Saved waters, profiles, and preferences will stay available.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowWatermancerResetConfirm(false)}
+                className="rounded-lg bg-slate-700/40 px-4 py-2 text-sm text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleResetWatermancer}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-rose-500"
+              >
+                Reset workspace
               </button>
             </div>
           </div>
