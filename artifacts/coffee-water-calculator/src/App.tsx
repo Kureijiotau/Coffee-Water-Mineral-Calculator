@@ -5441,17 +5441,6 @@ function App() {
                  <Droplet className="w-4 h-4" />
                  Add water source
                </button>
-               {showWatermancer && (
-                 <button
-                   type="button"
-                   onClick={() => setShowWatermancerResetConfirm(true)}
-                   className="flex items-center justify-center gap-2 rounded-xl border border-rose-400/25 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 transition hover:border-rose-300/45 hover:bg-rose-500/20 hover:text-rose-100"
-                   title="Reset the active Watermancer workspace"
-                 >
-                   <RotateCcw className="h-4 w-4" />
-                   Reset Watermancer
-                 </button>
-               )}
              </div>
 
             {/* Built-in reference waters */}
