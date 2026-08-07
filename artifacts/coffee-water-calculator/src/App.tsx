@@ -2758,10 +2758,10 @@ function App() {
       : 'from-sky-600 to-cyan-500';
   const modeGuide = nerdLevel === 'alchemist'
     ? {
-        eyebrow: 'Recipe lab',
-        title: 'Build a clean mineral recipe',
-        description: 'Start from 0-TDS water, tune the salt recipe, and prepare a reliable concentrate without source-water noise.',
-        tags: ['Salts first', 'GH / KH', 'Concentrate safety'],
+        eyebrow: 'Mineral recipe lab',
+        title: 'Design the recipe behind the cup',
+        description: 'Choose your salts, hydration forms, and mineral balance, then scale the recipe into a repeatable batch or concentrate.',
+        tags: ['Salt design', 'Dose control', 'Batch scaling'],
         tone: 'border-emerald-400/25 bg-emerald-500/[0.06] text-emerald-200',
       }
     : nerdLevel === 'watermancer'

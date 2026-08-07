@@ -45,3 +45,4 @@
 - [Watermancer rail layout](watermancer-rail-layout.md) — six-step workflow rail becomes a sticky right-side column on wide desktop and stays horizontal on smaller screens
 - [Watermancer rail transition](watermancer-rail-transition.md) — rail starts inline, pins right after its original position leaves view, and returns inline when scrolling back
 - [Alchemist and Watermancer language](alchemist-watermancer-language.md) — shared workflow concepts use the same labels across both tabs
+- [Mode identity language](mode-identity-language.md) — Brewer is simple, Alchemist designs mineral recipes, Watermancer matches ion targets and source waters
