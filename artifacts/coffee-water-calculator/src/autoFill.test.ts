@@ -126,6 +126,61 @@ describe('autoFillWaterVolumes', () => {
     expect(edited.calcium).toBeGreaterThan(initial.calcium);
   });
 
+  it('never reduces sodium when calcium chloride is increased manually', () => {
+    const source = water('source', { sodium: 8 });
+    source.volumeMl = '500';
+    const initial = computeWatermancerFinalIons([source], 1000, { cacl2: 2, nacl: 1 });
+    const edited = computeWatermancerFinalIons([source], 1000, { cacl2: 3, nacl: 1 });
+
+    expect(edited.sodium).toBeCloseTo(initial.sodium, 5);
+    expect(edited.calcium).toBeGreaterThan(initial.calcium);
+  });
+
+  it('keeps every other salt dose fixed while manually editing one salt', () => {
+    const source = water('source', { calcium: 10, sodium: 8 });
+    source.volumeMl = '500';
+    const route = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10, sodium: 10 },
+        selectedWaters: [source],
+        selectedSalts: ['cacl2', 'nacl'],
+        fixedWaterVolumes: { source: 500 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium', 'sodium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['calcium', 'sodium'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    }).primaryPlan;
+    const edited = recalculateWatermancerRouteAtCurrentVolumes(
+      {
+        plan: route.plan,
+        batchMl: 1000,
+        baseWaters: [source],
+        additionWaters: [],
+      },
+      route,
+      { ...route.saltTargets, cacl2: (route.saltTargets.cacl2 ?? 0) + 1 },
+    );
+
+    const sodiumFromUnchangedSalt = computeIonTotals(
+      { nacl: route.saltTargets.nacl ?? 0 },
+      {},
+      1,
+    ).sodium;
+    const sodiumFromVisibleWater = 8 * 500 / 1000;
+
+    expect(edited.saltTargets.nacl).toBeCloseTo(route.saltTargets.nacl, 8);
+    expect(edited.saltTargets.cacl2).toBeCloseTo((route.saltTargets.cacl2 ?? 0) + 1, 8);
+    expect(edited.finalIons.sodium).toBeCloseTo(sodiumFromVisibleWater + sodiumFromUnchangedSalt, 5);
+  });
+
   it('keeps the selected route kind when live reranking reuses the primary route ID', () => {
     const candidates = [
       {

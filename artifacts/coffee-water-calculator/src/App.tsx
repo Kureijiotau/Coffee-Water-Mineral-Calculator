@@ -2597,7 +2597,20 @@ function App() {
   const [brewerRecipeOverride, setBrewerRecipeOverride] = useState<Week1Recipe | null>(null);
   const [brewerRecipeHandoffToken, setBrewerRecipeHandoffToken] = useState(0);
   const [externalRecipeId, setExternalRecipeId] = useState('custom');
+  const [watermancerMatchMode, setWatermancerMatchMode] = useState<'automatic' | 'manual'>('automatic');
+  const [watermancerManualRoute, setWatermancerManualRoute] = useState<WatermancerRouteCandidate | null>(null);
+  const watermancerMatchModeRef = useRef<'automatic' | 'manual'>('automatic');
+  const watermancerAutomaticRouteRef = useRef<WatermancerRouteCandidate | null>(null);
+  function enterWatermancerManualMode() {
+    if (nerdLevel !== 'watermancer' || watermancerMatchModeRef.current === 'manual') return;
+    const route = watermancerAutomaticRouteRef.current;
+    if (route) setWatermancerManualRoute(cloneWatermancerRouteCandidate(route));
+    watermancerMatchModeRef.current = 'manual';
+    setWatermancerMatchMode('manual');
+    setWatermancerAppliedBestMatchRoute(null);
+  }
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
+    enterWatermancerManualMode();
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
@@ -2634,9 +2647,11 @@ function App() {
     });
   };
   const updateMineralWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    enterWatermancerManualMode();
     setMineralWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
   const removeMineralWater = (id: string) => {
+    enterWatermancerManualMode();
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
   useEffect(() => {
@@ -2645,6 +2660,7 @@ function App() {
     }
   }, [mineralWaters]);
   const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
+    enterWatermancerManualMode();
     const entry: MineralWaterEntry = {
       id: newMwId(),
       name: partial?.name ?? '',
@@ -2656,9 +2672,11 @@ function App() {
     return entry;
   };
   const updateAdditionWater = (id: string, patch: Partial<MineralWaterEntry>) => {
+    enterWatermancerManualMode();
     setAdditionWaters(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
   const removeAdditionWater = (id: string) => {
+    enterWatermancerManualMode();
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
   useEffect(() => {
@@ -2861,6 +2879,10 @@ function App() {
       setWatermancerActionRunning(false);
       setWatermancerActionMessage(null);
       setWatermancerTargetOverride(null);
+      watermancerMatchModeRef.current = 'automatic';
+      setWatermancerMatchMode('automatic');
+      setWatermancerManualRoute(null);
+      setWatermancerAppliedBestMatchRoute(null);
     }
     if (nerdLevel === 'alchemist' && level !== 'alchemist') {
       // Concentrate controls belong to the Alchemist recipe lab. Do not let
@@ -2889,6 +2911,8 @@ function App() {
       setWatermancerBestMatchDeviationMode(null);
       setWatermancerBestMatchPreview(null);
       setWatermancerAppliedBestMatchRoute(null);
+      setWatermancerMatchMode('automatic');
+      setWatermancerManualRoute(null);
       setWatermancerBestMatchMessage(null);
       setWatermancerBestMatchRunning(false);
       setWatermancerActionRunning(false);
@@ -2909,8 +2933,13 @@ function App() {
   useEffect(() => { saveWatermancerProfiles(wmProfiles); }, [wmProfiles]);
 
   const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
+    enterWatermancerManualMode();
     setWatermancerTargetOverride(null);
     setWatermancerTargetSource(source);
+  };
+  const handleWatermancerTargetOverrideChange = (targets: IonicTargetValues | null) => {
+    enterWatermancerManualMode();
+    setWatermancerTargetOverride(targets);
   };
 
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
@@ -3286,7 +3315,7 @@ function App() {
   const watermancerInputSignatureRef = useRef(watermancerInputSignature);
   watermancerInputSignatureRef.current = watermancerInputSignature;
   const watermancerLiveResult = useMemo(
-    () => showWatermancer
+    () => showWatermancer && watermancerMatchMode === 'automatic'
       ? solveWatermancerRoutes({
         plan: watermancerPlan,
         batchMl,
@@ -3294,7 +3323,15 @@ function App() {
         additionWaters,
       })
       : createInactiveWatermancerResult(watermancerPlan),
-    [additionWaters, batchMl, mineralWaters, showWatermancer, watermancerPlan, watermancerRecalculationNonce],
+    [
+      additionWaters,
+      batchMl,
+      mineralWaters,
+      showWatermancer,
+      watermancerMatchMode,
+      watermancerPlan,
+      watermancerRecalculationNonce,
+    ],
   );
   const beginWatermancerAction = () => {
     if (watermancerActionBusyRef.current) return false;
@@ -3312,6 +3349,7 @@ function App() {
   };
   const handleFillBaseWaters = () => {
     if (!beginWatermancerAction()) return;
+    enterWatermancerManualMode();
     setFillWaterNudgeSeen(true);
     setMineralWaters(prev => autoFillWaterVolumes(
       prev,
@@ -3346,6 +3384,10 @@ function App() {
   };
   const handleFindBestWatermancerMatch = () => {
     if (!beginWatermancerAction()) return;
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerManualRoute(null);
+    setWatermancerAppliedBestMatchRoute(null);
     setWatermancerBestMatchRunning(true);
     setWatermancerBestMatchMessage(null);
     const actionGeneration = watermancerActionGenerationRef.current;
@@ -3449,6 +3491,10 @@ function App() {
     setMineralWaters(cloneWatermancerWaters(route.baseWaters));
     setAdditionWaters(cloneWatermancerWaters(route.additionWaters));
     setWatermancerAppliedBestMatchRoute(route);
+    watermancerAutomaticRouteRef.current = route;
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerManualRoute(null);
     setWatermancerBestMatchPreview(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerActionMessage('Recommended match applied.');
@@ -3474,6 +3520,8 @@ function App() {
     )
     ? watermancerAppliedBestMatchRoute
     : null;
+  const automaticWatermancerRoute = appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan;
+  watermancerAutomaticRouteRef.current = automaticWatermancerRoute;
   const activeWatermancerRoute = useMemo(
     () => showWatermancer
       ? recalculateWatermancerRouteAtCurrentVolumes(
@@ -3483,16 +3531,22 @@ function App() {
           baseWaters: mineralWaters,
           additionWaters,
         },
-        appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan,
-        (appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan).saltTargets,
+        watermancerMatchMode === 'manual' && watermancerManualRoute
+          ? { ...watermancerManualRoute, plan: watermancerPlan }
+          : automaticWatermancerRoute,
+        (watermancerMatchMode === 'manual' && watermancerManualRoute
+          ? watermancerManualRoute
+          : automaticWatermancerRoute).saltTargets,
       )
       : watermancerLiveResult.primaryPlan,
     [
       additionWaters,
-      appliedBestMatchRoute,
+      automaticWatermancerRoute,
       batchMl,
       mineralWaters,
       showWatermancer,
+      watermancerManualRoute,
+      watermancerMatchMode,
       watermancerPlan,
       watermancerLiveResult,
     ],
@@ -3547,6 +3601,14 @@ function App() {
     () => watermancerRouteDeviations(watermancerCurrentFinalIons, watermancerIonTargets),
     [watermancerCurrentFinalIons, watermancerIonTargets],
   );
+  const watermancerCurrentStatus: WatermancerSolverResult['status'] = batchMl <= 0
+    || ([...mineralWaters, ...additionWaters].length === 0 && watermancerUsedSaltIds.length === 0)
+    ? 'blocked'
+    : watermancerCurrentDeviations.every(deviation => (
+      Math.abs(watermancerDeviationBeyondPolicy(deviation, watermancerPlan)) <= 0.05
+    ))
+      ? 'matched'
+      : 'partial';
   const watermancerPrecisionRecommendation = useMemo(
     () => showWatermancer
       ? buildWatermancerPrecisionRecommendation(
@@ -3565,6 +3627,7 @@ function App() {
     ],
   );
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
+    enterWatermancerManualMode();
     setWatermancerDoseOverridesMg(current => ({
       ...current,
       [saltId]: Math.max(0, currentMg + deltaMg),
@@ -3905,6 +3968,9 @@ function App() {
     setWatermancerBestMatchDeviationMode(null);
     setWatermancerBestMatchPreview(null);
     setWatermancerAppliedBestMatchRoute(null);
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerManualRoute(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
@@ -3933,6 +3999,9 @@ function App() {
     setWatermancerBestMatchDeviationMode(null);
     setWatermancerBestMatchPreview(null);
     setWatermancerAppliedBestMatchRoute(null);
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerManualRoute(null);
     setWatermancerBestMatchMessage(null);
     setWatermancerBestMatchRunning(false);
     setWatermancerActionRunning(false);
@@ -4154,6 +4223,7 @@ function App() {
   };
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
+    enterWatermancerManualMode();
     setBrewerRecipeOverride(null);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
@@ -4719,7 +4789,7 @@ function App() {
               watermancerTargetSource={watermancerTargetSource}
               onSelectProfile={handleSelectProfile}
               onTargetSourceChange={handleWatermancerTargetSourceChange}
-              onTargetOverrideChange={setWatermancerTargetOverride}
+              onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
                onReset={() => setShowResetConfirm(true)}
             />
@@ -5010,7 +5080,10 @@ function App() {
                 type="number"
                 inputMode="decimal"
                 value={liters}
-                onChange={e => setLiters(e.target.value)}
+                onChange={e => {
+                  if (showWatermancer) enterWatermancerManualMode();
+                  setLiters(e.target.value);
+                }}
                 placeholder="Liters"
                   className="w-32 bg-cyan-950/25 border border-cyan-300/35 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-200 transition"
               />
@@ -5109,6 +5182,7 @@ function App() {
                             type="button"
                             disabled={watermancerPrecisionRecommendation.recommendedBatchLiters <= L}
                             onClick={() => {
+                              enterWatermancerManualMode();
                               setLiters(String(watermancerPrecisionRecommendation.recommendedBatchLiters));
                               setWatermancerActionMessage(`Final batch set to ${watermancerPrecisionRecommendation.recommendedBatchLiters.toFixed(1)} L for easier weighing.`);
                             }}
@@ -6201,6 +6275,7 @@ function App() {
                             <select
                               value={rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0}
                               onChange={event => {
+                                enterWatermancerManualMode();
                                 const formIdx = Number(event.target.value);
                                 setRows(current => current.map((row, rowIndex) => (
                                   rowIndex === index ? { ...row, formIdx } : row
@@ -6232,6 +6307,7 @@ function App() {
                                 step="1"
                                 value={used ? activeMg.toFixed(1) : '0.0'}
                                 onChange={event => {
+                                  enterWatermancerManualMode();
                                   const value = Math.max(0, Number(event.target.value) || 0);
                                   setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
                                 }}
@@ -6258,6 +6334,7 @@ function App() {
                            <button
                             type="button"
                             onClick={() => {
+                              enterWatermancerManualMode();
                               setWatermancerUsedSaltIds(current => used
                                 ? current.filter(id => id !== salt.id)
                                 : [...current, salt.id]);
@@ -6301,15 +6378,15 @@ function App() {
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
                      <div className="flex items-center justify-end gap-2">
                        <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                         watermancerLiveResult.status === 'matched'
+                          (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'matched'
                            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                           : watermancerLiveResult.status === 'partial'
+                            : (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'partial'
                              ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
                              : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
                        }`}>
-                         {watermancerLiveResult.status === 'matched'
+                          {(watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'matched'
                            ? 'Matched'
-                           : watermancerLiveResult.status === 'partial'
+                            : (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'partial'
                              ? 'Partial match'
                              : 'Needs inputs'}
                        </span>
