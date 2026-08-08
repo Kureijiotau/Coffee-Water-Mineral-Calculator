@@ -7,6 +7,7 @@ import {
   computeConcentrateSaltMgPerDrop,
   computeConcentrateDropsForSaltMass,
   computeWatermancerBottledIons,
+  computeWatermancerFinalIons,
   computeSaltGapOptionPpm,
   craftGlacialStyleWatermancerMatch,
   translateSaltTargetsToIonTargets,
@@ -103,6 +104,26 @@ describe('autoFillWaterVolumes', () => {
 
     expect(current.finalIons.calcium).toBeCloseTo(5, 5);
     expect(edited.finalIons.calcium).toBeCloseTo(5.01, 5);
+  });
+
+  it('keeps the live final mixture aligned with edited water and salt inputs', () => {
+    const source = water('source', { calcium: 10 });
+    source.volumeMl = '500';
+    const initial = computeWatermancerFinalIons(
+      [source],
+      1000,
+      { cacl2: 2 },
+    );
+    const edited = computeWatermancerFinalIons(
+      [{ ...source, volumeMl: '501' }],
+      1000,
+      { cacl2: 3 },
+    );
+    const calciumFromSalt = computeIonTotals({ cacl2: 1 }, {}, 1).calcium;
+
+    expect(initial.calcium).toBeCloseTo(5 + calciumFromSalt * 2, 5);
+    expect(edited.calcium).toBeCloseTo(5.01 + calciumFromSalt * 3, 5);
+    expect(edited.calcium).toBeGreaterThan(initial.calcium);
   });
 
   it('keeps the selected route kind when live reranking reuses the primary route ID', () => {

@@ -506,6 +506,18 @@ export function computeWatermancerBottledIons(
   ) as Record<IonId, number>;
 }
 
+export function computeWatermancerFinalIons(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+  saltTargets: Record<string, number>,
+): Record<IonId, number> {
+  return computeIonTotals(
+    saltTargets,
+    computeWatermancerBottledIons(entries, batchMl),
+    1,
+  );
+}
+
 export function autoCraftSaltTargets(
   allowedSaltIds: string[],
   waterIons: Partial<Record<IonId, number>>,
@@ -3476,18 +3488,67 @@ function App() {
       watermancerLiveResult,
     ],
   );
-  const activeWatermancerSaltTargets = activeWatermancerRoute.saltTargets;
+  const activeWatermancerSaltTargets = useMemo(() => {
+    const targets: Record<string, number> = {};
+    SALTS.forEach((salt, index) => {
+      if (!watermancerUsedSaltIds.includes(salt.id)) {
+        targets[salt.id] = 0;
+        return;
+      }
+      const form = salt.hydrationForms[
+        rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0
+      ] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+      const overrideMg = watermancerDoseOverridesMg[salt.id];
+      if (
+        Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id)
+        && L > 0
+        && form
+      ) {
+        targets[salt.id] = Math.max(0, Number(overrideMg) || 0)
+          * salt.anhydrousMass
+          / (L * form.molarMass);
+        return;
+      }
+      targets[salt.id] = Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0));
+    });
+    return targets;
+  }, [
+    L,
+    activeWatermancerRoute.saltTargets,
+    rows,
+    watermancerDoseOverridesMg,
+    watermancerUsedSaltIds,
+  ]);
+  const watermancerCurrentWaterIons = useMemo(
+    () => computeWatermancerBottledIons(
+      [...mineralWaters, ...additionWaters],
+      batchMl,
+    ),
+    [additionWaters, batchMl, mineralWaters],
+  );
+  const watermancerCurrentFinalIons = useMemo(
+    () => computeWatermancerFinalIons(
+      [...mineralWaters, ...additionWaters],
+      batchMl,
+      activeWatermancerSaltTargets,
+    ),
+    [activeWatermancerSaltTargets, additionWaters, batchMl, mineralWaters],
+  );
+  const watermancerCurrentDeviations = useMemo(
+    () => watermancerRouteDeviations(watermancerCurrentFinalIons, watermancerIonTargets),
+    [watermancerCurrentFinalIons, watermancerIonTargets],
+  );
   const watermancerPrecisionRecommendation = useMemo(
     () => showWatermancer
       ? buildWatermancerPrecisionRecommendation(
-        activeWatermancerRoute.saltTargets,
+        activeWatermancerSaltTargets,
         rows,
         L,
         brewerDropsPerMl,
       )
       : null,
     [
-      activeWatermancerRoute.saltTargets,
+      activeWatermancerSaltTargets,
       brewerDropsPerMl,
       L,
       rows,
@@ -3595,13 +3656,13 @@ function App() {
      [rows, magnesiumPreference, saltOnlyIons, bottledIons, hasMineralWater],
    );
 
-   // Watermancer's selected route is the source of truth for dosing.
+    // Watermancer's visible salt controls are the source of truth for dosing.
   const selectedSuggestedSaltTargets = useMemo(() => {
     if (!showWatermancer) {
       return suggestedSaltTargets;
     }
-     return activeWatermancerRoute.saltTargets;
-   }, [activeWatermancerRoute, showWatermancer, suggestedSaltTargets]);
+      return activeWatermancerSaltTargets;
+    }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
   const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
@@ -3689,13 +3750,15 @@ function App() {
   const finalSaltGh = computeGH(finalSaltIons);
   const finalSaltKh = computeKH(finalSaltIons);
   const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
-  const reviewFinalIons = activeWatermancerRoute?.finalIons ?? suggestedIonTotals;
-  const reviewSaltIons = activeWatermancerRoute
-    ? computeIonTotals(activeWatermancerRoute.saltTargets, {}, 1)
+  const reviewFinalIons = showWatermancer ? watermancerCurrentFinalIons : suggestedIonTotals;
+  const reviewSaltIons = showWatermancer
+    ? computeIonTotals(activeWatermancerSaltTargets, {}, 1)
     : finalSaltIons;
-  const reviewWaterIons = Object.fromEntries(
-    IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
-  ) as Record<IonId, number>;
+  const reviewWaterIons = showWatermancer
+    ? watermancerCurrentWaterIons
+    : Object.fromEntries(
+      IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
+    ) as Record<IonId, number>;
   const reviewFinalGh = computeGH(reviewFinalIons);
   const reviewFinalKh = computeKH(reviewFinalIons);
   const reviewFinalTds = Object.values(reviewFinalIons).reduce((total, ppm) => total + ppm, 0);
@@ -3705,18 +3768,18 @@ function App() {
   const reviewWaterGh = computeGH(reviewWaterIons);
   const reviewWaterKh = computeKH(reviewWaterIons);
   const reviewWaterTds = Object.values(reviewWaterIons).reduce((total, ppm) => total + ppm, 0);
-  const reviewTotalDeviation = activeWatermancerRoute
+  const reviewTotalDeviation = showWatermancer
     ? totalWatermancerDeviation(
       reviewFinalIons,
       watermancerIonTargets,
-      activeWatermancerRoute.plan,
+       watermancerPlan,
     )
     : 0;
-  const reviewDeviationCount = activeWatermancerRoute
-    ? activeWatermancerRoute.deviations.filter(deviation => (
+  const reviewDeviationCount = showWatermancer
+    ? watermancerCurrentDeviations.filter(deviation => (
       Math.abs(watermancerDeviationBeyondPolicy(
         deviation,
-        activeWatermancerRoute.plan,
+         watermancerPlan,
       )) > 0.05
     )).length
     : 0;
@@ -5997,8 +6060,8 @@ function App() {
           {showWatermancer && activeWatermancerRoute && (
              <div className="order-5 scroll-mt-4 outline-none" data-watermancer-stage="closest-match" tabIndex={-1}>
              <WatermancerIonCoverageBars
-               actualIons={activeWatermancerRoute.finalIons}
-              supplementalIons={computeSupplementalIonTotals(activeWatermancerRoute.saltTargets)}
+                actualIons={watermancerCurrentFinalIons}
+               supplementalIons={computeSupplementalIonTotals(activeWatermancerSaltTargets)}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
                sticky={watermancerResultSticky}
@@ -6111,7 +6174,7 @@ function App() {
                       const option = watermancerSaltOptions[index];
                       const used = watermancerUsedSaltIds.includes(salt.id);
                        const doseIsAdjusted = Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id);
-                       const activePpm = used ? Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0)) : 0;
+                        const activePpm = used ? Math.max(0, Number(activeWatermancerSaltTargets[salt.id] ?? 0)) : 0;
                        const activeMg = activePpm > 0
                          ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
@@ -7374,7 +7437,7 @@ function WatermancerIonCoverageBars({
                Closest match result
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-               Final mineral contribution from the closest Watermancer match.
+               Final mineral contribution from the current waters and salt doses.
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
