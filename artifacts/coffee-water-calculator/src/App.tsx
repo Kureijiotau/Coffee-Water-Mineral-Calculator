@@ -2716,6 +2716,7 @@ function App() {
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
+  const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
@@ -2859,6 +2860,7 @@ function App() {
       setWatermancerBestMatchRunning(false);
       setWatermancerActionRunning(false);
       setWatermancerActionMessage(null);
+      setWatermancerTargetOverride(null);
     }
     if (nerdLevel === 'alchemist' && level !== 'alchemist') {
       // Concentrate controls belong to the Alchemist recipe lab. Do not let
@@ -2879,6 +2881,7 @@ function App() {
       setActiveRecipeId('custom');
       setExternalRecipeId('custom');
       setMagnesiumPreference('original');
+      setWatermancerTargetOverride(null);
       setWatermancerTargetSource('safe-profile');
       setWatermancerUsedSaltIds([]);
       setAutoCraftPreset('closest-match');
@@ -2904,6 +2907,11 @@ function App() {
   useEffect(() => { saveActiveProfileId(activeProfileId); }, [activeProfileId]);
   useEffect(() => { saveNerdLevel(nerdLevel); }, [nerdLevel]);
   useEffect(() => { saveWatermancerProfiles(wmProfiles); }, [wmProfiles]);
+
+  const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
+    setWatermancerTargetOverride(null);
+    setWatermancerTargetSource(source);
+  };
 
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
   const handleSaveProfile = (profile: WaterProfile) => {
@@ -3122,6 +3130,7 @@ function App() {
   );
   const allRecipesForWatermancer = [...RECIPES, ...savedRecipes];
   const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
+    if (watermancerTargetOverride) return watermancerTargetOverride;
     if (watermancerTargetSource === 'salt-table') return saltOnlyIons;
     if (watermancerTargetSource.startsWith('profile:')) {
       const pId = watermancerTargetSource.slice('profile:'.length);
@@ -3152,7 +3161,7 @@ function App() {
     return Object.fromEntries(
       ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
     ) as Partial<Record<IonId, number>>;
-  }, [activeRanges, allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetSource, wmProfiles]);
+  }, [activeRanges, allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
   // Combined contribution from all bottled waters (base + addition, already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
@@ -3916,7 +3925,8 @@ function App() {
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
     setMagnesiumPreference('original');
-    setWatermancerTargetSource('safe-profile');
+     setWatermancerTargetOverride(null);
+     setWatermancerTargetSource('safe-profile');
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerSaltObjective('balanced');
@@ -4134,7 +4144,8 @@ function App() {
     }
     setSavedRecipes(prev => [...prev, recipe]);
     if (showWatermancer) {
-      setWatermancerTargetSource(`recipe:${recipe.id}`);
+       setWatermancerTargetOverride(null);
+       setWatermancerTargetSource(`recipe:${recipe.id}`);
       setActiveRecipeId('custom');
       setExternalRecipeId('custom');
       return;
@@ -4707,7 +4718,8 @@ function App() {
               referenceWaters={EMPIRICAL_WATERS}
               watermancerTargetSource={watermancerTargetSource}
               onSelectProfile={handleSelectProfile}
-              onTargetSourceChange={setWatermancerTargetSource}
+              onTargetSourceChange={handleWatermancerTargetSourceChange}
+              onTargetOverrideChange={setWatermancerTargetOverride}
               onSaveWmProfile={handleSaveWmProfile}
                onReset={() => setShowResetConfirm(true)}
             />
@@ -7057,6 +7069,7 @@ function WatermancerIonProfileCard({
   watermancerTargetSource,
   onSelectProfile,
   onTargetSourceChange,
+  onTargetOverrideChange,
   onSaveWmProfile,
   onReset,
 }: {
@@ -7072,12 +7085,14 @@ function WatermancerIonProfileCard({
   watermancerTargetSource: WatermancerTargetSourceId;
   onSelectProfile: (id: string) => void;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
+  onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
   onReset: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [editingIonId, setEditingIonId] = useState<IonId | null>(null);
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
-  const [naming, setNaming] = useState(false);
+  const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
@@ -7122,6 +7137,7 @@ function WatermancerIonProfileCard({
   })();
 
   const handleDropdownChange = (value: string) => {
+    cancelEditing();
     if (value.startsWith('profile:')) {
       const profileId = value.slice('profile:'.length);
       onSelectProfile(profileId);
@@ -7138,37 +7154,83 @@ function WatermancerIonProfileCard({
       ) as Partial<Record<IonId, string>>,
     );
     setEditing(true);
-    setNaming(false);
+    setEditingIonId(null);
+    setNamingMode(null);
+    setNewName('');
+  };
+
+  const startIonEditing = (id: IonId) => {
+    setDraftTargets(
+      Object.fromEntries(
+        ACTIVE_ION_IDS.map(targetId => [targetId, String(targetIons[targetId] ?? 0)]),
+      ) as Partial<Record<IonId, string>>,
+    );
+    setEditing(false);
+    setEditingIonId(id);
+    setNamingMode(null);
     setNewName('');
   };
 
   const cancelEditing = () => {
     setEditing(false);
+    setEditingIonId(null);
     setDraftTargets({});
-    setNaming(false);
+    setNamingMode(null);
     setNewName('');
+    onTargetOverrideChange(null);
   };
 
-  const handleSave = () => {
+  const draftAsTargets = (): IonicTargetValues => Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => {
+      const val = parseFloat(draftTargets[id] ?? '0');
+      return [id, Number.isFinite(val) && val >= 0 ? val : 0];
+    }),
+  ) as IonicTargetValues;
+
+  const handleSaveAsNew = () => {
     if (!newName.trim()) return;
-    const targets = Object.fromEntries(
-      ACTIVE_ION_IDS.map(id => {
-        const val = parseFloat(draftTargets[id] ?? '0');
-        return [id, Number.isFinite(val) && val >= 0 ? val : 0];
-      }),
-    ) as IonicTargetValues;
+    const targets = draftAsTargets();
     const profile = createWatermancerProfile(newName.trim(), targets);
     onSaveWmProfile(profile);
     onTargetSourceChange(`saved:${profile.id}` as WatermancerTargetSourceId);
+    finishEditing();
+  };
+
+  const selectedSavedProfile = currentDropdownValue.startsWith('saved:')
+    ? wmProfiles.find(profile => profile.id === currentDropdownValue.slice('saved:'.length))
+    : undefined;
+
+  const handleOverwrite = () => {
+    if (!selectedSavedProfile) return;
+    onSaveWmProfile({
+      ...selectedSavedProfile,
+      targets: draftAsTargets(),
+    });
+    finishEditing();
+  };
+
+  const finishEditing = () => {
     setEditing(false);
-    setNaming(false);
+    setEditingIonId(null);
+    setNamingMode(null);
     setNewName('');
     setDraftTargets({});
+    onTargetOverrideChange(null);
   };
 
   const updateDraft = (id: IonId, value: string) => {
-    setDraftTargets(prev => ({ ...prev, [id]: value }));
+    const nextDraft = { ...draftTargets, [id]: value };
+    setDraftTargets(nextDraft);
+    onTargetOverrideChange(Object.fromEntries(
+      ACTIVE_ION_IDS.map(targetId => {
+        const parsed = parseFloat(nextDraft[targetId] ?? '0');
+        return [targetId, Number.isFinite(parsed) && parsed >= 0 ? parsed : 0];
+      }),
+    ) as IonicTargetValues);
   };
+
+  const isEditingAny = editing || editingIonId !== null;
+  const canOverwrite = Boolean(selectedSavedProfile);
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
@@ -7255,7 +7317,7 @@ function WatermancerIonProfileCard({
                 <span className="hidden sm:inline">Reset</span>
               </button>
            </div>
-          {!editing ? (
+           {!isEditingAny ? (
             <button
               type="button"
               onClick={startEditing}
@@ -7265,15 +7327,25 @@ function WatermancerIonProfileCard({
               Add new
             </button>
           ) : (
-             <div className="flex items-center gap-2">
+             <div className="flex flex-wrap items-center gap-2">
                <button
                  type="button"
-                 onClick={() => setNaming(true)}
+                  onClick={() => setNamingMode('new')}
                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
                >
                  <Save className="w-3.5 h-3.5" />
-                 Save
+                  Save as new
                </button>
+                {canOverwrite && (
+                  <button
+                    type="button"
+                    onClick={handleOverwrite}
+                    className="flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    Overwrite selected
+                  </button>
+                )}
                <button
                  type="button"
                  onClick={cancelEditing}
@@ -7289,10 +7361,11 @@ function WatermancerIonProfileCard({
 
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {ACTIVE_ION_IDS.map((id, idx) => {
+         {ACTIVE_ION_IDS.map((id, idx) => {
           const ion = ION_MAP[id];
           const ppm = ions[id] ?? 0;
-          const target = editing
+           const cardEditing = editing || editingIonId === id;
+           const target = cardEditing
             ? parseFloat(draftTargets[id] ?? '0')
             : (targetIons[id] ?? 0);
           const gap = Math.max(target - ppm, 0);
@@ -7300,9 +7373,19 @@ function WatermancerIonProfileCard({
           const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
 
           return (
-            <div
+             <div
               key={id}
-              className={`group/ion relative rounded-xl border px-4 py-3 ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'}`}
+               className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!isEditingAny ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
+               role={!isEditingAny ? 'button' : undefined}
+               tabIndex={!isEditingAny ? 0 : -1}
+               onClick={!isEditingAny ? () => startIonEditing(id) : undefined}
+               onKeyDown={!isEditingAny ? event => {
+                 if (event.key === 'Enter' || event.key === ' ') {
+                   event.preventDefault();
+                   startIonEditing(id);
+                 }
+               } : undefined}
+               aria-label={!isEditingAny ? `Edit ${ion.name} target` : undefined}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
@@ -7312,7 +7395,7 @@ function WatermancerIonProfileCard({
                 <span className={`text-lg font-bold ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'}`}>{ppm.toFixed(1)}</span>
                 <span className="text-xs text-slate-400">ppm</span>
               </div>
-              {editing ? (
+               {cardEditing ? (
                 <div className="mt-1.5">
                   <label className="text-[10px] text-slate-500 block mb-0.5">Ceiling</label>
                   <input
@@ -7374,7 +7457,7 @@ function WatermancerIonProfileCard({
       </div>
 
       {/* Naming dialog */}
-      {editing && naming && (
+       {isEditingAny && namingMode === 'new' && (
         <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2">
             <input
@@ -7385,12 +7468,12 @@ function WatermancerIonProfileCard({
               autoFocus
               className="flex-1 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
               onKeyDown={e => {
-                if (e.key === 'Enter') handleSave();
+                 if (e.key === 'Enter') handleSaveAsNew();
                 if (e.key === 'Escape') cancelEditing();
               }}
             />
             <button
-              onClick={handleSave}
+              onClick={handleSaveAsNew}
               disabled={!newName.trim()}
               className="flex items-center justify-center w-9 h-9 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition"
             >
