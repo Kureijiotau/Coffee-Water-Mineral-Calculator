@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import html2canvas from 'html2canvas';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
@@ -8760,7 +8761,6 @@ function BrewerRecipeStepsModal({
     setSaveImageError(false);
     let clone: HTMLDivElement | null = null;
     let imageUrl: string | null = null;
-    let svgUrl: string | null = null;
     const downloadUrl = (url: string, filename: string) => {
       const link = document.createElement('a');
       link.href = url;
@@ -8770,12 +8770,6 @@ function BrewerRecipeStepsModal({
       link.click();
       link.remove();
     };
-    const downloadBlob = (blob: Blob, filename: string) => {
-      const url = URL.createObjectURL(blob);
-      downloadUrl(url, filename);
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    };
-
     try {
       clone = source.cloneNode(true) as HTMLDivElement;
       const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
@@ -8812,46 +8806,25 @@ function BrewerRecipeStepsModal({
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
       const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
-      const serialized = new XMLSerializer().serializeToString(clone);
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
-      const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-      svgUrl = URL.createObjectURL(svgBlob);
-      const image = new Image();
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error('Recipe card image could not be created.'));
-        image.src = svgUrl ?? '';
+      const canvas = await html2canvas(clone, {
+        backgroundColor: '#1e293b',
+        width,
+        height,
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        windowWidth: width,
+        windowHeight: height,
       });
-
-      const canvas = document.createElement('canvas');
-      const scale = 2;
-      canvas.width = width * scale;
-      canvas.height = height * scale;
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Canvas is unavailable.');
-      context.scale(scale, scale);
-      context.fillStyle = '#1e293b';
-      context.fillRect(0, 0, width, height);
-      context.drawImage(image, 0, 0, width, height);
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
       if (!jpg) throw new Error('Recipe card JPEG could not be exported.');
 
       imageUrl = URL.createObjectURL(jpg);
       downloadUrl(imageUrl, 'coffee-water-recipe-steps.jpg');
     } catch {
-      try {
-        const text = source.innerText.trim();
-        if (!text) throw new Error('Recipe steps are empty.');
-        downloadBlob(
-          new Blob([text], { type: 'text/plain;charset=utf-8' }),
-          'coffee-water-recipe-steps.txt',
-        );
-      } catch {
-        setSaveImageError(true);
-      }
+      setSaveImageError(true);
     } finally {
       clone?.remove();
-      if (svgUrl) URL.revokeObjectURL(svgUrl);
       if (imageUrl) URL.revokeObjectURL(imageUrl);
       setIsSavingImage(false);
     }
