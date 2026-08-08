@@ -23,6 +23,7 @@ import {
   watermancerRouteMatchesCurrentInputs,
   isWatermancerActionSnapshotCurrent,
   watermancerBestMatchPreviewIsCurrent,
+  mergeRecipeStepTargets,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -41,6 +42,17 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('uses active recipe doses before suggested doses for preparation steps', () => {
+    expect(mergeRecipeStepTargets(
+      { calact: 8, nacl: 34 },
+      { calact: 0, nacl: 0, mgso4: 58 },
+    )).toMatchObject({
+      calact: 8,
+      nacl: 34,
+      mgso4: 58,
+    });
+  });
+
   it('reports the policy-adjusted total final ion deviation', () => {
     const plan = {
       targetIons: { calcium: 10, chloride: 0 },

@@ -42,6 +42,18 @@ import {
 } from './watermancerPlan';
 
 export type SaltRow = { target: string; formIdx: number };
+export function mergeRecipeStepTargets(
+  activeTargets: Record<string, number>,
+  suggestedTargets: Record<string, number>,
+): Record<string, number> {
+  return Object.fromEntries(
+    SALTS.map(salt => {
+      const activeTarget = Number(activeTargets[salt.id] ?? 0);
+      const suggestedTarget = Number(suggestedTargets[salt.id] ?? 0);
+      return [salt.id, activeTarget > 0 ? activeTarget : Math.max(suggestedTarget, 0)];
+    }),
+  );
+}
 type BrewerFlavorInput = {
   brightness: number;
   body: number;
@@ -8672,15 +8684,11 @@ function BrewerRecipeStepsModal({
       - configuredAdditionWaters.reduce((sum, water) => sum + water.volume, 0),
     0,
   );
-  // Keep salts from the selected recipe visible even when source water covers
-  // their remaining dose. Also include salts introduced by an adjusted route
-  // (for example, an optional sodium correction) so the instructions never
-  // omit a mineral that the active dose map actually requires.
-  const stepSalts = SALTS.filter(salt => (
-    (saltTargets[salt.id] ?? 0) > 0
-    || (suggestedSaltTargets[salt.id] ?? 0) > 0
-  ));
-  const stepSaltTargets = suggestedSaltTargets;
+  // Prefer the active recipe dose so the preparation card reflects what the
+  // user actually selected. Fall back to the suggested dose for salts supplied
+  // by the current water or matching route.
+  const stepSaltTargets = mergeRecipeStepTargets(saltTargets, suggestedSaltTargets);
+  const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
   const orderedRecipeSalts = [
     ...stepSalts.filter(salt => salt.formula.includes('SO₄')),
@@ -8795,6 +8803,7 @@ function BrewerRecipeStepsModal({
       clone.style.height = 'auto';
       clone.style.overflow = 'visible';
       clone.querySelectorAll<HTMLElement>('[data-recipe-steps-scroll]').forEach(element => {
+        element.style.height = 'auto';
         element.style.maxHeight = 'none';
         element.style.overflow = 'visible';
         element.style.flex = 'none';
@@ -8802,39 +8811,33 @@ function BrewerRecipeStepsModal({
       clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
-      const height = Math.ceil(clone.scrollHeight);
+      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
       const serialized = new XMLSerializer().serializeToString(clone);
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xhtml="http://www.w3.org/1999/xhtml" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><foreignObject width="100%" height="100%">${serialized}</foreignObject></svg>`;
       const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
       svgUrl = URL.createObjectURL(svgBlob);
-      try {
-        const image = new Image();
-        await new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve();
-          image.onerror = () => reject(new Error('Recipe card image could not be created.'));
-          image.src = svgUrl ?? '';
-        });
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Recipe card image could not be created.'));
+        image.src = svgUrl ?? '';
+      });
 
-        const canvas = document.createElement('canvas');
-        const scale = 2;
-        canvas.width = width * scale;
-        canvas.height = height * scale;
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Canvas is unavailable.');
-        context.scale(scale, scale);
-        context.drawImage(image, 0, 0, width, height);
-        const png = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
-        if (!png) throw new Error('Recipe card image could not be exported.');
+      const canvas = document.createElement('canvas');
+      const scale = 2;
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Canvas is unavailable.');
+      context.scale(scale, scale);
+      context.fillStyle = '#1e293b';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      if (!jpg) throw new Error('Recipe card JPEG could not be exported.');
 
-        imageUrl = URL.createObjectURL(png);
-        downloadUrl(imageUrl, 'coffee-water-recipe-steps.png');
-      } catch {
-        // Some browsers block SVG foreignObject rasterization. The SVG itself
-        // is still a complete, readable export, so save it instead of failing
-        // silently.
-        if (!svgUrl) throw new Error('Recipe card SVG could not be exported.');
-        downloadUrl(svgUrl, 'coffee-water-recipe-steps.svg');
-      }
+      imageUrl = URL.createObjectURL(jpg);
+      downloadUrl(imageUrl, 'coffee-water-recipe-steps.jpg');
     } catch {
       try {
         const text = source.innerText.trim();
