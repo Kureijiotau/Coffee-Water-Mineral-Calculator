@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
+  ArrowLeftRight,
   Beaker,
   Check,
   ChevronDown,
@@ -105,6 +106,10 @@ const styles = `
   .week1-card { border: 1px solid var(--week1-line); border-radius: 16px; background: rgba(16, 43, 50, .88); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
   .week1-recipe { padding: 23px; }
   .week1-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; margin-bottom: 21px; }
+  .week1-swap-button { display: inline-flex; align-items: center; gap: 7px; margin: -8px 0 17px; padding: 8px 11px; border: 1px solid rgba(142,228,220,.34); border-radius: 8px; color: var(--week1-cyan-soft); background: rgba(142,228,220,.08); font: 600 10px/1.2 "DM Sans", sans-serif; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+  .week1-swap-button:hover { border-color: rgba(142,228,220,.62); background: rgba(142,228,220,.15); transform: translateY(-1px); }
+  .week1-swap-button:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
+  .week1-swap-button svg { width: 14px; height: 14px; }
   .week1-eyebrow { color: var(--week1-cyan); font: 700 10px/1.2 "Space Mono", monospace; letter-spacing: .12em; }
   .week1-card h3 { margin: 8px 0 0; color: var(--week1-text); font: 500 24px/1.1 "Bricolage Grotesque", sans-serif; letter-spacing: -.025em; }
   .week1-target { display: flex; align-items: center; gap: 8px; color: var(--week1-muted); font-size: 11px; white-space: nowrap; }
@@ -205,6 +210,33 @@ const massTargets = (
   }),
 );
 
+export function equivalentSaltTarget(
+  sourceSaltId: string,
+  destinationSaltId: string,
+  ionId: string,
+  sourceTarget: number,
+): number {
+  const sourceSalt = SALTS.find(salt => salt.id === sourceSaltId);
+  const destinationSalt = SALTS.find(salt => salt.id === destinationSaltId);
+  const sourceFraction = sourceSalt?.ions.find(ion => ion.ionId === ionId)?.fraction ?? 0;
+  const destinationFraction = destinationSalt?.ions.find(ion => ion.ionId === ionId)?.fraction ?? 0;
+  if (!Number.isFinite(sourceTarget) || sourceTarget <= 0 || sourceFraction <= 0 || destinationFraction <= 0) {
+    return 0;
+  }
+  return Number(((sourceTarget * sourceFraction) / destinationFraction).toFixed(6));
+}
+
+const DAY5_ORIGINAL_TARGETS = massTargets(
+  { mgso4: 74, cacl2: 33, nahco3: 30 },
+  { mgso4: 1, cacl2: 0, nahco3: 0 },
+);
+
+const DAY5_SWAPPED_TARGETS = {
+  cacl2: DAY5_ORIGINAL_TARGETS.cacl2,
+  mgcl2: equivalentSaltTarget('mgso4', 'mgcl2', 'magnesium', DAY5_ORIGINAL_TARGETS.mgso4),
+  khco3: equivalentSaltTarget('nahco3', 'khco3', 'bicarbonate', DAY5_ORIGINAL_TARGETS.nahco3),
+};
+
 const DAYS: Week1Day[] = [
   {
     day: 1,
@@ -261,15 +293,15 @@ const DAYS: Week1Day[] = [
   {
     day: 5,
     label: 'CLARITY',
-    title: 'Change the buffer',
+    title: 'Try a mineral swap',
     subtitle: 'Read the finish',
-    description: 'Keep the balanced hardness split and swap sodium bicarbonate for potassium bicarbonate. Notice the effect of an alternate buffer source.',
-    prompt: 'Does the alternate buffer change the cup’s shape?',
-    note: 'Day 5 introduces a different KH source. Keep the GH split steady so the buffer is the variable you notice.',
-    learningNote: 'Potassium bicarbonate is a useful comparison, but higher potassium can taste unpleasant to some people. Treat this as a tasting experiment.',
-    formIdx: { mgso4: 1, cacl2: 0, khco3: 0 },
-    targets: massTargets({ mgso4: 74, cacl2: 33, khco3: 30 }, { mgso4: 1, cacl2: 0, khco3: 0 }),
-    displayTargets: { mgso4: '30 GH', cacl2: '30 GH', khco3: '15 KH' },
+    description: 'Start with the original mineral sources, then use the swap to compare magnesium chloride and potassium bicarbonate without changing the recipe’s GH or KH contribution.',
+    prompt: 'Does the alternate mineral source change the cup’s shape?',
+    note: 'Day 5 keeps the hardness split and buffer strength steady while changing both mineral sources. Compare the original and swapped cups side by side.',
+    learningNote: 'The swap uses equivalent magnesium and bicarbonate contributions. Magnesium chloride adds chloride, while potassium bicarbonate replaces sodium with potassium, so taste the cup for texture and finish changes.',
+    formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
+    targets: DAY5_ORIGINAL_TARGETS,
+    displayTargets: { mgso4: '30 GH', cacl2: '30 GH', nahco3: '15 KH' },
   },
   {
     day: 6,
@@ -308,21 +340,25 @@ const saltDisplay: Record<string, { label: string; note: string }> = {
   nacl: { label: 'Sodium chloride', note: 'Table / spring salt' },
 };
 
-const orderedRecipeSalts = (day: Week1Day) => SALTS.filter(salt => day.targets[salt.id] > 0);
-
 const formatMass = (massMg: number) => `${(massMg / 1000).toFixed(3)} g`;
-
-function recipeIons(day: Week1Day) {
-  return computeIonTotals(day.targets, {}, 1);
-}
 
 export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   const [activeDay, setActiveDay] = useState(1);
   const [appliedDay, setAppliedDay] = useState<number | null>(null);
+  const [day5Swapped, setDay5Swapped] = useState(false);
   const [visitedDays, setVisitedDays] = useState(() => new Set([1]));
   const currentDay = DAYS[activeDay - 1];
-  const ions = useMemo(() => recipeIons(currentDay), [currentDay]);
-  const recipeSalts = orderedRecipeSalts(currentDay);
+  const activeTargets: Record<string, number> = activeDay === 5 && day5Swapped
+    ? DAY5_SWAPPED_TARGETS
+    : currentDay.targets;
+  const activeFormIdx = activeDay === 5 && day5Swapped
+    ? { mgcl2: 1, cacl2: 0, khco3: 0 }
+    : currentDay.formIdx;
+  const activeDisplayTargets: Record<string, string> = activeDay === 5 && day5Swapped
+    ? { mgcl2: '30 GH', cacl2: '30 GH', khco3: '15 KH' }
+    : currentDay.displayTargets;
+  const ions = useMemo(() => computeIonTotals(activeTargets, {}, 1), [activeTargets]);
+  const recipeSalts = SALTS.filter(salt => (activeTargets[salt.id] ?? 0) > 0);
   const gh = computeGH(ions);
   const kh = computeKH(ions);
 
@@ -335,9 +371,9 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
 
   const applyCurrentRecipe = () => {
     onApplyRecipe({
-      id: `robert-asami-week1-day-${currentDay.day}`,
-      targets: currentDay.targets,
-      formIdx: currentDay.formIdx,
+      id: `robert-asami-week1-day-${currentDay.day}${activeDay === 5 && day5Swapped ? '-swapped' : ''}`,
+      targets: activeTargets,
+      formIdx: activeFormIdx,
     });
     setAppliedDay(currentDay.day);
   };
@@ -345,9 +381,9 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   const massFor = (saltId: string) => {
     const salt = SALTS.find(item => item.id === saltId);
     if (!salt) return 0;
-    const formIdx = currentDay.formIdx[saltId] ?? salt.defaultFormIdx ?? 0;
+    const formIdx = activeFormIdx[saltId] ?? salt.defaultFormIdx ?? 0;
     const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[0];
-    return currentDay.targets[saltId] * (form.molarMass / salt.anhydrousMass);
+    return (activeTargets[saltId] ?? 0) * (form.molarMass / salt.anhydrousMass);
   };
 
   return (
@@ -409,8 +445,21 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                   <div className="week1-eyebrow">DAY {currentDay.day} / {currentDay.label}</div>
                   <h3 id="week1-recipe-title">{currentDay.title}</h3>
                 </div>
-                <div className="week1-target"><Target /> Target · 1 L brew water</div>
+                 <div className="week1-target"><Target /> Target · 1 L brew water</div>
               </div>
+               {activeDay === 5 && (
+                 <button
+                   className="week1-swap-button"
+                   type="button"
+                   onClick={() => {
+                     setDay5Swapped(previous => !previous);
+                     setAppliedDay(null);
+                   }}
+                 >
+                   <ArrowLeftRight />
+                   {day5Swapped ? 'Use Epsom + sodium bicarbonate' : 'Swap to MgCl₂ + potassium bicarbonate'}
+                 </button>
+               )}
 
               <div className="week1-mineral-summary">
                 <div className="week1-summary">
@@ -437,7 +486,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                         <span className="week1-ingredient-icon">{index % 2 === 0 ? <Droplets /> : <Beaker />}</span>
                         <span><strong>{display.label}</strong><span>{display.note}</span></span>
                       </div>
-                      <span className="week1-amount" role="cell">{currentDay.displayTargets[salt.id] ?? `${currentDay.targets[salt.id].toFixed(1)} ppm`}<small>source target</small></span>
+                       <span className="week1-amount" role="cell">{activeDisplayTargets[salt.id] ?? `${activeTargets[salt.id].toFixed(1)} ppm`}<small>source target</small></span>
                       <span className="week1-amount accent" role="cell">{formatMass(massFor(salt.id))}</span>
                     </div>
                   );
