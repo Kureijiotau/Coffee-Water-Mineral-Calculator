@@ -229,7 +229,7 @@ export function equivalentSaltTarget(
 }
 
 const DAY5_ORIGINAL_TARGETS = massTargets(
-  { mgso4: 74, cacl2: 33, nahco3: 30 },
+  { mgso4: 74, cacl2: 33, nahco3: 25 },
   { mgso4: 1, cacl2: 0, nahco3: 0 },
 );
 

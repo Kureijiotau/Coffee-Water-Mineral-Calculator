@@ -13,8 +13,8 @@ describe('Robert Asami Day 5 mineral swap', () => {
   });
 
   it('preserves the bicarbonate KH contribution when swapping sodium for potassium bicarbonate', () => {
-    const swappedTarget = equivalentSaltTarget('nahco3', 'khco3', 'bicarbonate', 29.76);
-    const originalKh = computeKH(computeIonTotals({ nahco3: 29.76 }, {}, 1));
+    const swappedTarget = equivalentSaltTarget('nahco3', 'khco3', 'bicarbonate', 25);
+    const originalKh = computeKH(computeIonTotals({ nahco3: 25 }, {}, 1));
     const swappedKh = computeKH(computeIonTotals({ khco3: swappedTarget }, {}, 1));
 
     expect(swappedTarget).toBeGreaterThan(0);
