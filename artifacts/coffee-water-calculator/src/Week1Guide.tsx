@@ -106,12 +106,11 @@ const styles = `
   .week1-card { border: 1px solid var(--week1-line); border-radius: 16px; background: rgba(16, 43, 50, .88); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
   .week1-recipe { padding: 23px; }
   .week1-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; margin-bottom: 21px; }
-  .week1-swap-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 17px; }
-  .week1-swap-button { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 220px; justify-content: center; padding: 8px 11px; border: 1px solid rgba(142,228,220,.34); border-radius: 8px; color: var(--week1-cyan-soft); background: rgba(142,228,220,.08); font: 600 10px/1.2 "DM Sans", sans-serif; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+  .week1-swap-button { display: inline-flex; align-items: center; gap: 5px; flex: 0 0 auto; margin-left: auto; padding: 5px 7px; border: 1px solid rgba(142,228,220,.34); border-radius: 7px; color: var(--week1-cyan-soft); background: rgba(142,228,220,.08); font: 600 9px/1.2 "DM Sans", sans-serif; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
   .week1-swap-button:hover { border-color: rgba(142,228,220,.62); background: rgba(142,228,220,.15); transform: translateY(-1px); }
   .week1-swap-button.active { border-color: rgba(93,212,164,.62); color: #d6fff1; background: rgba(93,212,164,.14); }
   .week1-swap-button:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
-  .week1-swap-button svg { width: 14px; height: 14px; }
+  .week1-swap-button svg { width: 12px; height: 12px; }
   .week1-eyebrow { color: var(--week1-cyan); font: 700 10px/1.2 "Space Mono", monospace; letter-spacing: .12em; }
   .week1-card h3 { margin: 8px 0 0; color: var(--week1-text); font: 500 24px/1.1 "Bricolage Grotesque", sans-serif; letter-spacing: -.025em; }
   .week1-target { display: flex; align-items: center; gap: 8px; color: var(--week1-muted); font-size: 11px; white-space: nowrap; }
@@ -191,7 +190,9 @@ const styles = `
     .week1-card-heading { display: block; }
     .week1-target { margin-top: 15px; }
     .week1-table-head, .week1-ingredient { grid-template-columns: minmax(0, 1.25fr) .64fr .64fr; gap: 8px; }
-    .week1-ingredient-name { gap: 7px; }
+     .week1-ingredient-name { gap: 7px; }
+     .week1-swap-button { padding: 5px; font-size: 0; }
+     .week1-swap-button svg { width: 13px; height: 13px; }
     .week1-ingredient-icon { width: 28px; height: 28px; border-radius: 7px; }
     .week1-ingredient-name strong { font-size: 12px; }
     .week1-amount { font-size: 11px; }
@@ -487,33 +488,6 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                 </div>
                  <div className="week1-target"><Target /> Target · 1 L brew water</div>
               </div>
-                {activeDay === 5 && (
-                  <div className="week1-swap-buttons" aria-label="Day 5 mineral swaps">
-                    <button
-                      className={`week1-swap-button ${day5MagnesiumSwapped ? 'active' : ''}`}
-                      type="button"
-                      onClick={() => {
-                        setDay5MagnesiumSwapped(previous => !previous);
-                        setAppliedDay(null);
-                      }}
-                    >
-                      <ArrowLeftRight />
-                      {day5MagnesiumSwapped ? 'Use Epsom salt' : 'Swap Epsom → MgCl₂'}
-                    </button>
-                    <button
-                      className={`week1-swap-button ${day5BufferSwapped ? 'active' : ''}`}
-                      type="button"
-                      onClick={() => {
-                        setDay5BufferSwapped(previous => !previous);
-                        setAppliedDay(null);
-                      }}
-                    >
-                      <ArrowLeftRight />
-                      {day5BufferSwapped ? 'Use sodium bicarbonate' : 'Swap sodium → potassium bicarbonate'}
-                    </button>
-                  </div>
-               )}
-
               <div className="week1-mineral-summary">
                 <div className="week1-summary">
                   <span className="week1-summary-label">General hardness</span>
@@ -537,7 +511,35 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                     <div className="week1-ingredient" role="row" key={salt.id}>
                       <div className="week1-ingredient-name" role="cell">
                         <span className="week1-ingredient-icon">{index % 2 === 0 ? <Droplets /> : <Beaker />}</span>
-                        <span><strong>{display.label}</strong><span>{display.note}</span></span>
+                         <span className="min-w-0"><strong>{display.label}</strong><span>{display.note}</span></span>
+                         {activeDay === 5 && (salt.id === 'mgso4' || salt.id === 'mgcl2') && (
+                           <button
+                             className={`week1-swap-button ${day5MagnesiumSwapped ? 'active' : ''}`}
+                             type="button"
+                             onClick={() => {
+                               setDay5MagnesiumSwapped(previous => !previous);
+                               setAppliedDay(null);
+                             }}
+                             aria-label={day5MagnesiumSwapped ? 'Use Epsom salt instead' : 'Swap Epsom salt for magnesium chloride'}
+                           >
+                             <ArrowLeftRight />
+                             <span>{day5MagnesiumSwapped ? 'Use Epsom' : 'Swap to MgCl₂'}</span>
+                           </button>
+                         )}
+                         {activeDay === 5 && (salt.id === 'nahco3' || salt.id === 'khco3') && (
+                           <button
+                             className={`week1-swap-button ${day5BufferSwapped ? 'active' : ''}`}
+                             type="button"
+                             onClick={() => {
+                               setDay5BufferSwapped(previous => !previous);
+                               setAppliedDay(null);
+                             }}
+                             aria-label={day5BufferSwapped ? 'Use sodium bicarbonate instead' : 'Swap sodium bicarbonate for potassium bicarbonate'}
+                           >
+                             <ArrowLeftRight />
+                             <span>{day5BufferSwapped ? 'Use sodium' : 'Swap to KHCO₃'}</span>
+                           </button>
+                         )}
                       </div>
                        <span className="week1-amount" role="cell">{activeDisplayTargets[salt.id] ?? `${activeTargets[salt.id].toFixed(1)} ppm`}<small>source target</small></span>
                       <span className="week1-amount accent" role="cell">{formatMass(massFor(salt.id))}</span>
