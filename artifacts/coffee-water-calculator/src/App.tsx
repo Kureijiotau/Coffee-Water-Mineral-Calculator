@@ -8813,6 +8813,14 @@ function BrewerRecipeStepsModal({
         element.style.overflow = 'visible';
         element.style.flex = 'none';
       });
+      clone.querySelectorAll<HTMLElement>('[data-recipe-water-copy]').forEach(element => {
+        element.style.display = 'block';
+        element.style.height = 'auto';
+        element.style.lineHeight = '1.15';
+        element.style.overflow = 'visible';
+        element.style.textOverflow = 'clip';
+        element.style.whiteSpace = 'nowrap';
+      });
       clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
@@ -8907,7 +8915,7 @@ function BrewerRecipeStepsModal({
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
-                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed base water'}</div>
+                        <div data-recipe-water-copy className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed base water'}</div>
                       </div>
                       <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
@@ -8924,7 +8932,7 @@ function BrewerRecipeStepsModal({
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
-                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed addition water'}</div>
+                        <div data-recipe-water-copy className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed addition water'}</div>
                       </div>
                       <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
