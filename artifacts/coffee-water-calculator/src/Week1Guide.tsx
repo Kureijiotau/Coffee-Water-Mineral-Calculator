@@ -106,8 +106,10 @@ const styles = `
   .week1-card { border: 1px solid var(--week1-line); border-radius: 16px; background: rgba(16, 43, 50, .88); box-shadow: 0 18px 50px rgba(0,0,0,.13); }
   .week1-recipe { padding: 23px; }
   .week1-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; margin-bottom: 21px; }
-  .week1-swap-button { display: inline-flex; align-items: center; gap: 7px; margin: -8px 0 17px; padding: 8px 11px; border: 1px solid rgba(142,228,220,.34); border-radius: 8px; color: var(--week1-cyan-soft); background: rgba(142,228,220,.08); font: 600 10px/1.2 "DM Sans", sans-serif; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+  .week1-swap-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 17px; }
+  .week1-swap-button { display: inline-flex; align-items: center; gap: 7px; flex: 1 1 220px; justify-content: center; padding: 8px 11px; border: 1px solid rgba(142,228,220,.34); border-radius: 8px; color: var(--week1-cyan-soft); background: rgba(142,228,220,.08); font: 600 10px/1.2 "DM Sans", sans-serif; cursor: pointer; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
   .week1-swap-button:hover { border-color: rgba(142,228,220,.62); background: rgba(142,228,220,.15); transform: translateY(-1px); }
+  .week1-swap-button.active { border-color: rgba(93,212,164,.62); color: #d6fff1; background: rgba(93,212,164,.14); }
   .week1-swap-button:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
   .week1-swap-button svg { width: 14px; height: 14px; }
   .week1-eyebrow { color: var(--week1-cyan); font: 700 10px/1.2 "Space Mono", monospace; letter-spacing: .12em; }
@@ -231,11 +233,18 @@ const DAY5_ORIGINAL_TARGETS = massTargets(
   { mgso4: 1, cacl2: 0, nahco3: 0 },
 );
 
-const DAY5_SWAPPED_TARGETS = {
-  cacl2: DAY5_ORIGINAL_TARGETS.cacl2,
-  mgcl2: equivalentSaltTarget('mgso4', 'mgcl2', 'magnesium', DAY5_ORIGINAL_TARGETS.mgso4),
-  khco3: equivalentSaltTarget('nahco3', 'khco3', 'bicarbonate', DAY5_ORIGINAL_TARGETS.nahco3),
-};
+const DAY5_MGCL2_TARGET = equivalentSaltTarget(
+  'mgso4',
+  'mgcl2',
+  'magnesium',
+  DAY5_ORIGINAL_TARGETS.mgso4,
+);
+const DAY5_KHCO3_TARGET = equivalentSaltTarget(
+  'nahco3',
+  'khco3',
+  'bicarbonate',
+  DAY5_ORIGINAL_TARGETS.nahco3,
+);
 
 const DAYS: Week1Day[] = [
   {
@@ -345,18 +354,49 @@ const formatMass = (massMg: number) => `${(massMg / 1000).toFixed(3)} g`;
 export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   const [activeDay, setActiveDay] = useState(1);
   const [appliedDay, setAppliedDay] = useState<number | null>(null);
-  const [day5Swapped, setDay5Swapped] = useState(false);
+  const [day5MagnesiumSwapped, setDay5MagnesiumSwapped] = useState(false);
+  const [day5BufferSwapped, setDay5BufferSwapped] = useState(false);
   const [visitedDays, setVisitedDays] = useState(() => new Set([1]));
   const currentDay = DAYS[activeDay - 1];
-  const activeTargets: Record<string, number> = activeDay === 5 && day5Swapped
-    ? DAY5_SWAPPED_TARGETS
-    : currentDay.targets;
-  const activeFormIdx = activeDay === 5 && day5Swapped
-    ? { mgcl2: 1, cacl2: 0, khco3: 0 }
-    : currentDay.formIdx;
-  const activeDisplayTargets: Record<string, string> = activeDay === 5 && day5Swapped
-    ? { mgcl2: '30 GH', cacl2: '30 GH', khco3: '15 KH' }
-    : currentDay.displayTargets;
+  const activeTargets: Record<string, number> = useMemo(() => {
+    if (activeDay !== 5) return currentDay.targets;
+    const targets = { ...currentDay.targets };
+    if (day5MagnesiumSwapped) {
+      delete targets.mgso4;
+      targets.mgcl2 = DAY5_MGCL2_TARGET;
+    }
+    if (day5BufferSwapped) {
+      delete targets.nahco3;
+      targets.khco3 = DAY5_KHCO3_TARGET;
+    }
+    return targets;
+  }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
+  const activeFormIdx: Record<string, number> = useMemo(() => {
+    if (activeDay !== 5) return currentDay.formIdx;
+    const formIdx = { ...currentDay.formIdx };
+    if (day5MagnesiumSwapped) {
+      delete formIdx.mgso4;
+      formIdx.mgcl2 = 1;
+    }
+    if (day5BufferSwapped) {
+      delete formIdx.nahco3;
+      formIdx.khco3 = 0;
+    }
+    return formIdx;
+  }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
+  const activeDisplayTargets: Record<string, string> = useMemo(() => {
+    if (activeDay !== 5) return currentDay.displayTargets;
+    const displayTargets = { ...currentDay.displayTargets };
+    if (day5MagnesiumSwapped) {
+      delete displayTargets.mgso4;
+      displayTargets.mgcl2 = '30 GH';
+    }
+    if (day5BufferSwapped) {
+      delete displayTargets.nahco3;
+      displayTargets.khco3 = '15 KH';
+    }
+    return displayTargets;
+  }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
   const ions = useMemo(() => computeIonTotals(activeTargets, {}, 1), [activeTargets]);
   const recipeSalts = SALTS.filter(salt => (activeTargets[salt.id] ?? 0) > 0);
   const gh = computeGH(ions);
@@ -371,7 +411,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
 
   const applyCurrentRecipe = () => {
     onApplyRecipe({
-      id: `robert-asami-week1-day-${currentDay.day}${activeDay === 5 && day5Swapped ? '-swapped' : ''}`,
+      id: `robert-asami-week1-day-${currentDay.day}${activeDay === 5 && (day5MagnesiumSwapped || day5BufferSwapped) ? '-swapped' : ''}`,
       targets: activeTargets,
       formIdx: activeFormIdx,
     });
@@ -447,18 +487,31 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                 </div>
                  <div className="week1-target"><Target /> Target · 1 L brew water</div>
               </div>
-               {activeDay === 5 && (
-                 <button
-                   className="week1-swap-button"
-                   type="button"
-                   onClick={() => {
-                     setDay5Swapped(previous => !previous);
-                     setAppliedDay(null);
-                   }}
-                 >
-                   <ArrowLeftRight />
-                   {day5Swapped ? 'Use Epsom + sodium bicarbonate' : 'Swap to MgCl₂ + potassium bicarbonate'}
-                 </button>
+                {activeDay === 5 && (
+                  <div className="week1-swap-buttons" aria-label="Day 5 mineral swaps">
+                    <button
+                      className={`week1-swap-button ${day5MagnesiumSwapped ? 'active' : ''}`}
+                      type="button"
+                      onClick={() => {
+                        setDay5MagnesiumSwapped(previous => !previous);
+                        setAppliedDay(null);
+                      }}
+                    >
+                      <ArrowLeftRight />
+                      {day5MagnesiumSwapped ? 'Use Epsom salt' : 'Swap Epsom → MgCl₂'}
+                    </button>
+                    <button
+                      className={`week1-swap-button ${day5BufferSwapped ? 'active' : ''}`}
+                      type="button"
+                      onClick={() => {
+                        setDay5BufferSwapped(previous => !previous);
+                        setAppliedDay(null);
+                      }}
+                    >
+                      <ArrowLeftRight />
+                      {day5BufferSwapped ? 'Use sodium bicarbonate' : 'Swap sodium → potassium bicarbonate'}
+                    </button>
+                  </div>
                )}
 
               <div className="week1-mineral-summary">
