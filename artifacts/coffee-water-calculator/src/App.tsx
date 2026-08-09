@@ -6,6 +6,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
+import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
   computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
@@ -4594,6 +4595,16 @@ function App() {
           <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
         </div>
         <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
+          <a
+            href="https://discord.com/users/361929925449482240"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Send app feedback on Discord"
+            title="Send app feedback on Discord"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/15 text-white/80 transition hover:border-white/40 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-transparent"
+          >
+            <SiDiscord className="h-4 w-4" aria-hidden="true" />
+          </a>
             <div role="tablist" aria-label="App workspace" className="app-header__tabs flex rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
@@ -4627,7 +4638,6 @@ function App() {
           {appHeader}
           <ConcentrateWorkspace
           />
-           <FeedbackFooter />
         </div>
         </div>
       </div>
@@ -6660,7 +6670,6 @@ function App() {
               </div>
             </div>
           )}
-          <FeedbackFooter />
        </div>
       {(showAlchemist || showWatermancer || nerdLevel === 'brewer') && (
         <button
@@ -6844,23 +6853,6 @@ function App() {
         </div>
       )}
     </div>
-  );
-}
-
-function FeedbackFooter() {
-  return (
-    <footer className="mt-1 flex flex-wrap items-center justify-center gap-2 border-t border-slate-800/70 px-4 py-3 text-center text-[11px] text-slate-500">
-      <span>Have feedback about the app?</span>
-      <a
-        href="https://discord.com/users/361929925449482240"
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex items-center gap-1 font-semibold text-sky-300 transition hover:text-sky-200 hover:underline"
-      >
-        Message me on Discord
-        <span aria-hidden="true">↗</span>
-      </a>
-    </footer>
   );
 }
 
