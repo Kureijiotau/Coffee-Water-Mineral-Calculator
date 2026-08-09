@@ -4627,6 +4627,7 @@ function App() {
           {appHeader}
           <ConcentrateWorkspace
           />
+           <FeedbackFooter />
         </div>
         </div>
       </div>
@@ -6655,11 +6656,12 @@ function App() {
                      {Object.values(activeWatermancerSaltTargets).filter(target => target > 0.000001).length} selected
                    </div>
                  </div>
-               </div>
-             </div>
-           </div>
-         )}
-      </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <FeedbackFooter />
+       </div>
       {(showAlchemist || showWatermancer || nerdLevel === 'brewer') && (
         <button
           type="button"
@@ -6743,8 +6745,8 @@ function App() {
             </div>
           </div>
         </div>
-      )}
-      </div>
+       )}
+        </div>
         {showTastePreference && (
         <TastePreferenceModal
           onClose={() => setShowTastePreference(false)}
@@ -6842,6 +6844,23 @@ function App() {
         </div>
       )}
     </div>
+  );
+}
+
+function FeedbackFooter() {
+  return (
+    <footer className="mt-1 flex flex-wrap items-center justify-center gap-2 border-t border-slate-800/70 px-4 py-3 text-center text-[11px] text-slate-500">
+      <span>Have feedback about the app?</span>
+      <a
+        href="https://discord.com/users/361929925449482240"
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1 font-semibold text-sky-300 transition hover:text-sky-200 hover:underline"
+      >
+        Message me on Discord
+        <span aria-hidden="true">↗</span>
+      </a>
+    </footer>
   );
 }
 
