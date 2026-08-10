@@ -8648,6 +8648,9 @@ function MineralAnalysisLabel({
   gh: number;
   kh: number;
 }) {
+  const displayRecipeName = recipeName.trim() && recipeName !== 'Custom'
+    ? recipeName
+    : 'Mineral recipe';
   const additionalIonIds = ACTIVE_ION_IDS.filter(id => (
     !MINERAL_LABEL_CATION_IDS.includes(id)
     && !MINERAL_LABEL_ANION_IDS.includes(id)
@@ -8676,9 +8679,6 @@ function MineralAnalysisLabel({
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">Water profile</div>
             <h2 className="font-['Georgia'] text-lg font-bold tracking-tight text-[#173f49]">Mineral analysis</h2>
-            <div className="mt-1 max-w-[15rem] truncate text-[10px] font-semibold text-[#0d6170]" title={recipeName}>
-              {recipeName}
-            </div>
           </div>
           <div className="text-right">
             <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">Current mix</div>
@@ -8687,9 +8687,8 @@ function MineralAnalysisLabel({
         </div>
 
         <div className="border-b border-[#0d6170]/35 py-3 text-center">
-          <div className="font-['Georgia'] text-2xl font-bold tracking-tight text-[#0d6170]">Brew water</div>
-          <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#47737a]">
-            from current waters + salt doses
+          <div className="mx-auto max-w-full truncate font-['Georgia'] text-2xl font-bold tracking-tight text-[#0d6170]" title={displayRecipeName}>
+            {displayRecipeName}
           </div>
           <div className="mt-2 flex items-center justify-center gap-2 text-[9px] text-[#47737a]">
             <span className="h-px w-6 bg-[#0d6170]/35" />
@@ -8733,7 +8732,7 @@ function MineralAnalysisLabel({
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-3 text-[9px] text-[#47737a]">
-          <span>Calculated final profile</span>
+          <span className="font-semibold uppercase tracking-[0.12em]">Estimated final TDS: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{tds.toFixed(0)}</span> ppm</span>
           <span className="font-mono font-bold uppercase tracking-[0.12em]">mg/L = ppm</span>
         </div>
       </div>
