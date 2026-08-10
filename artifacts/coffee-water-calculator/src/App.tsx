@@ -3441,7 +3441,7 @@ function App() {
           setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
           return;
         }
-        setWatermancerBestMatchPreview({
+        const bestMatchPreview: WatermancerBestMatchPreview = {
           route: cloneWatermancerRouteCandidate(winner.route),
           strategy: winner.strategy,
           saltObjective: winner.saltObjective,
@@ -3451,8 +3451,8 @@ function App() {
           status: winner.result.status === 'matched' ? 'matched' : 'partial',
           explanation: winner.result.explanation,
           inputSignature: snapshot.inputSignature,
-        });
-        setWatermancerBestMatchMessage(null);
+        };
+        handleUseWatermancerBestMatch(bestMatchPreview);
       } catch {
         setWatermancerBestMatchPreview(null);
         setWatermancerBestMatchMessage('The best-match search could not finish. Please try again.');
@@ -3465,8 +3465,10 @@ function App() {
     // synchronous 48-route sweep starts.
     window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
-  const handleUseWatermancerBestMatch = () => {
-    const preview = watermancerBestMatchPreview;
+  const handleUseWatermancerBestMatch = (
+    previewOverride?: WatermancerBestMatchPreview,
+  ) => {
+    const preview = previewOverride ?? watermancerBestMatchPreview;
     if (!watermancerBestMatchPreviewIsCurrent(preview, watermancerInputSignature)) {
       setWatermancerBestMatchPreview(null);
       setWatermancerBestMatchMessage('This recommendation is out of date. Find a new best match.');
@@ -3510,8 +3512,11 @@ function App() {
     setWatermancerMatchMode('automatic');
     setWatermancerManualRoute(null);
     setWatermancerBestMatchPreview(null);
-    setWatermancerBestMatchMessage(null);
-    setWatermancerActionMessage('Recommended match applied.');
+    setWatermancerBestMatchMessage(
+      preview.status === 'matched'
+        ? 'Best match found and applied automatically.'
+        : 'Best available partial match found and applied automatically.',
+    );
     setWatermancerRecalculationNonce(current => current + 1);
   };
   const handleDismissWatermancerBestMatch = () => {
@@ -6395,8 +6400,8 @@ function App() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                  <div>
                     <p className="text-xs font-semibold text-cyan-100">Search your selected waters and salts for a safe, useful match.</p>
-                   <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
-                        The calculator compares the available options behind the scenes, then lets you review the recommendation before using it.
+                    <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
+                         The calculator compares the available options behind the scenes, then applies the best recommendation automatically.
                    </p>
                  </div>
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
@@ -6636,7 +6641,7 @@ function App() {
                       </button>
                       <button
                         type="button"
-                        onClick={handleUseWatermancerBestMatch}
+                        onClick={() => handleUseWatermancerBestMatch()}
                         className="rounded-lg border border-violet-200/50 bg-violet-300/20 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-300/30"
                       >
                         Use this match
@@ -6764,6 +6769,7 @@ function App() {
       )}
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
+          recipeName={displayedRecipeName}
           saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
           recipeRows={rows}
           liters={L}
@@ -8630,11 +8636,13 @@ function MineralAnalysisIonRow({
 }
 
 function MineralAnalysisLabel({
+  recipeName,
   finalIons,
   tds,
   gh,
   kh,
 }: {
+  recipeName: string;
   finalIons: Record<IonId, number>;
   tds: number;
   gh: number;
@@ -8668,6 +8676,9 @@ function MineralAnalysisLabel({
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">Water profile</div>
             <h2 className="font-['Georgia'] text-lg font-bold tracking-tight text-[#173f49]">Mineral analysis</h2>
+            <div className="mt-1 max-w-[15rem] truncate text-[10px] font-semibold text-[#0d6170]" title={recipeName}>
+              {recipeName}
+            </div>
           </div>
           <div className="text-right">
             <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">Current mix</div>
@@ -8731,6 +8742,7 @@ function MineralAnalysisLabel({
 }
 
 function BrewerRecipeStepsModal({
+  recipeName,
   saltTargets,
   recipeRows,
   liters,
@@ -8748,6 +8760,7 @@ function BrewerRecipeStepsModal({
   dosingMethod,
   onClose,
 }: {
+  recipeName: string;
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
@@ -9156,6 +9169,7 @@ function BrewerRecipeStepsModal({
           </p>
            </div>
            <MineralAnalysisLabel
+             recipeName={recipeName}
              finalIons={finalProfileIons}
              tds={finalProfileTds}
              gh={finalProfileGh}
