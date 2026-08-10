@@ -18,6 +18,14 @@ export interface SharedWater {
  */
 export const SHARED_WATERS: SharedWater[] = [
   {
+    id: 46,
+    name: "Magnesia",
+    ions: { magnesium: 172, calcium: 35.7, sodium: 5.2, sulfate: 10.2, bicarbonate: 950 },
+    metadata: { tds: 736 },
+    shared: "yes",
+    createdAt: "2026-08-10T11:34:10.606Z",
+  },
+  {
     id: 23,
     name: "Souroti",
     ions: { sodium: 97, calcium: 200, sulfate: 101, chloride: 116, magnesium: 60, potassium: 12, bicarbonate: 830 },
