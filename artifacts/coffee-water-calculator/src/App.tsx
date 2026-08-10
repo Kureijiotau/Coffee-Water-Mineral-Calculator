@@ -4101,6 +4101,11 @@ function App() {
     }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
   }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
+  const recipeStepsProfileName = showWatermancer
+    ? watermancerTargetSource === 'safe-profile'
+      ? activeProfile.name
+      : watermancerTargetSourceLabel
+    : displayedRecipeName;
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setBrewerRecipeOverride(null);
     setActiveRecipeId(recipe.id);
@@ -6769,7 +6774,7 @@ function App() {
       )}
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
-          recipeName={displayedRecipeName}
+          recipeName={recipeStepsProfileName}
           saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
           recipeRows={rows}
           liters={L}
@@ -8973,6 +8978,18 @@ function BrewerRecipeStepsModal({
         element.style.overflow = 'visible';
         element.style.textOverflow = 'clip';
         element.style.whiteSpace = 'nowrap';
+      });
+      clone.querySelectorAll<HTMLElement>('[data-recipe-mineral-label]').forEach(label => {
+        label.style.overflow = 'visible';
+        label.querySelectorAll<HTMLElement>('*').forEach(element => {
+          const computed = window.getComputedStyle(element);
+          const fontSize = parseFloat(computed.fontSize);
+          element.style.overflow = 'visible';
+          element.style.textOverflow = 'clip';
+          if (Number.isFinite(fontSize) && fontSize > 0) {
+            element.style.lineHeight = `${Math.ceil(fontSize * 1.2)}px`;
+          }
+        });
       });
       clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
 
