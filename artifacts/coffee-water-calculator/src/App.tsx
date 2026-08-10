@@ -8,7 +8,7 @@ import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
@@ -5006,14 +5006,18 @@ function App() {
             <span>Salt</span>
             <span>Target (ppm)</span>
              <span>Hydration form</span>
-             <span>Dose</span>
+              <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
           {SALTS.map((salt, i) => {
             const row = safeRows[i];
             const form = salt.hydrationForms[row.formIdx];
             const target = dosingSaltTargets[salt.id] ?? 0;
+            const recipeTarget = saltTargets[salt.id] ?? 0;
             const mg = L > 0 && target > 0
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
+              : 0;
+            const recipeMass = L > 0 && recipeTarget > 0
+              ? computeSaltMg(recipeTarget, L, form.molarMass, salt.anhydrousMass)
               : 0;
             const concMg = concentrateOn && target > 0 && concL > 0
               ? computeSaltMg(target, concL, form.molarMass, salt.anhydrousMass) * concentrateStrength
@@ -5022,6 +5026,21 @@ function App() {
             const massLabel = concentrateOn && displayMass >= 1000
               ? `${(displayMass / 1000).toFixed(2)} g`
               : `${displayMass.toFixed(2)} mg`;
+            const directDoseValue = recipeMass > 0 ? recipeMass.toFixed(2) : '';
+            const updateDirectDose = (value: string) => {
+              if (value.trim() === '') {
+                updateRow(i, { target: '' });
+                return;
+              }
+              const massMg = Number(value);
+              const targetPpm = computeSaltTargetPpm(
+                massMg,
+                L,
+                form.molarMass,
+                salt.anhydrousMass,
+              );
+              updateRow(i, { target: Number.isFinite(targetPpm) ? String(targetPpm) : '' });
+            };
             return (
               <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
@@ -5065,9 +5084,29 @@ function App() {
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
-                  <span className="text-sm font-mono text-emerald-300">
-                    {displayMass > 0 ? massLabel : '—'}
-                  </span>
+                  {showAlchemist ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        inputMode="decimal"
+                        aria-label={`${salt.name} direct dose in milligrams`}
+                        value={directDoseValue}
+                        onChange={e => updateDirectDose(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === '-') e.preventDefault();
+                        }}
+                        placeholder="0"
+                        className="min-w-0 w-full bg-slate-900/60 border border-emerald-400/30 rounded-lg px-3 py-2 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
+                      />
+                      <span className="shrink-0 text-[10px] text-slate-500">mg</span>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-mono text-emerald-300">
+                      {displayMass > 0 ? massLabel : '—'}
+                    </span>
+                  )}
                 </div>
               </div>
             );

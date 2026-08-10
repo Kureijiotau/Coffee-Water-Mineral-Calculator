@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   computeSaltMg,
+  computeSaltTargetPpm,
   computeIonTotals,
   computeNaClTargetForSodiumGap,
   findIonOvershoots,
@@ -47,6 +48,18 @@ describe('computeSaltMg', () => {
     const result = computeSaltMg(1e6, 1e4, 246.474, 120.365);
     expect(Number.isFinite(result)).toBe(true);
     expect(result).toBeGreaterThan(0);
+  });
+});
+
+describe('computeSaltTargetPpm', () => {
+  it('converts a direct hydrated-salt dose back to the target ppm', () => {
+    const doseMg = computeSaltMg(10, 1, 246.474, 120.365);
+    expect(computeSaltTargetPpm(doseMg, 1, 246.474, 120.365)).toBeCloseTo(10, 5);
+  });
+
+  it('returns zero when the batch volume is not usable', () => {
+    expect(computeSaltTargetPpm(20, 0, 120.365, 120.365)).toBe(0);
+    expect(computeSaltTargetPpm(20, 1, 0, 120.365)).toBe(0);
   });
 });
 

@@ -337,6 +337,17 @@ export function computeSaltMg(
   return targetPpm * liters * (hydrationMass / anhydrousMass);
 }
 
+export function computeSaltTargetPpm(
+  massMg: number, liters: number, hydrationMass: number, anhydrousMass: number,
+): number {
+  if (!Number.isFinite(massMg) || !Number.isFinite(liters) || liters <= 0
+    || !Number.isFinite(hydrationMass) || hydrationMass <= 0
+    || !Number.isFinite(anhydrousMass) || anhydrousMass <= 0) {
+    return 0;
+  }
+  return massMg * anhydrousMass / (liters * hydrationMass);
+}
+
 export function computeIonTotals(
   saltTargets: Record<string, number>,
   baseIons: Partial<Record<IonId, number>>,
