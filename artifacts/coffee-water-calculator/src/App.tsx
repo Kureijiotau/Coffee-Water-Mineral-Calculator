@@ -366,6 +366,103 @@ const num = (s: string): number => {
   return !Number.isFinite(v) || v < 0 ? 0 : v;
 };
 
+export type VolumeUnit = 'liters' | 'gallons';
+export const US_GALLON_IN_LITERS = 3.785411784;
+
+export function volumeToLiters(value: string | number, unit: VolumeUnit): number {
+  const parsed = typeof value === 'number' ? value : parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return unit === 'gallons' ? parsed * US_GALLON_IN_LITERS : parsed;
+}
+
+export function litersToVolumeInput(liters: string | number, unit: VolumeUnit): string {
+  const parsed = typeof liters === 'number' ? liters : parseFloat(liters);
+  if (!Number.isFinite(parsed) || parsed < 0) return '';
+  if (unit === 'liters') return String(liters);
+  return String(parsed / US_GALLON_IN_LITERS);
+}
+
+function volumeUnitLabel(unit: VolumeUnit): string {
+  return unit === 'gallons' ? 'gallons' : 'liters';
+}
+
+function volumeUnitShortLabel(unit: VolumeUnit): string {
+  return unit === 'gallons' ? 'gal' : 'L';
+}
+
+function formatVolumeValue(liters: number, unit: VolumeUnit): string {
+  const value = unit === 'gallons' ? liters / US_GALLON_IN_LITERS : liters;
+  return value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function VolumeUnitToggle({
+  unit,
+  onToggle,
+  className = '',
+}: {
+  unit: VolumeUnit;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-md border border-cyan-300/25 bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-200 transition hover:border-cyan-200/50 hover:bg-cyan-400/20 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 ${className}`}
+      aria-label={`Switch volume units to ${unit === 'liters' ? 'gallons' : 'liters'}`}
+      title={`Switch to ${unit === 'liters' ? 'gallons' : 'liters'}`}
+    >
+      {volumeUnitLabel(unit)}
+    </button>
+  );
+}
+
+function VolumeInput({
+  liters,
+  unit,
+  onChangeLiters,
+  ariaLabel,
+  placeholder,
+  className,
+}: {
+  liters: number;
+  unit: VolumeUnit;
+  onChangeLiters: (value: string) => void;
+  ariaLabel: string;
+  placeholder?: string;
+  className: string;
+}) {
+  const [inputValue, setInputValue] = useState(() => litersToVolumeInput(liters, unit));
+
+  useEffect(() => {
+    setInputValue(litersToVolumeInput(liters, unit));
+  }, [liters, unit]);
+
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      min="0"
+      step="0.1"
+      value={inputValue}
+      onChange={event => {
+        const nextValue = event.target.value;
+        setInputValue(nextValue);
+        if (!nextValue.trim()) {
+          onChangeLiters('');
+          return;
+        }
+        if (!nextValue.endsWith('.') && Number.isFinite(Number(nextValue))) {
+          onChangeLiters(String(volumeToLiters(nextValue, unit)));
+        }
+      }}
+      placeholder={placeholder}
+      aria-label={ariaLabel}
+      className={className}
+    />
+  );
+}
+
 export function translateSaltTargetsToIonTargets(
   saltTargets: Record<string, number>,
 ): Partial<Record<IonId, number>> {
@@ -2763,6 +2860,7 @@ function App() {
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
@@ -4290,7 +4388,7 @@ function App() {
     line('╚════════════════════════════════════════════╝');
     line('');
     line(`Profile : ${activeProfile.name}`);
-    line(`Volume  : ${liters} L`);
+    line(`Volume  : ${formatVolumeValue(L, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)}`);
     if (concentrateOn) {
       if (splitMode && stockGroups.length > 0) {
         line('Mode    : Split stock concentrate');
@@ -4355,7 +4453,7 @@ function App() {
         line('');
         line('  Dosing:');
         line(`    ${dosePerLiter.toFixed(1)} mL of stock per liter of brew water`);
-        if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${liters} L)`);
+        if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${formatVolumeValue(L, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)})`);
       }
       } else if (concentrateOn && splitMode) {
       // Split stocks — one section per group
@@ -4397,7 +4495,7 @@ function App() {
           line('');
           line('  Dosing:');
           line(`    ${dosePerLiter.toFixed(1)} mL of stock per liter of brew water`);
-          if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${liters} L)`);
+          if (L > 0) line(`    ${dosePerBatch.toFixed(1)} mL per batch  (${formatVolumeValue(L, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)})`);
         }
       }
     }
@@ -4497,7 +4595,7 @@ function App() {
     line(`╚════════════════════════════════════════════╝`);
     line('');
     line(`${'Recipe:'.padEnd(18)} ${rName}`);
-    line(`${'Batch:'.padEnd(18)} ${bMl} mL  (${liters} L)`);
+    line(`${'Batch:'.padEnd(18)} ${bMl} mL  (${formatVolumeValue(L, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)})`);
     line(`${'RO / distilled water:'.padEnd(18)} ${roMl} mL`);
     if (totalBaseMl > 0) line(`${'Base mineral water:'.padEnd(18)} ${totalBaseMl} mL`);
     if (totalMineralMl > 0) line(`${'Addition water:'.padEnd(18)} ${totalMineralMl} mL`);
@@ -4666,6 +4764,8 @@ function App() {
         <div className="app-page-stack flex w-full max-w-5xl flex-col">
           {appHeader}
           <ConcentrateWorkspace
+            volumeUnit={volumeUnit}
+            onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
           />
         </div>
         </div>
@@ -5131,6 +5231,8 @@ function App() {
                recipeRows={rows}
                liters={L}
                volumeInput={liters}
+               volumeUnit={volumeUnit}
+               onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
                onVolumeChange={value => setLiters(value)}
                concentrateOn={concentrateOn}
                concentrateLiters={concL}
@@ -5168,18 +5270,21 @@ function App() {
                <div className="app-card-body relative space-y-4 bg-transparent">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={liters}
-                onChange={e => {
+              <VolumeInput
+                liters={L}
+                unit={volumeUnit}
+                onChangeLiters={value => {
                   if (showWatermancer) enterWatermancerManualMode();
-                  setLiters(e.target.value);
+                  setLiters(value);
                 }}
-                placeholder="Liters"
-                  className="w-32 bg-cyan-950/25 border border-cyan-300/35 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-200 transition"
+                placeholder={volumeUnitLabel(volumeUnit)}
+                ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
+                className="w-32 bg-cyan-950/25 border border-cyan-300/35 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-200 transition"
               />
-                <span className="text-sm text-cyan-200/80">liters</span>
+              <VolumeUnitToggle
+                unit={volumeUnit}
+                onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
+              />
             </div>
 
             {showWatermancer && (
@@ -5261,7 +5366,7 @@ function App() {
                               Recommended dry batch
                             </div>
                             <div className="mt-1 text-sm font-semibold text-slate-100">
-                              {watermancerPrecisionRecommendation.recommendedBatchLiters.toFixed(1)} L
+                              {formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)}
                               <span className="ml-2 text-[11px] font-normal text-slate-500">
                                 smallest dose ≈ {watermancerPrecisionRecommendation.recommendedMinimumMassMg.toFixed(0)} mg
                               </span>
@@ -5276,11 +5381,11 @@ function App() {
                             onClick={() => {
                               enterWatermancerManualMode();
                               setLiters(String(watermancerPrecisionRecommendation.recommendedBatchLiters));
-                              setWatermancerActionMessage(`Final batch set to ${watermancerPrecisionRecommendation.recommendedBatchLiters.toFixed(1)} L for easier weighing.`);
+                              setWatermancerActionMessage(`Final batch set to ${formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} for easier weighing.`);
                             }}
                             className="rounded-lg border border-emerald-300/35 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:cursor-default disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600"
                           >
-                            {watermancerPrecisionRecommendation.recommendedBatchLiters <= L ? 'Already at target' : `Use ${watermancerPrecisionRecommendation.recommendedBatchLiters.toFixed(1)} L`}
+                            {watermancerPrecisionRecommendation.recommendedBatchLiters <= L ? 'Already at target' : `Use ${formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)}`}
                           </button>
                         </div>
                       )}
@@ -5531,6 +5636,8 @@ function App() {
             <BrewerDropperCalibrationCard
               dropsPerMl={brewerDropsPerMl}
               onCalibrate={setBrewerDropsPerMl}
+              volumeUnit={volumeUnit}
+              onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
             />
           </div>
         )}
@@ -6836,6 +6943,7 @@ function App() {
           saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
           recipeRows={rows}
           liters={L}
+           volumeUnit={volumeUnit}
           concentrateOn={concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
@@ -6925,7 +7033,13 @@ function App() {
   );
 }
 
-function ConcentrateWorkspace() {
+function ConcentrateWorkspace({
+  volumeUnit,
+  onToggleVolumeUnit,
+}: {
+  volumeUnit: VolumeUnit;
+  onToggleVolumeUnit: () => void;
+}) {
   const [saltId, setSaltId] = useState('mgso4');
   const [formIdx, setFormIdx] = useState(
     SALTS.find(salt => salt.id === 'mgso4')?.defaultFormIdx ?? 0,
@@ -6959,7 +7073,7 @@ function ConcentrateWorkspace() {
   const recommendedDrops = exactDropsForTarget > 0 ? Math.max(1, Math.round(exactDropsForTarget)) : 0;
   const recommendedSaltMassMg = recommendedDrops * mgPerDrop;
   const finalDrops = Math.max(0, Number(doseDrops) || 0);
-  const finalLiters = Math.max(0, Number(doseLiters) || 0);
+  const finalLiters = volumeToLiters(doseLiters, 'liters');
   const resultingPpm = finalLiters > 0 ? finalDrops * mgPerDrop / finalLiters : 0;
   const warnings = useMemo(
     () => strengthPercent > 0
@@ -7151,7 +7265,19 @@ function ConcentrateWorkspace() {
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <CalibrationInput label="Drops added" value={doseDrops} onChange={setDoseDrops} ariaLabel="Drops added to final water" />
-          <CalibrationInput label="Final water (L)" value={doseLiters} onChange={setDoseLiters} ariaLabel="Final water volume for drop contribution" />
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
+            <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+              Final water ({volumeUnitShortLabel(volumeUnit)})
+              <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+            </span>
+            <VolumeInput
+              liters={finalLiters}
+              unit={volumeUnit}
+              onChangeLiters={setDoseLiters}
+              ariaLabel={`Final water volume in ${volumeUnitLabel(volumeUnit)}`}
+              className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+            />
+          </label>
         </div>
         <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3">
           <span className="text-xs text-slate-400">{finalDrops} drops × {mgPerDrop.toFixed(2)} mg/drop of {salt.name}</span>
@@ -7998,9 +8124,13 @@ function SaltSieveIcon() {
 function BrewerDropperCalibrationCard({
   dropsPerMl,
   onCalibrate,
+  volumeUnit,
+  onToggleVolumeUnit,
 }: {
   dropsPerMl: number;
   onCalibrate: (value: number) => void;
+  volumeUnit: VolumeUnit;
+  onToggleVolumeUnit: () => void;
 }) {
   const [dropCount, setDropCount] = useState('20');
   const [measuredVolume, setMeasuredVolume] = useState('1');
@@ -8018,7 +8148,7 @@ function BrewerDropperCalibrationCard({
   const effectiveDropsPerMl = canCalibrate ? measuredDropsPerMl : dropsPerMl;
   const stockMgPerMl = Number(stockConcentration);
   const finalDoseDrops = Number(doseDrops);
-  const finalVolumeLiters = Number(doseVolumeLiters);
+  const finalVolumeLiters = volumeToLiters(doseVolumeLiters, 'liters');
   const mgPerDrop = stockMgPerMl > 0 && effectiveDropsPerMl > 0
     ? stockMgPerMl / effectiveDropsPerMl
     : 0;
@@ -8159,16 +8289,16 @@ function BrewerDropperCalibrationCard({
               />
             </label>
             <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
-              <span className="block text-[10px] text-slate-500">Final water (L)</span>
-              <input
-                type="number"
-                min="0.01"
-                step="0.1"
-                inputMode="decimal"
-                value={doseVolumeLiters}
-                onChange={event => setDoseVolumeLiters(event.target.value)}
+              <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                Final water ({volumeUnitShortLabel(volumeUnit)})
+                <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+              </span>
+              <VolumeInput
+                liters={finalVolumeLiters}
+                unit={volumeUnit}
+                onChangeLiters={setDoseVolumeLiters}
+                ariaLabel={`Final water volume in ${volumeUnitLabel(volumeUnit)}`}
                 className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Final water volume in liters"
               />
             </label>
           </div>
@@ -8195,6 +8325,8 @@ function BrewerSimpleRecipeCard({
   saltTargets,
   recipeRows,
   liters,
+  volumeUnit,
+  onToggleVolumeUnit,
   volumeInput,
   onVolumeChange,
   concentrateOn,
@@ -8208,6 +8340,8 @@ function BrewerSimpleRecipeCard({
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
+  volumeUnit: VolumeUnit;
+  onToggleVolumeUnit: () => void;
   volumeInput: string;
   onVolumeChange: (value: string) => void;
   concentrateOn: boolean;
@@ -8387,24 +8521,21 @@ function BrewerSimpleRecipeCard({
               Your mineral recipe
             </div>
             <p className="mt-1 text-xs text-slate-400">
-              {liters || 1} L batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Concentrate drops' : 'Weighed salts'}
+              {formatVolumeValue(liters || 1, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Concentrate drops' : 'Weighed salts'}
             </p>
           </div>
-          <label className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="sr-only">Batch volume</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              min="0"
-              step="0.1"
-              value={volumeInput}
-              onChange={event => onVolumeChange(event.target.value)}
+            <VolumeInput
+              liters={liters}
+              unit={volumeUnit}
+              onChangeLiters={onVolumeChange}
               placeholder="1"
+              ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
               className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
-              aria-label="Final batch volume in liters"
             />
-            <span>liters</span>
-          </label>
+            <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+          </div>
           <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
             Live result
           </span>
@@ -8660,7 +8791,7 @@ function BrewerSimpleRecipeCard({
           {waterReady && (
             <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-100">
               <Sparkles className="h-4 w-4 text-emerald-300" />
-              Everything is in for {liters || 1} L — brew away.
+               Everything is in for {formatVolumeValue(liters || 1, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} — brew away.
             </div>
           )}
         </div>
@@ -8808,6 +8939,7 @@ function BrewerRecipeStepsModal({
   saltTargets,
   recipeRows,
   liters,
+  volumeUnit,
   concentrateOn,
   concentrateLiters,
   concentrateStrength,
@@ -8826,6 +8958,7 @@ function BrewerRecipeStepsModal({
   saltTargets: Record<string, number>;
   recipeRows: SaltRow[];
   liters: number;
+  volumeUnit: VolumeUnit;
   concentrateOn: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
@@ -8891,8 +9024,8 @@ function BrewerRecipeStepsModal({
     return `${drops} drops`;
   };
   const volumeLabel = concentrateOn
-    ? `${concentrateLiters || 0} L stock`
-    : `${liters || 1} L water`;
+    ? `${formatVolumeValue(concentrateLiters || 0, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} stock`
+    : `${formatVolumeValue(liters || 1, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} water`;
   const formatWaterVolume = (volumeMl: number) =>
     volumeMl >= 1000 ? `${(volumeMl / 1000).toFixed(2)} L` : `${volumeMl.toFixed(0)} mL`;
   const remainingWaterMl = Math.max(
