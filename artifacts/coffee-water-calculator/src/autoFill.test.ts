@@ -18,6 +18,7 @@ import {
   selectWatermancerRouteCandidate,
   recalculateWatermancerRouteAtCurrentVolumes,
   totalWatermancerDeviation,
+  totalWatermancerAbsoluteDeviation,
   executeWatermancerRouteCandidate,
   watermancerRouteWaterInputs,
   watermancerRouteMatchesCurrentInputs,
@@ -68,6 +69,13 @@ describe('autoFillWaterVolumes', () => {
       plan.targetIons,
       plan,
     )).toBeCloseTo(3, 5);
+  });
+
+  it('reports both under-target and over-target gaps in the displayed total', () => {
+    expect(totalWatermancerAbsoluteDeviation(
+      { calcium: 8, chloride: 4 },
+      { calcium: 10, chloride: 0 },
+    )).toBeCloseTo(5.9, 5);
   });
 
   it('recalculates the selected route card from edited visible water volumes', () => {

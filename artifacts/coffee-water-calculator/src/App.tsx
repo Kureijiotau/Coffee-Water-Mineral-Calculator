@@ -2055,6 +2055,23 @@ export function totalWatermancerDeviation(
   );
 }
 
+export function totalWatermancerAbsoluteDeviation(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+  tolerance = 0.05,
+): number {
+  const displayTolerance = Math.max(0, tolerance);
+  return watermancerRouteDeviations(
+    Object.fromEntries(
+      IONS.map(({ id }) => [id, actual[id] ?? 0]),
+    ) as Record<IonId, number>,
+    target,
+  ).reduce(
+    (total, deviation) => total + Math.max(Math.abs(deviation.delta) - displayTolerance, 0),
+    0,
+  );
+}
+
 export function applyWatermancerBestMatchDeviationMode(
   plan: WatermancerPlan,
   mode: WatermancerBestMatchDeviationMode,
@@ -3447,7 +3464,10 @@ function App() {
           saltObjective: winner.saltObjective,
           priorityPreset: winner.priorityPreset,
           deviationMode: winner.deviationMode,
-          totalDeviation: winner.totalDeviation,
+          totalDeviation: totalWatermancerAbsoluteDeviation(
+            winner.route.finalIons,
+            winner.route.plan.targetIons,
+          ),
           status: winner.result.status === 'matched' ? 'matched' : 'partial',
           explanation: winner.result.explanation,
           inputSignature: snapshot.inputSignature,
@@ -3860,10 +3880,9 @@ function App() {
   const reviewWaterKh = computeKH(reviewWaterIons);
   const reviewWaterTds = Object.values(reviewWaterIons).reduce((total, ppm) => total + ppm, 0);
   const reviewTotalDeviation = showWatermancer
-    ? totalWatermancerDeviation(
+    ? totalWatermancerAbsoluteDeviation(
       reviewFinalIons,
       watermancerIonTargets,
-       watermancerPlan,
     )
     : 0;
   const reviewDeviationCount = showWatermancer
