@@ -8600,6 +8600,136 @@ function BrewerSimpleRecipeCard({
   );
 }
 
+const MINERAL_LABEL_CATION_IDS: IonId[] = ['calcium', 'magnesium', 'sodium', 'potassium'];
+const MINERAL_LABEL_ANION_IDS: IonId[] = ['bicarbonate', 'chloride', 'sulfate'];
+
+function MineralAnalysisIonRow({
+  id,
+  value,
+  accent,
+}: {
+  id: IonId;
+  value: number;
+  accent: 'teal' | 'ochre';
+}) {
+  const ion = ION_MAP[id];
+  return (
+    <div className="flex items-baseline justify-between gap-2 border-b border-[#0d6170]/15 py-2 last:border-b-0">
+      <div className="flex min-w-0 items-baseline gap-1.5">
+        <span className="truncate font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
+        <span className="shrink-0 font-mono text-[9px] text-[#47737a]">{ion.formula}</span>
+      </div>
+      <span className={`shrink-0 font-mono text-sm font-bold tabular-nums ${
+        accent === 'ochre' ? 'text-[#8a5e1b]' : 'text-[#0d6170]'
+      }`}>
+        {value.toFixed(1)}
+        <span className="ml-1 text-[8px] font-semibold tracking-normal text-[#47737a]">mg/L</span>
+      </span>
+    </div>
+  );
+}
+
+function MineralAnalysisLabel({
+  finalIons,
+  tds,
+  gh,
+  kh,
+}: {
+  finalIons: Record<IonId, number>;
+  tds: number;
+  gh: number;
+  kh: number;
+}) {
+  const additionalIonIds = ACTIVE_ION_IDS.filter(id => (
+    !MINERAL_LABEL_CATION_IDS.includes(id)
+    && !MINERAL_LABEL_ANION_IDS.includes(id)
+    && (finalIons[id] ?? 0) > 0.05
+  ));
+  const summary = [
+    ['TDS', tds, 'ppm'],
+    ['GH', gh, 'ppm'],
+    ['KH', kh, 'ppm'],
+  ] as const;
+
+  return (
+    <aside
+      data-recipe-mineral-label
+      className="relative overflow-hidden rounded-[1.35rem] border border-[#7cc3c5] bg-[#e9f3ee] text-[#173f49] shadow-[0_24px_70px_-35px_rgba(0,0,0,0.9)]"
+      aria-label="Final mineral contribution"
+    >
+      <div
+        className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent 0, transparent 7px, rgba(13,97,112,0.12) 8px), repeating-linear-gradient(90deg, transparent 0, transparent 7px, rgba(13,97,112,0.08) 8px)',
+        }}
+      />
+      <div className="relative p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3 border-b-2 border-[#0d6170] pb-3">
+          <div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">Water profile</div>
+            <h2 className="font-['Georgia'] text-lg font-bold tracking-tight text-[#173f49]">Mineral analysis</h2>
+          </div>
+          <div className="text-right">
+            <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">Current mix</div>
+            <div className="mt-0.5 text-[9px] text-[#47737a]">final contribution</div>
+          </div>
+        </div>
+
+        <div className="border-b border-[#0d6170]/35 py-3 text-center">
+          <div className="font-['Georgia'] text-2xl font-bold tracking-tight text-[#0d6170]">Brew water</div>
+          <div className="mt-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-[#47737a]">
+            from current waters + salt doses
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-2 text-[9px] text-[#47737a]">
+            <span className="h-px w-6 bg-[#0d6170]/35" />
+            <span>per litre of finished water</span>
+            <span className="h-px w-6 bg-[#0d6170]/35" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-4 border-b border-[#0d6170]/35 py-3">
+          <div>
+            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Cations</div>
+            {MINERAL_LABEL_CATION_IDS.map(id => (
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="teal" />
+            ))}
+          </div>
+          <div>
+            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Anions</div>
+            {MINERAL_LABEL_ANION_IDS.map(id => (
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
+            ))}
+          </div>
+        </div>
+
+        {additionalIonIds.length > 0 && (
+          <div className="border-b border-[#0d6170]/35 py-3">
+            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Other modeled ions</div>
+            {additionalIonIds.map(id => (
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
+            ))}
+          </div>
+        )}
+
+        <div className="grid grid-cols-3 gap-2 border-b border-[#0d6170]/35 py-3 text-center">
+          {summary.map(([label, value, unit]) => (
+            <div key={label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2 py-2">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">{label}</div>
+              <div className="mt-0.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{value.toFixed(0)}</div>
+              <div className="text-[8px] uppercase tracking-wider text-[#47737a]">{unit}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-3 text-[9px] text-[#47737a]">
+          <span>Calculated final profile</span>
+          <span className="font-mono font-bold uppercase tracking-[0.12em]">mg/L = ppm</span>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
 function BrewerRecipeStepsModal({
   saltTargets,
   recipeRows,
@@ -8713,6 +8843,17 @@ function BrewerRecipeStepsModal({
       && !salt.formula.includes('CO₃'),
     ),
   ];
+  const finalProfileWaterIons = computeWatermancerBottledIons(
+    [...configuredBaseWaters, ...configuredAdditionWaters].map(water => ({
+      ...water,
+      volumeMl: String(water.volume),
+    })),
+    batchMl,
+  );
+  const finalProfileIons = computeIonTotals(stepSaltTargets, finalProfileWaterIons, 1);
+  const finalProfileTds = Object.values(finalProfileIons).reduce((total, ppm) => total + ppm, 0);
+  const finalProfileGh = computeGH(finalProfileIons);
+  const finalProfileKh = computeKH(finalProfileIons);
   const saltGroup = (salt: typeof SALTS[number]) =>
     salt.formula.includes('SO₄') ? 'Sulfate'
       : salt.formula.includes('Cl') ? 'Chloride'
@@ -8857,7 +8998,7 @@ function BrewerRecipeStepsModal({
     >
       <div
         ref={recipeCardRef}
-        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
+        className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -8885,6 +9026,8 @@ function BrewerRecipeStepsModal({
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Step-by-step</div>
             <div className="text-[10px] text-slate-500">{orderedRecipeSalts.length + (useMixingVessel ? 3 : 2)} actions</div>
           </div>
+           <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
+           <div className="min-w-0">
           <ol className="space-y-2.5">
             <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">1</span>
@@ -9011,6 +9154,14 @@ function BrewerRecipeStepsModal({
            <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
             Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
           </p>
+           </div>
+           <MineralAnalysisLabel
+             finalIons={finalProfileIons}
+             tds={finalProfileTds}
+             gh={finalProfileGh}
+             kh={finalProfileKh}
+           />
+           </div>
           </div>
         </div>
       </div>
