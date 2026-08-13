@@ -9231,17 +9231,22 @@ function MineralAnalysisIonRow({
 }) {
   const ion = ION_MAP[id];
   return (
-    <div className="flex items-baseline justify-between gap-2 border-b border-[#0d6170]/15 py-2 last:border-b-0">
-      <div className="flex min-w-0 items-baseline gap-1.5">
-        <span className="truncate font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
-        <span className="shrink-0 font-mono text-[9px] text-[#47737a]">{ion.formula}</span>
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[#0d6170]/15 py-2.5 last:border-b-0">
+      <div className="min-w-0">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate text-[13px] font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
+          <span className="shrink-0 font-mono text-[10px] text-[#47737a]">{ion.formula}</span>
+        </div>
+        <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#47737a]/80">final concentration</div>
       </div>
-      <span className={`shrink-0 font-mono text-sm font-bold tabular-nums ${
-        accent === 'ochre' ? 'text-[#8a5e1b]' : 'text-[#0d6170]'
-      }`}>
-        {value.toFixed(1)}
-        <span className="ml-1 text-[8px] font-semibold tracking-normal text-[#47737a]">mg/L</span>
-      </span>
+      <div className="text-right">
+        <div className={`font-mono text-lg font-bold leading-none tabular-nums ${
+          accent === 'ochre' ? 'text-[#8a5e1b]' : 'text-[#0d6170]'
+        }`}>
+          {value.toFixed(1)}
+        </div>
+        <div className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#47737a]">mg/L</div>
+      </div>
     </div>
   );
 }
@@ -9308,15 +9313,21 @@ function MineralAnalysisLabel({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 border-b border-[#0d6170]/35 py-3">
+        <div className="grid grid-cols-2 gap-x-5 border-b border-[#0d6170]/35 py-3.5">
           <div>
-            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Cations</div>
+            <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">
+              <span>Cations</span>
+              <span className="h-px flex-1 bg-[#0d6170]/20" />
+            </div>
             {MINERAL_LABEL_CATION_IDS.map(id => (
               <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="teal" />
             ))}
           </div>
           <div>
-            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Anions</div>
+            <div className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">
+              <span>Anions</span>
+              <span className="h-px flex-1 bg-[#0d6170]/20" />
+            </div>
             {MINERAL_LABEL_ANION_IDS.map(id => (
               <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
             ))}
@@ -9325,7 +9336,7 @@ function MineralAnalysisLabel({
 
         {additionalIonIds.length > 0 && (
           <div className="border-b border-[#0d6170]/35 py-3">
-            <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Other modeled ions</div>
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Other modeled ions</div>
             {additionalIonIds.map(id => (
               <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
             ))}
