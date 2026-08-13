@@ -8081,7 +8081,6 @@ function WatermancerIonProfileCard({
           )}
         </div>
       </div>
-
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
          {ACTIVE_ION_IDS.map((id, idx) => {
@@ -8178,39 +8177,38 @@ function WatermancerIonProfileCard({
           );
         })()}
       </div>
-
       {/* Naming dialog */}
-       {isEditingAny && namingMode === 'new' && (
-        <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
-              placeholder="Name your profile"
-              autoFocus
-              className="flex-1 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
-              onKeyDown={e => {
-                 if (e.key === 'Enter') handleSaveAsNew();
-                if (e.key === 'Escape') cancelEditing();
-              }}
-            />
-            <button
-              onClick={handleSaveAsNew}
-              disabled={!newName.trim()}
-              className="flex items-center justify-center w-9 h-9 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition"
-            >
-              <Check className="w-4 h-4" />
-            </button>
-            <button
-              onClick={cancelEditing}
-              className="flex items-center justify-center w-9 h-9 text-slate-400 bg-slate-700/40 border border-slate-600/40 rounded-lg hover:bg-slate-700/60 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+      {isEditingAny && namingMode === 'new' && (
+       <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">
+         <div className="flex items-center gap-2">
+           <input
+             type="text"
+             value={newName}
+             onChange={e => setNewName(e.target.value)}
+             placeholder="Name your profile"
+             autoFocus
+             className="flex-1 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
+             onKeyDown={e => {
+                if (e.key === 'Enter') handleSaveAsNew();
+               if (e.key === 'Escape') cancelEditing();
+             }}
+           />
+           <button
+             onClick={handleSaveAsNew}
+             disabled={!newName.trim()}
+             className="flex items-center justify-center w-9 h-9 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition"
+           >
+             <Check className="w-4 h-4" />
+           </button>
+           <button
+             onClick={cancelEditing}
+             className="flex items-center justify-center w-9 h-9 text-slate-400 bg-slate-700/40 border border-slate-600/40 rounded-lg hover:bg-slate-700/60 transition"
+           >
+             <X className="w-4 h-4" />
+           </button>
+         </div>
+       </div>
+     )}
     </div>
   );
 }
@@ -9902,7 +9900,7 @@ function BrewerRecipeStepsModal({
                    },
                  ].map(dose => (
                    <div key={dose.label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2.5 py-2.5">
-                     <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">{dose.label}</div>
+                     <div className="font-bold uppercase tracking-[0.16em] text-[#47737a] text-[18px]">{dose.label}</div>
                      <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{dose.milliliters.toFixed(1)} mL</div>
                      <div className="mt-0.5 text-[10px] text-[#47737a]">≈ {dose.drops.toLocaleString()} drops</div>
                    </div>
