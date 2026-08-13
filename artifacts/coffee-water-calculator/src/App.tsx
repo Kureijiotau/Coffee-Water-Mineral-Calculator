@@ -9447,6 +9447,9 @@ function BrewerRecipeStepsModal({
     : `${formatVolumeValue(liters || 1, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} water`;
   const formatWaterVolume = (volumeMl: number) =>
     volumeMl >= 1000 ? `${(volumeMl / 1000).toFixed(2)} L` : `${volumeMl.toFixed(0)} mL`;
+  const concentrateWaterVolume = concentrateLiters > 0
+    ? formatWaterVolume(concentrateLiters * 1000)
+    : 'the selected amount of water';
   const remainingWaterMl = Math.max(
     batchMl
       - configuredBaseWaters.reduce((sum, water) => sum + water.volume, 0)
@@ -9743,7 +9746,7 @@ function BrewerRecipeStepsModal({
                   </div>
                   <div className={`mt-0.5 text-xs leading-relaxed ${allInOneConcentrate ? 'text-amber-100/80' : 'text-slate-400'}`}>
                     {allInOneConcentrate
-                      ? 'Start with part of the stock water. Add one salt at a time and stir until fully dissolved before adding the next.'
+                      ? `Start with ${concentrateWaterVolume} for the concentrate. Add one salt at a time and stir until fully dissolved before adding the next.`
                       : 'Add one salt at a time. Stir until fully dissolved before adding the next.'}
                   </div>
                   {allInOneConcentrate && (
