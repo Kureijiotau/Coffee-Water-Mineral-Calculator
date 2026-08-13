@@ -5505,44 +5505,54 @@ function App() {
 
              {showAlchemist && concentrateOn && !splitMode && (
                <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
-                <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-300">Stock strength:</label>
-                    <select
-                      value={STRENGTH_OPTIONS.includes(concentrateStrength) ? concentrateStrength : 0}
-                      onChange={e => {
-                        const v = Number(e.target.value);
-                        setConcentrateStrength(v === 0 ? concentrateStrength : v);
-                      }}
-                       className="bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
-                    >
-                      {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
-                      <option value={0}>Custom</option>
-                    </select>
-                    {!STRENGTH_OPTIONS.includes(concentrateStrength) && (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-slate-300">Stock strength:</label>
+                      <select
+                        value={STRENGTH_OPTIONS.includes(concentrateStrength) ? String(concentrateStrength) : 'custom'}
+                        onChange={e => {
+                          setConcentrateStrength(e.target.value === 'custom' ? 0 : Number(e.target.value));
+                        }}
+                        className="bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
+                      >
+                        {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
+                        <option value="custom">Custom</option>
+                      </select>
+                      {!STRENGTH_OPTIONS.includes(concentrateStrength) && (
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={2}
+                          value={concentrateStrength || ''}
+                          onChange={e => setConcentrateStrength(Number(e.target.value) || 0)}
+                          placeholder="×"
+                          className="w-20 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
+                          aria-label="Custom stock strength multiplier"
+                        />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-slate-300">Stock volume:</label>
                       <input
                         type="number"
-                        inputMode="numeric"
-                        min={2}
-                        value={concentrateStrength || ''}
-                        onChange={e => setConcentrateStrength(Number(e.target.value) || 0)}
-                        placeholder="×"
-                         className="w-20 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
+                        inputMode="decimal"
+                        value={concentrateMl}
+                        onChange={e => setConcentrateMl(e.target.value)}
+                        placeholder="500"
+                        className="w-24 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
                       />
-                    )}
+                      <span className="text-xs text-slate-400">mL</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-slate-300">Stock volume:</label>
-                    <input
-                      type="number"
-                      inputMode="decimal"
-                      value={concentrateMl}
-                      onChange={e => setConcentrateMl(e.target.value)}
-                      placeholder="500"
-                       className="w-24 bg-teal-950/20 border border-teal-400/30 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500/60 focus:border-teal-300 transition"
-                    />
-                    <span className="text-xs text-slate-400">mL</span>
-            </div>
+                  <button
+                    type="button"
+                    disabled={!Object.values(concSaltTargets).some(target => Number.isFinite(target) && target > 0)}
+                    onClick={() => setConcentrateStrength(findStrongestSafeConcentrateStrength(concSaltTargets))}
+                    className="ml-auto rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition hover:border-amber-200/60 hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600"
+                  >
+                    Max safe strength
+                  </button>
                 </div>
 
                 {concentrateStrength > 0 && concL > 0 && (
@@ -10745,15 +10755,14 @@ function SplitStockCard({
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-300">Strength:</label>
           <select
-            value={STRENGTH_OPTIONS.includes(strength) ? strength : 0}
+            value={STRENGTH_OPTIONS.includes(strength) ? String(strength) : 'custom'}
             onChange={e => {
-              const v = Number(e.target.value);
-              onStrengthChange(v === 0 ? strength : v);
+              onStrengthChange(e.target.value === 'custom' ? 0 : Number(e.target.value));
             }}
             className="bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
           >
             {STRENGTH_OPTIONS.map(v => <option key={v} value={v}>×{v}</option>)}
-            <option value={0}>Custom</option>
+            <option value="custom">Custom</option>
           </select>
           {!STRENGTH_OPTIONS.includes(strength) && (
             <input
@@ -10763,6 +10772,7 @@ function SplitStockCard({
               value={strength || ''}
               onChange={e => onStrengthChange(Number(e.target.value) || 0)}
               placeholder="×"
+              aria-label={`${group.name} custom stock strength multiplier`}
               className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
             />
           )}
