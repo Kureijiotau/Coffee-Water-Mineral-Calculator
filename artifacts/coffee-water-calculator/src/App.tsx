@@ -7369,21 +7369,43 @@ function RecipeConcentrateBuilder({
   onClear: () => void;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
-  const [stockVolumeInput, setStockVolumeInput] = useState('500');
+  const [stockLayout, setStockLayout] = useState<'compatible' | 'individual'>('compatible');
+  const [stockVolumeInputs, setStockVolumeInputs] = useState<Record<string, string>>({
+    hardness: '500',
+    alkalinity: '500',
+    citrate: '500',
+  });
   const [finalLiters, setFinalLiters] = useState(Math.max(handoff.finalLiters, 1));
 
   useEffect(() => {
     setStrengthInput('500');
-    setStockVolumeInput('500');
+    setStockLayout('compatible');
+    setStockVolumeInputs({
+      hardness: '500',
+      alkalinity: '500',
+      citrate: '500',
+    });
     setFinalLiters(Math.max(handoff.finalLiters, 1));
   }, [handoff]);
 
   const strength = Math.max(0, Number(strengthInput) || 0);
-  const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
   );
-  const stockGroups = splitIntoStockGroups(saltTargets);
+  const compatibleStockGroups = splitIntoStockGroups(saltTargets);
+  const stockGroups = stockLayout === 'compatible'
+    ? compatibleStockGroups
+    : compatibleStockGroups.flatMap(group =>
+        group.saltIds.map(saltId => {
+          const salt = SALTS.find(item => item.id === saltId);
+          return {
+            ...group,
+            id: `salt:${saltId}`,
+            name: `${salt?.name ?? 'Salt'} Stock`,
+            saltIds: [saltId],
+          };
+        }),
+      );
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
   const doseMlPerBatch = doseMlPerLiter * finalLiters;
   const totalSaltCount = Object.keys(handoff.salts).length;
@@ -7453,21 +7475,35 @@ function RecipeConcentrateBuilder({
               <span className="text-sm text-slate-400">×</span>
             </div>
           </label>
-          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Each stock volume</span>
-            <div className="mt-1 flex items-center gap-2">
-              <input
-                type="number"
-                min="1"
-                step="10"
-                value={stockVolumeInput}
-                onChange={event => setStockVolumeInput(event.target.value)}
-                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Recipe stock volume in milliliters"
-              />
-              <span className="text-sm text-slate-400">mL</span>
+          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Stock layout</span>
+            <div className="mt-1 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-900/50 p-1">
+              <button
+                type="button"
+                onClick={() => setStockLayout('compatible')}
+                aria-pressed={stockLayout === 'compatible'}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                  stockLayout === 'compatible'
+                    ? 'bg-sky-400/15 text-sky-200 ring-1 ring-sky-300/30'
+                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                }`}
+              >
+                Compatible groups
+              </button>
+              <button
+                type="button"
+                onClick={() => setStockLayout('individual')}
+                aria-pressed={stockLayout === 'individual'}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                  stockLayout === 'individual'
+                    ? 'bg-fuchsia-400/15 text-fuchsia-200 ring-1 ring-fuchsia-300/30'
+                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                }`}
+              >
+                One per salt
+              </button>
             </div>
-          </label>
+          </div>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Final brew batch
@@ -7498,12 +7534,12 @@ function RecipeConcentrateBuilder({
           <SummaryMetric
             label="Stocks to prepare"
             value={`${stockGroups.length}`}
-            detail="compatible groups"
+            detail={stockLayout === 'compatible' ? 'compatible groups' : 'one per active salt'}
             tone="slate"
           />
         </div>
         <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-          The conservative 500× default keeps each dosing volume practical while preserving the recipe’s target mineral amounts.
+          Strength stays shared so the recipe scales consistently. Each stock card below has its own volume, so GH, KH, and citrate stocks can be sized independently.
         </p>
       </section>
 
@@ -7511,12 +7547,18 @@ function RecipeConcentrateBuilder({
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe stocks</div>
-            <h2 className="mt-1 text-base font-semibold text-slate-100">Prepare each compatible stock separately</h2>
+            <h2 className="mt-1 text-base font-semibold text-slate-100">
+              {stockLayout === 'compatible' ? 'Prepare each compatible stock separately' : 'Prepare one stock per salt'}
+            </h2>
           </div>
-          <span className="text-[11px] text-slate-500">Dose {doseMlPerBatch.toFixed(2)} mL of each stock per batch</span>
+          <span className="text-[11px] text-slate-500">
+            Shared strength {strength || 0}× · each volume is independent
+          </span>
         </div>
         {stockGroups.map(group => {
           const tone = groupTone[group.color];
+          const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
+          const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
           const groupTargets = Object.fromEntries(
             group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
           );
@@ -7555,9 +7597,29 @@ function RecipeConcentrateBuilder({
                     Weigh the salts below, add {waterMassG.toFixed(2)} g of distilled or RO water, and mix to {stockVolumeMl.toFixed(0)} mL total stock.
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per batch</div>
-                  <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerBatch.toFixed(2)} mL</div>
+                <div className="flex flex-wrap items-end justify-end gap-3">
+                  <label className="text-left">
+                    <span className="block text-[10px] uppercase tracking-wider text-slate-500">Stock volume</span>
+                    <span className="mt-1 flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2 py-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        step="10"
+                        value={stockVolumeInput}
+                        onChange={event => setStockVolumeInputs(prev => ({
+                          ...prev,
+                          [group.id]: event.target.value,
+                        }))}
+                        className="w-20 bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                        aria-label={`${group.name} stock volume in milliliters`}
+                      />
+                      <span className="text-xs text-slate-400">mL</span>
+                    </span>
+                  </label>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per batch</div>
+                    <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerBatch.toFixed(2)} mL</div>
+                  </div>
                 </div>
               </div>
 
