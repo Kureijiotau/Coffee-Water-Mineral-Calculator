@@ -9846,18 +9846,28 @@ function BrewerRecipeStepsModal({
              kh={finalProfileKh}
            />
            {concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0 && (
-             <div className="mt-3 rounded-2xl border border-sky-300/25 bg-sky-950/35 p-4 text-sky-50 shadow-[0_16px_40px_-28px_rgba(56,189,248,0.8)]" aria-label="Concentrate dosing reference">
-               <div className="flex items-start justify-between gap-3 border-b border-sky-200/15 pb-3">
-                 <div>
-                   <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-300">Concentrate dosing</div>
-                   <div className="mt-1 text-sm font-semibold text-sky-50">Reference for finished water</div>
+             <aside
+               className="relative mt-3 overflow-hidden rounded-[1.35rem] border border-[#7cc3c5] bg-[#e9f3ee] text-[#173f49] shadow-[0_24px_70px_-35px_rgba(0,0,0,0.9)]"
+               aria-label="Concentrate dosing reference"
+             >
+               <div
+                 className="absolute inset-0 opacity-30"
+                 style={{
+                   backgroundImage: 'repeating-linear-gradient(0deg, transparent 0, transparent 7px, rgba(13,97,112,0.12) 8px), repeating-linear-gradient(90deg, transparent 0, transparent 7px, rgba(13,97,112,0.08) 8px)',
+                 }}
+               />
+               <div className="relative p-4 sm:p-5">
+                 <div className="flex items-center justify-between gap-3 border-b-2 border-[#0d6170] pb-3">
+                   <div>
+                     <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">Concentrate guide</div>
+                     <h2 className="font-['Georgia'] text-lg font-bold tracking-tight text-[#173f49]">Dosing reference</h2>
+                   </div>
+                   <div className="text-right">
+                     <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">Stock</div>
+                     <div className="mt-0.5 text-[9px] text-[#47737a]">{formatWaterVolume(concentrateLiters * 1000)}</div>
+                   </div>
                  </div>
-                 <div className="rounded-md border border-sky-200/20 bg-sky-400/10 px-2 py-1 text-right text-[9px] text-sky-200">
-                   <div className="uppercase tracking-wider text-sky-300/70">Stock</div>
-                   <div className="font-mono font-bold tabular-nums">{formatWaterVolume(concentrateLiters * 1000)}</div>
-                 </div>
-               </div>
-               <div className="mt-3 grid grid-cols-2 gap-2">
+                 <div className="mt-3 grid grid-cols-2 gap-2">
                  {[
                    {
                      label: '1 L',
@@ -9870,17 +9880,18 @@ function BrewerRecipeStepsModal({
                      drops: concentrateDropsPerGallon,
                    },
                  ].map(dose => (
-                   <div key={dose.label} className="rounded-lg border border-sky-200/15 bg-slate-950/25 px-2.5 py-2.5">
-                     <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-sky-300">{dose.label}</div>
-                     <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-sky-50">{dose.milliliters.toFixed(1)} mL</div>
-                     <div className="mt-0.5 text-[10px] text-sky-200/75">≈ {dose.drops.toLocaleString()} drops</div>
+                   <div key={dose.label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2.5 py-2.5">
+                     <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">{dose.label}</div>
+                     <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{dose.milliliters.toFixed(1)} mL</div>
+                     <div className="mt-0.5 text-[10px] text-[#47737a]">≈ {dose.drops.toLocaleString()} drops</div>
                    </div>
                  ))}
+                 </div>
+                 <div className="mt-3 border-t border-[#0d6170]/35 pt-3 text-[9px] leading-relaxed text-[#47737a]">
+                   Drops use your calibrated setting of <span className="font-mono font-bold text-[#0d6170]">{dropsPerMl.toFixed(1)}</span> drops per mL.
+                 </div>
                </div>
-               <div className="mt-2 text-[10px] leading-relaxed text-sky-200/65">
-                 Drops use your calibrated dropper setting of {dropsPerMl.toFixed(1)} drops per mL.
-               </div>
-             </div>
+             </aside>
            )}
            </div>
           </div>
