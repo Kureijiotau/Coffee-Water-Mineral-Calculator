@@ -9902,7 +9902,10 @@ function BrewerRecipeStepsModal({
                    <div key={dose.label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2.5 py-2.5">
                      <div className="font-bold uppercase tracking-[0.16em] text-[#47737a] text-[18px]">{dose.label}</div>
                      <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{dose.milliliters.toFixed(1)} mL</div>
-                     <div className="mt-0.5 text-[#47737a] text-[16px]">≈ {dose.drops.toLocaleString()} drops</div>
+                     <div className="mt-0.5 flex items-center gap-1 text-[#47737a] text-[16px]">
+                       <Droplet className="h-3.5 w-3.5 shrink-0 text-[#0d6170]" aria-hidden="true" />
+                       <span>≈ {dose.drops.toLocaleString()} drops</span>
+                     </div>
                    </div>
                  ))}
                  </div>
