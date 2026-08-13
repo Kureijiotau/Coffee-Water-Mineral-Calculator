@@ -9799,9 +9799,9 @@ function BrewerRecipeStepsModal({
             <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">3</span>
               <div className="min-w-0">
-                  <div className="text-sm font-medium text-slate-200">Combine and top up</div>
+                  <div className="text-sm font-medium text-slate-200">Combine the salt concentrate</div>
                   <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                    Dissolve the salts in {formatWaterVolume(mixingVesselMl)} first, then add the mineral concentrate to the remaining water and stir thoroughly.
+                    Reserve {formatWaterVolume(mixingVesselMl)} of the prepared water for the salt concentrate. Dissolve the salts completely, then add the concentrate to the remaining water, rinse the vessel into the batch, and stir thoroughly.
                   </div>
                 </div>
               </li>
