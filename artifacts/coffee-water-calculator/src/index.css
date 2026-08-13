@@ -362,6 +362,20 @@ body {
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.025) inset;
 }
 
+.app-shell select {
+  color-scheme: dark;
+}
+
+.app-shell select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.app-shell select option:checked {
+  background-color: #7dd3fc;
+  color: #0f172a;
+}
+
 .app-shell input:focus,
 .app-shell select:focus,
 .app-shell textarea:focus,
