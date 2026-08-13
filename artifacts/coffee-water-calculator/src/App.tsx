@@ -9490,8 +9490,18 @@ function BrewerRecipeStepsModal({
       : salt.formula.includes('Cl') ? 'Chloride'
         : salt.formula.includes('HCO₃') || salt.formula.includes('CO₃') ? 'Bicarbonate / carbonate'
           : 'Other mineral';
-  const useMixingVessel = batchMl > 1000 && dosedStepSaltCount > 0;
+  const useMixingVessel = !concentrateOn && batchMl > 1000 && dosedStepSaltCount > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
+  const concentrateDoseMlPerLiter = concentrateOn && concentrateStrength > 0
+    ? 1000 / concentrateStrength
+    : 0;
+  const concentrateDoseMlPerGallon = concentrateDoseMlPerLiter * US_GALLON_IN_LITERS;
+  const concentrateDropsPerLiter = concentrateDoseMlPerLiter > 0 && dropsPerMl > 0
+    ? Math.max(1, Math.round(concentrateDoseMlPerLiter * dropsPerMl))
+    : 0;
+  const concentrateDropsPerGallon = concentrateDropsPerLiter > 0
+    ? Math.max(1, Math.round(concentrateDoseMlPerGallon * dropsPerMl))
+    : 0;
   const waterStepStyles = [
     'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',
     'border-sky-300/35 bg-sky-400/[0.08] text-sky-100',
@@ -9835,6 +9845,43 @@ function BrewerRecipeStepsModal({
              gh={finalProfileGh}
              kh={finalProfileKh}
            />
+           {concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0 && (
+             <div className="mt-3 rounded-2xl border border-sky-300/25 bg-sky-950/35 p-4 text-sky-50 shadow-[0_16px_40px_-28px_rgba(56,189,248,0.8)]" aria-label="Concentrate dosing reference">
+               <div className="flex items-start justify-between gap-3 border-b border-sky-200/15 pb-3">
+                 <div>
+                   <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-sky-300">Concentrate dosing</div>
+                   <div className="mt-1 text-sm font-semibold text-sky-50">Reference for finished water</div>
+                 </div>
+                 <div className="rounded-md border border-sky-200/20 bg-sky-400/10 px-2 py-1 text-right text-[9px] text-sky-200">
+                   <div className="uppercase tracking-wider text-sky-300/70">Stock</div>
+                   <div className="font-mono font-bold tabular-nums">{formatWaterVolume(concentrateLiters * 1000)}</div>
+                 </div>
+               </div>
+               <div className="mt-3 grid grid-cols-2 gap-2">
+                 {[
+                   {
+                     label: '1 L',
+                     milliliters: concentrateDoseMlPerLiter,
+                     drops: concentrateDropsPerLiter,
+                   },
+                   {
+                     label: '1 US gal',
+                     milliliters: concentrateDoseMlPerGallon,
+                     drops: concentrateDropsPerGallon,
+                   },
+                 ].map(dose => (
+                   <div key={dose.label} className="rounded-lg border border-sky-200/15 bg-slate-950/25 px-2.5 py-2.5">
+                     <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-sky-300">{dose.label}</div>
+                     <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-sky-50">{dose.milliliters.toFixed(1)} mL</div>
+                     <div className="mt-0.5 text-[10px] text-sky-200/75">≈ {dose.drops.toLocaleString()} drops</div>
+                   </div>
+                 ))}
+               </div>
+               <div className="mt-2 text-[10px] leading-relaxed text-sky-200/65">
+                 Drops use your calibrated dropper setting of {dropsPerMl.toFixed(1)} drops per mL.
+               </div>
+             </div>
+           )}
            </div>
           </div>
         </div>
