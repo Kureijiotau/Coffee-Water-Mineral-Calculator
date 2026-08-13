@@ -44,6 +44,29 @@ import {
 } from './watermancerPlan';
 
 export type SaltRow = { target: string; formIdx: number };
+export type ConcentrateRecipeHandoff = {
+  name: string;
+  salts: Record<string, SaltRecipeEntry>;
+  finalLiters: number;
+};
+
+export function computeRecipeStockSaltMassMg(
+  targetPpm: number,
+  stockVolumeMl: number,
+  strength: number,
+  hydrationMass: number,
+  anhydrousMass: number,
+): number {
+  if (
+    !Number.isFinite(targetPpm) || targetPpm <= 0
+    || !Number.isFinite(stockVolumeMl) || stockVolumeMl <= 0
+    || !Number.isFinite(strength) || strength <= 0
+  ) {
+    return 0;
+  }
+  return computeSaltMg(targetPpm, stockVolumeMl / 1000, hydrationMass, anhydrousMass) * strength;
+}
+
 export function mergeRecipeStepTargets(
   activeTargets: Record<string, number>,
   suggestedTargets: Record<string, number>,
@@ -2860,6 +2883,7 @@ function App() {
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [concentrateRecipeHandoff, setConcentrateRecipeHandoff] = useState<ConcentrateRecipeHandoff | null>(null);
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
@@ -4283,6 +4307,20 @@ function App() {
     return m;
   };
 
+  const handleSendRecipeToConcentrate = () => {
+    const salts = buildCurrentSalts();
+    if (Object.keys(salts).length === 0) {
+      window.alert('Enter at least one salt target before sending a recipe to Concentrate.');
+      return;
+    }
+    setConcentrateRecipeHandoff({
+      name: displayedRecipeName === 'Custom' ? 'Current recipe' : displayedRecipeName,
+      salts,
+      finalLiters: L > 0 ? L : 1,
+    });
+    setAppTab('concentrate');
+  };
+
   const handleSaveRecipe = () => {
     const salts = buildCurrentSalts();
     if (Object.keys(salts).length === 0) {
@@ -4766,6 +4804,8 @@ function App() {
           <ConcentrateWorkspace
             volumeUnit={volumeUnit}
             onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
+            recipeHandoff={concentrateRecipeHandoff}
+            onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
           />
         </div>
         </div>
@@ -5034,6 +5074,17 @@ function App() {
                 <Share2 className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Share</span>
               </button>
+              {showAlchemist && hasSaltRecipeTargets && (
+                <button
+                  type="button"
+                  onClick={handleSendRecipeToConcentrate}
+                  className="flex items-center gap-1.5 rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs text-fuchsia-200 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-500/20 hover:text-fuchsia-100"
+                  title="Open this recipe in the Concentrate workspace"
+                >
+                  <FlaskConical className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Use in Concentrate</span>
+                </button>
+              )}
               <button
                 onClick={() => importInputRef.current?.click()}
                  className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
@@ -7036,9 +7087,13 @@ function App() {
 function ConcentrateWorkspace({
   volumeUnit,
   onToggleVolumeUnit,
+  recipeHandoff,
+  onClearRecipeHandoff,
 }: {
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
+  recipeHandoff: ConcentrateRecipeHandoff | null;
+  onClearRecipeHandoff: () => void;
 }) {
   const [saltId, setSaltId] = useState('mgso4');
   const [formIdx, setFormIdx] = useState(
@@ -7088,6 +7143,15 @@ function ConcentrateWorkspace({
 
   return (
     <div className="space-y-4">
+      {recipeHandoff ? (
+        <RecipeConcentrateBuilder
+          handoff={recipeHandoff}
+          volumeUnit={volumeUnit}
+          onToggleVolumeUnit={onToggleVolumeUnit}
+          onClear={onClearRecipeHandoff}
+        />
+      ) : (
+        <>
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -7287,7 +7351,276 @@ function ConcentrateWorkspace({
           Keep each mineral stock in its own bottle. Add individual stocks to the final water, especially for calcium, sulfate, bicarbonate, and citrate salts.
         </p>
       </section>
+        </>
+      )}
     </div>
+  );
+}
+
+function RecipeConcentrateBuilder({
+  handoff,
+  volumeUnit,
+  onToggleVolumeUnit,
+  onClear,
+}: {
+  handoff: ConcentrateRecipeHandoff;
+  volumeUnit: VolumeUnit;
+  onToggleVolumeUnit: () => void;
+  onClear: () => void;
+}) {
+  const [strengthInput, setStrengthInput] = useState('500');
+  const [stockVolumeInput, setStockVolumeInput] = useState('500');
+  const [finalLiters, setFinalLiters] = useState(Math.max(handoff.finalLiters, 1));
+
+  useEffect(() => {
+    setStrengthInput('500');
+    setStockVolumeInput('500');
+    setFinalLiters(Math.max(handoff.finalLiters, 1));
+  }, [handoff]);
+
+  const strength = Math.max(0, Number(strengthInput) || 0);
+  const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
+  const saltTargets = Object.fromEntries(
+    Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
+  );
+  const stockGroups = splitIntoStockGroups(saltTargets);
+  const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
+  const doseMlPerBatch = doseMlPerLiter * finalLiters;
+  const totalSaltCount = Object.keys(handoff.salts).length;
+
+  const groupTone: Record<StockGroup['color'], {
+    border: string;
+    badge: string;
+    accent: string;
+  }> = {
+    sky: {
+      border: 'border-sky-400/25',
+      badge: 'border-sky-300/25 bg-sky-400/10 text-sky-200',
+      accent: 'text-sky-200',
+    },
+    violet: {
+      border: 'border-violet-400/25',
+      badge: 'border-violet-300/25 bg-violet-400/10 text-violet-200',
+      accent: 'text-violet-200',
+    },
+    amber: {
+      border: 'border-amber-400/25',
+      badge: 'border-amber-300/25 bg-amber-400/10 text-amber-200',
+      accent: 'text-amber-200',
+    },
+  };
+
+  return (
+    <>
+      <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
+              <FlaskConical className="h-4 w-4 text-fuchsia-300" />
+              Build stocks from a recipe
+            </div>
+            <h2 className="mt-2 truncate text-lg font-semibold text-white">{handoff.name}</h2>
+            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
+              Ported from the Calculator with {totalSaltCount} active {totalSaltCount === 1 ? 'salt' : 'salts'}.
+              Source-water additions stay in the Calculator; this workspace prepares the salt stocks.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClear}
+            className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+          >
+            Use single mineral mode
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+        <StepHeading number="1" title="Set the shared stock plan" />
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Stock strength</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="10"
+                value={strengthInput}
+                onChange={event => setStrengthInput(event.target.value)}
+                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Recipe stock strength multiplier"
+              />
+              <span className="text-sm text-slate-400">×</span>
+            </div>
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Each stock volume</span>
+            <div className="mt-1 flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                step="10"
+                value={stockVolumeInput}
+                onChange={event => setStockVolumeInput(event.target.value)}
+                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                aria-label="Recipe stock volume in milliliters"
+              />
+              <span className="text-sm text-slate-400">mL</span>
+            </div>
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              Final brew batch
+              <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+            </span>
+            <VolumeInput
+              liters={finalLiters}
+              unit={volumeUnit}
+              onChangeLiters={value => setFinalLiters(volumeToLiters(value, volumeUnit))}
+              ariaLabel={`Recipe final brew volume in ${volumeUnitLabel(volumeUnit)}`}
+              className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+            />
+          </label>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <SummaryMetric
+            label="Dose per liter"
+            value={`${doseMlPerLiter.toFixed(2)} mL`}
+            detail="of each stock"
+            tone="fuchsia"
+          />
+          <SummaryMetric
+            label="Dose per batch"
+            value={`${doseMlPerBatch.toFixed(2)} mL`}
+            detail={`${formatVolumeValue(finalLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} final water`}
+            tone="sky"
+          />
+          <SummaryMetric
+            label="Stocks to prepare"
+            value={`${stockGroups.length}`}
+            detail="compatible groups"
+            tone="slate"
+          />
+        </div>
+        <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+          The conservative 500× default keeps each dosing volume practical while preserving the recipe’s target mineral amounts.
+        </p>
+      </section>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+          <div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe stocks</div>
+            <h2 className="mt-1 text-base font-semibold text-slate-100">Prepare each compatible stock separately</h2>
+          </div>
+          <span className="text-[11px] text-slate-500">Dose {doseMlPerBatch.toFixed(2)} mL of each stock per batch</span>
+        </div>
+        {stockGroups.map(group => {
+          const tone = groupTone[group.color];
+          const groupTargets = Object.fromEntries(
+            group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
+          );
+          const warnings = strength > 0 ? checkConcentrate(strength, groupTargets) : [];
+          const stockRows = group.saltIds.map(saltId => {
+            const salt = SALTS.find(item => item.id === saltId);
+            const entry = handoff.salts[saltId];
+            if (!salt || !entry) return null;
+            const form = salt.hydrationForms[entry.formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+            const target = num(entry.target);
+            const massMg = computeRecipeStockSaltMassMg(
+              target,
+              stockVolumeMl,
+              strength,
+              form.molarMass,
+              salt.anhydrousMass,
+            );
+            return { salt, form, target, massMg };
+          }).filter((row): row is {
+            salt: typeof SALTS[number];
+            form: typeof SALTS[number]['hydrationForms'][number];
+            target: number;
+            massMg: number;
+          } => row !== null);
+          const totalSaltMassG = stockRows.reduce((sum, row) => sum + row.massMg, 0) / 1000;
+          const waterMassG = Math.max(stockVolumeMl - totalSaltMassG, 0);
+
+          return (
+            <article key={group.id} className={`rounded-2xl border ${tone.border} bg-slate-800/70 p-4 shadow-xl sm:p-5`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone.badge}`}>
+                    {group.name}
+                  </span>
+                  <p className="mt-2 text-xs text-slate-400">
+                    Weigh the salts below, add {waterMassG.toFixed(2)} g of distilled or RO water, and mix to {stockVolumeMl.toFixed(0)} mL total stock.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per batch</div>
+                  <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerBatch.toFixed(2)} mL</div>
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-700/60">
+                <table className="w-full min-w-[580px] text-left text-xs">
+                  <thead className="bg-slate-950/35 text-[10px] uppercase tracking-wider text-slate-500">
+                    <tr>
+                      <th className="px-3 py-2.5">Salt</th>
+                      <th className="px-3 py-2.5">Hydration form</th>
+                      <th className="px-3 py-2.5 text-right">Recipe target</th>
+                      <th className="px-3 py-2.5 text-right">Weigh into stock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-700/50">
+                    {stockRows.map(row => (
+                      <tr key={row.salt.id} className="text-slate-300">
+                        <td className="px-3 py-3 font-semibold text-slate-100">{row.salt.name}</td>
+                        <td className="px-3 py-3 text-slate-400">{row.form.label}</td>
+                        <td className="px-3 py-3 text-right tabular-nums">{row.target.toFixed(2)} ppm</td>
+                        <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tone.accent}`}>
+                          {row.massMg >= 1000 ? `${(row.massMg / 1000).toFixed(2)} g` : `${row.massMg.toFixed(1)} mg`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                <span>Total salt: <strong className="text-slate-300">{totalSaltMassG.toFixed(2)} g</strong></span>
+                <span>Label: {handoff.name} · {group.name} · {strength || 0}×</span>
+              </div>
+
+              {warnings.length > 0 && (
+                <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
+                  warnings.some(warning => warning.severity === 'error')
+                    ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200'
+                    : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
+                }`}>
+                  <div className="font-semibold">
+                    {warnings.some(warning => warning.severity === 'error') ? 'Check this stock before mixing' : 'Mixing note'}
+                  </div>
+                  {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 shadow-xl sm:p-5">
+        <div className="flex items-start gap-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+          <div>
+            <h2 className="text-sm font-semibold text-emerald-100">Use the stocks in your recipe</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">
+              Add {doseMlPerBatch.toFixed(2)} mL from each prepared stock to the {formatVolumeValue(finalLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} final batch.
+              Add the stocks one at a time and mix until clear. For drop-based dosing, calibrate each stock separately in Single mineral mode.
+            </p>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
 
