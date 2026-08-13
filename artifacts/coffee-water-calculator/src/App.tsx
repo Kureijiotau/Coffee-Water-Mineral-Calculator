@@ -2861,11 +2861,6 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
-  const toggleVolumeUnitAndReset = () => {
-    const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
-    setVolumeUnit(nextUnit);
-    setLiters(String(volumeToLiters('1', nextUnit)));
-  };
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
@@ -4770,7 +4765,7 @@ function App() {
           {appHeader}
           <ConcentrateWorkspace
             volumeUnit={volumeUnit}
-            onToggleVolumeUnit={toggleVolumeUnitAndReset}
+            onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
           />
         </div>
         </div>
@@ -5237,7 +5232,7 @@ function App() {
                liters={L}
                volumeInput={liters}
                volumeUnit={volumeUnit}
-                onToggleVolumeUnit={toggleVolumeUnitAndReset}
+               onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
                onVolumeChange={value => setLiters(value)}
                concentrateOn={concentrateOn}
                concentrateLiters={concL}
@@ -5288,7 +5283,7 @@ function App() {
               />
               <VolumeUnitToggle
                 unit={volumeUnit}
-                 onToggle={toggleVolumeUnitAndReset}
+                onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
               />
             </div>
 
@@ -5642,7 +5637,7 @@ function App() {
               dropsPerMl={brewerDropsPerMl}
               onCalibrate={setBrewerDropsPerMl}
               volumeUnit={volumeUnit}
-              onToggleVolumeUnit={toggleVolumeUnitAndReset}
+              onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
             />
           </div>
         )}
@@ -7057,11 +7052,6 @@ function ConcentrateWorkspace({
   const [doseDrops, setDoseDrops] = useState('1');
   const [doseLiters, setDoseLiters] = useState('1');
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
-  const handleVolumeUnitToggle = () => {
-    const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
-    setDoseLiters(String(volumeToLiters('1', nextUnit)));
-    onToggleVolumeUnit();
-  };
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
@@ -7278,7 +7268,7 @@ function ConcentrateWorkspace({
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
             <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
               Final water ({volumeUnitShortLabel(volumeUnit)})
-              <VolumeUnitToggle unit={volumeUnit} onToggle={handleVolumeUnitToggle} />
+              <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
             </span>
             <VolumeInput
               liters={finalLiters}
@@ -8149,11 +8139,6 @@ function BrewerDropperCalibrationCard({
   const [doseVolumeLiters, setDoseVolumeLiters] = useState('1');
   const [acknowledged, setAcknowledged] = useState(() => loadDropperCalibrationAcknowledged());
   const [collapsed, setCollapsed] = useState(false);
-  const handleVolumeUnitToggle = () => {
-    const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
-    setDoseVolumeLiters(String(volumeToLiters('1', nextUnit)));
-    onToggleVolumeUnit();
-  };
   const parsedDrops = Number(dropCount);
   const parsedVolume = Number(measuredVolume);
   const measuredDropsPerMl = parsedDrops > 0 && parsedVolume > 0
@@ -8306,7 +8291,7 @@ function BrewerDropperCalibrationCard({
             <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
               <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
                 Final water ({volumeUnitShortLabel(volumeUnit)})
-                <VolumeUnitToggle unit={volumeUnit} onToggle={handleVolumeUnitToggle} />
+                <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
               </span>
               <VolumeInput
                 liters={finalVolumeLiters}
@@ -8377,11 +8362,6 @@ function BrewerSimpleRecipeCard({
   const [pantryBottleMl, setPantryBottleMl] = useState('60');
   const [pantryCustomMl, setPantryCustomMl] = useState('150');
   const [calciumAvailable, setCalciumAvailable] = useState(true);
-  const handleVolumeUnitToggle = () => {
-    const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
-    onVolumeChange(String(volumeToLiters('1', nextUnit)));
-    onToggleVolumeUnit();
-  };
   const guideSaltLabels: Record<string, string> = {
     mgso4: 'Epsom salt',
     mgcl2: 'Magnesium chloride',
@@ -8554,7 +8534,7 @@ function BrewerSimpleRecipeCard({
               ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
               className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
-            <VolumeUnitToggle unit={volumeUnit} onToggle={handleVolumeUnitToggle} />
+            <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
           </div>
           <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
             Live result
