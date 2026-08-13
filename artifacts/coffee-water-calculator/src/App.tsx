@@ -7616,7 +7616,6 @@ function RecipeConcentrateBuilder({
             massMg: number;
           } => row !== null);
           const totalSaltMassG = stockRows.reduce((sum, row) => sum + row.massMg, 0) / 1000;
-          const waterMassG = Math.max(stockVolumeMl - totalSaltMassG, 0);
 
           return (
             <article key={group.id} className={`rounded-2xl border ${tone.border} bg-slate-800/70 p-4 shadow-xl sm:p-5`}>
@@ -7626,7 +7625,7 @@ function RecipeConcentrateBuilder({
                     {group.name}
                   </span>
                   <p className="mt-2 text-xs text-slate-400">
-                    Weigh the salts below, add {waterMassG.toFixed(2)} g of distilled or RO water, and mix to {stockVolumeMl.toFixed(0)} mL total stock.
+                    Weigh the salts below, dissolve in partial distilled or RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL final stock.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-end justify-end gap-3">

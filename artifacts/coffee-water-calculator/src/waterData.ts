@@ -187,6 +187,46 @@ export const AIKI_DEFAULT_PROFILE: WaterProfile = {
 
 export const ION_MAP = Object.fromEntries(IONS.map(i => [i.id, i])) as Record<IonId, IonInfo>;
 
+export interface IonChemistry {
+  /** Exact ion molar mass in g/mol for converting modeled mg/L to mmol/L. */
+  molarMass: number;
+  /** Signed ionic charge used when deriving milliequivalents per liter. */
+  charge: number;
+}
+
+/**
+ * Shared chemistry metadata for derived molar/equivalent measurements.
+ *
+ * The calculator continues to use gravimetric mg/L as its canonical state.
+ * These values are derived only where molar or charge-equivalent chemistry is
+ * useful, such as concentrate compatibility checks and future diagnostics.
+ */
+export const ION_CHEMISTRY: Record<IonId, IonChemistry> = {
+  sodium:      { molarMass: 22.989769, charge: 1 },
+  potassium:   { molarMass: 39.0983,   charge: 1 },
+  magnesium:   { molarMass: 24.305,    charge: 2 },
+  calcium:     { molarMass: 40.078,    charge: 2 },
+  chloride:    { molarMass: 35.45,     charge: -1 },
+  sulfate:     { molarMass: 96.06,     charge: -2 },
+  bicarbonate: { molarMass: 61.0168,   charge: -1 },
+  carbonate:   { molarMass: 60.0089,   charge: -2 },
+  citrates:    { molarMass: 189.10,    charge: -3 },
+  bicitrates:  { molarMass: 190.11,    charge: -2 },
+  biphosphates:{ molarMass: 96.987,    charge: -1 },
+  phosphates:  { molarMass: 94.9714,   charge: -3 },
+};
+
+export function computeIonMmolPerL(ionId: IonId, mgPerL: number): number {
+  const molarMass = ION_CHEMISTRY[ionId]?.molarMass;
+  return Number.isFinite(mgPerL) && mgPerL > 0 && molarMass > 0
+    ? mgPerL / molarMass
+    : 0;
+}
+
+export function computeIonMeqPerL(ionId: IonId, mgPerL: number): number {
+  return computeIonMmolPerL(ionId, mgPerL) * Math.abs(ION_CHEMISTRY[ionId]?.charge ?? 0);
+}
+
 export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
   {
     id: 'lactate',
@@ -569,20 +609,9 @@ export function checkConcentrate(
       // ÷ molar mass (g/mol) → mmol/L in stock
       const ionInfo = ION_MAP[c.ionId];
       if (!ionInfo) continue;
-      // We don't have molar masses for ions readily; approximate ppm mg/L to mmol/L
-      // Use approximate molar masses for key ions
-      const approxMolarMass: Partial<Record<IonId, number>> = {
-        calcium: 40.08,
-        magnesium: 24.31,
-        sulfate: 96.06,
-        carbonate: 60.01,
-        citrates: 189.10,
-        bicarbonate: 61.02,
-      };
-      const mw = approxMolarMass[c.ionId];
-      if (!mw) continue;
       const mgPerL_Stock = target * strength * c.fraction;
-      const mmolL = mgPerL_Stock / mw;
+      const mmolL = computeIonMmolPerL(c.ionId, mgPerL_Stock);
+      if (mmolL <= 0) continue;
       ionMmolInStock[c.ionId] = (ionMmolInStock[c.ionId] ?? 0) + mmolL;
       if (!saltIonSources[c.ionId]) saltIonSources[c.ionId] = [];
       if (!saltIonSources[c.ionId]!.includes(salt.name)) {

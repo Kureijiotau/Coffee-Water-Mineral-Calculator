@@ -14,6 +14,9 @@ import {
   computeSupplementalIonTotals,
   checkConcentrate,
   findStrongestSafeConcentrateStrength,
+  computeIonMmolPerL,
+  computeIonMeqPerL,
+  ION_CHEMISTRY,
 } from './waterData';
 
 // ─── computeSaltMg ────────────────────────────────────────────────────────────
@@ -62,6 +65,26 @@ describe('computeSaltTargetPpm', () => {
   it('returns zero when the batch volume is not usable', () => {
     expect(computeSaltTargetPpm(20, 0, 120.365, 120.365)).toBe(0);
     expect(computeSaltTargetPpm(20, 1, 0, 120.365)).toBe(0);
+  });
+});
+
+describe('derived ion chemistry', () => {
+  it('converts modeled mg/L to mmol/L and meq/L using shared exact metadata', () => {
+    expect(computeIonMmolPerL('calcium', 13.631231)).toBeCloseTo(13.631231 / ION_CHEMISTRY.calcium.molarMass, 8);
+    expect(computeIonMeqPerL('calcium', 13.631231)).toBeCloseTo(
+      (13.631231 / ION_CHEMISTRY.calcium.molarMass) * 2,
+      8,
+    );
+    expect(computeIonMeqPerL('bicarbonate', 18.158308)).toBeCloseTo(
+      18.158308 / ION_CHEMISTRY.bicarbonate.molarMass,
+      8,
+    );
+  });
+
+  it('returns zero for invalid or non-positive concentrations', () => {
+    expect(computeIonMmolPerL('magnesium', 0)).toBe(0);
+    expect(computeIonMmolPerL('magnesium', Number.NaN)).toBe(0);
+    expect(computeIonMeqPerL('sulfate', -1)).toBe(0);
   });
 });
 
