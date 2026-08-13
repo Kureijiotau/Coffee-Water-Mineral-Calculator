@@ -743,6 +743,41 @@ export function checkConcentrate(
   return warnings;
 }
 
+export const ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH = 500;
+
+/**
+ * Find the strongest single-stock multiplier that passes the concentrate
+ * safety checks. Informational precision notes are allowed; chemical errors
+ * and warnings disqualify a strength.
+ */
+export function findStrongestSafeConcentrateStrength(
+  saltTargetsBySaltId: Record<string, number>,
+  maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
+): number {
+  const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
+    target => Number.isFinite(target) && target > 0,
+  );
+  const upperBound = Math.max(1, Math.floor(maxStrength));
+  if (!hasActiveTarget || upperBound <= 1) return 1;
+
+  const isSafe = (strength: number) =>
+    checkConcentrate(strength, saltTargetsBySaltId).every(warning => warning.severity === 'info');
+
+  if (isSafe(upperBound)) return upperBound;
+
+  let low = 1;
+  let high = upperBound;
+  while (low < high) {
+    const midpoint = Math.ceil((low + high) / 2);
+    if (isSafe(midpoint)) {
+      low = midpoint;
+    } else {
+      high = midpoint - 1;
+    }
+  }
+  return low;
+}
+
 // ── Stock splitting ──────────────────────────────────────
 
 export interface StockGroup {

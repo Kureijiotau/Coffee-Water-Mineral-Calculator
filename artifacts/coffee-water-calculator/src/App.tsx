@@ -9,7 +9,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, splitIntoStockGroups,
+  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, splitIntoStockGroups,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -4104,6 +4104,14 @@ function App() {
     return { level: 'green', label: 'Single stock OK' };
   }, [concWarnings]);
 
+  const handleAllInOneConcentrateToggle = (enabled: boolean) => {
+    setConcentrateOn(enabled);
+    if (!enabled) return;
+    setConcentrateMl('100');
+    setConcentrateStrength(findStrongestSafeConcentrateStrength(concSaltTargets));
+    setSplitMode(false);
+  };
+
   // ── Reset state ────────────────────────────────────
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showWatermancerResetConfirm, setShowWatermancerResetConfirm] = useState(false);
@@ -5303,13 +5311,14 @@ function App() {
                title="2. Add waters — Batch volume"
              after={
                <div className="flex items-center gap-2">
-                {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                 <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>Preparation route</span>
+                 {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
+                  <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>All-in-one concentrate</span>
                  <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
                   <input
                     type="checkbox"
                     checked={concentrateOn}
-                    onChange={e => setConcentrateOn(e.target.checked)}
+                     onChange={e => handleAllInOneConcentrateToggle(e.target.checked)}
+                     aria-label="Use all-in-one concentrate"
                     className="sr-only"
            />
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -5597,9 +5606,21 @@ function App() {
                   </div>
                 )}
 
-                {/* Split into stocks button */}
+                 {concFeasibility.level !== 'green' && (
+                   <button
+                     type="button"
+                     onClick={handleSendRecipeToConcentrate}
+                     className="flex items-center gap-2 text-xs font-semibold text-fuchsia-200 hover:text-white bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-400/35 hover:border-fuchsia-300/60 rounded-lg px-3 py-2 transition w-full justify-center"
+                   >
+                     <FlaskConical className="w-3.5 h-3.5" />
+                     Open Concentrate workspace
+                   </button>
+                 )}
+
+                 {/* Split into stocks button */}
                 {concFeasibility.level !== 'green' && (
                   <button
+                     type="button"
                     onClick={() => setSplitMode(true)}
                     className="flex items-center gap-2 text-xs font-medium text-sky-300 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 hover:border-sky-400/50 rounded-lg px-3 py-2 transition w-full justify-center"
                   >
@@ -6996,6 +7017,7 @@ function App() {
           liters={L}
            volumeUnit={volumeUnit}
           concentrateOn={concentrateOn}
+           allInOneConcentrate={showAlchemist && concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
           baseWaters={nerdLevel === 'brewer' ? [] : mineralWaters}
@@ -9336,6 +9358,7 @@ function BrewerRecipeStepsModal({
   liters,
   volumeUnit,
   concentrateOn,
+  allInOneConcentrate,
   concentrateLiters,
   concentrateStrength,
   baseWaters,
@@ -9355,6 +9378,7 @@ function BrewerRecipeStepsModal({
   liters: number;
   volumeUnit: VolumeUnit;
   concentrateOn: boolean;
+  allInOneConcentrate: boolean;
   concentrateLiters: number;
   concentrateStrength: number;
   baseWaters: MineralWaterEntry[];
@@ -9435,17 +9459,18 @@ function BrewerRecipeStepsModal({
   const stepSaltTargets = mergeRecipeStepTargets(saltTargets, suggestedSaltTargets);
   const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
-  const orderedRecipeSalts = [
-    ...stepSalts.filter(salt => salt.formula.includes('SO₄')),
-    ...stepSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄')),
-    ...stepSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃')),
-    ...stepSalts.filter(salt =>
-      !salt.formula.includes('SO₄')
-      && !salt.formula.includes('Cl')
-      && !salt.formula.includes('HCO₃')
-      && !salt.formula.includes('CO₃'),
-    ),
-  ];
+  const sulfateSalts = stepSalts.filter(salt => salt.formula.includes('SO₄'));
+  const chlorideSalts = stepSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄'));
+  const alkalinitySalts = stepSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃'));
+  const otherSalts = stepSalts.filter(salt =>
+    !salt.formula.includes('SO₄')
+    && !salt.formula.includes('Cl')
+    && !salt.formula.includes('HCO₃')
+    && !salt.formula.includes('CO₃'),
+  );
+  const orderedRecipeSalts = allInOneConcentrate
+    ? [...sulfateSalts, ...chlorideSalts, ...otherSalts, ...alkalinitySalts]
+    : [...sulfateSalts, ...chlorideSalts, ...alkalinitySalts, ...otherSalts];
   const finalProfileWaterIons = computeWatermancerBottledIons(
     [...configuredBaseWaters, ...configuredAdditionWaters].map(water => ({
       ...water,
@@ -9702,13 +9727,33 @@ function BrewerRecipeStepsModal({
               </div>
             </li>
             {orderedRecipeSalts.length > 0 && (
-              <li className="flex gap-3 rounded-xl border border-sky-400/15 bg-slate-900/35 p-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-400/20 text-xs font-bold text-sky-100 ring-1 ring-sky-300/20">2</span>
+             <li className={`flex gap-3 rounded-xl p-3 ${
+               allInOneConcentrate
+                 ? 'border-amber-300/55 bg-amber-500/[0.12] ring-1 ring-amber-200/30 shadow-[0_0_18px_-6px_rgba(251,191,36,0.65)]'
+                 : 'border-sky-400/15 bg-slate-900/35'
+             }`}>
+               <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ring-1 ${
+                 allInOneConcentrate
+                   ? 'bg-amber-400/25 text-amber-50 ring-amber-200/35'
+                   : 'bg-sky-400/20 text-sky-100 ring-sky-300/20'
+               }`}>2</span>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-slate-200">Add the minerals in order</div>
-                  <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                    Add one salt at a time. Stir until fully dissolved before adding the next.
+                  <div className={`text-sm font-semibold ${allInOneConcentrate ? 'text-amber-50' : 'text-slate-200'}`}>
+                    {allInOneConcentrate ? 'Mix the all-in-one concentrate in order' : 'Add the minerals in order'}
                   </div>
+                  <div className={`mt-0.5 text-xs leading-relaxed ${allInOneConcentrate ? 'text-amber-100/80' : 'text-slate-400'}`}>
+                    {allInOneConcentrate
+                      ? 'Start with part of the stock water. Add one salt at a time and stir until fully dissolved before adding the next.'
+                      : 'Add one salt at a time. Stir until fully dissolved before adding the next.'}
+                  </div>
+                  {allInOneConcentrate && (
+                    <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200/35 bg-amber-950/35 px-3 py-2.5 text-[11px] leading-relaxed text-amber-50">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" />
+                      <div>
+                        <strong>Mixing order matters.</strong> Keep the solution moving, dissolve each salt completely, and add the final water only after all salts are clear. Bicarbonate/carbonate salts come last to reduce local precipitation risk.
+                      </div>
+                    </div>
+                  )}
                   <div className="mt-2 space-y-2">
                     {orderedRecipeSalts.map((salt, index) => {
                       const saltIndex = SALTS.findIndex(item => item.id === salt.id);
@@ -9716,8 +9761,13 @@ function BrewerRecipeStepsModal({
                         ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
                         : salt.defaultFormIdx ?? 0;
                       const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
-                      const saltStyle = saltStepStyles[index % saltStepStyles.length];
-                      const saltValueStyle = saltStepValueStyles[index % saltStepValueStyles.length];
+                       const isAlkalinitySalt = salt.formula.includes('HCO₃') || salt.formula.includes('CO₃');
+                       const saltStyle = allInOneConcentrate && isAlkalinitySalt
+                         ? 'border-rose-300/60 bg-rose-500/[0.14] text-rose-50 ring-1 ring-rose-200/30'
+                         : saltStepStyles[index % saltStepStyles.length];
+                       const saltValueStyle = allInOneConcentrate && isAlkalinitySalt
+                         ? 'border-rose-200/40 bg-rose-400/20 text-rose-50'
+                         : saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2.5 py-2 ${saltStyle}`}>
                           <div className="flex items-start justify-between gap-3">
@@ -9728,6 +9778,11 @@ function BrewerRecipeStepsModal({
                                <div className="mt-0.5 text-[10px] text-slate-300/65">
                                 {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
                               </div>
+                               {allInOneConcentrate && isAlkalinitySalt && (
+                                 <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-rose-100">
+                                   Last — add only after the other salts are clear
+                                 </div>
+                               )}
                             </div>
                               <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${saltValueStyle}`}>
                                 {amountLabel(salt, stepSaltTargets)}

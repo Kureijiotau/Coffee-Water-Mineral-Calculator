@@ -12,6 +12,8 @@ import {
   IONS,
   ACTIVE_ION_IDS,
   computeSupplementalIonTotals,
+  checkConcentrate,
+  findStrongestSafeConcentrateStrength,
 } from './waterData';
 
 // ─── computeSaltMg ────────────────────────────────────────────────────────────
@@ -60,6 +62,24 @@ describe('computeSaltTargetPpm', () => {
   it('returns zero when the batch volume is not usable', () => {
     expect(computeSaltTargetPpm(20, 0, 120.365, 120.365)).toBe(0);
     expect(computeSaltTargetPpm(20, 1, 0, 120.365)).toBe(0);
+  });
+});
+
+describe('findStrongestSafeConcentrateStrength', () => {
+  it('returns the practical ceiling when the recipe has no modeled chemical limit', () => {
+    expect(findStrongestSafeConcentrateStrength({ nacl: 1 })).toBe(500);
+    expect(checkConcentrate(500, { nacl: 1 }).every(warning => warning.severity === 'info')).toBe(true);
+  });
+
+  it('caps a recipe at the first safe integer below a solubility limit', () => {
+    expect(findStrongestSafeConcentrateStrength({ cacit: 100 })).toBe(8);
+    expect(checkConcentrate(8, { cacit: 100 }).some(warning => warning.severity !== 'info')).toBe(false);
+    expect(checkConcentrate(9, { cacit: 100 }).some(warning => warning.severity !== 'info')).toBe(true);
+  });
+
+  it('returns a deterministic 1× fallback for an empty recipe', () => {
+    expect(findStrongestSafeConcentrateStrength({})).toBe(1);
+    expect(findStrongestSafeConcentrateStrength({ nahco3: 0, mgcl2: Number.NaN })).toBe(1);
   });
 });
 
