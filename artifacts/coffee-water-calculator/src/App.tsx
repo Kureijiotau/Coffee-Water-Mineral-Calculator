@@ -35,8 +35,6 @@ import {
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   lotusDropsPerMl,
-  lotusPublishedDrops,
-  lotusRecipeById,
   lotusStockPlan,
   type LotusDropperStyle,
 } from './lotusConcentrate';
@@ -7209,15 +7207,15 @@ function ConcentrateWorkspace({
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
               <div className="mt-0.5 text-xs text-slate-500">
                 {concentrateMode === 'lotus'
-                  ? 'Prepare four independent mineral droppers using publicly documented recipe inputs.'
-                  : 'Build a calibrated single-mineral stock or continue a recipe handoff from the Calculator.'}
+                  ? 'Prepare four independent mineral droppers from the public source model.'
+                  : 'Build and calibrate a single-mineral stock by weight.'}
               </div>
             </div>
           </div>
           <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
             {([
               ['builder', 'Stock Builder', 'Make one mineral stock'],
-              ['lotus', 'Four-Mineral Drops', 'Four independent dropper stocks'],
+              ['lotus', 'DIY Lotus Drops', 'Four independent dropper stocks'],
             ] as const).map(([value, label, description]) => (
               <button
                 key={value}
@@ -7461,15 +7459,12 @@ function LotusDropsSection() {
   const [style, setStyle] = useState<LotusDropperStyle>('round');
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
   const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
-  const [selectedRecipeId, setSelectedRecipeId] = useState(LOTUS_RECIPES[0]?.id ?? '');
 
   const stockVolumeMl = Math.max(1, Number(stockVolumeInput) || LOTUS_BOTTLE_VOLUME_ML);
   const straightBaselineDropsPerMl = Math.max(
     0.1,
     Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   );
-  const selectedRecipe = lotusRecipeById(selectedRecipeId);
-  const selectedDrops = lotusPublishedDrops(selectedRecipe, style);
   const activeDropsPerMl = lotusDropsPerMl(style, straightBaselineDropsPerMl);
   const roundDropsPerMl = lotusDropsPerMl('round', straightBaselineDropsPerMl);
   const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
@@ -7483,7 +7478,7 @@ function LotusDropsSection() {
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-rose-100">
             <FlaskConical className="h-4 w-4 text-rose-300" />
-            Four-Mineral Drops
+              DIY Lotus Drops
           </div>
           <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-bottle mineral system</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
@@ -7569,34 +7564,8 @@ function LotusDropsSection() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-slate-700/60 bg-slate-950/20 p-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <label className="min-w-[220px] flex-1">
-            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
-              <ListChecks className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />
-              Recipe dosing preview
-            </span>
-            <select
-              value={selectedRecipe.id}
-              onChange={event => setSelectedRecipeId(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-700/60 bg-slate-900/70 px-2.5 py-2 text-sm font-semibold text-slate-100 outline-none"
-              aria-label="Four-mineral recipe dosing preview"
-            >
-              {LOTUS_RECIPES.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
-            </select>
-          </label>
-          <div className="rounded-lg border border-rose-300/20 bg-rose-400/[0.06] px-3 py-2 text-right">
-            <div className="text-[10px] uppercase tracking-wider text-slate-500">450 mL {style} dose</div>
-            <div className="mt-1 text-sm font-semibold tabular-nums text-rose-100">
-              {selectedDrops.magnesium} Mg · {selectedDrops.calcium} Ca · {selectedDrops.potassium} K · {selectedDrops.sodium} Na drops
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid gap-3 md:grid-cols-2">
         {stockPlans.map(plan => {
-          const recipeDrops = selectedDrops[plan.id];
           return (
             <article key={plan.id} className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4">
               <div className="flex items-start justify-between gap-3">
@@ -7609,9 +7578,6 @@ function LotusDropsSection() {
                   <div className="mt-1 text-[11px] text-slate-500">{plan.saltName} · {plan.saltFormula} · {plan.hydrationForm}</div>
                   </div>
                 </div>
-                <span className="rounded-full border border-rose-300/20 bg-rose-400/[0.08] px-2 py-1 text-[10px] font-semibold tabular-nums text-rose-200">
-                  {recipeDrops} drops
-                </span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <SummaryMetric label="Stock strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
@@ -7630,39 +7596,6 @@ function LotusDropsSection() {
             </article>
           );
         })}
-      </div>
-
-      <div className="overflow-x-auto rounded-xl border border-slate-700/60">
-        <table className="w-full min-w-[760px] text-left text-xs">
-          <thead className="bg-slate-950/35 text-[10px] uppercase tracking-wider text-slate-500">
-            <tr>
-              <th className="px-3 py-2.5">Published recipe</th>
-              <th className="px-3 py-2.5 text-right">Round Mg / Ca / K / Na</th>
-              <th className="px-3 py-2.5 text-right">Straight Mg / Ca / K / Na</th>
-              <th className="px-3 py-2.5 text-right">Ion profile</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-700/50">
-            {LOTUS_RECIPES.map(recipe => {
-              const round = lotusPublishedDrops(recipe, 'round');
-              const straight = lotusPublishedDrops(recipe, 'straight');
-              return (
-                <tr key={recipe.id} className="text-slate-300">
-                  <td className="px-3 py-2.5 font-semibold text-slate-100">{recipe.name}</td>
-                  <td className="px-3 py-2.5 text-right font-mono tabular-nums text-rose-200">
-                    {round.magnesium} / {round.calcium} / {round.potassium} / {round.sodium}
-                  </td>
-                  <td className="px-3 py-2.5 text-right font-mono tabular-nums text-sky-200">
-                    {straight.magnesium} / {straight.calcium} / {straight.potassium} / {straight.sodium}
-                  </td>
-                  <td className="px-3 py-2.5 text-right text-slate-500">
-                    Mg {recipe.ionTargets.magnesium} · Ca {recipe.ionTargets.calcium} · K {recipe.ionTargets.potassium} · Na {recipe.ionTargets.sodium} · Cl {recipe.ionTargets.chloride} · HCO₃ {recipe.ionTargets.bicarbonate}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
 
       <p className="text-[10px] leading-relaxed text-slate-500">
