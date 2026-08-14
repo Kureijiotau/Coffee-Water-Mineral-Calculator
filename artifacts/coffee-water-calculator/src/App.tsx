@@ -7703,20 +7703,20 @@ function RecipeConcentrateBuilder({
   const [strengthInput, setStrengthInput] = useState('500');
   const [stockStrategy, setStockStrategy] = useState<'gh-kh' | 'all-in-one' | 'individual'>('gh-kh');
   const [stockVolumeInputs, setStockVolumeInputs] = useState<Record<string, string>>({
-    hardness: '500',
-    alkalinity: '500',
-    citrate: '500',
-    'all-in-one': '500',
+    hardness: '100',
+    alkalinity: '100',
+    citrate: '100',
+    'all-in-one': '100',
   });
 
   useEffect(() => {
     setStrengthInput('500');
     setStockStrategy('gh-kh');
     setStockVolumeInputs({
-      hardness: '500',
-      alkalinity: '500',
-      citrate: '500',
-      'all-in-one': '500',
+      hardness: '100',
+      alkalinity: '100',
+      citrate: '100',
+      'all-in-one': '100',
     });
   }, [handoff]);
 
@@ -7800,7 +7800,7 @@ function RecipeConcentrateBuilder({
       groups: stockGroups.map(group => ({
         id: group.id,
         name: group.name.replace(/ Stock$/, ' Concentrate'),
-        volumeMl: Math.max(0, Number(stockVolumeInputs[group.id] ?? '500') || 0),
+        volumeMl: Math.max(0, Number(stockVolumeInputs[group.id] ?? '100') || 0),
         saltIds: [...group.saltIds],
       })),
     });
@@ -7982,7 +7982,7 @@ function RecipeConcentrateBuilder({
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stockGroups.map(group => {
                 const groupName = group.name.replace(/ Stock$/, ' Concentrate');
-                const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
+                const stockVolumeInput = stockVolumeInputs[group.id] ?? '100';
                 return (
                   <label key={group.id} className="rounded-lg border border-sky-300/15 bg-slate-900/55 px-3 py-2">
                     <span className="block truncate text-[10px] font-semibold text-slate-300">{groupName}</span>
@@ -8034,7 +8034,7 @@ function RecipeConcentrateBuilder({
         {stockGroups.map(group => {
           const tone = groupTone[group.color];
           const groupName = group.name.replace(/ Stock$/, ' Concentrate');
-          const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
+          const stockVolumeInput = stockVolumeInputs[group.id] ?? '100';
           const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
           const groupTargets = groupTargetsFor(group);
           const warnings = strength > 0 ? checkConcentrate(strength, groupTargets) : [];
