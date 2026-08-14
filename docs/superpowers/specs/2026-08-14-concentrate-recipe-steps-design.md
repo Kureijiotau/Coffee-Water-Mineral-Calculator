@@ -18,8 +18,11 @@ instruction card rather than reusing the Brewer dry-salt/dropper modal.
   - a separate concentrate-volume card listing every active concentrate and
     its current editable volume;
   - the max-safe-strength reminder when available;
-  - a single dosing reference card with a button that swaps between 1 L and
-    1 US gallon, showing both mL and drops.
+  - both 1 L and 1 US gallon dosing references, showing mL and drops.
+- The preparation-instruction checklist is not part of the Recipe steps card;
+  the card is a compact recipe and dosing reference.
+- A **Save JPG** button at the top exports the clean recipe card without the
+  modal backdrop or export controls.
 - Dosing uses the current recipe strength and the app’s calibrated drops-per-mL
   value. The listed dose is the amount to add from **each prepared
   concentrate**.
@@ -38,6 +41,11 @@ the selected strategy, strength, max-safe strength, group identifiers, and
 current volume for each group. The workspace passes that snapshot, the recipe
 handoff, and the calibrated drops-per-mL value to the new steps card. Existing
 stock/group calculations remain unchanged.
+
+The modal keeps a ref to the exportable card surface and uses the app’s
+existing `html2canvas` dependency to create a high-resolution JPEG. Export
+controls are excluded from the captured surface, and a temporary saved state
+provides feedback without changing recipe data.
 
 ## Verification
 
