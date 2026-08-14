@@ -7873,17 +7873,28 @@ function RecipeConcentrateBuilder({
           ))}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Stock strength
+          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <label htmlFor="recipe-stock-strength">Stock strength</label>
               {maxSafeStrength != null && (
-                <span className={strength > maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}>
+                <button
+                  type="button"
+                  onClick={() => setStrengthInput(String(maxSafeStrength))}
+                  className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
+                    strength > maxSafeStrength
+                      ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
+                      : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
+                  }`}
+                  aria-label={`Apply max safe stock strength of ${maxSafeStrength} times`}
+                  title={`Apply max safe strength ×${maxSafeStrength}`}
+                >
                   Max safe ×{maxSafeStrength}
-                </span>
+                </button>
               )}
-            </span>
+            </div>
             <div className="mt-1 flex items-center gap-2">
               <input
+                id="recipe-stock-strength"
                 type="number"
                 min="1"
                 step="10"
@@ -7894,7 +7905,7 @@ function RecipeConcentrateBuilder({
               />
               <span className="text-sm text-slate-400">×</span>
             </div>
-          </label>
+          </div>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Final brew batch
