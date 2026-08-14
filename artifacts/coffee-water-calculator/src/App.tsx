@@ -30,6 +30,16 @@ import {
 } from './watermancerProfiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
+import {
+  LOTUS_BOTTLE_VOLUME_ML,
+  LOTUS_DROPPER_DEFINITIONS,
+  LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+  lotusDropsPerMl,
+  lotusPublishedDrops,
+  lotusRecipeById,
+  lotusStockPlan,
+  type LotusDropperStyle,
+} from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
   normalizeWatermancerIonOrder,
@@ -7395,7 +7405,224 @@ function ConcentrateWorkspace({
       </section>
         </>
       )}
+      <LotusDropsSection />
     </div>
+  );
+}
+
+function LotusDropsSection() {
+  const [style, setStyle] = useState<LotusDropperStyle>('round');
+  const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
+  const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
+  const [selectedRecipeId, setSelectedRecipeId] = useState(LOTUS_RECIPES[0]?.id ?? '');
+
+  const stockVolumeMl = Math.max(1, Number(stockVolumeInput) || LOTUS_BOTTLE_VOLUME_ML);
+  const straightBaselineDropsPerMl = Math.max(
+    0.1,
+    Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+  );
+  const selectedRecipe = lotusRecipeById(selectedRecipeId);
+  const selectedDrops = lotusPublishedDrops(selectedRecipe, style);
+  const activeDropsPerMl = lotusDropsPerMl(style, straightBaselineDropsPerMl);
+  const roundDropsPerMl = lotusDropsPerMl('round', straightBaselineDropsPerMl);
+  const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
+  const stockPlans = LOTUS_DROPPER_DEFINITIONS.map(dropper => (
+    lotusStockPlan(dropper, style, stockVolumeMl, straightBaselineDropsPerMl)
+  ));
+
+  return (
+    <section className="space-y-4 rounded-2xl border border-rose-400/25 bg-gradient-to-br from-rose-500/[0.08] via-slate-800/80 to-amber-500/[0.06] p-4 shadow-xl sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold text-rose-100">
+            <FlaskConical className="h-4 w-4 text-rose-300" />
+            DIY Lotus Drops
+          </div>
+          <h2 className="mt-2 text-xl font-semibold text-white">Clone the four-bottle Lotus system</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
+            Four independent stocks, using Lotus&apos;s public recipe model and ingredient identities.
+            The commercial manufacturing formula is not published, so these are nominal clone values
+            that should be refined with your own dropper calibration.
+          </p>
+        </div>
+        <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
+          Source model
+        </span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-3 text-[11px] leading-relaxed text-amber-100/80">
+          <div className="font-semibold text-amber-200">What “nominal clone” means</div>
+          <p className="mt-1">
+            Lotus publishes the 450 mL recipe inputs, rounded drops, a 0.56 Round/1.00 Straight
+            style factor, and 59 mL bottle size—but not the proprietary batch formula or guaranteed
+            drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML} Straight drops/mL
+            and derives Round at 0.56×. Measure each finished stock and replace that baseline here.
+          </p>
+        </div>
+        <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-slate-500">Dropper style</div>
+              <div className="mt-1 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 p-1">
+                {(['round', 'straight'] as LotusDropperStyle[]).map(option => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setStyle(option)}
+                    aria-pressed={style === option}
+                    className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                      style === option
+                        ? 'bg-rose-400/15 text-rose-200 ring-1 ring-rose-300/30'
+                        : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                    }`}
+                  >
+                    {option === 'round' ? 'Round' : 'Straight'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">Bottle volume</span>
+              <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={stockVolumeInput}
+                  onChange={event => setStockVolumeInput(event.target.value)}
+                  className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                  aria-label="DIY Lotus stock volume in milliliters"
+                />
+                <span className="text-xs text-slate-500">mL</span>
+              </span>
+            </label>
+            <label>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">Straight drops/mL</span>
+              <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={straightDropsPerMlInput}
+                  onChange={event => setStraightDropsPerMlInput(event.target.value)}
+                  className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                  aria-label="DIY Lotus straight dropper calibration in drops per milliliter"
+                />
+                <span className="text-xs text-slate-500">drops/mL</span>
+              </span>
+            </label>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <SummaryMetric label="Active style" value={style === 'round' ? 'Round' : 'Straight'} detail={`${activeDropsPerMl.toFixed(1)} drops/mL`} tone="fuchsia" />
+            <SummaryMetric label="Round model" value={`${roundDropsPerMl.toFixed(1)}`} detail="drops/mL" tone="slate" />
+            <SummaryMetric label="Straight model" value={`${straightModelDropsPerMl.toFixed(1)}`} detail="drops/mL" tone="slate" />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-700/60 bg-slate-950/20 p-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <label className="min-w-[220px] flex-1">
+            <span className="block text-[10px] uppercase tracking-wider text-slate-500">Recipe dosing preview</span>
+            <select
+              value={selectedRecipe.id}
+              onChange={event => setSelectedRecipeId(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-700/60 bg-slate-900/70 px-2.5 py-2 text-sm font-semibold text-slate-100 outline-none"
+              aria-label="DIY Lotus recipe dosing preview"
+            >
+              {LOTUS_RECIPES.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
+            </select>
+          </label>
+          <div className="rounded-lg border border-rose-300/20 bg-rose-400/[0.06] px-3 py-2 text-right">
+            <div className="text-[10px] uppercase tracking-wider text-slate-500">450 mL {style} dose</div>
+            <div className="mt-1 text-sm font-semibold tabular-nums text-rose-100">
+              {selectedDrops.magnesium} Mg · {selectedDrops.calcium} Ca · {selectedDrops.potassium} K · {selectedDrops.sodium} Na drops
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {stockPlans.map(plan => {
+          const recipeDrops = selectedDrops[plan.id];
+          return (
+            <article key={plan.id} className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-slate-100">{plan.label} Dropper</div>
+                  <div className="mt-1 text-[11px] text-slate-500">{plan.saltName} · {plan.saltFormula} · {plan.hydrationForm}</div>
+                </div>
+                <span className="rounded-full border border-rose-300/20 bg-rose-400/[0.08] px-2 py-1 text-[10px] font-semibold tabular-nums text-rose-200">
+                  {recipeDrops} drops
+                </span>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <SummaryMetric label="Stock strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
+                <SummaryMetric label={`Weigh for ${stockVolumeMl.toFixed(0)} mL`} value={`${plan.saltMassG.toFixed(2)} g`} detail={`${plan.hydrationMolarMass.toFixed(3)} g/mol`} tone="sky" />
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                Weigh <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}.
+                Dissolve in partial distilled/RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL.
+                The selected {style} model contributes about {plan.dropsPerMl.toFixed(1)} drops/mL;
+                calibrate the finished dropper before relying on whole-drop dosing.
+              </p>
+              <div className="mt-2 text-[10px] text-slate-600">
+                Use partial distilled/RO water while dissolving; final volume is the controlling measurement.
+              </div>
+            </article>
+          );
+        })}
+      </div>
+
+      <div className="overflow-x-auto rounded-xl border border-slate-700/60">
+        <table className="w-full min-w-[760px] text-left text-xs">
+          <thead className="bg-slate-950/35 text-[10px] uppercase tracking-wider text-slate-500">
+            <tr>
+              <th className="px-3 py-2.5">Lotus recipe</th>
+              <th className="px-3 py-2.5 text-right">Round Mg / Ca / K / Na</th>
+              <th className="px-3 py-2.5 text-right">Straight Mg / Ca / K / Na</th>
+              <th className="px-3 py-2.5 text-right">Ion profile</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-700/50">
+            {LOTUS_RECIPES.map(recipe => {
+              const round = lotusPublishedDrops(recipe, 'round');
+              const straight = lotusPublishedDrops(recipe, 'straight');
+              return (
+                <tr key={recipe.id} className="text-slate-300">
+                  <td className="px-3 py-2.5 font-semibold text-slate-100">{recipe.name}</td>
+                  <td className="px-3 py-2.5 text-right font-mono tabular-nums text-rose-200">
+                    {round.magnesium} / {round.calcium} / {round.potassium} / {round.sodium}
+                  </td>
+                  <td className="px-3 py-2.5 text-right font-mono tabular-nums text-sky-200">
+                    {straight.magnesium} / {straight.calcium} / {straight.potassium} / {straight.sodium}
+                  </td>
+                  <td className="px-3 py-2.5 text-right text-slate-500">
+                    Mg {recipe.ionTargets.magnesium} · Ca {recipe.ionTargets.calcium} · K {recipe.ionTargets.potassium} · Na {recipe.ionTargets.sodium} · Cl {recipe.ionTargets.chloride} · HCO₃ {recipe.ionTargets.bicarbonate}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-[10px] leading-relaxed text-slate-500">
+        Sources:{' '}
+        <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/pages/product-instructions" target="_blank" rel="noreferrer">
+          Lotus recipe calculator
+        </a>
+        {' · '}
+        <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/products/lotus-water-1" target="_blank" rel="noreferrer">
+          Lotus Water ingredients
+        </a>
+        {' · '}
+        <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/blogs/lotus-blog/precision-brewing-an-exploration-of-dropper-variability-in-making-water-for-coffee" target="_blank" rel="noreferrer">
+          dropper calibration notes
+        </a>
+      </p>
+    </section>
   );
 }
 
