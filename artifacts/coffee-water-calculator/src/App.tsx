@@ -99,6 +99,7 @@ type BrewerFlavorInput = {
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `lotus:${string}` | `reference:${string}`;
 type AppTab = 'calculator' | 'concentrate';
+type ConcentrateMode = 'builder' | 'lotus';
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 type AutoCraftObjective = WatermancerSaltObjective;
 export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
@@ -7147,6 +7148,7 @@ function ConcentrateWorkspace({
   recipeHandoff: ConcentrateRecipeHandoff | null;
   onClearRecipeHandoff: () => void;
 }) {
+  const [concentrateMode, setConcentrateMode] = useState<ConcentrateMode>('builder');
   const [saltId, setSaltId] = useState('mgso4');
   const [formIdx, setFormIdx] = useState(
     SALTS.find(salt => salt.id === 'mgso4')?.defaultFormIdx ?? 0,
@@ -7193,9 +7195,55 @@ function ConcentrateWorkspace({
     setCompletedSteps(prev => ({ ...prev, [step]: !prev[step] }));
   };
 
+  useEffect(() => {
+    if (recipeHandoff) setConcentrateMode('builder');
+  }, [recipeHandoff]);
+
   return (
     <div className="space-y-4">
-      {recipeHandoff ? (
+      <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
+              <div className="mt-0.5 text-xs text-slate-500">
+                {concentrateMode === 'lotus'
+                  ? 'Prepare four independent Lotus-style mineral droppers from the public source model.'
+                  : 'Build a calibrated single-mineral stock or continue a recipe handoff from the Calculator.'}
+              </div>
+            </div>
+          </div>
+          <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+            {([
+              ['builder', 'Stock Builder', 'Make one mineral stock'],
+              ['lotus', 'DIY Lotus Drops', 'Four independent dropper stocks'],
+            ] as const).map(([value, label, description]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={concentrateMode === value}
+                onClick={() => setConcentrateMode(value)}
+                title={description}
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  concentrateMode === value
+                    ? value === 'lotus'
+                      ? 'border border-rose-400/40 bg-rose-500/15 text-rose-200 shadow-sm'
+                      : 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
+                    : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {concentrateMode === 'lotus' ? (
+        <LotusDropsSection />
+      ) : recipeHandoff ? (
         <RecipeConcentrateBuilder
           handoff={recipeHandoff}
           volumeUnit={volumeUnit}
@@ -7405,7 +7453,6 @@ function ConcentrateWorkspace({
       </section>
         </>
       )}
-      <LotusDropsSection />
     </div>
   );
 }
