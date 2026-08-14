@@ -5055,6 +5055,18 @@ function App() {
               })()}
             </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
+              {selectedSourceRecipe?.sourceUrl && (
+                <a
+                  href={selectedSourceRecipe.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open source page for ${selectedSourceRecipe.name}`}
+                  title={`Open source page for ${selectedSourceRecipe.name}`}
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[10px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+                >
+                  ?
+                </a>
+              )}
               <select
                 value={mineralRecipeSelectorValue}
                 onChange={e => handleMineralRecipeChange(e.target.value)}
