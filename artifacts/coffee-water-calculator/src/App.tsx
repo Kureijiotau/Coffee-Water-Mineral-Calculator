@@ -7691,28 +7691,43 @@ function RecipeConcentrateBuilder({
   const activeSaltIds = Object.entries(saltTargets)
     .filter(([, target]) => target > 0)
     .map(([saltId]) => saltId);
+  const individualStockGroups = compatibleStockGroups.flatMap(group =>
+    group.saltIds.map(saltId => {
+      const salt = SALTS.find(item => item.id === saltId);
+      return {
+        ...group,
+        id: `salt:${saltId}`,
+        name: `${salt?.name ?? 'Salt'} Stock`,
+        saltIds: [saltId],
+      };
+    }),
+  );
+  const allInOneStockGroups = activeSaltIds.length > 0
+    ? [{
+        id: 'all-in-one',
+        name: 'All-in-one Stock',
+        saltIds: activeSaltIds,
+        color: 'violet' as const,
+      }]
+    : [];
   const stockGroups = stockStrategy === 'all-in-one'
-    ? activeSaltIds.length > 0
-      ? [{
-          id: 'all-in-one',
-          name: 'All-in-one Stock',
-          saltIds: activeSaltIds,
-          color: 'violet' as const,
-        }]
-      : []
+    ? allInOneStockGroups
     : stockStrategy === 'individual'
-    ? compatibleStockGroups.flatMap(group =>
-        group.saltIds.map(saltId => {
-          const salt = SALTS.find(item => item.id === saltId);
-          return {
-            ...group,
-            id: `salt:${saltId}`,
-            name: `${salt?.name ?? 'Salt'} Stock`,
-            saltIds: [saltId],
-          };
-        }),
-      )
+    ? individualStockGroups
     : compatibleStockGroups;
+  const groupTargetsFor = (group: { saltIds: string[] }) => Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
+  );
+  const maxSafeStrengthFor = (groups: Array<{ saltIds: string[] }>) =>
+    groups.length > 0
+      ? Math.min(...groups.map(group => findStrongestSafeConcentrateStrength(groupTargetsFor(group))))
+      : null;
+  const maxSafeStrengthByStrategy = {
+    'gh-kh': maxSafeStrengthFor(compatibleStockGroups),
+    'all-in-one': maxSafeStrengthFor(allInOneStockGroups),
+    individual: maxSafeStrengthFor(individualStockGroups),
+  };
+  const maxSafeStrength = maxSafeStrengthByStrategy[stockStrategy];
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
   const doseMlPerBatch = doseMlPerLiter * finalLiters;
   const totalSaltCount = Object.keys(handoff.salts).length;
@@ -7794,6 +7809,7 @@ function RecipeConcentrateBuilder({
               badge: 'Recommended',
               description: 'Balanced everyday setup with compatible hardness and alkalinity stocks.',
               footer: 'Best starting point',
+              maxSafeStrength: maxSafeStrengthByStrategy['gh-kh'],
               glyph: <Gauge className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-sky-300/60 bg-sky-400/[0.12] ring-1 ring-sky-300/30',
               glyphClass: 'border-sky-300/30 bg-sky-400/15 text-sky-200',
@@ -7805,6 +7821,7 @@ function RecipeConcentrateBuilder({
               badge: 'Easy',
               description: 'One bottle with every active salt for the simplest dosing routine.',
               footer: 'Fewest bottles',
+              maxSafeStrength: maxSafeStrengthByStrategy['all-in-one'],
               glyph: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-violet-300/60 bg-violet-400/[0.12] ring-1 ring-violet-300/30',
               glyphClass: 'border-violet-300/30 bg-violet-400/15 text-violet-200',
@@ -7816,6 +7833,7 @@ function RecipeConcentrateBuilder({
               badge: 'Advanced',
               description: 'One bottle per active salt for maximum control over each dose.',
               footer: 'Most flexible',
+              maxSafeStrength: maxSafeStrengthByStrategy.individual,
               glyph: <Layers className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-amber-300/60 bg-amber-400/[0.12] ring-1 ring-amber-300/30',
               glyphClass: 'border-amber-300/30 bg-amber-400/15 text-amber-200',
@@ -7846,12 +7864,24 @@ function RecipeConcentrateBuilder({
               <div className="mt-3 border-t border-white/[0.08] pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
                 {option.footer}
               </div>
+              {option.maxSafeStrength != null && (
+                <div className="mt-2 text-[10px] font-semibold tabular-nums text-emerald-300/80">
+                  Max safe strength: ×{option.maxSafeStrength}
+                </div>
+              )}
             </button>
           ))}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Stock strength</span>
+            <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              Stock strength
+              {maxSafeStrength != null && (
+                <span className={strength > maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}>
+                  Max safe ×{maxSafeStrength}
+                </span>
+              )}
+            </span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
@@ -7910,6 +7940,9 @@ function RecipeConcentrateBuilder({
           <span>
             <strong className="text-slate-200">{stockStrategyDetails.label}:</strong>{' '}
             {stockStrategyDetails.helper} Strength stays shared so the recipe scales consistently, while each stock card below keeps its own volume.
+            {maxSafeStrength != null && strength > maxSafeStrength && (
+              <strong className="text-rose-200"> Current ×{strength} is above the max safe ×{maxSafeStrength}; lower the strength before mixing.</strong>
+            )}
           </span>
         </div>
       </section>
@@ -7934,10 +7967,9 @@ function RecipeConcentrateBuilder({
           const tone = groupTone[group.color];
           const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
           const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
-          const groupTargets = Object.fromEntries(
-            group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
-          );
+          const groupTargets = groupTargetsFor(group);
           const warnings = strength > 0 ? checkConcentrate(strength, groupTargets) : [];
+          const groupMaxSafeStrength = findStrongestSafeConcentrateStrength(groupTargets);
           const stockRows = group.saltIds.map(saltId => {
             const salt = SALTS.find(item => item.id === saltId);
             const entry = handoff.salts[saltId];
@@ -7990,6 +8022,12 @@ function RecipeConcentrateBuilder({
                       <span className="text-xs text-slate-400">mL</span>
                     </span>
                   </label>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Max safe strength</div>
+                    <div className={`mt-1 text-lg font-semibold tabular-nums ${
+                      strength > groupMaxSafeStrength ? 'text-rose-300' : 'text-emerald-300/90'
+                    }`}>×{groupMaxSafeStrength}</div>
+                  </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per batch</div>
                     <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerBatch.toFixed(2)} mL</div>
