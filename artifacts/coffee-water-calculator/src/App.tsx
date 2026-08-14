@@ -29,6 +29,7 @@ import {
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
+import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import {
   normalizeWatermancerIonOrder,
@@ -86,7 +87,7 @@ type BrewerFlavorInput = {
   sweetness: number;
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
-type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `reference:${string}`;
+type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `lotus:${string}` | `reference:${string}`;
 type AppTab = 'calculator' | 'concentrate';
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 type AutoCraftObjective = WatermancerSaltObjective;
@@ -3331,6 +3332,11 @@ function App() {
       const recipe = ROBERT_ASAMI_RECIPES.find(item => item.id === recipeId);
       return recipe ? ionTotalsForSaltRecipe(recipe) : {};
     }
+    if (watermancerTargetSource.startsWith('lotus:')) {
+      const recipeId = watermancerTargetSource.slice('lotus:'.length);
+      const recipe = LOTUS_RECIPES.find(item => item.id === recipeId);
+      return recipe ? lotusIonTargetsForWatermancer(recipe) : {};
+    }
     if (watermancerTargetSource.startsWith('reference:')) {
       const referenceId = watermancerTargetSource.slice('reference:'.length);
       return EMPIRICAL_WATERS.find(item => item.id === referenceId)?.ions ?? {};
@@ -4248,6 +4254,9 @@ function App() {
     if (watermancerTargetSource.startsWith('reference:')) {
       return EMPIRICAL_WATERS.find(item => item.id === watermancerTargetSource.slice('reference:'.length))?.name ?? 'Reference water';
     }
+    if (watermancerTargetSource.startsWith('lotus:')) {
+      return LOTUS_RECIPES.find(item => item.id === watermancerTargetSource.slice('lotus:'.length))?.name ?? 'Lotus recipe';
+    }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
   }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
   const recipeStepsProfileName = showWatermancer
@@ -4986,6 +4995,7 @@ function App() {
               wmProfiles={wmProfiles}
               allRecipes={allRecipes}
               externalRecipes={ROBERT_ASAMI_RECIPES}
+              lotusRecipes={LOTUS_RECIPES}
               referenceWaters={EMPIRICAL_WATERS}
               watermancerTargetSource={watermancerTargetSource}
               onSelectProfile={handleSelectProfile}
@@ -7787,6 +7797,7 @@ function WatermancerIonProfileCard({
   wmProfiles,
   allRecipes,
   externalRecipes,
+  lotusRecipes,
   referenceWaters,
   watermancerTargetSource,
   onSelectProfile,
@@ -7803,6 +7814,7 @@ function WatermancerIonProfileCard({
   wmProfiles: WatermancerProfile[];
   allRecipes: SaltRecipe[];
   externalRecipes: ExternalRecipe[];
+  lotusRecipes: LotusRecipe[];
   referenceWaters: typeof EMPIRICAL_WATERS;
   watermancerTargetSource: WatermancerTargetSourceId;
   onSelectProfile: (id: string) => void;
@@ -7839,6 +7851,11 @@ function WatermancerIonProfileCard({
         recipe => recipe.id === currentDropdownValue.slice('external:'.length),
       )?.sourceUrl;
     }
+    if (currentDropdownValue.startsWith('lotus:')) {
+      return lotusRecipes.find(
+        recipe => recipe.id === currentDropdownValue.slice('lotus:'.length),
+      )?.sourceUrl;
+    }
     return undefined;
   })();
 
@@ -7852,6 +7869,11 @@ function WatermancerIonProfileCard({
       return allRecipes.find(
         recipe => recipe.id === currentDropdownValue.slice('recipe:'.length),
       )?.name ?? 'selected recipe';
+    }
+    if (currentDropdownValue.startsWith('lotus:')) {
+      return lotusRecipes.find(
+        recipe => recipe.id === currentDropdownValue.slice('lotus:'.length),
+      )?.name ?? 'selected Lotus recipe';
     }
     return externalRecipes.find(
       recipe => recipe.id === currentDropdownValue.slice('external:'.length),
@@ -8023,6 +8045,13 @@ function WatermancerIonProfileCard({
             <optgroup label="Watering Hole · Tap-water proxy">
               {externalRecipes.filter(r => r.method.includes('tap-water')).map(r => (
                 <option key={`external:${r.id}`} value={`external:${r.id}`}>
+                  {r.name}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="Lotus Coffee Products">
+              {lotusRecipes.map(r => (
+                <option key={`lotus:${r.id}`} value={`lotus:${r.id}`}>
                   {r.name}
                 </option>
               ))}
