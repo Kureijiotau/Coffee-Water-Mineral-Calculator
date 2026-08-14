@@ -7769,23 +7769,19 @@ function RecipeConcentrateBuilder({
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
   const doseMlPerReference = doseMlPerLiter * doseReferenceLiters;
-  const totalSaltCount = Object.keys(handoff.salts).length;
   const stockStrategyDetails = stockStrategy === 'all-in-one'
     ? {
         label: 'All-in-one',
-        description: 'One concentrate with every active salt',
-        helper: 'The easiest dosing path, but combined salts may have stricter solubility and shelf-stability limits.',
+        helper: 'Every active salt shares one bottle.',
       }
     : stockStrategy === 'individual'
     ? {
         label: 'Separate salts',
-        description: 'One concentrate per active salt',
-        helper: 'The most flexible path for advanced control. Each salt gets its own bottle and dose.',
+        helper: 'One bottle per active salt.',
       }
     : {
         label: 'GH + KH',
-        description: 'Recommended compatible grouping',
-        helper: 'The recommended balance of simplicity and stability. Hardness, alkalinity, and citrate stay in compatible groups when needed.',
+        helper: 'Use separate bottles for compatible groups.',
       };
   const planGroupSignature = stockGroups
     .map(group => `${group.id}:${group.saltIds.join(',')}`)
@@ -7845,39 +7841,26 @@ function RecipeConcentrateBuilder({
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
-              <FlaskConical className="h-4 w-4 text-fuchsia-300" />
-              Build concentrates from a recipe
-            </div>
-            <h2 className="mt-2 truncate text-lg font-semibold text-white">{handoff.name}</h2>
-            <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-              Ported from the Calculator with {totalSaltCount} active {totalSaltCount === 1 ? 'salt' : 'salts'}.
-              Source-water additions stay in the Calculator; this workspace prepares the salt concentrates.
-            </p>
+            <h2 className="truncate text-lg font-semibold text-white">{handoff.name}</h2>
           </div>
           <button
             type="button"
             onClick={onClear}
             className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
           >
-            Use single mineral mode
+            Single mineral
           </button>
         </div>
       </section>
 
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/[0.08] via-slate-800/80 to-indigo-500/[0.08] p-4 shadow-xl sm:p-6">
-        <StepHeading number="1" title="Choose your concentrate style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
-        <p className="mt-3 max-w-3xl text-xs leading-relaxed text-slate-400">
-          Decide how you want to make and dose your recipe, then choose the reference amount for the final water. You can change this plan at any time.
-        </p>
+        <StepHeading number="1" title="Style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {[
             {
               value: 'gh-kh' as const,
               label: 'GH + KH',
               badge: 'Recommended',
-              description: 'Balanced everyday setup with compatible hardness and alkalinity concentrates.',
-              footer: 'Best starting point',
               maxSafeStrength: maxSafeStrengthByStrategy['gh-kh'],
               glyph: <Gauge className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-sky-300/60 bg-sky-400/[0.12] ring-1 ring-sky-300/30',
@@ -7888,8 +7871,6 @@ function RecipeConcentrateBuilder({
               value: 'all-in-one' as const,
               label: 'All-in-one',
               badge: 'Easy',
-              description: 'One bottle with every active salt for the simplest dosing routine.',
-              footer: 'Fewest bottles',
               maxSafeStrength: maxSafeStrengthByStrategy['all-in-one'],
               glyph: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-violet-300/60 bg-violet-400/[0.12] ring-1 ring-violet-300/30',
@@ -7900,8 +7881,6 @@ function RecipeConcentrateBuilder({
               value: 'individual' as const,
               label: 'Separate salts',
               badge: 'Advanced',
-              description: 'One bottle per active salt for maximum control over each dose.',
-              footer: 'Most flexible',
               maxSafeStrength: maxSafeStrengthByStrategy.individual,
               glyph: <Layers className="h-5 w-5" aria-hidden="true" />,
               activeClass: 'border-amber-300/60 bg-amber-400/[0.12] ring-1 ring-amber-300/30',
@@ -7914,7 +7893,7 @@ function RecipeConcentrateBuilder({
               type="button"
               onClick={() => setStockStrategy(option.value)}
               aria-pressed={stockStrategy === option.value}
-              className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-500/80 ${
+              className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:border-slate-500/80 ${
                 stockStrategy === option.value
                   ? option.activeClass
                   : 'border-slate-700/60 bg-slate-950/25 hover:bg-slate-900/50'
@@ -7929,13 +7908,9 @@ function RecipeConcentrateBuilder({
                 </span>
               </div>
               <div className="mt-3 text-sm font-semibold text-slate-100">{option.label}</div>
-              <p className="mt-1 min-h-[2.5rem] text-[11px] leading-relaxed text-slate-400">{option.description}</p>
-              <div className="mt-3 border-t border-white/[0.08] pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                {option.footer}
-              </div>
               {option.maxSafeStrength != null && (
                 <div className="mt-2 text-[10px] font-semibold tabular-nums text-emerald-300/80">
-                  Max safe strength: ×{option.maxSafeStrength}
+                  Max ×{option.maxSafeStrength}
                 </div>
               )}
             </button>
@@ -7949,7 +7924,7 @@ function RecipeConcentrateBuilder({
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
                     <BottleWine className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <label htmlFor="recipe-stock-strength">Concentrate strength</label>
+                  <label htmlFor="recipe-stock-strength">Strength</label>
                 </span>
                 {maxSafeStrength != null && (
                   <button
@@ -7963,7 +7938,7 @@ function RecipeConcentrateBuilder({
                     aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
                     title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
                   >
-                    Max safe ×{maxSafeStrength}
+                    Max ×{maxSafeStrength}
                   </button>
                 )}
               </div>
@@ -7983,27 +7958,27 @@ function RecipeConcentrateBuilder({
             </div>
             <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.06] px-3 py-2.5">
               <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                <span>Dosing reference</span>
+                <span>Dose</span>
                 <button
                   type="button"
                   onClick={onToggleVolumeUnit}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-sky-100 transition hover:border-sky-200/60 hover:bg-sky-400/20"
-                  aria-label={`Switch dosing reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
+                  aria-label={`Switch dose reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
                   title={`Switch to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
                 >
                   <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                  {doseReferenceLabel}
+                  {volumeUnit === 'liters' ? '1 L' : '1 US gal'}
                 </button>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
-                Dose per selected reference amount of final water.
-              </p>
+              <div className="mt-2 text-lg font-semibold tabular-nums text-sky-100">
+                {doseMlPerReference.toFixed(2)} mL <span className="text-[10px] font-normal text-slate-500">each</span>
+              </div>
             </div>
           </div>
           <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate volume</span>
-              <span className="text-[10px] text-slate-500">Set each bottle below · mL</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Volumes</span>
+              <span className="text-[10px] text-slate-500">mL</span>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {stockGroups.map(group => {
@@ -8033,58 +8008,29 @@ function RecipeConcentrateBuilder({
             </div>
           </div>
         </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <SummaryMetric
-            label="Dose per liter"
-            value={`${doseMlPerLiter.toFixed(2)} mL`}
-             detail="of each concentrate"
-            tone="fuchsia"
-          />
-          <SummaryMetric
-            label="Dose per reference"
-            value={`${doseMlPerReference.toFixed(2)} mL`}
-            detail={`${doseReferenceLabel} final water`}
-            tone="sky"
-          />
-          <SummaryMetric
-             label="Concentrates to prepare"
-            value={`${stockGroups.length}`}
-            detail={stockStrategyDetails.description}
-            tone="slate"
-          />
-        </div>
-        <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
-          stockStrategy === 'all-in-one'
-            ? 'border-amber-400/25 bg-amber-500/[0.08] text-amber-100/80'
-            : 'border-slate-700/50 bg-slate-950/20 text-slate-500'
-        }`}>
-          {stockStrategy === 'all-in-one'
-            ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
-            : <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />}
-          <span>
-            <strong className="text-slate-200">{stockStrategyDetails.label}:</strong>{' '}
-            {stockStrategyDetails.helper} Strength stays shared so the recipe scales consistently, while each stock card below keeps its own volume.
-            {maxSafeStrength != null && strength > maxSafeStrength && (
-              <strong className="text-rose-200"> Current ×{strength} is above the max safe ×{maxSafeStrength}; lower the strength before mixing.</strong>
-            )}
-          </span>
-        </div>
+        {((stockStrategy === 'all-in-one') || (maxSafeStrength != null && strength > maxSafeStrength)) && (
+          <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-[11px] ${
+            maxSafeStrength != null && strength > maxSafeStrength
+              ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200'
+              : 'border-amber-400/25 bg-amber-500/[0.08] text-amber-100/80'
+          }`}>
+            {maxSafeStrength != null && strength > maxSafeStrength
+              ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
+              : <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />}
+            <span>
+              {maxSafeStrength != null && strength > maxSafeStrength
+                ? `Lower strength below ×${maxSafeStrength}.`
+                : stockStrategyDetails.helper}
+            </span>
+          </div>
+        )}
       </section>
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-          <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe concentrates</div>
-            <h2 className="mt-1 text-base font-semibold text-slate-100">
-              {stockStrategy === 'all-in-one'
-                ? 'Prepare your all-in-one concentrate'
-                : stockStrategy === 'individual'
-                ? 'Prepare one concentrate per salt'
-                : 'Prepare your GH + KH concentrates'}
-            </h2>
-          </div>
+          <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
           <span className="text-[11px] text-slate-500">
-            Shared concentrate strength {strength || 0}× · each volume is independent
+            ×{strength || 0} · {stockGroups.length} {stockGroups.length === 1 ? 'bottle' : 'bottles'}
           </span>
         </div>
         {stockGroups.map(group => {
@@ -8124,23 +8070,20 @@ function RecipeConcentrateBuilder({
                   <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone.badge}`}>
                     {groupName}
                   </span>
-                  <p className="mt-2 text-xs text-slate-400">
-                    Weigh the salts below, dissolve in partial distilled or RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL final concentrate.
-                  </p>
                 </div>
                 <div className="flex flex-wrap items-end justify-end gap-3">
                   <div className="text-right">
-                    <span className="block text-[10px] uppercase tracking-wider text-slate-500">Concentrate volume</span>
+                    <span className="block text-[10px] uppercase tracking-wider text-slate-500">Vol</span>
                     <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{stockVolumeMl.toFixed(0)} mL</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Max safe strength</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Max</div>
                     <div className={`mt-1 text-lg font-semibold tabular-nums ${
                       strength > groupMaxSafeStrength ? 'text-rose-300' : 'text-emerald-300/90'
                     }`}>×{groupMaxSafeStrength}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per reference</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose</div>
                     <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerReference.toFixed(2)} mL</div>
                   </div>
                 </div>
@@ -8151,9 +8094,9 @@ function RecipeConcentrateBuilder({
                   <thead className="bg-slate-950/35 text-[10px] uppercase tracking-wider text-slate-500">
                     <tr>
                       <th className="px-3 py-2.5">Salt</th>
-                      <th className="px-3 py-2.5">Hydration form</th>
-                      <th className="px-3 py-2.5 text-right">Recipe target</th>
-                      <th className="px-3 py-2.5 text-right">Weigh into concentrate</th>
+                      <th className="px-3 py-2.5">Form</th>
+                      <th className="px-3 py-2.5 text-right">Target</th>
+                      <th className="px-3 py-2.5 text-right">Mass</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
@@ -8172,8 +8115,7 @@ function RecipeConcentrateBuilder({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span>Total salt: <strong className="text-slate-300">{totalSaltMassG.toFixed(2)} g</strong></span>
-                <span>Label: {handoff.name} · {groupName} · {strength || 0}×</span>
+                <span>Total <strong className="text-slate-300">{totalSaltMassG.toFixed(2)} g</strong></span>
               </div>
 
               {warnings.length > 0 && (
@@ -8183,7 +8125,7 @@ function RecipeConcentrateBuilder({
                     : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
                 }`}>
                   <div className="font-semibold">
-                    {warnings.some(warning => warning.severity === 'error') ? 'Check this concentrate before mixing' : 'Mixing note'}
+                    {warnings.some(warning => warning.severity === 'error') ? 'Check strength' : 'Note'}
                   </div>
                   {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
                 </div>
@@ -8193,16 +8135,10 @@ function RecipeConcentrateBuilder({
         })}
       </section>
 
-      <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] p-4 shadow-xl sm:p-5">
-        <div className="flex items-start gap-3">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-          <div>
-            <h2 className="text-sm font-semibold text-emerald-100">Use the concentrates in your recipe</h2>
-            <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Add {doseMlPerReference.toFixed(2)} mL from each prepared concentrate to {doseReferenceLabel} of final water.
-              Add the concentrates one at a time and mix until clear. For drop-based dosing, calibrate each concentrate separately in Single mineral mode.
-            </p>
-          </div>
+      <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] px-4 py-3 shadow-xl sm:px-5">
+        <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
+          <Info className="h-4 w-4 shrink-0 text-emerald-300" />
+          {doseMlPerReference.toFixed(2)} mL each → {doseReferenceLabel}
         </div>
       </section>
     </>
@@ -9933,45 +9869,85 @@ function ConcentrateRecipeStepsModal({
     };
   });
   const handleSaveJpg = async () => {
-    if (!exportCardRef.current || isSavingJpg) return;
+    const source = exportCardRef.current;
+    if (!source || isSavingJpg) return;
     setIsSavingJpg(true);
     setSaveJpgStatus('idle');
+    let clone: HTMLDivElement | null = null;
+    let imageUrl: string | null = null;
+    const downloadUrl = (url: string, filename: string) => {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    };
     try {
-      const canvas = await html2canvas(exportCardRef.current, {
+      clone = source.cloneNode(true) as HTMLDivElement;
+      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
+        const sourceStyle = window.getComputedStyle(sourceNode);
+        const targetStyle = (targetNode as HTMLElement).style;
+        for (let index = 0; index < sourceStyle.length; index += 1) {
+          const property = sourceStyle.item(index);
+          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
+        }
+        Array.from(sourceNode.children).forEach((child, index) => {
+          const targetChild = targetNode.children[index];
+          if (targetChild) copyComputedStyles(child, targetChild);
+        });
+      };
+
+      document.body.appendChild(clone);
+      copyComputedStyles(source, clone);
+      clone.style.position = 'fixed';
+      clone.style.left = '-100000px';
+      clone.style.top = '0';
+      clone.style.width = `${Math.ceil(source.getBoundingClientRect().width)}px`;
+      clone.style.maxHeight = 'none';
+      clone.style.height = 'auto';
+      clone.style.overflow = 'visible';
+      clone.style.display = 'block';
+      clone.querySelectorAll<HTMLElement>('[data-concentrate-export-content]').forEach(element => {
+        element.style.height = 'auto';
+        element.style.maxHeight = 'none';
+        element.style.overflow = 'visible';
+        element.style.flex = 'none';
+      });
+      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
+
+      const width = Math.ceil(clone.getBoundingClientRect().width);
+      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
+      const canvas = await html2canvas(clone, {
         backgroundColor: '#0f172a',
-        scale: Math.max(2, window.devicePixelRatio || 1),
+        width,
+        height,
+        scale: 2,
         useCORS: true,
         logging: false,
-        ignoreElements: element => element.hasAttribute('data-html2canvas-ignore'),
-        onclone: clonedDocument => {
-          const clonedCard = clonedDocument.querySelector<HTMLElement>('[data-concentrate-export-card]');
-          const clonedContent = clonedDocument.querySelector<HTMLElement>('[data-concentrate-export-content]');
-          if (clonedCard) {
-            clonedCard.style.maxHeight = 'none';
-            clonedCard.style.height = 'auto';
-            clonedCard.style.overflow = 'visible';
-          }
-          if (clonedContent) {
-            clonedContent.style.maxHeight = 'none';
-            clonedContent.style.height = 'auto';
-            clonedContent.style.overflow = 'visible';
-          }
-        },
+        windowWidth: width,
+        windowHeight: height,
       });
+      const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      if (!jpg) throw new Error('Concentrate guide JPEG could not be exported.');
       const recipeSlug = (recipeHandoff?.name || 'concentrate-recipe-steps')
         .trim()
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '') || 'concentrate-recipe-steps';
-      const link = document.createElement('a');
-      link.download = `${recipeSlug}-steps.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.94);
-      link.click();
+      imageUrl = URL.createObjectURL(jpg);
+      downloadUrl(imageUrl, `${recipeSlug}-steps.jpg`);
+      const downloadedImageUrl = imageUrl;
+      imageUrl = null;
+      window.setTimeout(() => URL.revokeObjectURL(downloadedImageUrl), 1000);
       setSaveJpgStatus('saved');
       window.setTimeout(() => setSaveJpgStatus('idle'), 2200);
     } catch {
       setSaveJpgStatus('error');
     } finally {
+      clone?.remove();
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
       setIsSavingJpg(false);
     }
   };
@@ -9996,13 +9972,9 @@ function ConcentrateRecipeStepsModal({
               <BottleWine className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Concentrate guide</div>
               <h2 id="concentrate-recipe-steps-title" className="mt-1 text-base font-semibold text-white">
-                {recipeHandoff ? `${recipeHandoff.name} steps` : 'Concentrate recipe steps'}
+                {recipeHandoff ? recipeHandoff.name : 'Concentrate steps'}
               </h2>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                Prepare the concentrate first, then use the same measured dose for each concentrate in the final water.
-              </p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2" data-html2canvas-ignore="true">
@@ -10037,44 +10009,33 @@ function ConcentrateRecipeStepsModal({
           {recipeHandoff && plan ? (
             <>
               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
-                <div className="text-xs font-semibold text-slate-100">Current concentrate plan</div>
+                <div className="text-xs font-semibold text-slate-100">Plan</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-3 py-2.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Strategy</div>
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Style</div>
                     <div className="mt-1 text-sm font-semibold text-violet-100">{plan.strategyLabel}</div>
-                    <div className="mt-0.5 text-[10px] text-slate-500">
-                      {plan.groups.length} {plan.groups.length === 1 ? 'concentrate' : 'concentrates'} to prepare
-                    </div>
                   </div>
                   <div className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-3 py-2.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Concentrate strength</div>
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Strength</div>
                     <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">×{plan.strength || 0}</div>
                     {plan.maxSafeStrength != null && (
                       <div className={`mt-0.5 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
-                        Max safe ×{plan.maxSafeStrength}
+                        Max ×{plan.maxSafeStrength}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="mt-2 rounded-lg border border-sky-300/20 bg-sky-400/[0.06] px-3 py-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-sky-200/70">Concentrate volume</div>
-                    <div className="text-[9px] text-slate-500">from the active cards</div>
-                  </div>
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-sky-200/70">Volumes</div>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {plan.groups.map(group => {
-                      const groupSaltNames = group.saltIds
-                        .map(saltId => SALTS.find(salt => salt.id === saltId)?.name)
-                        .filter((name): name is string => Boolean(name));
                       return (
                         <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
                           <div className="min-w-0">
                             <div className="truncate text-[11px] font-semibold text-slate-200">{group.name}</div>
-                            <div className="mt-0.5 truncate text-[10px] text-slate-500">{groupSaltNames.join(' · ')}</div>
                           </div>
                           <div className="shrink-0 text-right">
                             <div className="text-sm font-semibold tabular-nums text-sky-100">{group.volumeMl.toFixed(0)} mL</div>
-                            <div className="text-[9px] uppercase tracking-wider text-slate-600">bottle volume</div>
                           </div>
                         </div>
                       );
@@ -10084,12 +10045,7 @@ function ConcentrateRecipeStepsModal({
               </section>
 
               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="text-xs font-semibold text-slate-100">Active recipe salts</div>
-                  <div className="text-[10px] tabular-nums text-fuchsia-200">
-                    Reflected from the current recipe
-                  </div>
-                </div>
+                <div className="text-xs font-semibold text-slate-100">Salts</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   {activeSaltRows.map(row => (
                     <div key={row.salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
@@ -10099,71 +10055,50 @@ function ConcentrateRecipeStepsModal({
                       </div>
                       <div className="shrink-0 text-right">
                         <div className="text-[10px] font-semibold tabular-nums text-slate-300">{row.target.toFixed(2)} ppm</div>
-                        <div className="text-[9px] uppercase tracking-wider text-slate-600">recipe target</div>
                       </div>
                     </div>
                   ))}
                 </div>
-                <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-                  The exact salt mass is shown on each active concentrate card below the chooser.
-                </p>
               </section>
             </>
           ) : (
             <section className="rounded-xl border border-amber-400/25 bg-amber-500/[0.07] p-3.5">
               <div className="text-xs font-semibold text-amber-100">
-                {recipeHandoff ? 'Loading the active concentrate plan' : 'No recipe is currently handed off'}
+                {recipeHandoff ? 'Loading…' : 'No recipe'}
               </div>
-              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                {recipeHandoff
-                  ? 'The guide will reflect the selected strategy, strength, and bottle volumes as soon as the builder state is available.'
-                  : 'Open the Calculator, choose a mineral recipe, and select Build concentrates from a recipe to populate recipe-specific salt amounts and dosing.'}
-              </p>
             </section>
           )}
 
           <section className="rounded-xl border border-violet-400/25 bg-violet-500/[0.07] p-3.5">
             <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
               <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
-              Dosing reference
+              Dose
             </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-              Add the amount below from <strong className="text-slate-200">each prepared concentrate</strong>. Drops use the current calibration of {safeDropsPerMl.toFixed(1)} drops/mL.
-            </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {doseRows.map(row => (
                 <article key={row.label} className="rounded-xl border border-violet-300/20 bg-slate-950/30 px-3.5 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-sm font-semibold text-slate-100">{row.label}</div>
-                    <div className="text-[10px] text-slate-500">{row.liters.toFixed(row.liters === 1 ? 0 : 2)} L final water</div>
                   </div>
                   {recipeHandoff && plan && concentrateStrength > 0 ? (
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Measured volume</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">mL</div>
                         <div className="mt-1 text-lg font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
                       </div>
                       <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Dropper estimate</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Drops</div>
                         <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{Math.round(row.drops)} drops</div>
                       </div>
                     </div>
                   ) : (
                     <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
-                      Recipe-specific dosing appears after a recipe is handed off from Calculator.
+                      No recipe.
                     </div>
                   )}
                 </article>
               ))}
             </div>
-            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-              Syringe or graduated-cylinder measurements are more precise than drops. When dosing multiple concentrates, add the listed amount from every bottle.
-            </p>
-          </section>
-
-          <section className="flex items-start gap-2 rounded-xl border border-sky-400/20 bg-sky-500/[0.05] px-3 py-3 text-[11px] leading-relaxed text-slate-400">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />
-            <span>Mix each concentrate until clear before dosing. Keep concentrate bottles separate unless the selected plan explicitly shows them as compatible.</span>
           </section>
         </div>
       </div>
