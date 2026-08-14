@@ -7559,16 +7559,17 @@ function LotusDropsSection() {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <SummaryMetric label="Stock strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
-                <SummaryMetric label={`Weigh for ${stockVolumeMl.toFixed(0)} mL`} value={`${plan.saltMassG.toFixed(2)} g`} detail={`${plan.hydrationMolarMass.toFixed(3)} g/mol`} tone="sky" />
+                <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(2)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
-                Weigh <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}.
-                Dissolve in partial distilled/RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL.
+                <strong className="text-slate-200">Tare the bottle and weigh {stockVolumeMl.toFixed(1)} g of distilled/RO water.</strong>
+                Add <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}, then dissolve completely.
+                The water number is a mass target—not {stockVolumeMl.toFixed(1)} mL of water and not the total solution weight.
                 The selected {style} model contributes about {plan.dropsPerMl.toFixed(1)} drops/mL;
                 calibrate the finished dropper before relying on whole-drop dosing.
               </p>
               <div className="mt-2 text-[10px] text-slate-600">
-                Use partial distilled/RO water while dissolving; final volume is the controlling measurement.
+                Weight-first preparation uses approximately 1 g water ≈ 1 mL; dissolved salt changes final volume slightly, so calibration matters.
               </div>
             </article>
           );
