@@ -29,6 +29,10 @@ instruction card rather than reusing the Brewer dry-salt/dropper modal.
 - Strategy, strength, and concentrate-volume values update in the guide while
   the workspace remains open; the guide never substitutes default values for
   the user’s active card inputs.
+- In the builder summary, the editable concentrate-volume inputs sit in their
+  own card directly below concentrate strength. The old Final brew batch input
+  is replaced by a dosing-reference button that swaps between 1 L and 1 US
+  gallon; lower concentrate cards show their volume as a read-only summary.
 - Without a recipe handoff, the card provides general concentrate preparation
   guidance and explains how to return to the Calculator for recipe-specific
   amounts.
