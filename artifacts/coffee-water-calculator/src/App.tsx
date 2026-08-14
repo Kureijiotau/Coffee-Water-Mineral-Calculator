@@ -9916,6 +9916,15 @@ function ConcentrateRecipeStepsModal({
         element.style.flex = 'none';
       });
       clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
+      clone.querySelectorAll<HTMLElement>('*').forEach(element => {
+        const computed = window.getComputedStyle(element);
+        const fontSize = parseFloat(computed.fontSize);
+        element.style.overflow = 'visible';
+        element.style.textOverflow = 'clip';
+        if (Number.isFinite(fontSize) && fontSize > 0) {
+          element.style.lineHeight = `${Math.ceil(fontSize * 1.25)}px`;
+        }
+      });
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
       const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
