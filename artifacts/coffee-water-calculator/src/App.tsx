@@ -7852,7 +7852,6 @@ function RecipeConcentrateBuilder({
           </button>
         </div>
       </section>
-
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/[0.08] via-slate-800/80 to-indigo-500/[0.08] p-4 shadow-xl sm:p-6">
         <StepHeading number="1" title="Style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
@@ -7977,7 +7976,7 @@ function RecipeConcentrateBuilder({
           </div>
           <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Volumes</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate Volume</span>
               <span className="text-[10px] text-slate-500">mL</span>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -8025,7 +8024,6 @@ function RecipeConcentrateBuilder({
           </div>
         )}
       </section>
-
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
@@ -8134,7 +8132,6 @@ function RecipeConcentrateBuilder({
           );
         })}
       </section>
-
       <section className="rounded-2xl border border-emerald-400/25 bg-emerald-500/[0.06] px-4 py-3 shadow-xl sm:px-5">
         <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
           <Info className="h-4 w-4 shrink-0 text-emerald-300" />
