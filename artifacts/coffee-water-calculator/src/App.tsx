@@ -5064,13 +5064,17 @@ function App() {
                 <option value="custom">Custom</option>
                 <optgroup label="Built-in">
                   {RECIPES.map(r => (
-                    <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>{r.name}</option>
+                    <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
+                      {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
+                    </option>
                   ))}
                 </optgroup>
                 {savedRecipes.length > 0 && (
                   <optgroup label="My recipes">
                     {savedRecipes.map(r => (
-                      <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>{r.name}</option>
+                      <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
+                        {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
+                      </option>
                     ))}
                   </optgroup>
                 )}
