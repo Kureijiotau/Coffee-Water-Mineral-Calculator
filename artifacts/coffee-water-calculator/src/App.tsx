@@ -4234,6 +4234,11 @@ function App() {
   const selectedExternalRecipe: ExternalRecipe | undefined = ROBERT_ASAMI_RECIPES.find(
     r => r.id === externalRecipeId,
   );
+  const mineralRecipeSelectorValue = activeRecipeId !== 'custom'
+    ? `recipe:${activeRecipeId}`
+    : externalRecipeId !== 'custom'
+    ? `external:${externalRecipeId}`
+    : 'custom';
   const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
   const hasSaltRecipeTargets = Object.values(saltTargets).some(target => target > 0);
   const selectedSourceRecipe = selectedExternalRecipe ?? (
@@ -4323,6 +4328,14 @@ function App() {
         ? { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx }
         : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
     }));
+  };
+
+  const handleMineralRecipeChange = (value: string) => {
+    if (value.startsWith('external:')) {
+      applyExternalRecipe(value.slice('external:'.length));
+      return;
+    }
+    applyRecipe(value.startsWith('recipe:') ? value.slice('recipe:'.length) : value);
   };
 
   const buildCurrentSalts = (): Record<string, SaltRecipeEntry> => {
@@ -5043,37 +5056,40 @@ function App() {
             </div>
               <div className="flex flex-wrap items-center justify-end gap-2">
               <select
-                value={activeRecipeId}
-                onChange={e => applyRecipe(e.target.value)}
-                 className="bg-sky-950/40 border border-sky-400/30 rounded-lg px-2.5 py-1.5 text-xs text-sky-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                value={mineralRecipeSelectorValue}
+                onChange={e => handleMineralRecipeChange(e.target.value)}
+                aria-label="Select mineral recipe"
+                className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
               >
                 <option value="custom">Custom</option>
                 <optgroup label="Built-in">
                   {RECIPES.map(r => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
+                    <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>{r.name}</option>
                   ))}
                 </optgroup>
                 {savedRecipes.length > 0 && (
                   <optgroup label="My recipes">
                     {savedRecipes.map(r => (
-                      <option key={r.id} value={r.id}>{r.name}</option>
+                      <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>{r.name}</option>
                     ))}
                   </optgroup>
                 )}
+                <optgroup label="Watering Hole · Filter">
+                  {ROBERT_ASAMI_RECIPES.filter(r => r.method === 'Filter').map(r => (
+                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Watering Hole · Espresso">
+                  {ROBERT_ASAMI_RECIPES.filter(r => r.method === 'Espresso').map(r => (
+                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Watering Hole · Tap-water proxy">
+                  {ROBERT_ASAMI_RECIPES.filter(r => r.method.includes('tap-water')).map(r => (
+                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
+                  ))}
+                </optgroup>
               </select>
-               <select
-                 value={externalRecipeId}
-                 onChange={e => applyExternalRecipe(e.target.value)}
-                 aria-label="Robert Asami Watering Hole recipes"
-                 className="max-w-[220px] bg-slate-700/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-400 transition"
-               >
-                 <option value="custom">Watering Hole recipes</option>
-                 <optgroup label="Robert Asami’s Watering Hole">
-                   {ROBERT_ASAMI_RECIPES.map(r => (
-                     <option key={r.id} value={r.id}>{r.name}</option>
-                   ))}
-                 </optgroup>
-               </select>
               {activeRecipeId === 'custom' && (
                 <button
                   onClick={handleSaveRecipe}
