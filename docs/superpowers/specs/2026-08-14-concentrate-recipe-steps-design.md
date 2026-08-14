@@ -12,13 +12,20 @@ instruction card rather than reusing the Brewer dry-salt/dropper modal.
 - The button opens a Concentrate-specific modal card.
 - When a recipe handoff exists, the card shows:
   - the current recipe name and active salts with hydration forms;
-  - clear preparation steps for every concentrate card;
+  - the selected concentrate strategy (GH + KH, All-in-one, or Separate
+    salts);
   - the current shared concentrate strength;
+  - a separate concentrate-volume card listing every active concentrate and
+    its current editable volume;
   - the max-safe-strength reminder when available;
-  - dosing for 1 L and 1 US gallon in both mL and drops.
+  - a single dosing reference card with a button that swaps between 1 L and
+    1 US gallon, showing both mL and drops.
 - Dosing uses the current recipe strength and the app’s calibrated drops-per-mL
   value. The listed dose is the amount to add from **each prepared
   concentrate**.
+- Strategy, strength, and concentrate-volume values update in the guide while
+  the workspace remains open; the guide never substitutes default values for
+  the user’s active card inputs.
 - Without a recipe handoff, the card provides general concentrate preparation
   guidance and explains how to return to the Calculator for recipe-specific
   amounts.
@@ -26,9 +33,11 @@ instruction card rather than reusing the Brewer dry-salt/dropper modal.
 ## Data flow
 
 `RecipeConcentrateBuilder` continues to own its calculation state, but reports
-the current strength to `ConcentrateWorkspace`. The workspace passes that
-strength, the recipe handoff, and the calibrated drops-per-mL value to the new
-steps card. Existing stock/group calculations remain unchanged.
+a small live plan snapshot to `ConcentrateWorkspace`. The snapshot contains
+the selected strategy, strength, max-safe strength, group identifiers, and
+current volume for each group. The workspace passes that snapshot, the recipe
+handoff, and the calibrated drops-per-mL value to the new steps card. Existing
+stock/group calculations remain unchanged.
 
 ## Verification
 
