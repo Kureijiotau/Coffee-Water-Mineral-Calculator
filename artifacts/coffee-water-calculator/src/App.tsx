@@ -7207,7 +7207,7 @@ function ConcentrateWorkspace({
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
               <div className="mt-0.5 text-xs text-slate-500">
                 {concentrateMode === 'lotus'
-                  ? 'Prepare four independent mineral droppers from the public source model.'
+                  ? 'Craft four independent mineral droppers for your own brewing setup.'
                   : 'Build and calibrate a single-mineral stock by weight.'}
               </div>
             </div>
@@ -7478,13 +7478,14 @@ function LotusDropsSection() {
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-rose-100">
             <FlaskConical className="h-4 w-4 text-rose-300" />
-              DIY Lotus Drops
+            DIY Lotus Drops
           </div>
           <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-bottle mineral system</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            Four independent stocks using publicly documented recipe inputs and ingredient identities.
-            This independent model is not affiliated with or endorsed by Lotus Coffee Products, and
-            does not claim to reproduce any proprietary manufacturing formula.
+             Prepare your own four independent stocks using public ingredient identities and recipe inputs.
+             Choose the recipe you prefer from the official instructions, then use its drop counts with
+             your finished droppers. This independent model is not affiliated with or endorsed by Lotus
+             Coffee Products, and does not claim to reproduce any proprietary manufacturing formula.
           </p>
         </div>
         <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
@@ -7500,7 +7501,8 @@ function LotusDropsSection() {
             Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
             formula or guaranteed drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML}
             Straight drops/mL and derives Round at 0.56×. Measure each finished stock and replace
-            that baseline here.
+            that baseline here. Once your droppers are prepared, use the official recipe instructions
+            to select the drop counts for your brew.
           </p>
         </div>
         <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
