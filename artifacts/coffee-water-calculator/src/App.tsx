@@ -7209,7 +7209,7 @@ function ConcentrateWorkspace({
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
               <div className="mt-0.5 text-xs text-slate-500">
                 {concentrateMode === 'lotus'
-                  ? 'Prepare four independent Lotus-style mineral droppers from the public source model.'
+                  ? 'Prepare four independent mineral droppers using publicly documented recipe inputs.'
                   : 'Build a calibrated single-mineral stock or continue a recipe handoff from the Calculator.'}
               </div>
             </div>
@@ -7217,7 +7217,7 @@ function ConcentrateWorkspace({
           <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
             {([
               ['builder', 'Stock Builder', 'Make one mineral stock'],
-              ['lotus', 'DIY Lotus Drops', 'Four independent dropper stocks'],
+              ['lotus', 'Four-Mineral Drops', 'Four independent dropper stocks'],
             ] as const).map(([value, label, description]) => (
               <button
                 key={value}
@@ -7483,28 +7483,29 @@ function LotusDropsSection() {
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-rose-100">
             <FlaskConical className="h-4 w-4 text-rose-300" />
-            DIY Lotus Drops
+            Four-Mineral Drops
           </div>
-          <h2 className="mt-2 text-xl font-semibold text-white">Clone the four-bottle Lotus system</h2>
+          <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-bottle mineral system</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-            Four independent stocks, using Lotus&apos;s public recipe model and ingredient identities.
-            The commercial manufacturing formula is not published, so these are nominal clone values
-            that should be refined with your own dropper calibration.
+            Four independent stocks using publicly documented recipe inputs and ingredient identities.
+            This independent model is not affiliated with or endorsed by Lotus Coffee Products, and
+            does not claim to reproduce any proprietary manufacturing formula.
           </p>
         </div>
         <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
-          Source model
+          Independent model
         </span>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-3 text-[11px] leading-relaxed text-amber-100/80">
-          <div className="font-semibold text-amber-200">What “nominal clone” means</div>
+          <div className="font-semibold text-amber-200">What this independent model means</div>
           <p className="mt-1">
-            Lotus publishes the 450 mL recipe inputs, rounded drops, a 0.56 Round/1.00 Straight
-            style factor, and 59 mL bottle size—but not the proprietary batch formula or guaranteed
-            drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML} Straight drops/mL
-            and derives Round at 0.56×. Measure each finished stock and replace that baseline here.
+            The public Lotus recipe calculator lists 450 mL recipe inputs, rounded drops, a 0.56
+            Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
+            formula or guaranteed drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML}
+            Straight drops/mL and derives Round at 0.56×. Measure each finished stock and replace
+            that baseline here.
           </p>
         </div>
         <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
@@ -7539,7 +7540,7 @@ function LotusDropsSection() {
                   value={stockVolumeInput}
                   onChange={event => setStockVolumeInput(event.target.value)}
                   className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                  aria-label="DIY Lotus stock volume in milliliters"
+                  aria-label="Four-mineral stock volume in milliliters"
                 />
                 <span className="text-xs text-slate-500">mL</span>
               </span>
@@ -7554,7 +7555,7 @@ function LotusDropsSection() {
                   value={straightDropsPerMlInput}
                   onChange={event => setStraightDropsPerMlInput(event.target.value)}
                   className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                  aria-label="DIY Lotus straight dropper calibration in drops per milliliter"
+                  aria-label="Straight dropper calibration in drops per milliliter"
                 />
                 <span className="text-xs text-slate-500">drops/mL</span>
               </span>
@@ -7579,7 +7580,7 @@ function LotusDropsSection() {
               value={selectedRecipe.id}
               onChange={event => setSelectedRecipeId(event.target.value)}
               className="mt-1 w-full rounded-lg border border-slate-700/60 bg-slate-900/70 px-2.5 py-2 text-sm font-semibold text-slate-100 outline-none"
-              aria-label="DIY Lotus recipe dosing preview"
+              aria-label="Four-mineral recipe dosing preview"
             >
               {LOTUS_RECIPES.map(recipe => <option key={recipe.id} value={recipe.id}>{recipe.name}</option>)}
             </select>
@@ -7635,7 +7636,7 @@ function LotusDropsSection() {
         <table className="w-full min-w-[760px] text-left text-xs">
           <thead className="bg-slate-950/35 text-[10px] uppercase tracking-wider text-slate-500">
             <tr>
-              <th className="px-3 py-2.5">Lotus recipe</th>
+              <th className="px-3 py-2.5">Published recipe</th>
               <th className="px-3 py-2.5 text-right">Round Mg / Ca / K / Na</th>
               <th className="px-3 py-2.5 text-right">Straight Mg / Ca / K / Na</th>
               <th className="px-3 py-2.5 text-right">Ion profile</th>
@@ -7667,15 +7668,15 @@ function LotusDropsSection() {
       <p className="text-[10px] leading-relaxed text-slate-500">
         Sources:{' '}
         <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/pages/product-instructions" target="_blank" rel="noreferrer">
-          Lotus recipe calculator
+          Public recipe calculator source
         </a>
         {' · '}
         <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/products/lotus-water-1" target="_blank" rel="noreferrer">
-          Lotus Water ingredients
+          Ingredient source
         </a>
         {' · '}
         <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/blogs/lotus-blog/precision-brewing-an-exploration-of-dropper-variability-in-making-water-for-coffee" target="_blank" rel="noreferrer">
-          dropper calibration notes
+          Dropper calibration reference
         </a>
       </p>
     </section>
