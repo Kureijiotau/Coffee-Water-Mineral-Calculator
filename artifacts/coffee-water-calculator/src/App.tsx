@@ -9873,7 +9873,9 @@ function ConcentrateRecipeStepsModal({
   dropsPerMl: number;
   onClose: () => void;
 }) {
-  const [doseUnit, setDoseUnit] = useState<'liters' | 'gallons'>('liters');
+  const exportCardRef = useRef<HTMLDivElement>(null);
+  const [isSavingJpg, setIsSavingJpg] = useState(false);
+  const [saveJpgStatus, setSaveJpgStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const concentrateStrength = plan?.strength ?? 0;
   const activeSaltRows = recipeHandoff
     ? Object.entries(recipeHandoff.salts)
@@ -9895,10 +9897,61 @@ function ConcentrateRecipeStepsModal({
     : [];
   const doseMlPerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const safeDropsPerMl = Number.isFinite(dropsPerMl) && dropsPerMl > 0 ? dropsPerMl : 20;
-  const doseLiters = doseUnit === 'liters' ? 1 : 3.78541;
-  const doseLabel = doseUnit === 'liters' ? '1 L' : '1 US gallon';
-  const doseMilliliters = doseMlPerLiter * doseLiters;
-  const doseDrops = doseMilliliters * safeDropsPerMl;
+  const doseRows = [
+    { label: '1 L', liters: 1 },
+    { label: '1 US gallon', liters: 3.78541 },
+  ].map(({ label, liters }) => {
+    const milliliters = doseMlPerLiter * liters;
+    return {
+      label,
+      liters,
+      milliliters,
+      drops: milliliters * safeDropsPerMl,
+    };
+  });
+  const handleSaveJpg = async () => {
+    if (!exportCardRef.current || isSavingJpg) return;
+    setIsSavingJpg(true);
+    setSaveJpgStatus('idle');
+    try {
+      const canvas = await html2canvas(exportCardRef.current, {
+        backgroundColor: '#0f172a',
+        scale: Math.max(2, window.devicePixelRatio || 1),
+        useCORS: true,
+        logging: false,
+        ignoreElements: element => element.hasAttribute('data-html2canvas-ignore'),
+        onclone: clonedDocument => {
+          const clonedCard = clonedDocument.querySelector<HTMLElement>('[data-concentrate-export-card]');
+          const clonedContent = clonedDocument.querySelector<HTMLElement>('[data-concentrate-export-content]');
+          if (clonedCard) {
+            clonedCard.style.maxHeight = 'none';
+            clonedCard.style.height = 'auto';
+            clonedCard.style.overflow = 'visible';
+          }
+          if (clonedContent) {
+            clonedContent.style.maxHeight = 'none';
+            clonedContent.style.height = 'auto';
+            clonedContent.style.overflow = 'visible';
+          }
+        },
+      });
+      const recipeSlug = (recipeHandoff?.name || 'concentrate-recipe-steps')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'concentrate-recipe-steps';
+      const link = document.createElement('a');
+      link.download = `${recipeSlug}-steps.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.94);
+      link.click();
+      setSaveJpgStatus('saved');
+      window.setTimeout(() => setSaveJpgStatus('idle'), 2200);
+    } catch {
+      setSaveJpgStatus('error');
+    } finally {
+      setIsSavingJpg(false);
+    }
+  };
 
   return (
     <div
@@ -9911,6 +9964,8 @@ function ConcentrateRecipeStepsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="concentrate-recipe-steps-title"
+        ref={exportCardRef}
+        data-concentrate-export-card
       >
         <div className="flex items-start justify-between gap-3 border-b border-fuchsia-400/20 bg-gradient-to-r from-fuchsia-500/15 via-slate-900/60 to-violet-500/10 px-5 py-4">
           <div className="flex items-start gap-3">
@@ -9927,30 +9982,35 @@ function ConcentrateRecipeStepsModal({
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
-            aria-label="Close concentrate recipe steps"
-          >
-            <X className="h-4 w-4" aria-hidden="true" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2" data-html2canvas-ignore="true">
+            <button
+              type="button"
+              onClick={handleSaveJpg}
+              disabled={isSavingJpg}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+                saveJpgStatus === 'error'
+                  ? 'border-rose-300/35 bg-rose-400/10 text-rose-200'
+                  : saveJpgStatus === 'saved'
+                  ? 'border-emerald-300/35 bg-emerald-400/10 text-emerald-200'
+                  : 'border-fuchsia-300/30 bg-fuchsia-400/10 text-fuchsia-100 hover:border-fuchsia-200/60 hover:bg-fuchsia-400/20'
+              } disabled:cursor-wait disabled:opacity-70`}
+              aria-label="Save concentrate recipe steps as JPG"
+            >
+              <Save className="h-3.5 w-3.5" aria-hidden="true" />
+              {isSavingJpg ? 'Saving…' : saveJpgStatus === 'saved' ? 'Saved JPG' : saveJpgStatus === 'error' ? 'Try again' : 'Save JPG'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200"
+              aria-label="Close concentrate recipe steps"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        <div className="space-y-4 overflow-y-auto p-4 sm:p-5">
-          <section className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.07] p-3.5">
-            <div className="flex items-center gap-2 text-xs font-semibold text-emerald-100">
-              <ListChecks className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              Prepare the concentrate
-            </div>
-            <ol className="mt-2 list-inside list-decimal space-y-1.5 text-[11px] leading-relaxed text-slate-300">
-              <li>Choose the concentrate style and strength in the workspace.</li>
-              <li>For each concentrate card, weigh the listed salts using the selected hydration form.</li>
-              <li>Dissolve the salts in partial distilled or RO water, then top up to the exact concentrate volume.</li>
-              <li>Label each bottle with the recipe, concentrate grouping, strength, and preparation date.</li>
-            </ol>
-          </section>
-
+        <div className="space-y-4 overflow-y-auto p-4 sm:p-5" data-concentrate-export-content>
           {recipeHandoff && plan ? (
             <>
               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
@@ -10040,41 +10100,39 @@ function ConcentrateRecipeStepsModal({
           )}
 
           <section className="rounded-xl border border-violet-400/25 bg-violet-500/[0.07] p-3.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
-                <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
-                Dosing reference
-              </div>
-              <button
-                type="button"
-                onClick={() => setDoseUnit(current => current === 'liters' ? 'gallons' : 'liters')}
-                className="rounded-lg border border-violet-300/30 bg-violet-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/60 hover:bg-violet-400/20"
-                aria-label={`Switch dosing reference to ${doseUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
-              >
-                {doseLabel} · swap
-              </button>
+            <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
+              <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
+              Dosing reference
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
               Add the amount below from <strong className="text-slate-200">each prepared concentrate</strong>. Drops use the current calibration of {safeDropsPerMl.toFixed(1)} drops/mL.
             </p>
-            {recipeHandoff && plan && concentrateStrength > 0 ? (
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-xl border border-violet-300/20 bg-violet-400/10 px-3.5 py-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Measured volume</div>
-                  <div className="mt-1 text-2xl font-semibold tabular-nums text-violet-100">{doseMilliliters.toFixed(2)} mL</div>
-                  <div className="mt-1 text-[10px] text-slate-500">{doseLabel} final water</div>
-                </div>
-                <div className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-400/10 px-3.5 py-3">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Dropper estimate</div>
-                  <div className="mt-1 text-2xl font-semibold tabular-nums text-fuchsia-100">{Math.round(doseDrops)} drops</div>
-                  <div className="mt-1 text-[10px] text-slate-500">{safeDropsPerMl.toFixed(1)} drops/mL calibration</div>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
-                Recipe-specific dosing appears after a recipe is handed off from Calculator.
-              </div>
-            )}
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {doseRows.map(row => (
+                <article key={row.label} className="rounded-xl border border-violet-300/20 bg-slate-950/30 px-3.5 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-slate-100">{row.label}</div>
+                    <div className="text-[10px] text-slate-500">{row.liters.toFixed(row.liters === 1 ? 0 : 2)} L final water</div>
+                  </div>
+                  {recipeHandoff && plan && concentrateStrength > 0 ? (
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Measured volume</div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
+                      </div>
+                      <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/10 px-2.5 py-2">
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Dropper estimate</div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{Math.round(row.drops)} drops</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
+                      Recipe-specific dosing appears after a recipe is handed off from Calculator.
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
             <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
               Syringe or graduated-cylinder measurements are more precise than drops. When dosing multiple concentrates, add the listed amount from every bottle.
             </p>
