@@ -58,6 +58,19 @@ export type ConcentrateRecipeHandoff = {
   salts: Record<string, SaltRecipeEntry>;
   finalLiters: number;
 };
+type ConcentrateStrategy = 'gh-kh' | 'all-in-one' | 'individual';
+type ConcentratePlanSnapshot = {
+  strategy: ConcentrateStrategy;
+  strategyLabel: string;
+  strength: number;
+  maxSafeStrength: number | null;
+  groups: Array<{
+    id: string;
+    name: string;
+    volumeMl: number;
+    saltIds: string[];
+  }>;
+};
 
 export function computeRecipeStockSaltMassMg(
   targetPpm: number,
@@ -7195,7 +7208,7 @@ function ConcentrateWorkspace({
   const [doseLiters, setDoseLiters] = useState('1');
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [showConcentrateSteps, setShowConcentrateSteps] = useState(false);
-  const [recipeStrengthInput, setRecipeStrengthInput] = useState('500');
+  const [recipeConcentratePlan, setRecipeConcentratePlan] = useState<ConcentratePlanSnapshot | null>(null);
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
@@ -7284,7 +7297,7 @@ function ConcentrateWorkspace({
           volumeUnit={volumeUnit}
           onToggleVolumeUnit={onToggleVolumeUnit}
           onClear={onClearRecipeHandoff}
-          onStrengthChange={setRecipeStrengthInput}
+          onPlanChange={setRecipeConcentratePlan}
         />
       ) : (
         <>
@@ -7502,7 +7515,7 @@ function ConcentrateWorkspace({
       {showConcentrateSteps && (
         <ConcentrateRecipeStepsModal
           recipeHandoff={recipeHandoff}
-          concentrateStrength={Math.max(0, Number(recipeStrengthInput) || 0)}
+          plan={recipeConcentratePlan}
           dropsPerMl={dropsPerMl}
           onClose={() => setShowConcentrateSteps(false)}
         />
@@ -7679,13 +7692,13 @@ function RecipeConcentrateBuilder({
   volumeUnit,
   onToggleVolumeUnit,
   onClear,
-  onStrengthChange,
+  onPlanChange,
 }: {
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
   onClear: () => void;
-  onStrengthChange: (value: string) => void;
+  onPlanChange: (plan: ConcentratePlanSnapshot) => void;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
   const [stockStrategy, setStockStrategy] = useState<'gh-kh' | 'all-in-one' | 'individual'>('gh-kh');
@@ -7699,7 +7712,6 @@ function RecipeConcentrateBuilder({
 
   useEffect(() => {
     setStrengthInput('500');
-    onStrengthChange('500');
     setStockStrategy('gh-kh');
     setStockVolumeInputs({
       hardness: '500',
@@ -7708,7 +7720,7 @@ function RecipeConcentrateBuilder({
       'all-in-one': '500',
     });
     setFinalLiters(Math.max(handoff.finalLiters, 1));
-  }, [handoff, onStrengthChange]);
+  }, [handoff]);
 
   const strength = Math.max(0, Number(strengthInput) || 0);
   const saltTargets = Object.fromEntries(
@@ -7775,6 +7787,36 @@ function RecipeConcentrateBuilder({
         description: 'Recommended compatible grouping',
         helper: 'The recommended balance of simplicity and stability. Hardness, alkalinity, and citrate stay in compatible groups when needed.',
       };
+  const planGroupSignature = stockGroups
+    .map(group => `${group.id}:${group.saltIds.join(',')}`)
+    .join('|');
+  const planVolumeSignature = Object.entries(stockVolumeInputs)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([groupId, volume]) => `${groupId}:${volume}`)
+    .join('|');
+
+  useEffect(() => {
+    onPlanChange({
+      strategy: stockStrategy,
+      strategyLabel: stockStrategyDetails.label,
+      strength,
+      maxSafeStrength,
+      groups: stockGroups.map(group => ({
+        id: group.id,
+        name: group.name.replace(/ Stock$/, ' Concentrate'),
+        volumeMl: Math.max(0, Number(stockVolumeInputs[group.id] ?? '500') || 0),
+        saltIds: [...group.saltIds],
+      })),
+    });
+  }, [
+    maxSafeStrength,
+    onPlanChange,
+    planGroupSignature,
+    planVolumeSignature,
+    stockStrategy,
+    stockStrategyDetails.label,
+    strength,
+  ]);
 
   const groupTone: Record<StockGroup['color'], {
     border: string;
@@ -7933,7 +7975,6 @@ function RecipeConcentrateBuilder({
                 value={strengthInput}
                 onChange={event => {
                   setStrengthInput(event.target.value);
-                  onStrengthChange(event.target.value);
                 }}
                 className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
                 aria-label="Recipe concentrate strength multiplier"
@@ -9823,15 +9864,17 @@ function MineralAnalysisLabel({
 
 function ConcentrateRecipeStepsModal({
   recipeHandoff,
-  concentrateStrength,
+  plan,
   dropsPerMl,
   onClose,
 }: {
   recipeHandoff: ConcentrateRecipeHandoff | null;
-  concentrateStrength: number;
+  plan: ConcentratePlanSnapshot | null;
   dropsPerMl: number;
   onClose: () => void;
 }) {
+  const [doseUnit, setDoseUnit] = useState<'liters' | 'gallons'>('liters');
+  const concentrateStrength = plan?.strength ?? 0;
   const activeSaltRows = recipeHandoff
     ? Object.entries(recipeHandoff.salts)
         .map(([saltId, entry]) => {
@@ -9852,18 +9895,10 @@ function ConcentrateRecipeStepsModal({
     : [];
   const doseMlPerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const safeDropsPerMl = Number.isFinite(dropsPerMl) && dropsPerMl > 0 ? dropsPerMl : 20;
-  const doseRows = [
-    { label: '1 L', liters: 1 },
-    { label: '1 US gallon', liters: 3.78541 },
-  ].map(({ label, liters }) => {
-    const milliliters = doseMlPerLiter * liters;
-    return {
-      label,
-      liters,
-      milliliters,
-      drops: milliliters * safeDropsPerMl,
-    };
-  });
+  const doseLiters = doseUnit === 'liters' ? 1 : 3.78541;
+  const doseLabel = doseUnit === 'liters' ? '1 L' : '1 US gallon';
+  const doseMilliliters = doseMlPerLiter * doseLiters;
+  const doseDrops = doseMilliliters * safeDropsPerMl;
 
   return (
     <div
@@ -9916,75 +9951,130 @@ function ConcentrateRecipeStepsModal({
             </ol>
           </section>
 
-          {recipeHandoff ? (
-            <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <div className="text-xs font-semibold text-slate-100">Active recipe salts</div>
-                <div className="text-[10px] tabular-nums text-fuchsia-200">
-                  Shared strength ×{concentrateStrength || 0}
-                </div>
-              </div>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                {activeSaltRows.map(row => (
-                  <div key={row.salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-[11px] font-semibold text-slate-200">{row.salt.name}</div>
-                      <div className="mt-0.5 truncate text-[10px] text-slate-500">{row.form.label}</div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-[10px] font-semibold tabular-nums text-slate-300">{row.target.toFixed(2)} ppm</div>
-                      <div className="text-[9px] uppercase tracking-wider text-slate-600">recipe target</div>
+          {recipeHandoff && plan ? (
+            <>
+              <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
+                <div className="text-xs font-semibold text-slate-100">Current concentrate plan</div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-3 py-2.5">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Strategy</div>
+                    <div className="mt-1 text-sm font-semibold text-violet-100">{plan.strategyLabel}</div>
+                    <div className="mt-0.5 text-[10px] text-slate-500">
+                      {plan.groups.length} {plan.groups.length === 1 ? 'concentrate' : 'concentrates'} to prepare
                     </div>
                   </div>
-                ))}
-              </div>
-              <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-                The exact salt mass and bottle volume are shown on each concentrate card below the chooser.
-              </p>
-            </section>
+                  <div className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-3 py-2.5">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Concentrate strength</div>
+                    <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">×{plan.strength || 0}</div>
+                    {plan.maxSafeStrength != null && (
+                      <div className={`mt-0.5 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
+                        Max safe ×{plan.maxSafeStrength}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-2 rounded-lg border border-sky-300/20 bg-sky-400/[0.06] px-3 py-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-sky-200/70">Concentrate volume</div>
+                    <div className="text-[9px] text-slate-500">from the active cards</div>
+                  </div>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {plan.groups.map(group => {
+                      const groupSaltNames = group.saltIds
+                        .map(saltId => SALTS.find(salt => salt.id === saltId)?.name)
+                        .filter((name): name is string => Boolean(name));
+                      return (
+                        <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
+                          <div className="min-w-0">
+                            <div className="truncate text-[11px] font-semibold text-slate-200">{group.name}</div>
+                            <div className="mt-0.5 truncate text-[10px] text-slate-500">{groupSaltNames.join(' · ')}</div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-sm font-semibold tabular-nums text-sky-100">{group.volumeMl.toFixed(0)} mL</div>
+                            <div className="text-[9px] uppercase tracking-wider text-slate-600">bottle volume</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <div className="text-xs font-semibold text-slate-100">Active recipe salts</div>
+                  <div className="text-[10px] tabular-nums text-fuchsia-200">
+                    Reflected from the current recipe
+                  </div>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {activeSaltRows.map(row => (
+                    <div key={row.salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-[11px] font-semibold text-slate-200">{row.salt.name}</div>
+                        <div className="mt-0.5 truncate text-[10px] text-slate-500">{row.form.label}</div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="text-[10px] font-semibold tabular-nums text-slate-300">{row.target.toFixed(2)} ppm</div>
+                        <div className="text-[9px] uppercase tracking-wider text-slate-600">recipe target</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+                  The exact salt mass is shown on each active concentrate card below the chooser.
+                </p>
+              </section>
+            </>
           ) : (
             <section className="rounded-xl border border-amber-400/25 bg-amber-500/[0.07] p-3.5">
-              <div className="text-xs font-semibold text-amber-100">No recipe is currently handed off</div>
+              <div className="text-xs font-semibold text-amber-100">
+                {recipeHandoff ? 'Loading the active concentrate plan' : 'No recipe is currently handed off'}
+              </div>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                Open the Calculator, choose a mineral recipe, and select Build concentrates from a recipe to populate recipe-specific salt amounts and dosing.
+                {recipeHandoff
+                  ? 'The guide will reflect the selected strategy, strength, and bottle volumes as soon as the builder state is available.'
+                  : 'Open the Calculator, choose a mineral recipe, and select Build concentrates from a recipe to populate recipe-specific salt amounts and dosing.'}
               </p>
             </section>
           )}
 
           <section className="rounded-xl border border-violet-400/25 bg-violet-500/[0.07] p-3.5">
-            <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
-              <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
-              Dosing reference
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
+                <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
+                Dosing reference
+              </div>
+              <button
+                type="button"
+                onClick={() => setDoseUnit(current => current === 'liters' ? 'gallons' : 'liters')}
+                className="rounded-lg border border-violet-300/30 bg-violet-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/60 hover:bg-violet-400/20"
+                aria-label={`Switch dosing reference to ${doseUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
+              >
+                {doseLabel} · swap
+              </button>
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
               Add the amount below from <strong className="text-slate-200">each prepared concentrate</strong>. Drops use the current calibration of {safeDropsPerMl.toFixed(1)} drops/mL.
             </p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {doseRows.map(row => (
-                <article key={row.label} className="rounded-xl border border-violet-300/20 bg-slate-950/30 px-3.5 py-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-semibold text-slate-100">{row.label}</div>
-                    <div className="text-[10px] text-slate-500">{row.liters.toFixed(row.liters === 1 ? 0 : 2)} L final water</div>
-                  </div>
-                  {recipeHandoff && concentrateStrength > 0 ? (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Measured volume</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
-                      </div>
-                      <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Dropper estimate</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{Math.round(row.drops)} drops</div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
-                      Recipe-specific dosing appears after a recipe is handed off from Calculator.
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
+            {recipeHandoff && plan && concentrateStrength > 0 ? (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="rounded-xl border border-violet-300/20 bg-violet-400/10 px-3.5 py-3">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Measured volume</div>
+                  <div className="mt-1 text-2xl font-semibold tabular-nums text-violet-100">{doseMilliliters.toFixed(2)} mL</div>
+                  <div className="mt-1 text-[10px] text-slate-500">{doseLabel} final water</div>
+                </div>
+                <div className="rounded-xl border border-fuchsia-300/20 bg-fuchsia-400/10 px-3.5 py-3">
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Dropper estimate</div>
+                  <div className="mt-1 text-2xl font-semibold tabular-nums text-fuchsia-100">{Math.round(doseDrops)} drops</div>
+                  <div className="mt-1 text-[10px] text-slate-500">{safeDropsPerMl.toFixed(1)} drops/mL calibration</div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
+                Recipe-specific dosing appears after a recipe is handed off from Calculator.
+              </div>
+            )}
             <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
               Syringe or graduated-cylinder measurements are more precise than drops. When dosing multiple concentrates, add the listed amount from every bottle.
             </p>
