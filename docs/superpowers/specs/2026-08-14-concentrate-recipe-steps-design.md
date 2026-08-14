@@ -29,6 +29,12 @@ instruction card rather than reusing the Brewer dry-salt/dropper modal.
 - Strategy, strength, and concentrate-volume values update in the guide while
   the workspace remains open; the guide never substitutes default values for
   the user’s active card inputs.
+- The builder uses data-first labels: keep recipe names, strategy names, values,
+  table headings, and actionable warnings; remove repeated helper paragraphs,
+  card footers, and duplicate preparation instructions.
+- The Recipe steps modal uses the same minimal-copy rule. It keeps the plan,
+  salt, volume, and dose data but removes explanatory subtitles and repeated
+  descriptions.
 - In the builder summary, the editable concentrate-volume inputs sit in their
   own card directly below concentrate strength. The old Final brew batch input
   is replaced by a dosing-reference button that swaps between 1 L and 1 US
@@ -47,9 +53,12 @@ handoff, and the calibrated drops-per-mL value to the new steps card. Existing
 stock/group calculations remain unchanged.
 
 The modal keeps a ref to the exportable card surface and uses the app’s
-existing `html2canvas` dependency to create a high-resolution JPEG. Export
-controls are excluded from the captured surface, and a temporary saved state
-provides feedback without changing recipe data.
+existing `html2canvas` dependency to create a high-resolution JPEG. Saving
+clones the card into an off-screen, expanded document node so the modal’s
+scroll clipping cannot truncate the image. Export controls are removed from
+the clone, the canvas is converted to a JPEG blob, and the blob is downloaded
+through a temporary object URL. A temporary saved state provides feedback
+without changing recipe data.
 
 ## Verification
 
