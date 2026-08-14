@@ -7708,7 +7708,6 @@ function RecipeConcentrateBuilder({
     citrate: '500',
     'all-in-one': '500',
   });
-  const [finalLiters, setFinalLiters] = useState(Math.max(handoff.finalLiters, 1));
 
   useEffect(() => {
     setStrengthInput('500');
@@ -7719,7 +7718,6 @@ function RecipeConcentrateBuilder({
       citrate: '500',
       'all-in-one': '500',
     });
-    setFinalLiters(Math.max(handoff.finalLiters, 1));
   }, [handoff]);
 
   const strength = Math.max(0, Number(strengthInput) || 0);
@@ -7767,8 +7765,10 @@ function RecipeConcentrateBuilder({
     individual: maxSafeStrengthFor(individualStockGroups),
   };
   const maxSafeStrength = maxSafeStrengthByStrategy[stockStrategy];
+  const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
+  const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
-  const doseMlPerBatch = doseMlPerLiter * finalLiters;
+  const doseMlPerReference = doseMlPerLiter * doseReferenceLiters;
   const totalSaltCount = Object.keys(handoff.salts).length;
   const stockStrategyDetails = stockStrategy === 'all-in-one'
     ? {
@@ -7868,7 +7868,7 @@ function RecipeConcentrateBuilder({
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/[0.08] via-slate-800/80 to-indigo-500/[0.08] p-4 shadow-xl sm:p-6">
         <StepHeading number="1" title="Choose your concentrate style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
         <p className="mt-3 max-w-3xl text-xs leading-relaxed text-slate-400">
-          Decide how you want to make and dose your recipe before setting the batch size. You can change this plan at any time.
+          Decide how you want to make and dose your recipe, then choose the reference amount for the final water. You can change this plan at any time.
         </p>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {[
@@ -7941,60 +7941,97 @@ function RecipeConcentrateBuilder({
             </button>
           ))}
         </div>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              <span className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
-                  <BottleWine className="h-4 w-4" aria-hidden="true" />
+        <div className="mt-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <span className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
+                    <BottleWine className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <label htmlFor="recipe-stock-strength">Concentrate strength</label>
                 </span>
-                <label htmlFor="recipe-stock-strength">Concentrate strength</label>
-              </span>
-              {maxSafeStrength != null && (
+                {maxSafeStrength != null && (
+                  <button
+                    type="button"
+                    onClick={() => setStrengthInput(String(maxSafeStrength))}
+                    className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
+                      strength > maxSafeStrength
+                        ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
+                        : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
+                    }`}
+                    aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
+                    title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
+                  >
+                    Max safe ×{maxSafeStrength}
+                  </button>
+                )}
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <input
+                  id="recipe-stock-strength"
+                  type="number"
+                  min="1"
+                  step="10"
+                  value={strengthInput}
+                  onChange={event => setStrengthInput(event.target.value)}
+                  className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                  aria-label="Recipe concentrate strength multiplier"
+                />
+                <span className="text-sm text-slate-400">×</span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.06] px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <span>Dosing reference</span>
                 <button
                   type="button"
-                  onClick={() => setStrengthInput(String(maxSafeStrength))}
-                  className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
-                    strength > maxSafeStrength
-                      ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
-                      : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
-                  }`}
-                  aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
-                  title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
+                  onClick={onToggleVolumeUnit}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-sky-100 transition hover:border-sky-200/60 hover:bg-sky-400/20"
+                  aria-label={`Switch dosing reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
+                  title={`Switch to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
                 >
-                  Max safe ×{maxSafeStrength}
+                  <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                  {doseReferenceLabel}
                 </button>
-              )}
-            </div>
-            <div className="mt-1 flex items-center gap-2">
-              <input
-                id="recipe-stock-strength"
-                type="number"
-                min="1"
-                step="10"
-                value={strengthInput}
-                onChange={event => {
-                  setStrengthInput(event.target.value);
-                }}
-                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Recipe concentrate strength multiplier"
-              />
-              <span className="text-sm text-slate-400">×</span>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-slate-400">
+                Dose per selected reference amount of final water.
+              </p>
             </div>
           </div>
-          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Final brew batch
-              <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
-            </span>
-            <VolumeInput
-              liters={finalLiters}
-              unit={volumeUnit}
-              onChangeLiters={value => setFinalLiters(volumeToLiters(value, volumeUnit))}
-              ariaLabel={`Recipe final brew volume in ${volumeUnitLabel(volumeUnit)}`}
-              className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-            />
-          </label>
+          <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate volume</span>
+              <span className="text-[10px] text-slate-500">Set each bottle below · mL</span>
+            </div>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {stockGroups.map(group => {
+                const groupName = group.name.replace(/ Stock$/, ' Concentrate');
+                const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
+                return (
+                  <label key={group.id} className="rounded-lg border border-sky-300/15 bg-slate-900/55 px-3 py-2">
+                    <span className="block truncate text-[10px] font-semibold text-slate-300">{groupName}</span>
+                    <span className="mt-1 flex items-center gap-1.5 rounded-md border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                      <input
+                        type="number"
+                        min="1"
+                        step="10"
+                        value={stockVolumeInput}
+                        onChange={event => setStockVolumeInputs(prev => ({
+                          ...prev,
+                          [group.id]: event.target.value,
+                        }))}
+                        className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                        aria-label={`${groupName} volume in milliliters`}
+                      />
+                      <span className="text-xs text-slate-400">mL</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <SummaryMetric
@@ -8004,9 +8041,9 @@ function RecipeConcentrateBuilder({
             tone="fuchsia"
           />
           <SummaryMetric
-            label="Dose per batch"
-            value={`${doseMlPerBatch.toFixed(2)} mL`}
-            detail={`${formatVolumeValue(finalLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} final water`}
+            label="Dose per reference"
+            value={`${doseMlPerReference.toFixed(2)} mL`}
+            detail={`${doseReferenceLabel} final water`}
             tone="sky"
           />
           <SummaryMetric
@@ -8092,24 +8129,10 @@ function RecipeConcentrateBuilder({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-end justify-end gap-3">
-                  <label className="text-left">
+                  <div className="text-right">
                     <span className="block text-[10px] uppercase tracking-wider text-slate-500">Concentrate volume</span>
-                    <span className="mt-1 flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2 py-1.5">
-                      <input
-                        type="number"
-                        min="1"
-                        step="10"
-                        value={stockVolumeInput}
-                        onChange={event => setStockVolumeInputs(prev => ({
-                          ...prev,
-                          [group.id]: event.target.value,
-                        }))}
-                        className="w-20 bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                         aria-label={`${groupName} volume in milliliters`}
-                      />
-                      <span className="text-xs text-slate-400">mL</span>
-                    </span>
-                  </label>
+                    <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{stockVolumeMl.toFixed(0)} mL</div>
+                  </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Max safe strength</div>
                     <div className={`mt-1 text-lg font-semibold tabular-nums ${
@@ -8117,8 +8140,8 @@ function RecipeConcentrateBuilder({
                     }`}>×{groupMaxSafeStrength}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per batch</div>
-                    <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerBatch.toFixed(2)} mL</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose per reference</div>
+                    <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerReference.toFixed(2)} mL</div>
                   </div>
                 </div>
               </div>
@@ -8176,7 +8199,7 @@ function RecipeConcentrateBuilder({
           <div>
             <h2 className="text-sm font-semibold text-emerald-100">Use the concentrates in your recipe</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Add {doseMlPerBatch.toFixed(2)} mL from each prepared concentrate to the {formatVolumeValue(finalLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} final batch.
+              Add {doseMlPerReference.toFixed(2)} mL from each prepared concentrate to {doseReferenceLabel} of final water.
               Add the concentrates one at a time and mix until clear. For drop-based dosing, calibrate each concentrate separately in Single mineral mode.
             </p>
           </div>
