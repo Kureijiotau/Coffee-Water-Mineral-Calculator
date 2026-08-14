@@ -7662,21 +7662,23 @@ function RecipeConcentrateBuilder({
   onClear: () => void;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
-  const [stockLayout, setStockLayout] = useState<'compatible' | 'individual'>('compatible');
+  const [stockStrategy, setStockStrategy] = useState<'gh-kh' | 'all-in-one' | 'individual'>('gh-kh');
   const [stockVolumeInputs, setStockVolumeInputs] = useState<Record<string, string>>({
     hardness: '500',
     alkalinity: '500',
     citrate: '500',
+    'all-in-one': '500',
   });
   const [finalLiters, setFinalLiters] = useState(Math.max(handoff.finalLiters, 1));
 
   useEffect(() => {
     setStrengthInput('500');
-    setStockLayout('compatible');
+    setStockStrategy('gh-kh');
     setStockVolumeInputs({
       hardness: '500',
       alkalinity: '500',
       citrate: '500',
+      'all-in-one': '500',
     });
     setFinalLiters(Math.max(handoff.finalLiters, 1));
   }, [handoff]);
@@ -7686,9 +7688,20 @@ function RecipeConcentrateBuilder({
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
   );
   const compatibleStockGroups = splitIntoStockGroups(saltTargets);
-  const stockGroups = stockLayout === 'compatible'
-    ? compatibleStockGroups
-    : compatibleStockGroups.flatMap(group =>
+  const activeSaltIds = Object.entries(saltTargets)
+    .filter(([, target]) => target > 0)
+    .map(([saltId]) => saltId);
+  const stockGroups = stockStrategy === 'all-in-one'
+    ? activeSaltIds.length > 0
+      ? [{
+          id: 'all-in-one',
+          name: 'All-in-one Stock',
+          saltIds: activeSaltIds,
+          color: 'violet' as const,
+        }]
+      : []
+    : stockStrategy === 'individual'
+    ? compatibleStockGroups.flatMap(group =>
         group.saltIds.map(saltId => {
           const salt = SALTS.find(item => item.id === saltId);
           return {
@@ -7698,10 +7711,28 @@ function RecipeConcentrateBuilder({
             saltIds: [saltId],
           };
         }),
-      );
+      )
+    : compatibleStockGroups;
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
   const doseMlPerBatch = doseMlPerLiter * finalLiters;
   const totalSaltCount = Object.keys(handoff.salts).length;
+  const stockStrategyDetails = stockStrategy === 'all-in-one'
+    ? {
+        label: 'All-in-one',
+        description: 'One stock with every active salt',
+        helper: 'The easiest dosing path, but combined salts may have stricter solubility and shelf-stability limits.',
+      }
+    : stockStrategy === 'individual'
+    ? {
+        label: 'Separate salts',
+        description: 'One stock per active salt',
+        helper: 'The most flexible path for advanced control. Each salt gets its own bottle and dose.',
+      }
+    : {
+        label: 'GH + KH',
+        description: 'Recommended compatible grouping',
+        helper: 'The recommended balance of simplicity and stability. Hardness, alkalinity, and citrate stay in compatible groups when needed.',
+      };
 
   const groupTone: Record<StockGroup['color'], {
     border: string;
@@ -7750,9 +7781,75 @@ function RecipeConcentrateBuilder({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="1" title="Set the shared stock plan" />
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/[0.08] via-slate-800/80 to-indigo-500/[0.08] p-4 shadow-xl sm:p-6">
+        <StepHeading number="1" title="Choose your concentrate style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <p className="mt-3 max-w-3xl text-xs leading-relaxed text-slate-400">
+          Decide how you want to make and dose your recipe before setting the batch size. You can change this plan at any time.
+        </p>
+        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+          {[
+            {
+              value: 'gh-kh' as const,
+              label: 'GH + KH',
+              badge: 'Recommended',
+              description: 'Balanced everyday setup with compatible hardness and alkalinity stocks.',
+              footer: 'Best starting point',
+              glyph: <Gauge className="h-5 w-5" aria-hidden="true" />,
+              activeClass: 'border-sky-300/60 bg-sky-400/[0.12] ring-1 ring-sky-300/30',
+              glyphClass: 'border-sky-300/30 bg-sky-400/15 text-sky-200',
+              badgeClass: 'border-sky-300/25 bg-sky-400/10 text-sky-200',
+            },
+            {
+              value: 'all-in-one' as const,
+              label: 'All-in-one',
+              badge: 'Easy',
+              description: 'One bottle with every active salt for the simplest dosing routine.',
+              footer: 'Fewest bottles',
+              glyph: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
+              activeClass: 'border-violet-300/60 bg-violet-400/[0.12] ring-1 ring-violet-300/30',
+              glyphClass: 'border-violet-300/30 bg-violet-400/15 text-violet-200',
+              badgeClass: 'border-violet-300/25 bg-violet-400/10 text-violet-200',
+            },
+            {
+              value: 'individual' as const,
+              label: 'Separate salts',
+              badge: 'Advanced',
+              description: 'One bottle per active salt for maximum control over each dose.',
+              footer: 'Most flexible',
+              glyph: <Layers className="h-5 w-5" aria-hidden="true" />,
+              activeClass: 'border-amber-300/60 bg-amber-400/[0.12] ring-1 ring-amber-300/30',
+              glyphClass: 'border-amber-300/30 bg-amber-400/15 text-amber-200',
+              badgeClass: 'border-amber-300/25 bg-amber-400/10 text-amber-200',
+            },
+          ].map(option => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setStockStrategy(option.value)}
+              aria-pressed={stockStrategy === option.value}
+              className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:border-slate-500/80 ${
+                stockStrategy === option.value
+                  ? option.activeClass
+                  : 'border-slate-700/60 bg-slate-950/25 hover:bg-slate-900/50'
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${option.glyphClass}`}>
+                  {option.glyph}
+                </span>
+                <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] ${option.badgeClass}`}>
+                  {option.badge}
+                </span>
+              </div>
+              <div className="mt-3 text-sm font-semibold text-slate-100">{option.label}</div>
+              <p className="mt-1 min-h-[2.5rem] text-[11px] leading-relaxed text-slate-400">{option.description}</p>
+              <div className="mt-3 border-t border-white/[0.08] pt-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                {option.footer}
+              </div>
+            </button>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Stock strength</span>
             <div className="mt-1 flex items-center gap-2">
@@ -7768,35 +7865,6 @@ function RecipeConcentrateBuilder({
               <span className="text-sm text-slate-400">×</span>
             </div>
           </label>
-          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Stock layout</span>
-            <div className="mt-1 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-900/50 p-1">
-              <button
-                type="button"
-                onClick={() => setStockLayout('compatible')}
-                aria-pressed={stockLayout === 'compatible'}
-                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
-                  stockLayout === 'compatible'
-                    ? 'bg-sky-400/15 text-sky-200 ring-1 ring-sky-300/30'
-                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
-                }`}
-              >
-                Compatible groups
-              </button>
-              <button
-                type="button"
-                onClick={() => setStockLayout('individual')}
-                aria-pressed={stockLayout === 'individual'}
-                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
-                  stockLayout === 'individual'
-                    ? 'bg-fuchsia-400/15 text-fuchsia-200 ring-1 ring-fuchsia-300/30'
-                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
-                }`}
-              >
-                One per salt
-              </button>
-            </div>
-          </div>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               Final brew batch
@@ -7827,13 +7895,23 @@ function RecipeConcentrateBuilder({
           <SummaryMetric
             label="Stocks to prepare"
             value={`${stockGroups.length}`}
-            detail={stockLayout === 'compatible' ? 'compatible groups' : 'one per active salt'}
+            detail={stockStrategyDetails.description}
             tone="slate"
           />
         </div>
-        <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-          Strength stays shared so the recipe scales consistently. Each stock card below has its own volume, so GH, KH, and citrate stocks can be sized independently.
-        </p>
+        <div className={`mt-3 flex items-start gap-2 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
+          stockStrategy === 'all-in-one'
+            ? 'border-amber-400/25 bg-amber-500/[0.08] text-amber-100/80'
+            : 'border-slate-700/50 bg-slate-950/20 text-slate-500'
+        }`}>
+          {stockStrategy === 'all-in-one'
+            ? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+            : <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" aria-hidden="true" />}
+          <span>
+            <strong className="text-slate-200">{stockStrategyDetails.label}:</strong>{' '}
+            {stockStrategyDetails.helper} Strength stays shared so the recipe scales consistently, while each stock card below keeps its own volume.
+          </span>
+        </div>
       </section>
 
       <section className="space-y-3">
@@ -7841,7 +7919,11 @@ function RecipeConcentrateBuilder({
           <div>
             <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe stocks</div>
             <h2 className="mt-1 text-base font-semibold text-slate-100">
-              {stockLayout === 'compatible' ? 'Prepare each compatible stock separately' : 'Prepare one stock per salt'}
+              {stockStrategy === 'all-in-one'
+                ? 'Prepare your all-in-one stock'
+                : stockStrategy === 'individual'
+                ? 'Prepare one stock per salt'
+                : 'Prepare your GH + KH stocks'}
             </h2>
           </div>
           <span className="text-[11px] text-slate-500">
