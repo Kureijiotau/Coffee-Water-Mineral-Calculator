@@ -4,7 +4,7 @@ import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -7734,13 +7734,13 @@ function RecipeConcentrateBuilder({
   const stockStrategyDetails = stockStrategy === 'all-in-one'
     ? {
         label: 'All-in-one',
-        description: 'One stock with every active salt',
+        description: 'One concentrate with every active salt',
         helper: 'The easiest dosing path, but combined salts may have stricter solubility and shelf-stability limits.',
       }
     : stockStrategy === 'individual'
     ? {
         label: 'Separate salts',
-        description: 'One stock per active salt',
+        description: 'One concentrate per active salt',
         helper: 'The most flexible path for advanced control. Each salt gets its own bottle and dose.',
       }
     : {
@@ -7778,12 +7778,12 @@ function RecipeConcentrateBuilder({
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
               <FlaskConical className="h-4 w-4 text-fuchsia-300" />
-              Build stocks from a recipe
+              Build concentrates from a recipe
             </div>
             <h2 className="mt-2 truncate text-lg font-semibold text-white">{handoff.name}</h2>
             <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
               Ported from the Calculator with {totalSaltCount} active {totalSaltCount === 1 ? 'salt' : 'salts'}.
-              Source-water additions stay in the Calculator; this workspace prepares the salt stocks.
+              Source-water additions stay in the Calculator; this workspace prepares the salt concentrates.
             </p>
           </div>
           <button
@@ -7807,7 +7807,7 @@ function RecipeConcentrateBuilder({
               value: 'gh-kh' as const,
               label: 'GH + KH',
               badge: 'Recommended',
-              description: 'Balanced everyday setup with compatible hardness and alkalinity stocks.',
+              description: 'Balanced everyday setup with compatible hardness and alkalinity concentrates.',
               footer: 'Best starting point',
               maxSafeStrength: maxSafeStrengthByStrategy['gh-kh'],
               glyph: <Gauge className="h-5 w-5" aria-hidden="true" />,
@@ -7875,7 +7875,12 @@ function RecipeConcentrateBuilder({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              <label htmlFor="recipe-stock-strength">Stock strength</label>
+              <span className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
+                  <BottleWine className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <label htmlFor="recipe-stock-strength">Concentrate strength</label>
+              </span>
               {maxSafeStrength != null && (
                 <button
                   type="button"
@@ -7885,8 +7890,8 @@ function RecipeConcentrateBuilder({
                       ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
                       : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
                   }`}
-                  aria-label={`Apply max safe stock strength of ${maxSafeStrength} times`}
-                  title={`Apply max safe strength ×${maxSafeStrength}`}
+                  aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
+                  title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
                 >
                   Max safe ×{maxSafeStrength}
                 </button>
@@ -7901,7 +7906,7 @@ function RecipeConcentrateBuilder({
                 value={strengthInput}
                 onChange={event => setStrengthInput(event.target.value)}
                 className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Recipe stock strength multiplier"
+                aria-label="Recipe concentrate strength multiplier"
               />
               <span className="text-sm text-slate-400">×</span>
             </div>
@@ -7924,7 +7929,7 @@ function RecipeConcentrateBuilder({
           <SummaryMetric
             label="Dose per liter"
             value={`${doseMlPerLiter.toFixed(2)} mL`}
-            detail="of each stock"
+             detail="of each concentrate"
             tone="fuchsia"
           />
           <SummaryMetric
@@ -7934,7 +7939,7 @@ function RecipeConcentrateBuilder({
             tone="sky"
           />
           <SummaryMetric
-            label="Stocks to prepare"
+             label="Concentrates to prepare"
             value={`${stockGroups.length}`}
             detail={stockStrategyDetails.description}
             tone="slate"
@@ -7961,21 +7966,22 @@ function RecipeConcentrateBuilder({
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe stocks</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-300/80">Recipe concentrates</div>
             <h2 className="mt-1 text-base font-semibold text-slate-100">
               {stockStrategy === 'all-in-one'
-                ? 'Prepare your all-in-one stock'
+                ? 'Prepare your all-in-one concentrate'
                 : stockStrategy === 'individual'
-                ? 'Prepare one stock per salt'
-                : 'Prepare your GH + KH stocks'}
+                ? 'Prepare one concentrate per salt'
+                : 'Prepare your GH + KH concentrates'}
             </h2>
           </div>
           <span className="text-[11px] text-slate-500">
-            Shared strength {strength || 0}× · each volume is independent
+            Shared concentrate strength {strength || 0}× · each volume is independent
           </span>
         </div>
         {stockGroups.map(group => {
           const tone = groupTone[group.color];
+          const groupName = group.name.replace(/ Stock$/, ' Concentrate');
           const stockVolumeInput = stockVolumeInputs[group.id] ?? '500';
           const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
           const groupTargets = groupTargetsFor(group);
@@ -8008,15 +8014,15 @@ function RecipeConcentrateBuilder({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${tone.badge}`}>
-                    {group.name}
+                    {groupName}
                   </span>
                   <p className="mt-2 text-xs text-slate-400">
-                    Weigh the salts below, dissolve in partial distilled or RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL final stock.
+                    Weigh the salts below, dissolve in partial distilled or RO water, then top up to exactly {stockVolumeMl.toFixed(0)} mL final concentrate.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-end justify-end gap-3">
                   <label className="text-left">
-                    <span className="block text-[10px] uppercase tracking-wider text-slate-500">Stock volume</span>
+                    <span className="block text-[10px] uppercase tracking-wider text-slate-500">Concentrate volume</span>
                     <span className="mt-1 flex items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-950/40 px-2 py-1.5">
                       <input
                         type="number"
@@ -8028,7 +8034,7 @@ function RecipeConcentrateBuilder({
                           [group.id]: event.target.value,
                         }))}
                         className="w-20 bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                        aria-label={`${group.name} stock volume in milliliters`}
+                         aria-label={`${groupName} volume in milliliters`}
                       />
                       <span className="text-xs text-slate-400">mL</span>
                     </span>
@@ -8053,7 +8059,7 @@ function RecipeConcentrateBuilder({
                       <th className="px-3 py-2.5">Salt</th>
                       <th className="px-3 py-2.5">Hydration form</th>
                       <th className="px-3 py-2.5 text-right">Recipe target</th>
-                      <th className="px-3 py-2.5 text-right">Weigh into stock</th>
+                      <th className="px-3 py-2.5 text-right">Weigh into concentrate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
@@ -8073,7 +8079,7 @@ function RecipeConcentrateBuilder({
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
                 <span>Total salt: <strong className="text-slate-300">{totalSaltMassG.toFixed(2)} g</strong></span>
-                <span>Label: {handoff.name} · {group.name} · {strength || 0}×</span>
+                <span>Label: {handoff.name} · {groupName} · {strength || 0}×</span>
               </div>
 
               {warnings.length > 0 && (
@@ -8083,7 +8089,7 @@ function RecipeConcentrateBuilder({
                     : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
                 }`}>
                   <div className="font-semibold">
-                    {warnings.some(warning => warning.severity === 'error') ? 'Check this stock before mixing' : 'Mixing note'}
+                    {warnings.some(warning => warning.severity === 'error') ? 'Check this concentrate before mixing' : 'Mixing note'}
                   </div>
                   {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
                 </div>
@@ -8097,10 +8103,10 @@ function RecipeConcentrateBuilder({
         <div className="flex items-start gap-3">
           <Info className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
           <div>
-            <h2 className="text-sm font-semibold text-emerald-100">Use the stocks in your recipe</h2>
+            <h2 className="text-sm font-semibold text-emerald-100">Use the concentrates in your recipe</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-400">
-              Add {doseMlPerBatch.toFixed(2)} mL from each prepared stock to the {formatVolumeValue(finalLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} final batch.
-              Add the stocks one at a time and mix until clear. For drop-based dosing, calibrate each stock separately in Single mineral mode.
+              Add {doseMlPerBatch.toFixed(2)} mL from each prepared concentrate to the {formatVolumeValue(finalLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} final batch.
+              Add the concentrates one at a time and mix until clear. For drop-based dosing, calibrate each concentrate separately in Single mineral mode.
             </p>
           </div>
         </div>
