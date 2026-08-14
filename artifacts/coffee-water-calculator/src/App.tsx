@@ -7270,7 +7270,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="1" title="Choose the mineral" />
+        <StepHeading number="1" title="Choose the mineral" icon={<GiSaltShaker className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Salt</span>
@@ -7308,7 +7308,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="2" title="Choose concentration and batch weight" />
+        <StepHeading number="2" title="Choose concentration and batch weight" icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentration</span>
@@ -7355,7 +7355,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="3" title="Weigh, mix, and label" />
+        <StepHeading number="3" title="Weigh, mix, and label" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 space-y-2">
           {[
             `Weigh ${saltMassLabel} of ${salt.name} (${form.label}).`,
@@ -7379,7 +7379,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-sky-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="4" title="Calibrate this dropper" />
+        <StepHeading number="4" title="Calibrate this dropper" icon={<Droplet className="h-3.5 w-3.5" aria-hidden="true" />} />
         <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
           Tare a small container, dispense a known number of drops, then weigh the drops.
         </p>
@@ -7398,7 +7398,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="5" title="Calculate your dose" />
+        <StepHeading number="5" title="Calculate your dose" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Dose a target mineral amount</div>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
@@ -7571,7 +7571,10 @@ function LotusDropsSection() {
       <div className="rounded-xl border border-slate-700/60 bg-slate-950/20 p-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <label className="min-w-[220px] flex-1">
-            <span className="block text-[10px] uppercase tracking-wider text-slate-500">Recipe dosing preview</span>
+            <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
+              <ListChecks className="h-3.5 w-3.5 text-rose-300" aria-hidden="true" />
+              Recipe dosing preview
+            </span>
             <select
               value={selectedRecipe.id}
               onChange={event => setSelectedRecipeId(event.target.value)}
@@ -7596,9 +7599,14 @@ function LotusDropsSection() {
           return (
             <article key={plan.id} className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold text-slate-100">{plan.label} Dropper</div>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-400/[0.08] text-rose-200">
+                    <Droplet className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-100">{plan.label} Dropper</div>
                   <div className="mt-1 text-[11px] text-slate-500">{plan.saltName} · {plan.saltFormula} · {plan.hydrationForm}</div>
+                  </div>
                 </div>
                 <span className="rounded-full border border-rose-300/20 bg-rose-400/[0.08] px-2 py-1 text-[10px] font-semibold tabular-nums text-rose-200">
                   {recipeDrops} drops
@@ -8002,10 +8010,15 @@ function RecipeConcentrateBuilder({
   );
 }
 
-function StepHeading({ number, title }: { number: string; title: string }) {
+function StepHeading({ number, title, icon }: { number: string; title: string; icon?: ReactNode }) {
   return (
     <div className="flex items-center gap-2 border-b border-slate-700/50 pb-3">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-fuchsia-400/15 text-xs font-bold text-fuchsia-200">{number}</span>
+      {icon && (
+        <span className="flex h-6 w-6 items-center justify-center rounded-lg border border-fuchsia-300/20 bg-fuchsia-400/[0.08] text-fuchsia-200">
+          {icon}
+        </span>
+      )}
       <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-200">{title}</h2>
     </div>
   );
