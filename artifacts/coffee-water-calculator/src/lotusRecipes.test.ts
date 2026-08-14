@@ -15,7 +15,7 @@ describe('Lotus Coffee Products recipes', () => {
     expect(LOTUS_RECIPES.every(recipe => recipe.sourceUrl.includes('lotuscoffeeproducts.com/pages/product-instructions'))).toBe(true);
   });
 
-  it('matches Lotus final-ion conversion for Simple and Sweet', () => {
+  it('matches Lotus rounded final-ion table for Simple and Sweet', () => {
     const targets = lotusIonTargets({
       magnesium: 30,
       calcium: 60,
@@ -23,12 +23,27 @@ describe('Lotus Coffee Products recipes', () => {
       sodium: 25,
     });
 
-    expect(targets.magnesium).toBeCloseTo(7.2915, 6);
-    expect(targets.calcium).toBeCloseTo(24.0468, 6);
-    expect(targets.potassium).toBeCloseTo(11.72949, 6);
-    expect(targets.sodium).toBeCloseTo(11.4945, 6);
-    expect(targets.chloride).toBeCloseTo(63.8154, 6);
-    expect(targets.bicarbonate).toBeCloseTo(48.8128, 6);
+    expect(targets).toEqual({
+      magnesium: 7,
+      calcium: 24,
+      potassium: 12,
+      sodium: 11,
+      chloride: 64,
+      bicarbonate: 49,
+    });
+  });
+
+  it("matches the published Rao's Recipe ion table", () => {
+    const rao = LOTUS_RECIPES.find(recipe => recipe.id === 'lotus-raos-recipe');
+
+    expect(rao?.ionTargets).toEqual({
+      magnesium: 8,
+      calcium: 16,
+      potassium: 6,
+      sodium: 6,
+      chloride: 51,
+      bicarbonate: 25,
+    });
   });
 
   it('stores complete six-ion targets for every preset', () => {

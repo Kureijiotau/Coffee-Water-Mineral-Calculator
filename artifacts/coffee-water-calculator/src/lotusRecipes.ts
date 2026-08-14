@@ -30,17 +30,18 @@ const SOURCE_URL = 'https://lotuscoffeeproducts.com/pages/product-instructions';
 
 /**
  * Lotus publishes dropper recipe ppm inputs and derives the final ion profile
- * in its calculator. Keep that conversion explicit so these entries remain
- * ion targets, not approximated salt recipes.
+ * in its calculator. The published ion table rounds each final value to the
+ * nearest whole mg/L, so preserve that presentation in Watermancer while
+ * retaining the original inputs above for attribution and auditing.
  */
 export function lotusIonTargets(input: LotusIonInput): Record<LotusIonTargetId, number> {
   return {
-    magnesium: input.magnesium * (24.305 / 100),
-    calcium: input.calcium * (40.078 / 100),
-    potassium: 2 * input.potassium * (39.0983 / 100),
-    sodium: 2 * input.sodium * (22.989 / 100),
-    chloride: 2 * (input.magnesium + input.calcium) * (35.453 / 100),
-    bicarbonate: 2 * (input.sodium + input.potassium) * (61.016 / 100),
+    magnesium: Math.round(input.magnesium * (24.305 / 100)),
+    calcium: Math.round(input.calcium * (40.078 / 100)),
+    potassium: Math.round(2 * input.potassium * (39.0983 / 100)),
+    sodium: Math.round(2 * input.sodium * (22.989 / 100)),
+    chloride: Math.round(2 * (input.magnesium + input.calcium) * (35.453 / 100)),
+    bicarbonate: Math.round(2 * (input.sodium + input.potassium) * (61.016 / 100)),
   };
 }
 
