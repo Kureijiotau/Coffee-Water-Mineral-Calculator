@@ -115,6 +115,17 @@ export function mergeRecipeStepTargets(
     }),
   );
 }
+
+export function selectRecipePreparationTargets(
+  mode: NerdLevel,
+  brewerTargets: Record<string, number>,
+  alchemistTargets: Record<string, number>,
+  watermancerTargets: Record<string, number>,
+): Record<string, number> {
+  if (mode === 'brewer') return brewerTargets;
+  if (mode === 'watermancer') return watermancerTargets;
+  return alchemistTargets;
+}
 type BrewerFlavorInput = {
   brightness: number;
   body: number;
@@ -3133,6 +3144,8 @@ function App() {
     watermancerMatchModeRef.current = 'manual';
     setWatermancerMatchMode('manual');
     setWatermancerAppliedBestMatchRoute(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerBestMatchMessage(null);
   }
   const addMineralWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string; sourceLocalId?: string }) => {
     enterWatermancerManualMode();
@@ -4067,7 +4080,18 @@ function App() {
     : null;
   const automaticWatermancerRoute = appliedBestMatchRoute ?? watermancerLiveResult.primaryPlan;
   watermancerAutomaticRouteRef.current = automaticWatermancerRoute;
-  const activeWatermancerRoute = useMemo(
+  const selectedWatermancerRouteCandidate = useMemo(
+    () => watermancerMatchMode === 'manual' && watermancerManualRoute
+      ? { ...watermancerManualRoute, plan: watermancerPlan }
+      : automaticWatermancerRoute,
+    [
+      automaticWatermancerRoute,
+      watermancerManualRoute,
+      watermancerMatchMode,
+      watermancerPlan,
+    ],
+  );
+  const activeWatermancerRouteBaseline = useMemo(
     () => showWatermancer
       ? recalculateWatermancerRouteAtCurrentVolumes(
         {
@@ -4076,24 +4100,18 @@ function App() {
           baseWaters: mineralWaters,
           additionWaters,
         },
-        watermancerMatchMode === 'manual' && watermancerManualRoute
-          ? { ...watermancerManualRoute, plan: watermancerPlan }
-          : automaticWatermancerRoute,
-        (watermancerMatchMode === 'manual' && watermancerManualRoute
-          ? watermancerManualRoute
-          : automaticWatermancerRoute).saltTargets,
+        selectedWatermancerRouteCandidate,
+        selectedWatermancerRouteCandidate.saltTargets,
       )
       : watermancerLiveResult.primaryPlan,
     [
       additionWaters,
-      automaticWatermancerRoute,
       batchMl,
       mineralWaters,
+      selectedWatermancerRouteCandidate,
       showWatermancer,
-      watermancerManualRoute,
-      watermancerMatchMode,
-      watermancerPlan,
       watermancerLiveResult,
+      watermancerPlan,
     ],
   );
   const activeWatermancerSaltTargets = useMemo(() => {
@@ -4117,16 +4135,43 @@ function App() {
           / (L * form.molarMass);
         return;
       }
-      targets[salt.id] = Math.max(0, Number(activeWatermancerRoute.saltTargets[salt.id] ?? 0));
+      targets[salt.id] = Math.max(0, Number(activeWatermancerRouteBaseline.saltTargets[salt.id] ?? 0));
     });
     return targets;
   }, [
     L,
-    activeWatermancerRoute.saltTargets,
+    activeWatermancerRouteBaseline.saltTargets,
     rows,
     watermancerDoseOverridesMg,
     watermancerUsedSaltIds,
   ]);
+  // This is the single route used by Watermancer result cards, ion coverage,
+  // Recipe steps, precision guidance, and exports. The baseline route keeps
+  // the selected candidate's doses; the final pass materializes visible salt
+  // selection and physical-dose overrides into the route itself.
+  const activeWatermancerRoute = useMemo(
+    () => showWatermancer
+      ? recalculateWatermancerRouteAtCurrentVolumes(
+        {
+          plan: watermancerPlan,
+          batchMl,
+          baseWaters: mineralWaters,
+          additionWaters,
+        },
+        activeWatermancerRouteBaseline,
+        activeWatermancerSaltTargets,
+      )
+      : activeWatermancerRouteBaseline,
+    [
+      activeWatermancerRouteBaseline,
+      activeWatermancerSaltTargets,
+      additionWaters,
+      batchMl,
+      mineralWaters,
+      showWatermancer,
+      watermancerPlan,
+    ],
+  );
   const watermancerCurrentWaterIons = useMemo(
     () => computeWatermancerBottledIons(
       [...mineralWaters, ...additionWaters],
@@ -4135,16 +4180,12 @@ function App() {
     [additionWaters, batchMl, mineralWaters],
   );
   const watermancerCurrentFinalIons = useMemo(
-    () => computeWatermancerFinalIons(
-      [...mineralWaters, ...additionWaters],
-      batchMl,
-      activeWatermancerSaltTargets,
-    ),
-    [activeWatermancerSaltTargets, additionWaters, batchMl, mineralWaters],
+    () => activeWatermancerRoute.finalIons,
+    [activeWatermancerRoute],
   );
   const watermancerCurrentDeviations = useMemo(
-    () => watermancerRouteDeviations(watermancerCurrentFinalIons, watermancerIonTargets),
-    [watermancerCurrentFinalIons, watermancerIonTargets],
+    () => activeWatermancerRoute.deviations,
+    [activeWatermancerRoute],
   );
   const watermancerCurrentStatus: WatermancerSolverResult['status'] = batchMl <= 0
     || ([...mineralWaters, ...additionWaters].length === 0 && watermancerUsedSaltIds.length === 0)
@@ -4647,16 +4688,17 @@ function App() {
       ? activeProfile.name
       : watermancerTargetSourceLabel
     : displayedRecipeName;
-  const recipeStepsSaltTargets = showWatermancer
-    ? effectiveSuggestedSaltTargets
-    : nerdLevel === 'brewer'
-      ? brewerModeSaltTargets
-      : saltTargets;
-  const recipeStepsSuggestedSaltTargets = showWatermancer
-    ? effectiveSuggestedSaltTargets
-    : nerdLevel === 'brewer'
-      ? brewerModeSaltTargets
-      : effectiveSuggestedSaltTargets;
+  // Recipe steps must describe the same salts the active tab will actually
+  // prepare. Alchemist uses the source-water-adjusted dosing map (not the
+  // untouched recipe rows); Watermancer uses its live route and dose
+  // overrides; Brewer stays on its flavor/lesson recipe map.
+  const recipeStepsSaltTargets = selectRecipePreparationTargets(
+    nerdLevel,
+    brewerModeSaltTargets,
+    dosingSaltTargets,
+    effectiveSuggestedSaltTargets,
+  );
+  const recipeStepsSuggestedSaltTargets = recipeStepsSaltTargets;
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setBrewerRecipeOverride(null);
     setActiveRecipeId(recipe.id);
@@ -5745,6 +5787,19 @@ function App() {
                    <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
                       {selectedSourceRecipe.notes}
                    </p>
+                   {selectedSourceRecipe.sourceAmounts && (
+                     <div className="mt-2 flex flex-wrap gap-1.5">
+                       {selectedSourceRecipe.sourceAmounts.map(sourceAmount => (
+                         <span
+                           key={`${sourceAmount.label}-${sourceAmount.amount}`}
+                           className="rounded-md border border-amber-300/15 bg-amber-300/[0.06] px-2 py-1 text-[10px] text-amber-100/80"
+                         >
+                           <span className="font-semibold text-amber-100">{sourceAmount.label}:</span>{' '}
+                           {sourceAmount.amount}
+                         </span>
+                       ))}
+                     </div>
+                   )}
                  </div>
                  <a
                    href={selectedSourceRecipe.sourceUrl}
@@ -5760,7 +5815,7 @@ function App() {
          <>
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
-            <span>Target (ppm)</span>
+            <span>Salt target (ppm)</span>
              <span>Hydration form</span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
@@ -5804,7 +5859,7 @@ function App() {
                   <span className="text-xs text-slate-500">{salt.formula}</span>
                 </div>
                 <div>
-                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Target (ppm)</label>
+                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Salt target (ppm)</label>
                   <input
                     id={`salt-target-${salt.id}`}
                     type="number"
@@ -7038,7 +7093,7 @@ function App() {
              <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="final-mixture" tabIndex={-1}>
               <SectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
-               The automatic match's modeled final mixture at the selected batch volume.
+               The active route's modeled final mixture at the selected batch volume, including visible dose overrides.
             </div>
              <div className="app-card-body">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -7256,15 +7311,15 @@ function App() {
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
                      <div className="flex items-center justify-end gap-2">
                        <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                          (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'matched'
+                          watermancerCurrentStatus === 'matched'
                            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                            : (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'partial'
+                            : watermancerCurrentStatus === 'partial'
                              ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
                              : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
                        }`}>
-                          {(watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'matched'
+                          {watermancerCurrentStatus === 'matched'
                            ? 'Matched'
-                            : (watermancerMatchMode === 'manual' ? watermancerCurrentStatus : watermancerLiveResult.status) === 'partial'
+                            : watermancerCurrentStatus === 'partial'
                              ? 'Partial match'
                              : 'Needs inputs'}
                        </span>
@@ -7505,7 +7560,7 @@ function App() {
                 )}
                <div className="mt-3 grid gap-2 sm:grid-cols-3">
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
-                   <div className="text-[10px] uppercase tracking-wider text-slate-500">Automatic plan</div>
+                   <div className="text-[10px] uppercase tracking-wider text-slate-500">Active plan</div>
                    <div className="mt-1 text-xs font-semibold text-slate-200">Primary match</div>
                  </div>
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
@@ -7515,7 +7570,7 @@ function App() {
                    </div>
                  </div>
                  <div className="rounded-lg border border-slate-700/60 bg-slate-900/35 px-3 py-2">
-                   <div className="text-[10px] uppercase tracking-wider text-slate-500">Automatic salts</div>
+                   <div className="text-[10px] uppercase tracking-wider text-slate-500">Active salts</div>
                    <div className="mt-1 text-xs font-semibold text-slate-200">
                      {Object.values(activeWatermancerSaltTargets).filter(target => target > 0.000001).length} selected
                    </div>

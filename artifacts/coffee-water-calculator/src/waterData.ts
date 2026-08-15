@@ -477,6 +477,11 @@ export interface SaltRecipeEntry {
   formIdx: number;
 }
 
+export interface SourceRecipeAmount {
+  label: string;
+  amount: string;
+}
+
 export interface SaltRecipe {
   id: string;
   name: string;
@@ -488,6 +493,7 @@ export interface SaltRecipe {
   method?: string;
   notes?: string;
   conversion?: 'exact' | 'approximation';
+  sourceAmounts?: SourceRecipeAmount[];
   /** Split stocks mode — absent/false means off */
   splitMode?: boolean;
   /** Per-group concentrate strengths (×N multiplier); absent means default (100 per group) */
@@ -504,8 +510,16 @@ export const RECIPES: SaltRecipe[] = [
     sourceUrl: 'https://kimoi.coffee/resources',
     attribution: 'Recipe credited to Kimoi.coffee',
     method: 'Water recipe',
-    notes: 'Values transcribed from Kimoi.coffee’s public Resources collection and represented using this calculator’s salt-target model.',
+    notes: 'Kimoi publishes GH/KH inputs per liter of distilled water. The calculator converts those source values into exact salt-target ppm for ion calculations and physical dosing.',
     conversion: 'exact',
+    sourceAmounts: [
+      { label: 'MgCl GH', amount: '10 ppm as CaCO₃' },
+      { label: 'Epsom GH', amount: '5 ppm as CaCO₃' },
+      { label: 'CaCl GH', amount: '10 ppm as CaCO₃' },
+      { label: 'NaCl', amount: '10 ppm' },
+      { label: 'Sodium bicarbonate KH', amount: '10 ppm as CaCO₃' },
+      { label: 'Silica', amount: '6.6 mg' },
+    ],
     salts: {
       mgcl2:  { target: '9.5',  formIdx: 1 },
       mgso4:  { target: '6.0',  formIdx: 1 },
@@ -521,8 +535,14 @@ export const RECIPES: SaltRecipe[] = [
     sourceUrl: 'https://kimoi.coffee/resources',
     attribution: 'Recipe credited to Kimoi.coffee',
     method: 'Water recipe',
-    notes: 'Values transcribed from Kimoi.coffee’s public Resources collection and represented using this calculator’s salt-target model.',
+    notes: 'Kimoi publishes GH/KH inputs per liter of distilled water. The calculator converts those source values into exact salt-target ppm for ion calculations and physical dosing.',
     conversion: 'exact',
+    sourceAmounts: [
+      { label: 'MgCl GH', amount: '20 ppm as CaCO₃' },
+      { label: 'NaCl', amount: '20 ppm' },
+      { label: 'Sodium bicarbonate KH', amount: '6 ppm as CaCO₃' },
+      { label: 'Silica', amount: '6.6 mg (optional)' },
+    ],
     salts: {
       mgcl2:  { target: '19.0', formIdx: 1 },
       nacl:   { target: '20',   formIdx: 0 },

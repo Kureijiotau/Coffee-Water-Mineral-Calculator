@@ -25,6 +25,7 @@ import {
   isWatermancerActionSnapshotCurrent,
   watermancerBestMatchPreviewIsCurrent,
   mergeRecipeStepTargets,
+  selectRecipePreparationTargets,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -43,6 +44,19 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('uses each tab’s active preparation targets in Recipe steps', () => {
+    const brewer = { mgso4: 8 };
+    const alchemist = { mgso4: 6, cacl2: 4 };
+    const watermancer = { nacl: 10 };
+
+    expect(selectRecipePreparationTargets('brewer', brewer, alchemist, watermancer))
+      .toBe(brewer);
+    expect(selectRecipePreparationTargets('alchemist', brewer, alchemist, watermancer))
+      .toBe(alchemist);
+    expect(selectRecipePreparationTargets('watermancer', brewer, alchemist, watermancer))
+      .toBe(watermancer);
+  });
+
   it('uses active recipe doses before suggested doses for preparation steps', () => {
     expect(mergeRecipeStepTargets(
       { calact: 8, nacl: 34 },

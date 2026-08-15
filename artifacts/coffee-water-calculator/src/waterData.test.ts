@@ -17,7 +17,34 @@ import {
   computeIonMmolPerL,
   computeIonMeqPerL,
   ION_CHEMISTRY,
+  RECIPES,
 } from './waterData';
+
+describe('published Kimoi recipe conversions', () => {
+  it('matches Kimoi Water GH, KH, and NaCl source values', () => {
+    const recipe = RECIPES.find(item => item.id === 'kimoi')!;
+    const targets = Object.fromEntries(
+      Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
+    );
+    const ions = computeIonTotals(targets, {}, 1);
+
+    expect(computeGH(ions)).toBeCloseTo(25, 1);
+    expect(computeKH(ions)).toBeCloseTo(10, 1);
+    expect(ions.sodium).toBeCloseTo(10 * (22.99 / 58.44) + 16.8 * (22.99 / 84.007), 3);
+  });
+
+  it('matches Terebat Water GH, KH, and NaCl source values', () => {
+    const recipe = RECIPES.find(item => item.id === 'terebat')!;
+    const targets = Object.fromEntries(
+      Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
+    );
+    const ions = computeIonTotals(targets, {}, 1);
+
+    expect(computeGH(ions)).toBeCloseTo(20, 1);
+    expect(computeKH(ions)).toBeCloseTo(6, 1);
+    expect(ions.sodium).toBeCloseTo(20 * (22.99 / 58.44) + 10.1 * (22.99 / 84.007), 3);
+  });
+});
 
 // ─── computeSaltMg ────────────────────────────────────────────────────────────
 
