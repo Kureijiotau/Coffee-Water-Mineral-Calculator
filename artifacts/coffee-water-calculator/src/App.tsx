@@ -7,7 +7,6 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import watermancerHeroImage from '@assets/1f6a4052-7d58-44ed-8dd9-1b682112084a_1786804195267.jpg';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -5574,36 +5573,6 @@ function App() {
                   Start the 7-day crash course
                   <span aria-hidden="true">→</span>
                 </button>
-              </div>
-            </section>
-          )}
-
-          {showWatermancer && (
-            <section
-              aria-labelledby="watermancer-hero-title"
-              className="watermancer-hero order-0 relative isolate min-h-[190px] overflow-hidden rounded-2xl border border-indigo-300/25 bg-slate-950 shadow-xl shadow-indigo-950/25 sm:min-h-[220px]"
-            >
-              <img
-                src={watermancerHeroImage}
-                alt="A hooded Watermancer surrounded by glowing water and ion symbols"
-                className="absolute inset-0 h-full w-full object-cover object-[center_29%] opacity-90"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-indigo-950/25" />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-transparent to-slate-950/15" />
-              <div className="absolute inset-y-0 left-0 w-1/3 bg-cyan-400/10 blur-3xl" />
-              <div className="relative flex min-h-[190px] items-end px-5 py-5 sm:min-h-[220px] sm:px-7 sm:py-6">
-                <div className="max-w-md">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-200/80">
-                    <WatermancerMark className="h-4 w-4 text-cyan-200" aria-hidden="true" />
-                    Watermancer · Align the elements
-                  </div>
-                  <h2 id="watermancer-hero-title" className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                    Get your ions in a row.
-                  </h2>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-300/85 sm:text-sm">
-                    Set the final profile, choose your source waters, and let the route reveal itself.
-                  </p>
-                </div>
               </div>
             </section>
           )}
