@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import TasteProfileCard from './TasteProfileCard';
@@ -5490,7 +5490,7 @@ function App() {
                   onClick={() => handleNerdLevelChange(value)}
                   aria-pressed={nerdLevel === value}
                   title={description}
-                  className={`mode-switcher__button min-h-10 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+                  className={`mode-switcher__button inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
                     nerdLevel === value
                       ? value === 'alchemist'
                         ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
@@ -5500,6 +5500,12 @@ function App() {
                       : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                   }`}
                 >
+                  {value === 'watermancer' && (
+                    <WatermancerMark
+                      className={nerdLevel === value ? 'text-indigo-200' : 'text-slate-500'}
+                      aria-hidden="true"
+                    />
+                  )}
                   {label}
                 </button>
               ))}
@@ -9823,6 +9829,62 @@ function SaltSieveIcon() {
         <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
       </svg>
     </span>
+  );
+}
+
+function WatermancerMark({
+  className = '',
+  size = 18,
+  ...props
+}: {
+  className?: string;
+  size?: number;
+} & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 28 28"
+      width={size}
+      height={size}
+      fill="none"
+      className={className}
+      {...props}
+    >
+      <path
+        d="M14 2.75C14 2.75 6.25 10.1 6.25 16.15a7.75 7.75 0 0 0 15.5 0C21.75 10.1 14 2.75 14 2.75Z"
+        fill="currentColor"
+        fillOpacity=".14"
+        stroke="currentColor"
+        strokeWidth="1.35"
+      />
+      <ellipse
+        cx="14"
+        cy="14"
+        rx="8.35"
+        ry="3.35"
+        stroke="currentColor"
+        strokeOpacity=".72"
+        strokeWidth="1"
+        transform="rotate(-28 14 14)"
+      />
+      <ellipse
+        cx="14"
+        cy="14"
+        rx="7"
+        ry="2.75"
+        stroke="currentColor"
+        strokeOpacity=".45"
+        strokeWidth="1"
+        transform="rotate(42 14 14)"
+      />
+      <path
+        d="m14 8.2 2.25 4-2.25 4-2.25-4 2.25-4Z"
+        fill="currentColor"
+        fillOpacity=".85"
+      />
+      <circle cx="14" cy="12.2" r="1.1" fill="#0f172a" />
+      <circle cx="8.8" cy="18.2" r=".75" fill="currentColor" />
+      <circle cx="19.2" cy="18.2" r=".75" fill="currentColor" />
+    </svg>
   );
 }
 
