@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import html2canvas from 'html2canvas';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
@@ -26,6 +27,17 @@ import {
   loadNerdLevel, saveNerdLevel, createProfile,
   type NerdLevel,
 } from '@/profiles';
+import {
+  createWaterPlan,
+  isValidWaterPlan,
+  loadWaterPlans,
+  parseWaterPlanFile,
+  saveWaterPlans,
+  serializeWaterPlanFile,
+  type WaterPlan,
+  type WaterPlanConcentrateSnapshot,
+  type WaterPlanSnapshot,
+} from './waterPlans';
 import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles,
   type IonicTargetValues, type WatermancerProfile,
@@ -113,6 +125,23 @@ type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `lotus:${string}` | `reference:${string}`;
 type AppTab = 'calculator' | 'concentrate';
 type ConcentrateMode = 'builder' | 'lotus';
+
+const DEFAULT_WATER_PLAN_CONCENTRATE: WaterPlanConcentrateSnapshot = {
+  mode: 'builder',
+  saltId: 'mgso4',
+  formIdx: 0,
+  strengthInput: '5',
+  totalStockMassInput: '50',
+  calibrationDrops: '100',
+  calibrationStockMass: '5',
+  targetSaltMass: '40',
+  doseDrops: '1',
+  doseLiters: '1',
+  dropperStyle: 'straight',
+  straightDropsPerMlInput: String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML),
+  recipeConcentratePlan: null,
+};
+
 export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 type AutoCraftObjective = WatermancerSaltObjective;
 export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
@@ -2746,6 +2775,326 @@ function createInactiveWatermancerResult(plan: WatermancerPlan): WatermancerSolv
   };
 }
 
+function WaterPlanManager({
+  plans,
+  open,
+  onOpen,
+  onClose,
+  onSave,
+  onRestore,
+  onDuplicate,
+  onRename,
+  onDelete,
+  onImport,
+}: {
+  plans: WaterPlan[];
+  open: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onSave: (name: string) => WaterPlan | null;
+  onRestore: (plan: WaterPlan) => void;
+  onDuplicate: (plan: WaterPlan) => WaterPlan;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+  onImport: (plan: WaterPlan) => void;
+}) {
+  const [name, setName] = useState('');
+  const [restoreId, setRestoreId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState('');
+  const [importError, setImportError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSave = () => {
+    const plan = onSave(name);
+    if (plan) setName('');
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const imported = parseWaterPlanFile(await file.text());
+    if (!imported) {
+      setImportError(true);
+      return;
+    }
+    setImportError(false);
+    onImport(imported);
+  };
+
+  const handleExport = (plan: WaterPlan) => {
+    const blob = new Blob([serializeWaterPlanFile(plan)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `${plan.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-plan'}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-white/20 bg-black/15 px-2.5 py-2 text-xs font-semibold text-white/85 transition hover:border-white/40 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-transparent sm:min-h-0 sm:py-1.5"
+        aria-label={`Open saved water plans${plans.length ? `, ${plans.length} saved` : ''}`}
+        title="Save and restore complete water setups"
+      >
+        <Save className="h-3.5 w-3.5" aria-hidden="true" />
+        <span>Plans</span>
+        {plans.length > 0 && (
+          <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] tabular-nums text-white/80">
+            {plans.length}
+          </span>
+        )}
+      </button>
+
+      {open && createPortal(
+        <div
+          className="fixed inset-0 z-[80] flex items-start justify-center overflow-y-auto bg-slate-950/75 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+          role="presentation"
+          onClick={onClose}
+        >
+          <section
+            className="my-2 flex max-h-[calc(100dvh-1rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-900 shadow-2xl shadow-slate-950/70 sm:my-0 sm:max-h-[calc(100dvh-3rem)]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="water-plans-title"
+            onClick={event => event.stopPropagation()}
+          >
+            <header className="flex items-start justify-between gap-3 border-b border-cyan-300/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-4 sm:px-5">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/70">Reusable setups</div>
+                <h2 id="water-plans-title" className="mt-1 text-lg font-semibold text-white">Saved water plans</h2>
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
+                  Save the whole calculator setup. Plans are snapshots, so off-plan experiments can become separate plans.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-700/70 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                aria-label="Close saved water plans"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </header>
+
+            <div className="space-y-3 overflow-y-auto p-4 sm:p-5">
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/80">Save current setup as a new plan</div>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={event => setName(event.target.value)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter') handleSave();
+                    }}
+                    placeholder="e.g. Bright washed coffee water"
+                    className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-700/70 bg-slate-950/50 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-300/30"
+                    aria-label="New water plan name"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={!name.trim()}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                    Save new
+                  </button>
+                </div>
+              </div>
+
+              {importError && (
+                <div className="rounded-lg border border-rose-400/25 bg-rose-500/[0.08] px-3 py-2 text-[11px] text-rose-200">
+                  That file is not a valid Coffee Water plan.
+                </div>
+              )}
+
+              {plans.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-slate-700/80 bg-slate-950/25 px-4 py-8 text-center">
+                  <div className="text-sm font-semibold text-slate-300">No saved plans yet</div>
+                  <p className="mt-1 text-xs text-slate-500">Name the current setup above to keep it as a reusable snapshot.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {plans.map(plan => (
+                    <article key={plan.id} className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-semibold text-slate-100">{plan.name}</div>
+                          <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">
+                            {plan.snapshot.nerdLevel} · Updated {new Date(plan.updatedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {renameId === plan.id ? (
+                            <>
+                              <input
+                                type="text"
+                                value={renameName}
+                                onChange={event => setRenameName(event.target.value)}
+                                onKeyDown={event => {
+                                  if (event.key === 'Enter' && renameName.trim()) {
+                                    onRename(plan.id, renameName);
+                                    setRenameId(null);
+                                  }
+                                }}
+                                className="min-h-9 w-40 rounded-lg border border-sky-300/40 bg-slate-950/70 px-2.5 text-[11px] text-slate-100 outline-none focus:ring-2 focus:ring-sky-300/30"
+                                aria-label={`Rename ${plan.name}`}
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!renameName.trim()) return;
+                                  onRename(plan.id, renameName);
+                                  setRenameId(null);
+                                }}
+                                disabled={!renameName.trim()}
+                                className="inline-flex min-h-9 items-center rounded-lg bg-sky-500/20 px-2.5 text-[11px] font-semibold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRenameId(null)}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : restoreId === plan.id ? (
+                            <>
+                              <span className="mr-1 text-[10px] text-amber-200">Replace current setup?</span>
+                              <button
+                                type="button"
+                                onClick={() => onRestore(plan)}
+                                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-amber-500/20 px-2.5 text-[11px] font-semibold text-amber-100 ring-1 ring-amber-300/30 transition hover:bg-amber-500/30"
+                              >
+                                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRestoreId(null)}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : deleteId === plan.id ? (
+                            <>
+                              <span className="mr-1 text-[10px] text-rose-200">Delete this plan?</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onDelete(plan.id);
+                                  setDeleteId(null);
+                                }}
+                                className="inline-flex min-h-9 items-center rounded-lg bg-rose-500/20 px-2.5 text-[11px] font-semibold text-rose-100 ring-1 ring-rose-300/30 transition hover:bg-rose-500/30"
+                              >
+                                Delete
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteId(null)}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setRestoreId(plan.id)}
+                                className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-cyan-500/15 px-2.5 text-[11px] font-semibold text-cyan-100 ring-1 ring-cyan-300/25 transition hover:bg-cyan-500/25"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => onDuplicate(plan)}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                              >
+                                Duplicate
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRenameId(plan.id);
+                                  setRenameName(plan.name);
+                                  setRestoreId(null);
+                                  setDeleteId(null);
+                                }}
+                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                              >
+                                Rename
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleExport(plan)}
+                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-700/70 px-2.5 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                                aria-label={`Export ${plan.name}`}
+                                title="Export plan"
+                              >
+                                <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteId(plan.id)}
+                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-700/70 px-2.5 text-slate-400 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-200"
+                                aria-label={`Delete ${plan.name}`}
+                                title="Delete plan"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-700/60 px-4 py-3 sm:px-5">
+              <span className="text-[10px] text-slate-500">Plans stay in this browser unless exported.</span>
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleImport}
+                  className="hidden"
+                  aria-label="Import a water plan file"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-700/70 px-2.5 text-[11px] font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                >
+                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                  Import plan
+                </button>
+              </div>
+            </footer>
+          </section>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -2908,7 +3257,11 @@ function App() {
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
+  const [plansOpen, setPlansOpen] = useState(false);
   const [concentrateRecipeHandoff, setConcentrateRecipeHandoff] = useState<ConcentrateRecipeHandoff | null>(null);
+  const [concentrateSnapshot, setConcentrateSnapshot] = useState<WaterPlanConcentrateSnapshot>(DEFAULT_WATER_PLAN_CONCENTRATE);
+  const [pendingConcentrateRestore, setPendingConcentrateRestore] = useState<WaterPlanConcentrateSnapshot | null>(null);
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
@@ -2949,6 +3302,7 @@ function App() {
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
   useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
+  useEffect(() => { saveWaterPlans(savedPlans); }, [savedPlans]);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
@@ -4806,6 +5160,157 @@ function App() {
     navigator.clipboard.writeText(text).catch(() => {});
   };
 
+  const captureWaterPlanSnapshot = (): WaterPlanSnapshot => ({
+    version: 1,
+    appTab,
+    nerdLevel,
+    liters,
+    volumeUnit,
+    rows: safeRows.map(row => ({ target: row.target, formIdx: row.formIdx })),
+    mineralWaters: mineralWaters.map(entry => ({
+      id: entry.id,
+      name: entry.name,
+      ions: Object.fromEntries(Object.entries(entry.ions).map(([id, value]) => [id, String(value ?? '')])),
+      metadata: Object.fromEntries(Object.entries(entry.metadata).map(([key, value]) => [key, String(value ?? '')])),
+      volumeMl: entry.volumeMl,
+      sourceLocalId: entry.sourceLocalId,
+    })),
+    additionWaters: additionWaters.map(entry => ({
+      id: entry.id,
+      name: entry.name,
+      ions: Object.fromEntries(Object.entries(entry.ions).map(([id, value]) => [id, String(value ?? '')])),
+      metadata: Object.fromEntries(Object.entries(entry.metadata).map(([key, value]) => [key, String(value ?? '')])),
+      volumeMl: entry.volumeMl,
+      sourceLocalId: entry.sourceLocalId,
+    })),
+    magnesiumPreference,
+    autoFillPriorityPreset,
+    autoFillCustomPriority: [...autoFillCustomPriority],
+    autoFillDeviationPpm,
+    overshootSettings: {
+      enabled: overshootSettings.enabled,
+      allowedIons: [...overshootSettings.allowedIons],
+      limits: Object.fromEntries(Object.entries(overshootSettings.limits).map(([id, value]) => [id, Number(value)])),
+    },
+    brewerDropsPerMl,
+    brewerFlavor: { ...brewerFlavor },
+    brewerRecipeOverride,
+    externalRecipeId,
+    activeRecipeId,
+    activeProfileId,
+    watermancerTargetSource,
+    watermancerTargetOverride: watermancerTargetOverride ? { ...watermancerTargetOverride } : null,
+    watermancerUsedSaltIds: [...watermancerUsedSaltIds],
+    autoCraftPreset,
+    watermancerSaltObjective,
+    watermancerBestMatchDeviationMode,
+    watermancerIonSourcePreferences: Object.fromEntries(Object.entries(watermancerIonSourcePreferences)),
+    watermancerDoseOverridesMg: { ...watermancerDoseOverridesMg },
+    sodiumCorrectionOn,
+    concentrateRecipeHandoff: concentrateRecipeHandoff
+      ? {
+          name: concentrateRecipeHandoff.name,
+          salts: { ...concentrateRecipeHandoff.salts },
+          finalLiters: concentrateRecipeHandoff.finalLiters,
+        }
+      : null,
+    concentrate: {
+      ...concentrateSnapshot,
+    },
+  });
+
+  const handleSaveWaterPlan = (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return null;
+    const plan = createWaterPlan(trimmedName, captureWaterPlanSnapshot());
+    setSavedPlans(previous => [plan, ...previous]);
+    return plan;
+  };
+
+  const handleDuplicateWaterPlan = (plan: WaterPlan) => {
+    const duplicate = createWaterPlan(`${plan.name} copy`, plan.snapshot);
+    setSavedPlans(previous => [duplicate, ...previous]);
+    return duplicate;
+  };
+
+  const handleRenameWaterPlan = (id: string, name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    setSavedPlans(previous => previous.map(plan => plan.id === id
+      ? { ...plan, name: trimmedName, updatedAt: new Date().toISOString() }
+      : plan));
+  };
+
+  const handleImportWaterPlan = (plan: WaterPlan) => {
+    if (!isValidWaterPlan(plan)) return;
+    setSavedPlans(previous => [plan, ...previous.filter(existing => existing.id !== plan.id)]);
+  };
+
+  const handleDeleteWaterPlan = (id: string) => {
+    setSavedPlans(previous => previous.filter(plan => plan.id !== id));
+  };
+
+  const restoreWaterPlan = (plan: WaterPlan) => {
+    const snapshot = plan.snapshot;
+    watermancerActionGenerationRef.current += 1;
+    watermancerActionBusyRef.current = false;
+    setWatermancerBestMatchRunning(false);
+    setWatermancerActionRunning(false);
+    setWatermancerActionMessage(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerAppliedBestMatchRoute(null);
+    setWatermancerManualRoute(null);
+    watermancerMatchModeRef.current = 'automatic';
+
+    setNerdLevel(snapshot.nerdLevel);
+    setLiters(snapshot.liters);
+    setVolumeUnit(snapshot.volumeUnit);
+    setRows(snapshot.rows.map(row => ({ target: row.target, formIdx: row.formIdx })));
+    setMineralWaters(snapshot.mineralWaters.map(entry => ({
+      ...entry,
+      ions: entry.ions,
+      metadata: entry.metadata,
+    })));
+    setAdditionWaters(snapshot.additionWaters.map(entry => ({
+      ...entry,
+      ions: entry.ions,
+      metadata: entry.metadata,
+    })));
+    setMagnesiumPreference(snapshot.magnesiumPreference);
+    setAutoFillPriorityPreset(snapshot.autoFillPriorityPreset as AutoFillPriorityPreset);
+    setAutoFillCustomPriority(snapshot.autoFillCustomPriority as IonId[]);
+    setAutoFillDeviationPpm(snapshot.autoFillDeviationPpm);
+    setOvershootSettings({
+      enabled: snapshot.overshootSettings.enabled,
+      allowedIons: snapshot.overshootSettings.allowedIons as IonId[],
+      limits: snapshot.overshootSettings.limits as Partial<Record<IonId, number>>,
+    });
+    setBrewerDropsPerMl(snapshot.brewerDropsPerMl);
+    setBrewerFlavor({ ...snapshot.brewerFlavor });
+    setBrewerRecipeOverride(snapshot.brewerRecipeOverride as Week1Recipe | null);
+    setExternalRecipeId(snapshot.externalRecipeId);
+    setActiveRecipeId(snapshot.activeRecipeId);
+    setActiveProfileId(profiles.some(profile => profile.id === snapshot.activeProfileId)
+      ? snapshot.activeProfileId
+      : AIKI_DEFAULT_PROFILE.id);
+    setWatermancerTargetSource(snapshot.watermancerTargetSource as WatermancerTargetSourceId);
+    setWatermancerTargetOverride(snapshot.watermancerTargetOverride ? { ...snapshot.watermancerTargetOverride } : null);
+    setWatermancerUsedSaltIds([...snapshot.watermancerUsedSaltIds]);
+    setAutoCraftPreset(snapshot.autoCraftPreset as AutoCraftPreset);
+    setWatermancerSaltObjective(snapshot.watermancerSaltObjective as AutoCraftObjective);
+    setWatermancerBestMatchDeviationMode(snapshot.watermancerBestMatchDeviationMode);
+    setWatermancerIonSourcePreferences(snapshot.watermancerIonSourcePreferences as Record<IonId, WatermancerIonSourcePreference>);
+    setWatermancerDoseOverridesMg({ ...snapshot.watermancerDoseOverridesMg });
+    setSodiumCorrectionOn(snapshot.sodiumCorrectionOn);
+    setWatermancerMatchMode('automatic');
+    setConcentrateRecipeHandoff(snapshot.concentrateRecipeHandoff);
+    setPendingConcentrateRestore({ ...snapshot.concentrate });
+    setConcentrateSnapshot({ ...snapshot.concentrate });
+    setAppTab(snapshot.appTab);
+    setPlansOpen(false);
+  };
+
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
       <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-4 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
@@ -4824,6 +5329,18 @@ function App() {
           >
             <SiDiscord className="h-4 w-4" aria-hidden="true" />
           </a>
+          <WaterPlanManager
+            plans={savedPlans}
+            open={plansOpen}
+            onOpen={() => setPlansOpen(true)}
+            onClose={() => setPlansOpen(false)}
+            onSave={handleSaveWaterPlan}
+            onRestore={restoreWaterPlan}
+            onDuplicate={handleDuplicateWaterPlan}
+            onRename={handleRenameWaterPlan}
+            onDelete={handleDeleteWaterPlan}
+            onImport={handleImportWaterPlan}
+          />
             <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
@@ -4861,6 +5378,9 @@ function App() {
             recipeHandoff={concentrateRecipeHandoff}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
             dropsPerMl={brewerDropsPerMl}
+            restoreSnapshot={pendingConcentrateRestore}
+            onRestoreSnapshotConsumed={() => setPendingConcentrateRestore(null)}
+            onSnapshotChange={setConcentrateSnapshot}
           />
         </div>
         </div>
@@ -7189,12 +7709,18 @@ function ConcentrateWorkspace({
   recipeHandoff,
   onClearRecipeHandoff,
   dropsPerMl,
+  restoreSnapshot,
+  onRestoreSnapshotConsumed,
+  onSnapshotChange,
 }: {
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
   recipeHandoff: ConcentrateRecipeHandoff | null;
   onClearRecipeHandoff: () => void;
   dropsPerMl: number;
+  restoreSnapshot: WaterPlanConcentrateSnapshot | null;
+  onRestoreSnapshotConsumed: () => void;
+  onSnapshotChange: (snapshot: WaterPlanConcentrateSnapshot) => void;
 }) {
   const [concentrateMode, setConcentrateMode] = useState<ConcentrateMode>('builder');
   const [saltId, setSaltId] = useState('mgso4');
@@ -7255,6 +7781,59 @@ function ConcentrateWorkspace({
   useEffect(() => {
     if (recipeHandoff) setConcentrateMode('builder');
   }, [recipeHandoff]);
+
+  useEffect(() => {
+    if (!restoreSnapshot) return;
+    setConcentrateMode(restoreSnapshot.mode);
+    setSaltId(restoreSnapshot.saltId);
+    setFormIdx(restoreSnapshot.formIdx);
+    setStrengthInput(restoreSnapshot.strengthInput);
+    setTotalStockMassInput(restoreSnapshot.totalStockMassInput);
+    setCalibrationDrops(restoreSnapshot.calibrationDrops);
+    setCalibrationStockMass(restoreSnapshot.calibrationStockMass);
+    setTargetSaltMass(restoreSnapshot.targetSaltMass);
+    setDoseDrops(restoreSnapshot.doseDrops);
+    setDoseLiters(restoreSnapshot.doseLiters);
+    setDropperStyle(restoreSnapshot.dropperStyle);
+    setStraightDropsPerMlInput(restoreSnapshot.straightDropsPerMlInput);
+    setRecipeConcentratePlan(restoreSnapshot.recipeConcentratePlan as ConcentratePlanSnapshot | null);
+    setCompletedSteps({});
+    setShowConcentrateSteps(false);
+    onRestoreSnapshotConsumed();
+  }, [onRestoreSnapshotConsumed, restoreSnapshot]);
+
+  useEffect(() => {
+    onSnapshotChange({
+      mode: concentrateMode,
+      saltId,
+      formIdx,
+      strengthInput,
+      totalStockMassInput,
+      calibrationDrops,
+      calibrationStockMass,
+      targetSaltMass,
+      doseDrops,
+      doseLiters,
+      dropperStyle,
+      straightDropsPerMlInput,
+      recipeConcentratePlan,
+    });
+  }, [
+    calibrationDrops,
+    calibrationStockMass,
+    concentrateMode,
+    doseDrops,
+    doseLiters,
+    dropperStyle,
+    formIdx,
+    onSnapshotChange,
+    recipeConcentratePlan,
+    saltId,
+    straightDropsPerMlInput,
+    strengthInput,
+    targetSaltMass,
+    totalStockMassInput,
+  ]);
 
   return (
     <div className="concentrate-workspace space-y-4">
