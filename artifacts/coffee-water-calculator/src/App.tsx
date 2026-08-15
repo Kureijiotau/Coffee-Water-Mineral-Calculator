@@ -4809,28 +4809,28 @@ function App() {
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
       <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-4 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3">
           <Calculator className="w-6 h-6 text-white" />
           <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
         </div>
-        <div className="order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
+        <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
           <a
             href="https://discord.com/users/361929925449482240"
             target="_blank"
             rel="noreferrer"
             aria-label="Send app feedback on Discord"
             title="Send app feedback on Discord"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/20 bg-black/15 text-white/80 transition hover:border-white/40 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-transparent"
+            className="app-header__discord inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-black/15 text-white/80 transition hover:border-white/40 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-transparent sm:h-8 sm:w-8"
           >
             <SiDiscord className="h-4 w-4" aria-hidden="true" />
           </a>
-            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex rounded-lg border border-white/20 bg-black/15 p-0.5">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
               role="tab"
               aria-selected={appTab === 'calculator'}
               onClick={() => setAppTab('calculator')}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Calculator
             </button>
@@ -4839,7 +4839,7 @@ function App() {
               role="tab"
               aria-selected={appTab === 'concentrate'}
               onClick={() => setAppTab('concentrate')}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Concentrate
             </button>
@@ -4891,7 +4891,7 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="mode-switcher grid grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+            <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
               {([
                 ['brewer', 'Brewer', 'Flavor-first recipe'],
                 ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
@@ -4903,7 +4903,7 @@ function App() {
                   onClick={() => handleNerdLevelChange(value)}
                   aria-pressed={nerdLevel === value}
                   title={description}
-                  className={`mode-switcher__button rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  className={`mode-switcher__button min-h-10 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
                     nerdLevel === value
                       ? value === 'alchemist'
                         ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
@@ -5005,7 +5005,7 @@ function App() {
                       <button
                         type="button"
                         onClick={() => scrollToWatermancerStage(step.stage)}
-                        className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
+                         className="flex min-h-10 w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
                         aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
                       >
                         <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
@@ -7257,7 +7257,7 @@ function ConcentrateWorkspace({
   }, [recipeHandoff]);
 
   return (
-    <div className="space-y-4">
+    <div className="concentrate-workspace space-y-4">
       <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
@@ -7530,7 +7530,7 @@ function ConcentrateWorkspace({
       <button
         type="button"
         onClick={() => setShowConcentrateSteps(true)}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border border-fuchsia-300/45 bg-fuchsia-600/90 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-fuchsia-950/40 backdrop-blur transition hover:-translate-y-0.5 hover:bg-fuchsia-500 active:translate-y-0"
+        className="recipe-steps-fab fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border border-fuchsia-300/45 bg-fuchsia-600/90 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-fuchsia-950/40 backdrop-blur transition hover:-translate-y-0.5 hover:bg-fuchsia-500 active:translate-y-0"
         aria-label="Open concentrate recipe steps"
         title="Open concentrate preparation and dosing steps"
       >
