@@ -4647,6 +4647,16 @@ function App() {
       ? activeProfile.name
       : watermancerTargetSourceLabel
     : displayedRecipeName;
+  const recipeStepsSaltTargets = showWatermancer
+    ? effectiveSuggestedSaltTargets
+    : nerdLevel === 'brewer'
+      ? brewerModeSaltTargets
+      : saltTargets;
+  const recipeStepsSuggestedSaltTargets = showWatermancer
+    ? effectiveSuggestedSaltTargets
+    : nerdLevel === 'brewer'
+      ? brewerModeSaltTargets
+      : effectiveSuggestedSaltTargets;
   const applyRecipeObject = (recipe: SaltRecipe) => {
     setBrewerRecipeOverride(null);
     setActiveRecipeId(recipe.id);
@@ -7609,7 +7619,7 @@ function App() {
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
           recipeName={recipeStepsProfileName}
-          saltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : saltTargets}
+          saltTargets={recipeStepsSaltTargets}
           recipeRows={rows}
           liters={L}
            volumeUnit={volumeUnit}
@@ -7621,7 +7631,7 @@ function App() {
           additionWaters={nerdLevel === 'brewer' ? [] : additionWaters}
           baseWaterScale={sourceScale}
           batchMl={batchMl}
-          suggestedSaltTargets={nerdLevel === 'brewer' ? brewerModeSaltTargets : effectiveSuggestedSaltTargets}
+          suggestedSaltTargets={recipeStepsSuggestedSaltTargets}
           nerdLevel={nerdLevel}
           tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
