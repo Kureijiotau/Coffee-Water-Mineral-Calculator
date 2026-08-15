@@ -5388,7 +5388,7 @@ function App() {
           <div className="min-w-0">
             <div className="text-[9px] font-semibold uppercase tracking-[0.24em] text-cyan-200/75">Watermancer Lab</div>
             <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">Coffee Water Lab</h1>
-            <p className="hidden text-[11px] leading-relaxed text-slate-300/75 sm:block">Obsessive water craft for better coffee.</p>
+            <p className="hidden text-[11px] leading-relaxed text-slate-300/75 sm:block">Get your ions in a row.</p>
           </div>
         </div>
         <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
