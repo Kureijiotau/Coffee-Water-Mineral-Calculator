@@ -7,6 +7,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
+import watermancerMarkImage from '@assets/image_1786804591106.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -5383,7 +5384,13 @@ function App() {
       <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-3.5 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-200/25 bg-slate-950/45 text-cyan-100 shadow-lg shadow-cyan-950/30">
-            <WatermancerMageMark className="h-11 w-11" aria-hidden="true" />
+            <img
+              src={watermancerMarkImage}
+              alt=""
+              aria-hidden="true"
+              className="h-11 w-11 rounded-lg object-cover"
+              style={{ imageRendering: 'pixelated' }}
+            />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-lg font-semibold uppercase tracking-[0.08em] text-white sm:text-xl">Watermancer</h1>
