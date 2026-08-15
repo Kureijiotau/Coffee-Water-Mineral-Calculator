@@ -475,6 +475,9 @@ export function findIonUnderdoses(
 export interface SaltRecipeEntry {
   target: string;
   formIdx: number;
+  /** Published source value shown to users when the source uses GH/KH units. */
+  sourceTarget?: string;
+  sourceUnit?: 'salt-ppm' | 'gh-ppm-as-caco3' | 'kh-ppm-as-caco3';
 }
 
 export interface SourceRecipeAmount {
@@ -521,11 +524,11 @@ export const RECIPES: SaltRecipe[] = [
       { label: 'Silica', amount: '6.6 mg' },
     ],
     salts: {
-      mgcl2:  { target: '9.5',  formIdx: 1 },
-      mgso4:  { target: '6.0',  formIdx: 1 },
-      cacl2:  { target: '11.1', formIdx: 1 },
-      nacl:   { target: '10',   formIdx: 0 },
-      nahco3: { target: '16.8', formIdx: 0 },
+      mgcl2:  { target: '9.5',  sourceTarget: '10', sourceUnit: 'gh-ppm-as-caco3', formIdx: 1 },
+      mgso4:  { target: '6.0',  sourceTarget: '5', sourceUnit: 'gh-ppm-as-caco3', formIdx: 1 },
+      cacl2:  { target: '11.1', sourceTarget: '10', sourceUnit: 'gh-ppm-as-caco3', formIdx: 1 },
+      nacl:   { target: '10',   sourceTarget: '10', sourceUnit: 'salt-ppm', formIdx: 0 },
+      nahco3: { target: '16.8', sourceTarget: '10', sourceUnit: 'kh-ppm-as-caco3', formIdx: 0 },
     },
   },
   {
@@ -544,9 +547,9 @@ export const RECIPES: SaltRecipe[] = [
       { label: 'Silica', amount: '6.6 mg (optional)' },
     ],
     salts: {
-      mgcl2:  { target: '19.0', formIdx: 1 },
-      nacl:   { target: '20',   formIdx: 0 },
-      nahco3: { target: '10.1', formIdx: 0 },
+      mgcl2:  { target: '19.0', sourceTarget: '20', sourceUnit: 'gh-ppm-as-caco3', formIdx: 1 },
+      nacl:   { target: '20',   sourceTarget: '20', sourceUnit: 'salt-ppm', formIdx: 0 },
+      nahco3: { target: '10.1', sourceTarget: '6', sourceUnit: 'kh-ppm-as-caco3', formIdx: 0 },
     },
   },
 ];

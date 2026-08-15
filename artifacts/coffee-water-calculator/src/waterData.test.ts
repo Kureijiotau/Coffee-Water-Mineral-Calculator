@@ -23,6 +23,11 @@ import {
 describe('published Kimoi recipe conversions', () => {
   it('matches Kimoi Water GH, KH, and NaCl source values', () => {
     const recipe = RECIPES.find(item => item.id === 'kimoi')!;
+    expect(recipe.salts.mgcl2.sourceTarget).toBe('10');
+    expect(recipe.salts.mgso4.sourceTarget).toBe('5');
+    expect(recipe.salts.cacl2.sourceTarget).toBe('10');
+    expect(recipe.salts.nahco3.sourceTarget).toBe('10');
+    expect(recipe.salts.nacl.sourceTarget).toBe('10');
     const targets = Object.fromEntries(
       Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
     );

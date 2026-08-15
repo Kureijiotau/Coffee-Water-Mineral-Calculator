@@ -4654,6 +4654,13 @@ function App() {
   const selectedSourceRecipe = selectedExternalRecipe ?? (
     activeRecipe?.sourceUrl ? activeRecipe : undefined
   );
+  const publishedTargetRecipe = showAlchemist
+    && selectedSourceRecipe
+    && activeRecipe?.id === selectedSourceRecipe.id
+    && Object.values(activeRecipe.salts).some(entry => entry.sourceTarget !== undefined)
+    ? activeRecipe
+    : undefined;
+  const publishedTargetLabel = publishedTargetRecipe ? 'Published target' : 'Salt target (ppm)';
   const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
   const autoFillTargets = showAlchemist && hasSaltRecipeTargets
     ? saltOnlyIons
@@ -5815,7 +5822,7 @@ function App() {
          <>
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
-            <span>Salt target (ppm)</span>
+            <span>{publishedTargetLabel}</span>
              <span>Hydration form</span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
@@ -5824,6 +5831,26 @@ function App() {
             const form = salt.hydrationForms[row.formIdx];
             const target = dosingSaltTargets[salt.id] ?? 0;
             const recipeTarget = saltTargets[salt.id] ?? 0;
+            const publishedTargetEntry = publishedTargetRecipe?.salts[salt.id];
+            const displayedRecipeTarget = publishedTargetEntry?.sourceTarget ?? recipeTarget;
+            const displayedRecipeTargetValue = Number(displayedRecipeTarget);
+            const updateTargetValue = (value: string) => {
+              if (
+                value.trim() === ''
+                || !publishedTargetEntry?.sourceTarget
+                || !activeRecipe?.salts[salt.id]?.target
+              ) {
+                updateRow(i, { target: value });
+                return;
+              }
+              const sourceValue = Number(value);
+              const sourceBase = Number(publishedTargetEntry.sourceTarget);
+              const internalBase = Number(activeRecipe.salts[salt.id].target);
+              const internalValue = sourceBase > 0
+                ? sourceValue * internalBase / sourceBase
+                : sourceValue;
+              updateRow(i, { target: Number.isFinite(internalValue) ? String(internalValue) : '' });
+            };
             const mg = L > 0 && target > 0
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
@@ -5859,15 +5886,15 @@ function App() {
                   <span className="text-xs text-slate-500">{salt.formula}</span>
                 </div>
                 <div>
-                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Salt target (ppm)</label>
+                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
                   <input
                     id={`salt-target-${salt.id}`}
                     type="number"
                     inputMode="decimal"
                     min="0"
                     aria-label={`${salt.name} target ppm`}
-                    value={row.target}
-                    onChange={e => updateRow(i, { target: e.target.value })}
+                    value={displayedRecipeTargetValue > 0 ? displayedRecipeTarget : ''}
+                    onChange={e => updateTargetValue(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === '-') e.preventDefault();
                     }}
