@@ -5386,8 +5386,8 @@ function App() {
             <CoffeeWaterLabMark className="h-9 w-9" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">Watermancer Quest</h1>
-            <p className="text-[11px] leading-relaxed text-slate-300/75">Get your ions in a row.</p>
+            <h1 className="truncate text-lg font-semibold uppercase tracking-[0.08em] text-white sm:text-xl">Watermancer</h1>
+            <p className="text-[11px] leading-relaxed text-slate-300/75">On a quest to get your ions in a row.</p>
           </div>
         </div>
         <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
