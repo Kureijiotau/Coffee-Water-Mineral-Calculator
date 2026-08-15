@@ -5500,6 +5500,18 @@ function App() {
                       : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                   }`}
                 >
+                  {value === 'brewer' && (
+                    <BrewerMark
+                      className={nerdLevel === value ? 'text-sky-200' : 'text-slate-500'}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {value === 'alchemist' && (
+                    <AlchemistMark
+                      className={nerdLevel === value ? 'text-emerald-200' : 'text-slate-500'}
+                      aria-hidden="true"
+                    />
+                  )}
                   {value === 'watermancer' && (
                     <WatermancerMark
                       className={nerdLevel === value ? 'text-indigo-200' : 'text-slate-500'}
@@ -9829,6 +9841,55 @@ function SaltSieveIcon() {
         <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
       </svg>
     </span>
+  );
+}
+
+function BrewerMark({
+  className = '',
+  size = 18,
+  ...props
+}: {
+  className?: string;
+  size?: number;
+} & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 28 28"
+      width={size}
+      height={size}
+      fill="none"
+      className={className}
+      {...props}
+    >
+      <path d="M6.5 11.5h13v6.2a3.8 3.8 0 0 1-3.8 3.8h-5.4a3.8 3.8 0 0 1-3.8-3.8v-6.2Z" fill="currentColor" fillOpacity=".14" stroke="currentColor" strokeWidth="1.35" />
+      <path d="M19.5 13h1.8a2.7 2.7 0 0 1 0 5.4h-1.8M5 23h16" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path d="M10 8.7c-1.2-1.1.8-1.8-.2-3M14 8.7c-1.2-1.1.8-1.8-.2-3M18 8.7c-1.2-1.1.8-1.8-.2-3" stroke="currentColor" strokeOpacity=".72" strokeWidth="1" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function AlchemistMark({
+  className = '',
+  size = 18,
+  ...props
+}: {
+  className?: string;
+  size?: number;
+} & SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 28 28"
+      width={size}
+      height={size}
+      fill="none"
+      className={className}
+      {...props}
+    >
+      <path d="M10.75 3.5h6.5M13 3.5v6.2L7 19.05a3.1 3.1 0 0 0 2.6 4.7h8.8a3.1 3.1 0 0 0 2.6-4.7L15 9.7V3.5" fill="currentColor" fillOpacity=".12" stroke="currentColor" strokeWidth="1.35" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M9.2 17.5h9.6" stroke="currentColor" strokeOpacity=".72" strokeWidth="1.1" strokeLinecap="round" />
+      <path d="m21.5 5.2.65 1.8 1.85.65-1.85.65-.65 1.8-.65-1.8L19 7.65l1.85-.65.65-1.8Z" fill="currentColor" />
+      <circle cx="12.3" cy="20.1" r=".8" fill="currentColor" />
+    </svg>
   );
 }
 
