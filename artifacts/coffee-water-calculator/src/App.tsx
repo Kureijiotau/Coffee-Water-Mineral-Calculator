@@ -7717,16 +7717,13 @@ function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsP
           </span>
           <div>
             <h2 id="dropper-reference-title" className="text-sm font-semibold text-slate-100">Dropper reference</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-              A quick Lotus measurement reference for planning drops.
-            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">Choose the shape of your dropper tip.</p>
           </div>
         </div>
         <span className="rounded-full border border-cyan-300/20 bg-cyan-400/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200/80">
           Informational
         </span>
       </div>
-
       <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Dropper style</div>
@@ -7768,7 +7765,6 @@ function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsP
           </p>
         </div>
       </div>
-
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <SummaryMetric label="Round reference" value={roundDropsPerMl.toFixed(1)} detail="drops/mL" tone="slate" />
         <SummaryMetric label="Straight reference" value={straightDropsPerMl.toFixed(1)} detail="drops/mL" tone="sky" />
