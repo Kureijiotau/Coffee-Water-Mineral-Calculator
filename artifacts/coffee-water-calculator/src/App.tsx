@@ -5091,7 +5091,7 @@ function App() {
                 <optgroup label="Built-in">
                   {RECIPES.map(r => (
                     <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                      {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
+                        {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
                     </option>
                   ))}
                 </optgroup>
@@ -5099,7 +5099,7 @@ function App() {
                   <optgroup label="My recipes">
                     {savedRecipes.map(r => (
                       <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                        {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
+                      {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
                       </option>
                     ))}
                   </optgroup>
@@ -7258,14 +7258,14 @@ function ConcentrateWorkspace({
               <div className="mt-0.5 text-xs text-slate-500">
                 {concentrateMode === 'lotus'
                   ? 'Craft four independent mineral droppers for your own brewing setup.'
-                  : 'Build and calibrate a single-mineral stock by weight.'}
+                  : 'Build and calibrate a single-mineral concentrate by weight.'}
               </div>
             </div>
           </div>
           <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
             {([
-              ['builder', 'Stock Builder', 'Make one mineral stock'],
-              ['lotus', 'DIY Lotus Drops', 'Four independent dropper stocks'],
+              ['builder', 'Stock builder', 'Build one concentrate'],
+              ['lotus', 'DIY Lotus Drops', 'Four independent dropper concentrates'],
             ] as const).map(([value, label, description]) => (
               <button
                 key={value}
@@ -7295,6 +7295,7 @@ function ConcentrateWorkspace({
         <RecipeConcentrateBuilder
           handoff={recipeHandoff}
           volumeUnit={volumeUnit}
+          dropsPerMl={dropsPerMl}
           onToggleVolumeUnit={onToggleVolumeUnit}
           onClear={onClearRecipeHandoff}
           onPlanChange={setRecipeConcentratePlan}
@@ -7306,10 +7307,10 @@ function ConcentrateWorkspace({
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
               <FlaskConical className="h-4 w-4 text-fuchsia-300" />
-              Make one mineral stock
+              Build one concentrate
             </div>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
-              Make a repeatable mineral stock by weight, then use calibrated drops in your brew water.
+              Make a repeatable mineral concentrate by weight, then use calibrated drops in your brew water.
             </p>
           </div>
           <span className="rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200">
@@ -7357,10 +7358,10 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="2" title="Choose concentration and batch weight" icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <StepHeading number="2" title="Choose concentrate strength and batch weight" icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentration</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate strength</span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
@@ -7375,7 +7376,7 @@ function ConcentrateWorkspace({
             </div>
           </label>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total stock weight</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total concentrate weight</span>
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number"
@@ -7384,7 +7385,7 @@ function ConcentrateWorkspace({
                 value={totalStockMassInput}
                 onChange={event => setTotalStockMassInput(event.target.value)}
                 className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                aria-label="Total concentrate stock weight in grams"
+                aria-label="Total concentrate weight in grams"
               />
               <span className="text-sm text-slate-400">g</span>
             </div>
@@ -7393,7 +7394,7 @@ function ConcentrateWorkspace({
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <SummaryMetric label="Salt to weigh" value={saltMassLabel} detail={salt.name} tone="fuchsia" />
           <SummaryMetric label="Water to weigh" value={`${waterMassG.toFixed(2)} g`} detail="distilled or RO water" tone="slate" />
-          <SummaryMetric label="Salt per stock gram" value={`${saltMgPerStockG.toFixed(1)} mg`} detail={salt.name} tone="slate" />
+          <SummaryMetric label="Salt per concentrate gram" value={`${saltMgPerStockG.toFixed(1)} mg`} detail={salt.name} tone="slate" />
         </div>
         {warnings.length > 0 && (
           <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${hasError ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200' : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'}`}>
@@ -7403,13 +7404,15 @@ function ConcentrateWorkspace({
         )}
       </section>
 
+      <DropperReferenceCard authoritativeDropsPerMl={dropsPerMl} />
+
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="3" title="Weigh, mix, and label" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <StepHeading number="3" title="Preparation" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 space-y-2">
           {[
             `Weigh ${saltMassLabel} of ${salt.name} (${form.label}).`,
             `Add ${waterMassG.toFixed(2)} g of distilled or RO water.`,
-            `Combine until the total stock weighs ${totalStockMassG.toFixed(2)} g.`,
+            `Combine until the total concentrate weighs ${totalStockMassG.toFixed(2)} g.`,
             `Shake until clear, then label: ${salt.name} · ${strengthPercent || 0}% w/w · ${totalStockMassG.toFixed(2)} g total.`,
           ].map((step, index) => (
             <button
@@ -7428,7 +7431,7 @@ function ConcentrateWorkspace({
       </section>
 
       <section className="rounded-2xl border border-sky-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="4" title="Calibrate this dropper" icon={<Droplet className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <StepHeading number="4" title="Calibration" icon={<Droplet className="h-3.5 w-3.5" aria-hidden="true" />} />
         <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
           Tare a small container, dispense a known number of drops, then weigh the drops.
         </p>
@@ -7439,19 +7442,19 @@ function ConcentrateWorkspace({
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <SummaryMetric label="Weight per drop" value={`${measuredGramsPerDrop.toFixed(4)} g`} detail="this dropper" tone="sky" />
           <SummaryMetric label="Salt per drop" value={`${mgPerDrop.toFixed(2)} mg`} detail={salt.name} tone="sky" />
-          <SummaryMetric label="Drops per gram" value={measuredGramsPerDrop > 0 ? `${(1 / measuredGramsPerDrop).toFixed(1)}` : '—'} detail="this stock" tone="sky" />
+          <SummaryMetric label="Drops per gram" value={measuredGramsPerDrop > 0 ? `${(1 / measuredGramsPerDrop).toFixed(1)}` : '—'} detail="this concentrate" tone="sky" />
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-          This weight calibration applies to this stock. Recalibrate whenever you change the bottle, dropper, or technique.
+          This weight calibration applies to this concentrate. Recalibrate whenever you change the bottle, dropper, or technique.
         </p>
       </section>
 
       <section className="rounded-2xl border border-emerald-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
-        <StepHeading number="5" title="Calculate your dose" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <StepHeading number="5" title="Dose" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">Dose a target mineral amount</div>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-            Enter the salt mass you want to add. The recommendation rounds to a whole drop using this stock calibration.
+            Enter the salt mass you want to add. The recommendation rounds to a whole drop using this concentrate calibration.
           </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
             <CalibrationInput
@@ -7497,7 +7500,7 @@ function ConcentrateWorkspace({
           <strong className="text-xl tabular-nums text-emerald-200">{resultingPpm.toFixed(2)} mg/L</strong>
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-          Keep each mineral stock in its own bottle. Add individual stocks to the final water, especially for calcium, sulfate, bicarbonate, and citrate salts.
+          Keep each mineral concentrate in its own bottle. Add individual concentrates to the final water, especially for calcium, sulfate, bicarbonate, and citrate salts.
         </p>
       </section>
         </>
@@ -7549,9 +7552,9 @@ function LotusDropsSection() {
             <FlaskConical className="h-4 w-4 text-rose-300" />
             DIY Lotus Drops
           </div>
-          <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-bottle mineral system</h2>
+           <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-concentrate mineral system</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-             Prepare your own four independent stocks using public ingredient identities and recipe inputs.
+             Prepare your own four independent concentrates using public ingredient identities and recipe inputs.
              Choose the recipe you prefer from the official instructions, then use its drop counts with
              your finished droppers. This independent model is not affiliated with or endorsed by Lotus
              Coffee Products, and does not claim to reproduce any proprietary manufacturing formula.
@@ -7569,7 +7572,7 @@ function LotusDropsSection() {
             The public Lotus recipe calculator lists 450 mL recipe inputs, rounded drops, a 0.56
             Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
             formula or guaranteed drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML}
-            Straight drops/mL and derives Round at 0.56×. Measure each finished stock and replace
+            Straight drops/mL and derives Round at 0.56×. Measure each finished concentrate and replace
             that baseline here. Once your droppers are prepared, use the official recipe instructions
             to select the drop counts for your brew.
           </p>
@@ -7585,6 +7588,7 @@ function LotusDropsSection() {
                     type="button"
                     onClick={() => setStyle(option)}
                     aria-pressed={style === option}
+                    aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper style`}
                     className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
                       style === option
                         ? 'bg-rose-400/15 text-rose-200 ring-1 ring-rose-300/30'
@@ -7597,7 +7601,7 @@ function LotusDropsSection() {
               </div>
             </div>
             <label>
-              <span className="text-[10px] uppercase tracking-wider text-slate-500">Bottle volume</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">Concentrate volume</span>
               <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
                 <input
                   type="number"
@@ -7606,7 +7610,7 @@ function LotusDropsSection() {
                   value={stockVolumeInput}
                   onChange={event => setStockVolumeInput(event.target.value)}
                   className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                  aria-label="Four-mineral stock volume in milliliters"
+                  aria-label="Four-mineral concentrate volume in milliliters"
                 />
                 <span className="text-xs text-slate-500">mL</span>
               </span>
@@ -7635,6 +7639,10 @@ function LotusDropsSection() {
         </div>
       </div>
 
+      <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+        <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
+        <span className="text-[11px] text-slate-500">4 independent droppers</span>
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
         {stockPlans.map(plan => {
           return (
@@ -7651,7 +7659,7 @@ function LotusDropsSection() {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <SummaryMetric label="Stock strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
+                <SummaryMetric label="Concentrate strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
                 <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(2)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
@@ -7659,7 +7667,7 @@ function LotusDropsSection() {
                 Add <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}, then dissolve completely.
                 The water number is a mass target—not {stockVolumeMl.toFixed(1)} mL of water and not the total solution weight.
                 The selected {style} model contributes about {plan.dropsPerMl.toFixed(1)} drops/mL;
-                calibrate the finished dropper before relying on whole-drop dosing.
+                calibrate the finished concentrate dropper before relying on whole-drop dosing.
               </p>
               <div className="mt-2 text-[10px] text-slate-600">
                 Weight-first preparation uses approximately 1 g water ≈ 1 mL; dissolved salt changes final volume slightly, so calibration matters.
@@ -7687,15 +7695,99 @@ function LotusDropsSection() {
   );
 }
 
+function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsPerMl: number }) {
+  const [referenceStyle, setReferenceStyle] = useState<LotusDropperStyle>('straight');
+  const straightDropsPerMl = lotusDropsPerMl('straight');
+  const roundDropsPerMl = lotusDropsPerMl('round');
+  const activeDropsPerMl = lotusDropsPerMl(referenceStyle);
+  const safeAuthoritativeDropsPerMl = Number.isFinite(authoritativeDropsPerMl) && authoritativeDropsPerMl > 0
+    ? authoritativeDropsPerMl
+    : straightDropsPerMl;
+
+  return (
+    <section
+      className="rounded-2xl border border-cyan-300/20 bg-slate-800/70 p-4 shadow-xl sm:p-5"
+      aria-labelledby="dropper-reference-title"
+      data-testid="card-dropper-reference"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/25 bg-cyan-400/[0.08] text-cyan-200">
+            <Droplet className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 id="dropper-reference-title" className="text-sm font-semibold text-slate-100">Dropper reference</h2>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              A quick Lotus measurement reference for planning drops.
+            </p>
+          </div>
+        </div>
+        <span className="rounded-full border border-cyan-300/20 bg-cyan-400/[0.06] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200/80">
+          Informational
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Dropper style</div>
+          <div
+            className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 p-1"
+            role="group"
+            aria-label="Dropper reference style"
+          >
+            {(['round', 'straight'] as LotusDropperStyle[]).map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setReferenceStyle(option)}
+                aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper reference`}
+                aria-pressed={referenceStyle === option}
+                data-testid={`button-dropper-reference-${option}`}
+                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                  referenceStyle === option
+                    ? 'bg-cyan-400/15 text-cyan-100 ring-1 ring-cyan-300/30'
+                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                }`}
+              >
+                {option === 'round' ? 'Round' : 'Straight'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-cyan-300/20 bg-cyan-400/[0.05] px-3 py-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/70">Active measurement</div>
+          <div className="mt-1 flex items-baseline gap-2" data-testid="text-dropper-reference-active-measurement">
+            <strong className="text-lg font-semibold tabular-nums text-cyan-100">
+              {referenceStyle === 'round' ? 'Round' : 'Straight'}
+            </strong>
+            <span className="text-sm font-semibold tabular-nums text-cyan-200">{activeDropsPerMl.toFixed(1)} drops/mL</span>
+          </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+            Reference only; the current calibrated dose remains {safeAuthoritativeDropsPerMl.toFixed(1)} drops/mL.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <SummaryMetric label="Round reference" value={roundDropsPerMl.toFixed(1)} detail="drops/mL" tone="slate" />
+        <SummaryMetric label="Straight reference" value={straightDropsPerMl.toFixed(1)} detail="drops/mL" tone="sky" />
+      </div>
+    </section>
+  );
+}
+
 function RecipeConcentrateBuilder({
   handoff,
   volumeUnit,
+  dropsPerMl,
   onToggleVolumeUnit,
   onClear,
   onPlanChange,
 }: {
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
+  dropsPerMl: number;
   onToggleVolumeUnit: () => void;
   onClear: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
@@ -7841,6 +7933,7 @@ function RecipeConcentrateBuilder({
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Plan</div>
             <h2 className="truncate text-lg font-semibold text-white">{handoff.name}</h2>
           </div>
           <button
@@ -7848,12 +7941,12 @@ function RecipeConcentrateBuilder({
             onClick={onClear}
             className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
           >
-            Single mineral
+            Clear imported recipe
           </button>
         </div>
       </section>
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/[0.08] via-slate-800/80 to-indigo-500/[0.08] p-4 shadow-xl sm:p-6">
-        <StepHeading number="1" title="Style" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
+        <StepHeading number="1" title="Plan" icon={<FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           {[
             {
@@ -7923,7 +8016,7 @@ function RecipeConcentrateBuilder({
                   <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
                     <BottleWine className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <label htmlFor="recipe-stock-strength">Strength</label>
+                  <label htmlFor="recipe-stock-strength">Concentrate strength</label>
                 </span>
                 {maxSafeStrength != null && (
                   <button
@@ -7976,7 +8069,7 @@ function RecipeConcentrateBuilder({
           </div>
           <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate Volume</span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate volume</span>
               <span className="text-[10px] text-slate-500">mL</span>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -8024,6 +8117,7 @@ function RecipeConcentrateBuilder({
           </div>
         )}
       </section>
+      <DropperReferenceCard authoritativeDropsPerMl={dropsPerMl} />
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
@@ -10018,11 +10112,11 @@ function ConcentrateRecipeStepsModal({
                 <div className="text-xs font-semibold text-slate-100">Plan</div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <div className="rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-3 py-2.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Style</div>
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Plan</div>
                     <div className="mt-1 text-sm font-semibold text-violet-100">{plan.strategyLabel}</div>
                   </div>
                   <div className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-3 py-2.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Strength</div>
+                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Concentrate strength</div>
                     <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">×{plan.strength || 0}</div>
                     {plan.maxSafeStrength != null && (
                       <div className={`mt-0.5 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
@@ -10032,7 +10126,7 @@ function ConcentrateRecipeStepsModal({
                   </div>
                 </div>
                 <div className="mt-2 rounded-lg border border-sky-300/20 bg-sky-400/[0.06] px-3 py-2.5">
-                  <div className="text-[9px] font-semibold uppercase tracking-wider text-sky-200/70">Volumes</div>
+                  <div className="text-[9px] font-semibold uppercase tracking-wider text-sky-200/70">Concentrate volume</div>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {plan.groups.map(group => {
                       return (
