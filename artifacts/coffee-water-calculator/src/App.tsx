@@ -7,7 +7,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -5380,10 +5380,16 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-4 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-700 to-fuchsia-500' : modeAccent}`}>
-        <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3">
-          <Calculator className="w-6 h-6 text-white" />
-          <h1 className="truncate text-base sm:text-lg font-semibold text-white tracking-tight">Coffee Water Mineral Calculator</h1>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-3.5 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+        <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-200/25 bg-slate-950/35 text-cyan-100 shadow-lg shadow-cyan-950/30">
+            <CoffeeWaterLabMark className="h-9 w-9" aria-hidden="true" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.24em] text-cyan-200/75">Watermancer Lab</div>
+            <h1 className="truncate text-lg font-semibold tracking-tight text-white sm:text-xl">Coffee Water Lab</h1>
+            <p className="hidden text-[11px] leading-relaxed text-slate-300/75 sm:block">Obsessive water craft for better coffee.</p>
+          </div>
         </div>
         <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
           <a
@@ -9841,6 +9847,31 @@ function SaltSieveIcon() {
         <circle cx="8.95" cy="13.1" r="0.55" fill="currentColor" />
       </svg>
     </span>
+  );
+}
+
+function CoffeeWaterLabMark({
+  className = '',
+  ...props
+}: {
+  className?: string;
+} & SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 44 44" fill="none" className={className} {...props}>
+      <circle cx="22" cy="22" r="18" stroke="currentColor" strokeOpacity=".35" strokeWidth="1" />
+      <path
+        d="M22 7.5c0 0-7.4 7-7.4 12.4a7.4 7.4 0 0 0 14.8 0C29.4 14.5 22 7.5 22 7.5Z"
+        fill="currentColor"
+        fillOpacity=".16"
+        stroke="currentColor"
+        strokeWidth="1.5"
+      />
+      <path d="M10 25.6c3.3-2.3 6.2-2.3 9.1 0 2.9 2.3 5.8 2.3 8.7 0 2.5-2 4.7-2.2 6.2-1.5" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
+      <path d="M12.5 29.3c2.7-1.4 5.1-1.3 7.5.3 2.4 1.6 5 1.7 7.8.3" stroke="currentColor" strokeOpacity=".62" strokeWidth="1.1" strokeLinecap="round" />
+      <circle cx="22" cy="17.5" r="1.35" fill="currentColor" />
+      <circle cx="16.2" cy="12.8" r="1" fill="currentColor" fillOpacity=".72" />
+      <circle cx="27.8" cy="12.8" r="1" fill="currentColor" fillOpacity=".72" />
+    </svg>
   );
 }
 
