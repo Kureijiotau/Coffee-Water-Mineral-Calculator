@@ -4,6 +4,8 @@ import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
+import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
+import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -7209,7 +7211,7 @@ function ConcentrateWorkspace({
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [showConcentrateSteps, setShowConcentrateSteps] = useState(false);
   const [recipeConcentratePlan, setRecipeConcentratePlan] = useState<ConcentratePlanSnapshot | null>(null);
-  const [dropperStyle, setDropperStyle] = useState<LotusDropperStyle>('round');
+  const [dropperStyle, setDropperStyle] = useState<LotusDropperStyle>('straight');
   const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
@@ -7616,13 +7618,20 @@ function LotusDropsSection({
                     onClick={() => onStyleChange(option)}
                     aria-pressed={style === option}
                     aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper style`}
-                    className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                    className={`group relative rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
                       style === option
                         ? 'bg-rose-400/15 text-rose-200 ring-1 ring-rose-300/30'
                         : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
                     }`}
                   >
                     {option === 'round' ? 'Round' : 'Straight'}
+                    <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2 w-36 -translate-x-1/2 translate-y-1 overflow-hidden rounded-xl border border-rose-200/30 bg-white p-1 opacity-0 shadow-2xl shadow-slate-950/60 transition duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                      <img
+                        src={option === 'round' ? roundedDropperImage : straightDropperImage}
+                        alt={`${option === 'round' ? 'Round' : 'Straight'} dropper`}
+                        className="h-28 w-full object-contain"
+                      />
+                    </span>
                   </button>
                 ))}
               </div>
@@ -7776,13 +7785,20 @@ function DropperReferenceCard({
                 aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper reference`}
                 aria-pressed={referenceStyle === option}
                 data-testid={`button-dropper-reference-${option}`}
-                className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                className={`group relative rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
                   referenceStyle === option
                     ? 'bg-cyan-400/15 text-cyan-100 ring-1 ring-cyan-300/30'
                     : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
                 }`}
               >
                 {option === 'round' ? 'Round' : 'Straight'}
+                <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-50 mb-2 w-36 -translate-x-1/2 translate-y-1 overflow-hidden rounded-xl border border-cyan-200/30 bg-white p-1 opacity-0 shadow-2xl shadow-slate-950/60 transition duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                  <img
+                    src={option === 'round' ? roundedDropperImage : straightDropperImage}
+                    alt={`${option === 'round' ? 'Round' : 'Straight'} dropper`}
+                    className="h-28 w-full object-contain"
+                  />
+                </span>
               </button>
             ))}
           </div>
