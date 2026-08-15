@@ -7,7 +7,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine } from 'lucide-react';
+import { Calculator, Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -1110,6 +1110,14 @@ function loadDropsPerMl(): number {
 function loadDropperCalibrationAcknowledged(): boolean {
   try {
     return localStorage.getItem(DROPPER_CALIBRATION_ACKNOWLEDGED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function loadHasSavedDropperCalibration(): boolean {
+  try {
+    return localStorage.getItem(DROPPER_CALIBRATION_STORAGE_KEY) !== null;
   } catch {
     return false;
   }
@@ -9835,7 +9843,8 @@ function BrewerDropperCalibrationCard({
   const [doseDrops, setDoseDrops] = useState('20');
   const [doseVolumeLiters, setDoseVolumeLiters] = useState('1');
   const [acknowledged, setAcknowledged] = useState(() => loadDropperCalibrationAcknowledged());
-  const [collapsed, setCollapsed] = useState(false);
+  const [hasSavedCalibration, setHasSavedCalibration] = useState(() => loadHasSavedDropperCalibration());
+  const [collapsed, setCollapsed] = useState(true);
   const parsedDrops = Number(dropCount);
   const parsedVolume = Number(measuredVolume);
   const measuredDropsPerMl = parsedDrops > 0 && parsedVolume > 0
@@ -9872,25 +9881,49 @@ function BrewerDropperCalibrationCard({
         type="button"
         onClick={() => {
           acknowledge();
-          if (collapsed) setCollapsed(false);
+          setCollapsed(open => !open);
         }}
-        className="flex w-full items-start gap-3 border-b border-sky-400/15 bg-gradient-to-r from-sky-500/10 via-cyan-500/[0.04] to-transparent px-4 py-3 text-left sm:px-6"
-        aria-label="Acknowledge dropper calibration"
+        className={`group flex w-full items-start gap-3 bg-gradient-to-r from-sky-500/10 via-cyan-500/[0.05] to-transparent px-4 py-3 text-left transition hover:from-sky-500/15 hover:via-cyan-500/[0.08] sm:px-6 ${!collapsed ? 'border-b border-sky-400/15' : ''}`}
+        aria-label={`${collapsed ? 'Open' : 'Collapse'} dropper calibration`}
         aria-expanded={!collapsed}
+        aria-controls="brewer-dropper-calibration-content"
       >
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/30 bg-sky-400/10 text-sky-200">
           <FlaskConical className="h-4 w-4" />
         </div>
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-sky-100">Calibrate dropper</h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-sky-100">Calibrate your dropper</h2>
+            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold tracking-wide ${
+              hasSavedCalibration
+                ? 'border-cyan-300/25 bg-cyan-400/10 text-cyan-200'
+                : 'border-amber-300/25 bg-amber-400/10 text-amber-200'
+            }`}>
+              {hasSavedCalibration ? `${dropsPerMl.toFixed(1)} drops/mL` : 'Not calibrated'}
+            </span>
+          </div>
           <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
             {collapsed
-              ? `${dropsPerMl.toFixed(1)} drops/mL · Click to review calibration`
+              ? 'One quick measurement turns drops into reliable mg/L dosing.'
               : 'Turn drops into a reliable mg/L dose for your brew water.'}
           </p>
+          {collapsed && (
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] font-medium text-slate-400">
+              {['Measure', 'Convert', 'Dose'].map((step, index) => (
+                <span key={step} className="inline-flex items-center gap-1.5 rounded-full border border-sky-300/15 bg-slate-950/20 px-2 py-1">
+                  <span className="text-sky-300/80">{index + 1}</span>
+                  {step}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="flex shrink-0 items-center gap-2 pt-1 text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">
+          <span className="hidden sm:inline">{collapsed ? 'Open calibration' : 'Collapse'}</span>
+          <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`} />
         </div>
       </button>
-      {!collapsed && <div className="space-y-3 px-4 py-4 sm:px-6">
+      {!collapsed && <div id="brewer-dropper-calibration-content" className="space-y-3 px-4 py-4 sm:px-6">
         <div className="rounded-xl border border-sky-400/20 bg-sky-500/[0.06] px-3 py-3 text-[11px] leading-relaxed text-slate-300">
           <div className="font-semibold text-sky-200">Measure once, dose with confidence</div>
           <ol className="mt-2 list-inside list-decimal space-y-1 text-slate-400">
@@ -9944,6 +9977,7 @@ function BrewerDropperCalibrationCard({
             type="button"
             onClick={() => {
               onCalibrate(measuredDropsPerMl);
+              setHasSavedCalibration(true);
               setCollapsed(true);
             }}
             disabled={!canCalibrate}
