@@ -7209,6 +7209,8 @@ function ConcentrateWorkspace({
   const [completedSteps, setCompletedSteps] = useState<Record<number, boolean>>({});
   const [showConcentrateSteps, setShowConcentrateSteps] = useState(false);
   const [recipeConcentratePlan, setRecipeConcentratePlan] = useState<ConcentratePlanSnapshot | null>(null);
+  const [dropperStyle, setDropperStyle] = useState<LotusDropperStyle>('round');
+  const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
@@ -7239,6 +7241,11 @@ function ConcentrateWorkspace({
     [salt.id, saltMgPerStockG, strengthPercent],
   );
   const hasError = warnings.some(warning => warning.severity === 'error');
+  const straightBaselineDropsPerMl = Math.max(
+    0.1,
+    Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+  );
+  const dropperReferenceDropsPerMl = lotusDropsPerMl(dropperStyle, straightBaselineDropsPerMl);
   const toggleStep = (step: number) => {
     setCompletedSteps(prev => ({ ...prev, [step]: !prev[step] }));
   };
@@ -7290,12 +7297,20 @@ function ConcentrateWorkspace({
       </div>
 
       {concentrateMode === 'lotus' ? (
-        <LotusDropsSection />
+        <LotusDropsSection
+          style={dropperStyle}
+          onStyleChange={setDropperStyle}
+          straightDropsPerMlInput={straightDropsPerMlInput}
+          onStraightDropsPerMlChange={setStraightDropsPerMlInput}
+        />
       ) : recipeHandoff ? (
         <RecipeConcentrateBuilder
           handoff={recipeHandoff}
           volumeUnit={volumeUnit}
           dropsPerMl={dropsPerMl}
+          dropperStyle={dropperStyle}
+          onDropperStyleChange={setDropperStyle}
+          straightDropsPerMl={straightBaselineDropsPerMl}
           onToggleVolumeUnit={onToggleVolumeUnit}
           onClear={onClearRecipeHandoff}
           onPlanChange={setRecipeConcentratePlan}
@@ -7404,7 +7419,12 @@ function ConcentrateWorkspace({
         )}
       </section>
 
-      <DropperReferenceCard authoritativeDropsPerMl={dropsPerMl} />
+      <DropperReferenceCard
+        referenceStyle={dropperStyle}
+        onStyleChange={setDropperStyle}
+        straightDropsPerMl={straightBaselineDropsPerMl}
+        authoritativeDropsPerMl={dropsPerMl}
+      />
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
         <StepHeading number="3" title="Preparation" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
@@ -7520,6 +7540,8 @@ function ConcentrateWorkspace({
           recipeHandoff={recipeHandoff}
           plan={recipeConcentratePlan}
           dropsPerMl={dropsPerMl}
+          dropperStyle={dropperStyle}
+          dropperReferenceDropsPerMl={dropperReferenceDropsPerMl}
           onClose={() => setShowConcentrateSteps(false)}
         />
       )}
@@ -7527,16 +7549,21 @@ function ConcentrateWorkspace({
   );
 }
 
-function LotusDropsSection() {
-  const [style, setStyle] = useState<LotusDropperStyle>('round');
+function LotusDropsSection({
+  style,
+  onStyleChange,
+  straightDropsPerMlInput,
+  onStraightDropsPerMlChange,
+}: {
+  style: LotusDropperStyle;
+  onStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMlInput: string;
+  onStraightDropsPerMlChange: (value: string) => void;
+}) {
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
-  const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
 
   const stockVolumeMl = Math.max(1, Number(stockVolumeInput) || LOTUS_BOTTLE_VOLUME_ML);
-  const straightBaselineDropsPerMl = Math.max(
-    0.1,
-    Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
-  );
+  const straightBaselineDropsPerMl = Math.max(0.1, Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML);
   const activeDropsPerMl = lotusDropsPerMl(style, straightBaselineDropsPerMl);
   const roundDropsPerMl = lotusDropsPerMl('round', straightBaselineDropsPerMl);
   const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
@@ -7586,7 +7613,7 @@ function LotusDropsSection() {
                   <button
                     key={option}
                     type="button"
-                    onClick={() => setStyle(option)}
+                    onClick={() => onStyleChange(option)}
                     aria-pressed={style === option}
                     aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper style`}
                     className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
@@ -7623,7 +7650,7 @@ function LotusDropsSection() {
                   min="0.1"
                   step="0.1"
                   value={straightDropsPerMlInput}
-                  onChange={event => setStraightDropsPerMlInput(event.target.value)}
+                   onChange={event => onStraightDropsPerMlChange(event.target.value)}
                   className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
                   aria-label="Straight dropper calibration in drops per milliliter"
                 />
@@ -7695,14 +7722,23 @@ function LotusDropsSection() {
   );
 }
 
-function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsPerMl: number }) {
-  const [referenceStyle, setReferenceStyle] = useState<LotusDropperStyle>('straight');
-  const straightDropsPerMl = lotusDropsPerMl('straight');
-  const roundDropsPerMl = lotusDropsPerMl('round');
-  const activeDropsPerMl = lotusDropsPerMl(referenceStyle);
+function DropperReferenceCard({
+  referenceStyle,
+  onStyleChange,
+  straightDropsPerMl,
+  authoritativeDropsPerMl,
+}: {
+  referenceStyle: LotusDropperStyle;
+  onStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMl: number;
+  authoritativeDropsPerMl: number;
+}) {
+  const straightReferenceDropsPerMl = lotusDropsPerMl('straight', straightDropsPerMl);
+  const roundReferenceDropsPerMl = lotusDropsPerMl('round', straightDropsPerMl);
+  const activeDropsPerMl = lotusDropsPerMl(referenceStyle, straightDropsPerMl);
   const safeAuthoritativeDropsPerMl = Number.isFinite(authoritativeDropsPerMl) && authoritativeDropsPerMl > 0
     ? authoritativeDropsPerMl
-    : straightDropsPerMl;
+    : straightReferenceDropsPerMl;
 
   return (
     <section
@@ -7736,7 +7772,7 @@ function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsP
               <button
                 key={option}
                 type="button"
-                onClick={() => setReferenceStyle(option)}
+                onClick={() => onStyleChange(option)}
                 aria-label={`${option === 'round' ? 'Round' : 'Straight'} dropper reference`}
                 aria-pressed={referenceStyle === option}
                 data-testid={`button-dropper-reference-${option}`}
@@ -7766,8 +7802,8 @@ function DropperReferenceCard({ authoritativeDropsPerMl }: { authoritativeDropsP
         </div>
       </div>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <SummaryMetric label="Round reference" value={roundDropsPerMl.toFixed(1)} detail="drops/mL" tone="slate" />
-        <SummaryMetric label="Straight reference" value={straightDropsPerMl.toFixed(1)} detail="drops/mL" tone="sky" />
+        <SummaryMetric label="Round reference" value={roundReferenceDropsPerMl.toFixed(1)} detail="drops/mL" tone="slate" />
+        <SummaryMetric label="Straight reference" value={straightReferenceDropsPerMl.toFixed(1)} detail="drops/mL" tone="sky" />
       </div>
     </section>
   );
@@ -7777,6 +7813,9 @@ function RecipeConcentrateBuilder({
   handoff,
   volumeUnit,
   dropsPerMl,
+  dropperStyle,
+  onDropperStyleChange,
+  straightDropsPerMl,
   onToggleVolumeUnit,
   onClear,
   onPlanChange,
@@ -7784,6 +7823,9 @@ function RecipeConcentrateBuilder({
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
   dropsPerMl: number;
+  dropperStyle: LotusDropperStyle;
+  onDropperStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMl: number;
   onToggleVolumeUnit: () => void;
   onClear: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
@@ -8113,7 +8155,12 @@ function RecipeConcentrateBuilder({
           </div>
         )}
       </section>
-      <DropperReferenceCard authoritativeDropsPerMl={dropsPerMl} />
+      <DropperReferenceCard
+        referenceStyle={dropperStyle}
+        onStyleChange={onDropperStyleChange}
+        straightDropsPerMl={straightDropsPerMl}
+        authoritativeDropsPerMl={dropsPerMl}
+      />
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
@@ -9912,11 +9959,15 @@ function ConcentrateRecipeStepsModal({
   recipeHandoff,
   plan,
   dropsPerMl,
+  dropperStyle,
+  dropperReferenceDropsPerMl,
   onClose,
 }: {
   recipeHandoff: ConcentrateRecipeHandoff | null;
   plan: ConcentratePlanSnapshot | null;
   dropsPerMl: number;
+  dropperStyle: LotusDropperStyle;
+  dropperReferenceDropsPerMl: number;
   onClose: () => void;
 }) {
   const exportCardRef = useRef<HTMLDivElement>(null);
@@ -9943,6 +9994,7 @@ function ConcentrateRecipeStepsModal({
     : [];
   const doseMlPerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const safeDropsPerMl = Number.isFinite(dropsPerMl) && dropsPerMl > 0 ? dropsPerMl : 20;
+  const dropperStyleLabel = dropperStyle === 'round' ? 'Round' : 'Straight';
   const doseRows = [
     { label: '1 L', liters: 1 },
     { label: '1 US gallon', liters: 3.78541 },
@@ -10169,6 +10221,19 @@ function ConcentrateRecipeStepsModal({
             <div className="flex items-center gap-2 text-xs font-semibold text-violet-100">
               <Droplet className="h-4 w-4 text-violet-300" aria-hidden="true" />
               Dose
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-300/20 bg-violet-400/[0.08] px-3 py-2">
+              <div>
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Dropper style</div>
+                <div className="mt-1 text-sm font-semibold text-violet-100">{dropperStyleLabel}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">Reference</div>
+                <div className="mt-1 text-sm font-semibold tabular-nums text-violet-100">{dropperReferenceDropsPerMl.toFixed(1)} drops/mL</div>
+              </div>
+            </div>
+            <div className="mt-2 text-[10px] text-slate-500">
+              Dose drops below use the current calibrated setting of {safeDropsPerMl.toFixed(1)} drops/mL.
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
               {doseRows.map(row => (
