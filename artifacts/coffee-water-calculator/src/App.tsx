@@ -5382,8 +5382,8 @@ function App() {
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
       <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r px-4 py-3.5 sm:px-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-cyan-200/25 bg-slate-950/35 text-cyan-100 shadow-lg shadow-cyan-950/30">
-            <CoffeeWaterLabMark className="h-9 w-9" aria-hidden="true" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-200/25 bg-slate-950/45 text-cyan-100 shadow-lg shadow-cyan-950/30">
+            <WatermancerMageMark className="h-11 w-11" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-lg font-semibold uppercase tracking-[0.08em] text-white sm:text-xl">Watermancer</h1>
@@ -9849,27 +9849,32 @@ function SaltSieveIcon() {
   );
 }
 
-function CoffeeWaterLabMark({
+function WatermancerMageMark({
   className = '',
   ...props
 }: {
   className?: string;
 } & SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 44 44" fill="none" className={className} {...props}>
-      <circle cx="22" cy="22" r="18" stroke="currentColor" strokeOpacity=".35" strokeWidth="1" />
+    <svg viewBox="0 0 56 56" fill="none" className={className} {...props}>
+      <path d="M28 4.5c0 0-15.5 13.6-15.5 26.1a15.5 15.5 0 0 0 31 0C43.5 18.1 28 4.5 28 4.5Z" stroke="currentColor" strokeOpacity=".3" strokeWidth="1.15" />
       <path
-        d="M22 7.5c0 0-7.4 7-7.4 12.4a7.4 7.4 0 0 0 14.8 0C29.4 14.5 22 7.5 22 7.5Z"
-        fill="currentColor"
-        fillOpacity=".16"
+        d="M28 8.5 39.2 19l-5.8-1.1 2.8 9.4-8.2-4-8.2 4 2.8-9.4-5.8 1.1L28 8.5Z"
+        fill="#020617"
+        fillOpacity=".88"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.25"
+        strokeLinejoin="round"
       />
-      <path d="M10 25.6c3.3-2.3 6.2-2.3 9.1 0 2.9 2.3 5.8 2.3 8.7 0 2.5-2 4.7-2.2 6.2-1.5" stroke="currentColor" strokeWidth="1.45" strokeLinecap="round" />
-      <path d="M12.5 29.3c2.7-1.4 5.1-1.3 7.5.3 2.4 1.6 5 1.7 7.8.3" stroke="currentColor" strokeOpacity=".62" strokeWidth="1.1" strokeLinecap="round" />
-      <circle cx="22" cy="17.5" r="1.35" fill="currentColor" />
-      <circle cx="16.2" cy="12.8" r="1" fill="currentColor" fillOpacity=".72" />
-      <circle cx="27.8" cy="12.8" r="1" fill="currentColor" fillOpacity=".72" />
+      <path d="M21.1 29.2c1.6-4.2 4-6.3 6.9-6.3s5.3 2.1 6.9 6.3v7.3c-1.8 4.2-4.1 6.4-6.9 6.4s-5.1-2.2-6.9-6.4v-7.3Z" fill="#020617" stroke="currentColor" strokeOpacity=".85" strokeWidth="1.1" />
+      <path d="m23.5 31.2 3.8-1.2 1.2 1.3-3.8 1.5-1.2-1.6ZM32.5 31.2l-1.2 1.6 3.8-1.5-1.2-1.3-1.4 1.2Z" fill="#fb7185" />
+      <path d="M27.9 34.1h.2" stroke="#fb7185" strokeWidth="1.1" strokeLinecap="round" />
+      <path d="M21.5 39.2 16 43.8M34.5 39.2l5.5 4.6" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round" />
+      <path d="M40.2 35.8c3.8-2.6 6-5.2 6.6-8.2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="47.2" cy="25.8" r="1.65" fill="#67e8f9" />
+      <path d="M10 36.3c5.5-5.4 10.6 2.4 16.3-1.1 5.8-3.6 10.2-7.3 17.1-2.4 1.4 1 2.4 2.1 3 3.1-6.5-2.2-10.2 4.7-16.6 3.2-7.1-1.7-10.8-6-19.8 1.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="14.5" cy="29.4" r="1.15" fill="currentColor" />
+      <circle cx="43.8" cy="40.1" r="1" fill="currentColor" fillOpacity=".72" />
     </svg>
   );
 }
