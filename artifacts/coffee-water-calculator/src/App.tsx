@@ -7251,7 +7251,21 @@ function App() {
                     <span>Salt</span>
                     <span>Hydration form</span>
                     <span>Dose</span>
-                    <span>Use</span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Use</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          enterWatermancerManualMode();
+                          setWatermancerUsedSaltIds(SALTS.map(salt => salt.id));
+                        }}
+                        className="rounded border border-indigo-300/25 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-indigo-200 transition hover:border-indigo-200/50 hover:bg-indigo-500/20 hover:text-indigo-100"
+                        aria-label="Use all salts"
+                        title="Enable all salts"
+                      >
+                        All
+                      </button>
+                    </div>
                   </div>
                   <div className="divide-y divide-slate-700/50">
                     {SALTS.map((salt, index) => {
