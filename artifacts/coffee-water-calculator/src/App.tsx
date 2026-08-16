@@ -9552,6 +9552,14 @@ function WatermancerIonCoverageBars({
   sticky: boolean;
   onToggleSticky: () => void;
 }) {
+  const completeActualIons = completeIonTotals(actualIons);
+  const finalGh = computeGH(completeActualIons);
+  const finalKh = computeKH(completeActualIons);
+  const finalTds = Object.values(actualIons).reduce((total, ppm) => total + (ppm ?? 0), 0);
+  const finalGhKhRatio = finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh)
+    ? `${(finalGh / finalKh).toFixed(1)}:1`
+    : '—';
+
   return (
     <div
       className={`${sticky
@@ -9729,7 +9737,34 @@ function WatermancerIonCoverageBars({
             </div>
           );
         })()}
-      </div>
+       </div>
+       {sticky && (
+         <div
+           className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2"
+           aria-label="Final mixture summary"
+         >
+           <div className="min-w-0 px-1 text-center">
+             <div className="text-[9px] font-semibold uppercase tracking-wider text-indigo-200/70">GH</div>
+             <div className="mt-0.5 text-xs font-semibold tabular-nums text-indigo-200">{finalGh.toFixed(1)}</div>
+             <div className="text-[9px] text-slate-500">ppm</div>
+           </div>
+           <div className="min-w-0 px-1 text-center">
+             <div className="text-[9px] font-semibold uppercase tracking-wider text-amber-200/70">KH</div>
+             <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">{finalKh.toFixed(1)}</div>
+             <div className="text-[9px] text-slate-500">ppm</div>
+           </div>
+           <div className="min-w-0 px-1 text-center">
+             <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-200/70">GH:KH</div>
+             <div className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-200">{finalGhKhRatio}</div>
+             <div className="text-[9px] text-slate-500">ratio</div>
+           </div>
+           <div className="min-w-0 px-1 text-center">
+             <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">TDS</div>
+             <div className="mt-0.5 text-xs font-semibold tabular-nums text-cyan-200">{finalTds.toFixed(1)}</div>
+             <div className="text-[9px] text-slate-500">mg/L</div>
+           </div>
+         </div>
+       )}
     </div>
   );
 }
