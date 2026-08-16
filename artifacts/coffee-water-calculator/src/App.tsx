@@ -7,7 +7,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import watermancerMarkImage from '@assets/image_1786854008743.png';
+import watermancerMarkImage from '@assets/image_1786855239956.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
