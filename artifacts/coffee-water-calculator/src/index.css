@@ -48,6 +48,12 @@ body {
     0 0 0 1px rgb(255 255 255 / 0.04) inset;
 }
 
+.watermancer-header__mark {
+  mix-blend-mode: lighten;
+  -webkit-mask-image: radial-gradient(ellipse 76% 76% at center, #000 52%, transparent 100%);
+  mask-image: radial-gradient(ellipse 76% 76% at center, #000 52%, transparent 100%);
+}
+
 .app-header::after {
   position: absolute;
   inset: 0;

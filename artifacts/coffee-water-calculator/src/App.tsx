@@ -7,7 +7,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import watermancerHeaderBanner from '@assets/Untitled-1_1786854232596.png';
+import watermancerMarkImage from '@assets/image_1786854008743.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -5380,18 +5380,22 @@ function App() {
   };
 
   const appHeader = (
-    <div className="app-header overflow-hidden rounded-2xl bg-[#0b1c2b] shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-[#0b1c2b] ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
-        <div className="app-header__brand flex min-w-0 flex-1 items-center">
-          <h1 className="sr-only">Watermancer</h1>
+    <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-3.5 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+        <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
-            src={watermancerHeaderBanner}
-            alt="Watermancer — On a quest to get your ions in a row."
-            className="block h-auto w-full max-w-[39.4375rem] shrink-0"
+            src={watermancerMarkImage}
+            alt=""
+            aria-hidden="true"
+            className="watermancer-header__mark h-20 w-20 shrink-0 object-cover sm:h-24 sm:w-24"
             style={{ imageRendering: 'pixelated' }}
           />
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-semibold uppercase tracking-[0.08em] text-white sm:text-xl">Watermancer</h1>
+            <p className="text-[11px] leading-relaxed text-slate-300/75">On a quest to get your ions in a row.</p>
+          </div>
         </div>
-        <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 px-4 pb-3 sm:order-none sm:w-auto sm:px-4 sm:py-3.5">
+        <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
           <a
             href="https://discord.com/users/361929925449482240"
             target="_blank"
