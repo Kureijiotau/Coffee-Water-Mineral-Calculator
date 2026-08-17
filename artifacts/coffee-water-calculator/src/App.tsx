@@ -9569,10 +9569,13 @@ function WatermancerIonCoverageBars({
     : dockPosition === 'right'
       ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
       : 'fixed inset-x-3 bottom-3 top-auto sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
+  const stickyHeightClass = dockPosition === 'center'
+    ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
+    : '';
 
   return (
     <div
-      className={`${sticky ? stickyPositionClass : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+      className={`${sticky ? `${stickyPositionClass} ${stickyHeightClass}` : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
     >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -9654,7 +9657,7 @@ function WatermancerIonCoverageBars({
           </button>
         </div>
       </div>
-      <div className="app-card-body min-h-0 flex-1 space-y-3 overflow-y-auto">
+       <div className="app-card-body min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain">
         {ACTIVE_ION_IDS.map(id => {
           const ion = ION_MAP[id];
           const actual = actualIons[id] ?? 0;
