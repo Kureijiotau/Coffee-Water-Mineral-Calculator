@@ -9608,6 +9608,20 @@ function WatermancerIonCoverageBars({
               </button>
               <button
                 type="button"
+                onClick={() => onDockPositionChange('center')}
+                className={`inline-flex h-8 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
+                  dockPosition === 'center'
+                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
+                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
+                }`}
+                aria-pressed={dockPosition === 'center'}
+                aria-label="Center result at the bottom"
+                title="Center result at the bottom"
+              >
+                Center
+              </button>
+              <button
+                type="button"
                 onClick={() => onDockPositionChange('right')}
                 className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition ${
                   dockPosition === 'right'
