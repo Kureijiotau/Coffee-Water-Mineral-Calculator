@@ -40,7 +40,7 @@ export interface IonContribution {
   fraction: number;
 }
 
-export type SupplementalIonId = 'lactate';
+export type SupplementalIonId = 'lactate' | 'glycinate';
 
 export interface SupplementalIonInfo {
   id: SupplementalIonId;
@@ -234,11 +234,31 @@ export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
     formula: 'C₃H₅O₃⁻',
     note: 'Usually subtle at the levels used in coffee water; lactate may contribute a soft, rounded mouthfeel rather than a distinct flavor. At higher levels, a faint tangy or sour edge may appear.',
   },
+  {
+    id: 'glycinate',
+    name: 'Glycinate carrier',
+    formula: 'C₂H₄NO₂⁻',
+    note: 'Label-derived carrier mass for Magnesium Glycinate. Displayed separately from elemental magnesium and kept outside the core water-ion target and overshoot model.',
+  },
 ];
 
 export const SUPPLEMENTAL_ION_MAP = Object.fromEntries(
   SUPPLEMENTAL_IONS.map(ion => [ion.id, ion]),
 ) as Record<SupplementalIonId, SupplementalIonInfo>;
+
+/**
+ * The uploaded product label reports 210 mg elemental magnesium per 1.8 g
+ * scoop. Its remaining labeled mass is represented as a display-only
+ * glycinate carrier so the product basis stays faithful without inventing
+ * chloride, sulfate, bicarbonate, or another core water ion.
+ */
+export const MAGNESIUM_GLYCINATE_LABEL = {
+  servingMassMg: 1800,
+  elementalMagnesiumMg: 210,
+  glycinateCarrierMg: 1590,
+  elementalMagnesiumFraction: 210 / 1800,
+  glycinateCarrierFraction: 1590 / 1800,
+} as const;
 
 export const SALTS: SaltInfo[] = [
   {
@@ -345,6 +365,23 @@ export const SALTS: SaltInfo[] = [
     ions: [
       { ionId: 'potassium', fraction: 39.098 / 74.551 },
       { ionId: 'chloride',  fraction: 35.450 / 74.551 },
+    ],
+  },
+  {
+    id: 'mggly',
+    name: 'Magnesium Glycinate',
+    formula: 'Label-calibrated Mg bisglycinate',
+    // The label is the product basis; the equal masses preserve the existing
+    // salt-dose conversion while the elemental fractions come from the label.
+    anhydrousMass: 172.42,
+    hydrationForms: [
+      { label: 'Label basis · 1 scoop (1.8 g, 210 mg Mg)', molarMass: 172.42 },
+    ],
+    ions: [
+      { ionId: 'magnesium', fraction: MAGNESIUM_GLYCINATE_LABEL.elementalMagnesiumFraction },
+    ],
+    supplementalIons: [
+      { ionId: 'glycinate', fraction: MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierFraction },
     ],
   },
 ];

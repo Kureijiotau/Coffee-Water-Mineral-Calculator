@@ -36,6 +36,7 @@
 - [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts
 - [Brewer Week 1 guide integration](brewer-week1-guide-integration.md) — keep sourced lesson recipes on the shared chemistry engine behind a temporary Brewer override
 - [Calcium Lactate boundary](calcium-lactate-boundary.md) — model calcium normally while keeping lactate display-only and outside Watermancer solver dimensions
+- [Magnesium Glycinate label basis](magnesium-glycinate-label-basis.md) — calibrate the product from its 1.8 g / 210 mg label and keep the carrier supplemental
 - [Glacial-style matching strategy](watermancer-glacial-placeholder.md) — separate phased matcher uses calcium → MgCl2 → NaCl priorities with explicit overshoot allowances
 - [Added-water mineral-first matching](added-water-mineral-first.md) — quality-first Added-water dosing protects bicarbonate, caps water overshoot at 30%, and salts at 10%
 - [Watermancer ion source preferences](watermancer-ion-source-preferences.md) — source choices live in the unified plan and default to neutral Don’t care behavior

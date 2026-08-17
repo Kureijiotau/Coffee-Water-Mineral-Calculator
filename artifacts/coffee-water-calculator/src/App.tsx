@@ -9470,37 +9470,39 @@ function WatermancerIonProfileCard({
             </div>
           );
         })}
-        {(() => {
-          const lactatePpm = supplementalIons.lactate ?? 0;
-          return lactatePpm > 0 && (
-          <div
-            key="supplemental-lactate"
-            className="group/ion relative rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3"
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <span className="cursor-help text-sm font-medium text-slate-200">
-                {SUPPLEMENTAL_ION_MAP.lactate.name}
+        {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
+          const supplemental = SUPPLEMENTAL_ION_MAP[id];
+          const ppm = supplementalIons[id] ?? 0;
+          if (ppm <= 0) return null;
+          return (
+            <div
+              key={`supplemental-${id}`}
+              className="group/ion relative rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3"
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <span className="cursor-help text-sm font-medium text-slate-200">
+                  {supplemental.name}
+                </span>
+                <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-violet-300">
+                  {ppm.toFixed(1)}
+                </span>
+                <span className="text-xs text-slate-400">ppm</span>
+              </div>
+              <div className="mt-0.5 text-[10px] text-violet-200/70">
+                {supplemental.formula}
+              </div>
+              <div className="mt-1 text-[10px] text-slate-500">
+                Supplemental component · display only
+              </div>
+              <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
+                {supplemental.note}
               </span>
-              <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
             </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-violet-300">
-                {lactatePpm.toFixed(1)}
-              </span>
-              <span className="text-xs text-slate-400">ppm</span>
-            </div>
-            <div className="mt-0.5 text-[10px] text-violet-200/70">
-              {SUPPLEMENTAL_ION_MAP.lactate.formula}
-            </div>
-            <div className="mt-1 text-[10px] text-slate-500">
-              From Calcium Lactate · display only
-            </div>
-            <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
-              {SUPPLEMENTAL_ION_MAP.lactate.note}
-            </span>
-          </div>
           );
-        })()}
+        })}
       </div>
       {/* Naming dialog */}
       {isEditingAny && namingMode === 'new' && (
@@ -9768,16 +9770,17 @@ function WatermancerIonCoverageBars({
             </div>
           );
         })}
-        {(() => {
-          const lactatePpm = supplementalIons.lactate ?? 0;
-          if (lactatePpm <= 0) return null;
+        {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
+          const supplemental = SUPPLEMENTAL_ION_MAP[id];
+          const ppm = supplementalIons[id] ?? 0;
+          if (ppm <= 0) return null;
           return (
-            <div className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
-              <span className="truncate text-xs text-violet-200" title="Lactate">Lactate</span>
+            <div key={`supplemental-${id}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
+              <span className="truncate text-xs text-violet-200" title={supplemental.name}>{supplemental.name}</span>
               <div className="min-w-0">
                 <div
                   className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
-                  aria-label={`Lactate: ${formatLiveIonPpm(lactatePpm)} ppm, display only`}
+                  aria-label={`${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm, display only`}
                 >
                   <div
                     className="h-full rounded-full bg-violet-400/80 transition-all duration-300"
@@ -9788,16 +9791,16 @@ function WatermancerIonCoverageBars({
                   </span>
                 </div>
                 <div className="mt-1 text-[10px] text-violet-200">
-                  {formatLiveIonPpm(lactatePpm)} ppm · no target set
+                  {formatLiveIonPpm(ppm)} ppm · no target set
                 </div>
               </div>
               <span className="text-right text-xs font-semibold tabular-nums text-violet-200">
-                {formatLiveIonPpm(lactatePpm)}
+                {formatLiveIonPpm(ppm)}
                 <span className="font-normal text-slate-500"> ppm</span>
               </span>
             </div>
           );
-        })()}
+        })}
        </div>
        {sticky && (
          <div

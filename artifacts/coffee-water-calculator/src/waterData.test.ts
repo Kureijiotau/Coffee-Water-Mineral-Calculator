@@ -18,6 +18,7 @@ import {
   computeIonMeqPerL,
   ION_CHEMISTRY,
   RECIPES,
+  MAGNESIUM_GLYCINATE_LABEL,
 } from './waterData';
 
 describe('published Kimoi recipe conversions', () => {
@@ -224,6 +225,24 @@ describe('computeIonTotals', () => {
 
     expect(totals.lactate).toBeCloseTo(10 * ((2 * 89.07) / 218.22), 5);
     expect(computeSupplementalIonTotals({ calact: 0 }).lactate).toBe(0);
+  });
+
+  it('calibrates Magnesium Glycinate to the uploaded 1.8 g / 210 mg label', () => {
+    const magnesiumGlycinate = SALTS.find(s => s.id === 'mggly')!;
+    const saltTarget = MAGNESIUM_GLYCINATE_LABEL.servingMassMg;
+    const coreTotals = computeIonTotals({ mggly: saltTarget }, {}, 0);
+    const supplementalTotals = computeSupplementalIonTotals({ mggly: saltTarget });
+
+    expect(magnesiumGlycinate.hydrationForms).toHaveLength(1);
+    expect(coreTotals.magnesium).toBeCloseTo(MAGNESIUM_GLYCINATE_LABEL.elementalMagnesiumMg, 8);
+    expect(coreTotals.chloride).toBe(0);
+    expect(coreTotals.sulfate).toBe(0);
+    expect(coreTotals.bicarbonate).toBe(0);
+    expect(supplementalTotals.glycinate).toBeCloseTo(MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierMg, 8);
+    expect(
+      MAGNESIUM_GLYCINATE_LABEL.elementalMagnesiumMg
+      + MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierMg,
+    ).toBe(MAGNESIUM_GLYCINATE_LABEL.servingMassMg);
   });
 });
 
