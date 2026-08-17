@@ -8,7 +8,7 @@ import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1786855239956.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -3314,6 +3314,7 @@ function App() {
   const watermancerActionGenerationRef = useRef(0);
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
+  const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
   const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
   const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
   const watermancerWorkflowRailPinnedRef = useRef(false);
@@ -7147,6 +7148,8 @@ function App() {
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
                sticky={watermancerResultSticky}
+                dockPosition={watermancerResultDock}
+                onDockPositionChange={setWatermancerResultDock}
                onToggleSticky={() => setWatermancerResultSticky(current => !current)}
             />
           </div>
@@ -9541,6 +9544,8 @@ function WatermancerIonCoverageBars({
   targetIons,
   targetLabel,
   sticky,
+  dockPosition,
+  onDockPositionChange,
   onToggleSticky,
 }: {
   actualIons: Partial<Record<IonId, number>>;
@@ -9548,6 +9553,8 @@ function WatermancerIonCoverageBars({
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
   sticky: boolean;
+  dockPosition: 'center' | 'left' | 'right';
+  onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
   onToggleSticky: () => void;
 }) {
   const completeActualIons = completeIonTotals(actualIons);
@@ -9557,12 +9564,15 @@ function WatermancerIonCoverageBars({
   const finalGhKhRatio = finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh)
     ? `${(finalGh / finalKh).toFixed(1)}:1`
     : '—';
+  const stickyPositionClass = dockPosition === 'left'
+    ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
+    : dockPosition === 'right'
+      ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
+      : 'fixed inset-x-3 top-3 sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
 
   return (
     <div
-      className={`${sticky
-        ? 'fixed inset-x-3 top-3 sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2'
-        : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+      className={`${sticky ? stickyPositionClass : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
     >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -9578,21 +9588,57 @@ function WatermancerIonCoverageBars({
             {targetLabel} ion targets
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onToggleSticky}
-          className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
-            sticky
-              ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65 hover:bg-emerald-500/20'
-              : 'border-cyan-300/25 bg-slate-950/30 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-500/10'
-          }`}
-          aria-pressed={sticky}
-           aria-label={sticky ? 'Stop following the automatic match result' : 'Keep the automatic match result visible while scrolling'}
-          title={sticky ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
-        >
-          {sticky ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-          <span className="hidden sm:inline">{sticky ? 'Following screen' : 'Follow screen'}</span>
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {sticky && (
+            <div className="flex items-center gap-1" role="group" aria-label="Follow result dock position">
+              <button
+                type="button"
+                onClick={() => onDockPositionChange('left')}
+                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition ${
+                  dockPosition === 'left'
+                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
+                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
+                }`}
+                aria-pressed={dockPosition === 'left'}
+                aria-label="Dock result to the left side"
+                title="Dock result to the left side"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="hidden md:inline">Left</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onDockPositionChange('right')}
+                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition ${
+                  dockPosition === 'right'
+                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
+                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
+                }`}
+                aria-pressed={dockPosition === 'right'}
+                aria-label="Dock result to the right side"
+                title="Dock result to the right side"
+              >
+                <span className="hidden md:inline">Right</span>
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onToggleSticky}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              sticky
+                ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65 hover:bg-emerald-500/20'
+                : 'border-cyan-300/25 bg-slate-950/30 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-500/10'
+            }`}
+            aria-pressed={sticky}
+            aria-label={sticky ? 'Stop following the automatic match result' : 'Keep the automatic match result visible while scrolling'}
+            title={sticky ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
+          >
+            {sticky ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{sticky ? 'Following screen' : 'Follow screen'}</span>
+          </button>
+        </div>
       </div>
       <div className="app-card-body min-h-0 flex-1 space-y-3 overflow-y-auto">
         {ACTIVE_ION_IDS.map(id => {
