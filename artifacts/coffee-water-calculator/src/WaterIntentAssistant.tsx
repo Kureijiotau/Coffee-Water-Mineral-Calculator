@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronUp, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import type { IonId } from '@/waterData';
 
 export type WaterAssistantResult = {
@@ -65,30 +65,7 @@ export default function WaterIntentAssistant({ apiBase, open, onOpenChange, onAp
   };
 
   if (!open) {
-    return (
-      <section className="app-card overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-950/40 via-slate-900/75 to-indigo-950/55 shadow-md">
-        <button
-          type="button"
-          onClick={() => onOpenChange(true)}
-          aria-expanded="false"
-          className="group flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-fuchsia-300/[0.06] focus:outline-none focus:ring-2 focus:ring-fuchsia-200/70 focus:ring-inset sm:px-6"
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span className="rounded-lg border border-fuchsia-200/20 bg-fuchsia-300/10 p-1.5 text-fuchsia-200">
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200/75">Optional tool</span>
-              <span className="mt-0.5 block truncate text-sm font-semibold text-white">Describe the water you want</span>
-            </span>
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-fuchsia-200/25 bg-fuchsia-300/10 px-3 py-2 text-xs font-semibold text-fuchsia-100 transition group-hover:border-fuchsia-200/50 group-hover:bg-fuchsia-300/20">
-            Open assistant
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
-          </span>
-        </button>
-      </section>
-    );
+    return null;
   }
 
   return (
