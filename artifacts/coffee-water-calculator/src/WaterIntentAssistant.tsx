@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, ArrowRight, CheckCircle2, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { AlertCircle, ArrowRight, CheckCircle2, ChevronDown, ChevronUp, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import type { IonId } from '@/waterData';
 
 export type WaterAssistantResult = {
@@ -26,6 +26,7 @@ function labelWorkspace(workspace: WaterAssistantResult['workspace']): string {
 }
 
 export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAssistantProps) {
+  const [isOpen, setIsOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState<WaterAssistantResult | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'applied'>('idle');
@@ -62,6 +63,33 @@ export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAs
     setStatus('applied');
   };
 
+  if (!isOpen) {
+    return (
+      <section className="app-card overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-950/40 via-slate-900/75 to-indigo-950/55 shadow-md">
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-expanded="false"
+          className="group flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-fuchsia-300/[0.06] focus:outline-none focus:ring-2 focus:ring-fuchsia-200/70 focus:ring-inset sm:px-6"
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="rounded-lg border border-fuchsia-200/20 bg-fuchsia-300/10 p-1.5 text-fuchsia-200">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-fuchsia-200/75">Optional tool</span>
+              <span className="mt-0.5 block truncate text-sm font-semibold text-white">Describe the water you want</span>
+            </span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-fuchsia-200/25 bg-fuchsia-300/10 px-3 py-2 text-xs font-semibold text-fuchsia-100 transition group-hover:border-fuchsia-200/50 group-hover:bg-fuchsia-300/20">
+            Open assistant
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </span>
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className="app-card overflow-hidden rounded-2xl border border-fuchsia-300/25 bg-gradient-to-br from-fuchsia-950/55 via-slate-900/85 to-indigo-950/70 shadow-xl shadow-fuchsia-950/15">
       <div className="border-b border-fuchsia-200/10 px-4 py-3 sm:px-6">
@@ -78,9 +106,20 @@ export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAs
               </p>
             </div>
           </div>
-          <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-medium text-slate-400">
-            One request on submit
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[10px] font-medium text-slate-400">
+              One request on submit
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              aria-expanded="true"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/15 px-2 py-1.5 text-[10px] font-semibold text-slate-400 transition hover:border-white/25 hover:bg-white/10 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-200/60"
+            >
+              Hide
+              <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
 
