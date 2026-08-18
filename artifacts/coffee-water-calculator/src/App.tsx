@@ -2866,11 +2866,11 @@ function WaterPlanManager({
         type="button"
         onClick={onOpen}
         className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-white/20 bg-black/15 px-2.5 py-2 text-xs font-semibold text-white/85 transition hover:border-white/40 hover:bg-white/15 hover:text-white focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-transparent sm:min-h-0 sm:py-1.5"
-        aria-label={`Open saved water plans${plans.length ? `, ${plans.length} saved` : ''}`}
-        title="Save and restore complete water setups"
+        aria-label={`Open saved calculator sessions${plans.length ? `, ${plans.length} saved` : ''}`}
+        title="Save and restore the entire calculator session"
       >
         <Save className="h-3.5 w-3.5" aria-hidden="true" />
-        <span>Plans</span>
+        <span>Sessions</span>
         {plans.length > 0 && (
           <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px] tabular-nums text-white/80">
             {plans.length}
@@ -2893,10 +2893,10 @@ function WaterPlanManager({
           >
             <header className="flex items-start justify-between gap-3 border-b border-cyan-300/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 py-4 sm:px-5">
               <div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/70">Reusable setups</div>
-                <h2 id="water-plans-title" className="mt-1 text-lg font-semibold text-white">Saved water plans</h2>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/70">Reusable sessions</div>
+              <h2 id="water-plans-title" className="mt-1 text-lg font-semibold text-white">Saved calculator sessions</h2>
                 <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
-                  Save the whole calculator setup. Plans are snapshots, so off-plan experiments can become separate plans.
+                Save the entire calculator session — workspace, recipe, waters, targets, salts, and settings — as a reusable snapshot.
                 </p>
               </div>
               <button
@@ -2911,7 +2911,7 @@ function WaterPlanManager({
 
             <div className="space-y-3 overflow-y-auto p-4 sm:p-5">
               <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/80">Save current setup as a new plan</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/80">Save current session as a new snapshot</div>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <input
                     type="text"
@@ -2920,9 +2920,9 @@ function WaterPlanManager({
                     onKeyDown={event => {
                       if (event.key === 'Enter') handleSave();
                     }}
-                    placeholder="e.g. Bright washed coffee water"
+                    placeholder="e.g. Bright washed coffee session"
                     className="min-h-10 min-w-0 flex-1 rounded-lg border border-slate-700/70 bg-slate-950/50 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-emerald-300/60 focus:ring-2 focus:ring-emerald-300/30"
-                    aria-label="New water plan name"
+                    aria-label="New calculator session name"
                   />
                   <button
                     type="button"
@@ -2931,7 +2931,7 @@ function WaterPlanManager({
                     className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Save className="h-3.5 w-3.5" aria-hidden="true" />
-                    Save new
+                    Save session
                   </button>
                 </div>
               </div>
@@ -2944,8 +2944,8 @@ function WaterPlanManager({
 
               {plans.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-700/80 bg-slate-950/25 px-4 py-8 text-center">
-                  <div className="text-sm font-semibold text-slate-300">No saved plans yet</div>
-                  <p className="mt-1 text-xs text-slate-500">Name the current setup above to keep it as a reusable snapshot.</p>
+                  <div className="text-sm font-semibold text-slate-300">No saved sessions yet</div>
+                  <p className="mt-1 text-xs text-slate-500">Name the current session above to keep it as a reusable snapshot.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
