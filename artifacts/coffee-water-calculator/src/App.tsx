@@ -3124,6 +3124,7 @@ function App() {
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
   const [showMemeSalts, setShowMemeSalts] = useState(false);
+  const [memeSaltFlashNonce, setMemeSaltFlashNonce] = useState(0);
   // Keep calculations/rendering safe across hot reloads and older in-memory
   // state when a new salt is added to the shared catalog.
   const safeRows = useMemo(
@@ -3294,6 +3295,7 @@ function App() {
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
+  const [watermancerMemeSaltFlashNonce, setWatermancerMemeSaltFlashNonce] = useState(0);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
@@ -5923,8 +5925,13 @@ function App() {
               );
               updateRow(i, { target: Number.isFinite(targetPpm) ? String(targetPpm) : '' });
             };
-            return (
-              <div key={salt.id} className="grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors">
+             return (
+               <div
+                 key={`${salt.id}-${isMemeSalt ? memeSaltFlashNonce : 0}`}
+                 className={`grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
+                   isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
+                 }`}
+               >
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
                   <span className="text-sm font-medium text-slate-200">{salt.name}</span>
                   <span className="text-xs text-slate-500">{salt.formula}</span>
@@ -5998,7 +6005,10 @@ function App() {
              <div className="flex items-center justify-start">
                <MemeSaltToggle
                  showMemeSalts={showMemeSalts}
-                 onToggle={() => setShowMemeSalts(value => !value)}
+                 onToggle={() => {
+                   if (!showMemeSalts) setMemeSaltFlashNonce(value => value + 1);
+                   setShowMemeSalts(value => !value);
+                 }}
                />
              </div>
             </>
@@ -7296,7 +7306,12 @@ function App() {
                          ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
                       return (
-                         <div key={salt.id} className="watermancer-salt-table__row bg-slate-900/25">
+                             <div
+                               key={`${salt.id}-${MEME_SALT_IDS.has(salt.id) ? watermancerMemeSaltFlashNonce : 0}`}
+                               className={`watermancer-salt-table__row bg-slate-900/25 ${
+                                 MEME_SALT_IDS.has(salt.id) && watermancerMemeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
+                               }`}
+                             >
                            <div className="watermancer-salt-table__salt">
                              <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-200">{salt.name}</div>
                              <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
@@ -7391,7 +7406,10 @@ function App() {
                  <div className="flex items-center justify-start">
                    <MemeSaltToggle
                      showMemeSalts={showWatermancerMemeSalts}
-                     onToggle={() => setShowWatermancerMemeSalts(value => !value)}
+                     onToggle={() => {
+                       if (!showWatermancerMemeSalts) setWatermancerMemeSaltFlashNonce(value => value + 1);
+                       setShowWatermancerMemeSalts(value => !value);
+                     }}
                    />
                  </div>
             </div>

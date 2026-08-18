@@ -475,9 +475,25 @@ body {
   animation: brewer-make-water-checklist-flash 400ms ease-in-out 3;
 }
 
+@keyframes meme-salt-row-flash {
+  0%, 100% {
+    background-color: rgb(15 23 42 / 0.25);
+    box-shadow: inset 0 0 0 0 rgb(232 121 249 / 0);
+  }
+  50% {
+    background-color: rgb(217 70 239 / 0.22);
+    box-shadow: inset 0 0 0 1px rgb(232 121 249 / 0.75), 0 0 20px -8px rgb(232 121 249 / 0.95);
+  }
+}
+
+.meme-salt-row-flash {
+  animation: meme-salt-row-flash 420ms ease-in-out 2;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brewer-make-water-attention,
-  .brewer-make-water-checklist-flash {
+  .brewer-make-water-checklist-flash,
+  .meme-salt-row-flash {
     animation: none !important;
   }
 }
