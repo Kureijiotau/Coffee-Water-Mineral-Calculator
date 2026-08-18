@@ -70,6 +70,7 @@ import {
 } from './watermancerPlan';
 
 export type SaltRow = { target: string; formIdx: number };
+const MEME_SALT_IDS = new Set(['calact', 'mggly']);
 export type ConcentrateRecipeHandoff = {
   name: string;
   salts: Record<string, SaltRecipeEntry>;
@@ -3292,6 +3293,7 @@ function App() {
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
+  const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
@@ -5867,7 +5869,7 @@ function App() {
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
            {SALTS.map((salt, i) => {
-             const isMemeSalt = salt.id === 'calact' || salt.id === 'mggly';
+             const isMemeSalt = MEME_SALT_IDS.has(salt.id);
              if (isMemeSalt && !showMemeSalts) return null;
             const row = safeRows[i];
             const form = salt.hydrationForms[row.formIdx];
@@ -7267,9 +7269,13 @@ function App() {
                       <span>Use</span>
                       <button
                         type="button"
-                        onClick={() => {
+                         onClick={() => {
                           enterWatermancerManualMode();
-                          setWatermancerUsedSaltIds(SALTS.map(salt => salt.id));
+                           setWatermancerUsedSaltIds(
+                             SALTS
+                               .filter(salt => showWatermancerMemeSalts || !MEME_SALT_IDS.has(salt.id))
+                               .map(salt => salt.id),
+                           );
                         }}
                         className="rounded border border-indigo-300/25 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-indigo-200 transition hover:border-indigo-200/50 hover:bg-indigo-500/20 hover:text-indigo-100"
                         aria-label="Use all salts"
@@ -7280,7 +7286,8 @@ function App() {
                     </div>
                   </div>
                   <div className="divide-y divide-slate-700/50">
-                    {SALTS.map((salt, index) => {
+                     {SALTS.map((salt, index) => {
+                       if (MEME_SALT_IDS.has(salt.id) && !showWatermancerMemeSalts) return null;
                       const option = watermancerSaltOptions[index];
                       const used = watermancerUsedSaltIds.includes(salt.id);
                        const doseIsAdjusted = Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id);
@@ -7377,7 +7384,13 @@ function App() {
                       );
                     })}
                   </div>
-                 <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
+                   <div className="flex items-center justify-start border-t border-slate-700/50 px-3 py-1">
+                     <MemeSaltToggle
+                       showMemeSalts={showWatermancerMemeSalts}
+                       onToggle={() => setShowWatermancerMemeSalts(value => !value)}
+                     />
+                   </div>
+                   <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
                     The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.
                  </p>
                 </div>
@@ -9872,18 +9885,14 @@ function MemeSaltToggle({ showMemeSalts, onToggle }: { showMemeSalts: boolean; o
       title="Display meme salts"
       aria-label="Display meme salts"
       aria-pressed={showMemeSalts}
-      className={`group relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border transition focus:outline-none focus:ring-2 focus:ring-fuchsia-300/70 ${
-        showMemeSalts
-          ? 'border-fuchsia-300/60 bg-fuchsia-500/15 shadow-[0_0_12px_-4px_rgba(232,121,249,0.9)]'
-          : 'border-slate-700/70 bg-slate-950/35 hover:border-fuchsia-300/45 hover:bg-fuchsia-500/10'
-      }`}
+      className="group relative inline-flex h-5 w-5 items-center justify-center overflow-hidden text-slate-500 transition hover:text-fuchsia-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-300/70 focus:ring-offset-1 focus:ring-offset-slate-900"
     >
       <img
         key={isPlaying ? `meme-${previewRun}` : 'meme-last-frame'}
         src={isPlaying ? kappMemeGif : kappMemeLastFrame}
         alt=""
         aria-hidden="true"
-        className="h-7 w-auto max-w-full object-contain"
+        className="h-5 w-auto max-w-full object-contain"
       />
     </button>
   );
