@@ -135,12 +135,12 @@ export default function WaterIntentAssistant({ apiBase, open, onOpenChange, onAp
                   void submit();
                 }
               }}
-              maxLength={1200}
+               maxLength={600}
               rows={3}
-              placeholder="e.g. Clear and floral for a light roast, with enough sweetness to keep it balanced"
+               placeholder="e.g. Clear, floral water for a light roast with balanced sweetness"
               className="min-h-20 w-full resize-y rounded-xl border border-slate-700/80 bg-slate-950/55 px-3 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-fuchsia-300/60 focus:ring-2 focus:ring-fuchsia-300/15"
             />
-            <span className="mt-1 block text-right text-[10px] text-slate-600">{prompt.length}/1200</span>
+             <span className="mt-1 block text-right text-[10px] text-slate-600">{prompt.length}/600 · one concise sentence works best</span>
           </label>
           <button
             type="button"

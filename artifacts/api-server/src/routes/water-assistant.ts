@@ -46,7 +46,7 @@ type RateLimitEntry = {
 const requestBudget = new Map<string, RateLimitEntry>();
 const REQUESTS_PER_HOUR = 20;
 const HOUR_MS = 60 * 60 * 1000;
-const MAX_PROMPT_LENGTH = 1200;
+const MAX_PROMPT_LENGTH = 600;
 
 const ION_TARGET_PROPERTIES = Object.fromEntries(
   SUPPORTED_ION_IDS.map(id => [id, { type: SchemaType.NUMBER }]),
@@ -186,10 +186,7 @@ router.post("/water-assistant", async (req: Request, res: Response) => {
         responseMimeType: "application/json",
         responseSchema: ASSISTANT_RESPONSE_SCHEMA,
         temperature: 0.25,
-        maxOutputTokens: 1200,
-        // The installed SDK predates the thinkingConfig type, but forwards
-        // unknown generation config fields to Gemini's REST API.
-        thinkingConfig: { thinkingBudget: 512 },
+        maxOutputTokens: 600,
       } as never,
     });
 
@@ -231,7 +228,7 @@ router.post("/water-assistant", async (req: Request, res: Response) => {
     } else if (msg.includes("429") || msg.includes("Too Many Requests") || msg.includes("quota")) {
       res.status(429).json({ error: "Gemini quota reached — try again later." });
     } else if (msg.includes("timed out") || msg.includes("timeout") || msg.includes("aborted")) {
-      res.status(504).json({ error: "Gemini is taking too long to design this plan. Try a shorter description." });
+      res.status(504).json({ error: "The water design request timed out. Try one concise sentence or try again in a moment." });
     } else if (msg.includes("SAFETY")) {
       res.status(422).json({ error: "This request was blocked by content safety filters." });
     } else {
