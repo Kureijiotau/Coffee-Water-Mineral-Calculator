@@ -12,6 +12,8 @@ export type WaterAssistantResult = {
 
 type WaterIntentAssistantProps = {
   apiBase: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onApply: (result: WaterAssistantResult) => void;
 };
 
@@ -25,8 +27,7 @@ function labelWorkspace(workspace: WaterAssistantResult['workspace']): string {
   return workspace === 'watermancer' ? 'Watermancer · ion targets' : 'Alchemist · salt recipe';
 }
 
-export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAssistantProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function WaterIntentAssistant({ apiBase, open, onOpenChange, onApply }: WaterIntentAssistantProps) {
   const [prompt, setPrompt] = useState('');
   const [result, setResult] = useState<WaterAssistantResult | null>(null);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error' | 'applied'>('idle');
@@ -63,12 +64,12 @@ export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAs
     setStatus('applied');
   };
 
-  if (!isOpen) {
+  if (!open) {
     return (
       <section className="app-card overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-gradient-to-r from-fuchsia-950/40 via-slate-900/75 to-indigo-950/55 shadow-md">
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
+          onClick={() => onOpenChange(true)}
           aria-expanded="false"
           className="group flex min-h-14 w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-fuchsia-300/[0.06] focus:outline-none focus:ring-2 focus:ring-fuchsia-200/70 focus:ring-inset sm:px-6"
         >
@@ -112,7 +113,7 @@ export default function WaterIntentAssistant({ apiBase, onApply }: WaterIntentAs
             </span>
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => onOpenChange(false)}
               aria-expanded="true"
               className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-black/15 px-2 py-1.5 text-[10px] font-semibold text-slate-400 transition hover:border-white/25 hover:bg-white/10 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-fuchsia-200/60"
             >

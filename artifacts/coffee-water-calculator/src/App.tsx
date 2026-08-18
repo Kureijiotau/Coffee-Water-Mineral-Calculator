@@ -10,6 +10,8 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1786855239956.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
+import hackermanGif from '@assets/hackerman_1787062754046.gif';
+import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -3287,6 +3289,7 @@ function App() {
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
   const [plansOpen, setPlansOpen] = useState(false);
+  const [waterAssistantOpen, setWaterAssistantOpen] = useState(false);
   const [concentrateRecipeHandoff, setConcentrateRecipeHandoff] = useState<ConcentrateRecipeHandoff | null>(null);
   const [concentrateSnapshot, setConcentrateSnapshot] = useState<WaterPlanConcentrateSnapshot>(DEFAULT_WATER_PLAN_CONCENTRATE);
   const [pendingConcentrateRestore, setPendingConcentrateRestore] = useState<WaterPlanConcentrateSnapshot | null>(null);
@@ -5448,6 +5451,19 @@ function App() {
             onDelete={handleDeleteWaterPlan}
             onImport={handleImportWaterPlan}
           />
+            {appTab === 'calculator' && (
+              <HackermanAssistantButton
+                onOpen={() => {
+                  setWaterAssistantOpen(true);
+                  window.setTimeout(() => {
+                    document.querySelector<HTMLElement>('[data-water-intent-assistant]')?.scrollIntoView({
+                      behavior: 'smooth',
+                      block: 'center',
+                    });
+                  }, 0);
+                }}
+              />
+            )}
             <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
@@ -5583,7 +5599,14 @@ function App() {
            </div>
          </div>
 
-          <WaterIntentAssistant apiBase={API_BASE} onApply={applyWaterAssistantResult} />
+          <div data-water-intent-assistant>
+            <WaterIntentAssistant
+              apiBase={API_BASE}
+              open={waterAssistantOpen}
+              onOpenChange={setWaterAssistantOpen}
+              onApply={applyWaterAssistantResult}
+            />
+          </div>
 
           {nerdLevel === 'brewer' && (
             <section className="relative overflow-hidden rounded-2xl border border-teal-300/25 bg-gradient-to-br from-teal-950/80 via-slate-900/80 to-indigo-950/70 px-5 py-5 shadow-xl shadow-teal-950/15 sm:px-6">
@@ -9936,6 +9959,38 @@ function MemeSaltToggle({ showMemeSalts, onToggle }: { showMemeSalts: boolean; o
         alt=""
         aria-hidden="true"
         className="h-5 w-auto max-w-full object-contain"
+      />
+    </button>
+  );
+}
+
+function HackermanAssistantButton({ onOpen }: { onOpen: () => void }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [previewRun, setPreviewRun] = useState(0);
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      onPointerEnter={event => {
+        if (event.pointerType === 'mouse') {
+          setIsPlaying(true);
+          setPreviewRun(run => run + 1);
+        }
+      }}
+      onPointerLeave={() => setIsPlaying(false)}
+      onFocus={() => setIsPlaying(true)}
+      onBlur={() => setIsPlaying(false)}
+      title="Try asking the AI for fun :)"
+      aria-label="Try asking the AI for fun"
+      className="app-header__ai-button group inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/15 transition hover:border-fuchsia-200/55 hover:bg-fuchsia-300/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-200/70 focus:ring-offset-2 focus:ring-offset-transparent sm:h-8 sm:w-8"
+    >
+      <img
+        key={isPlaying ? `hackerman-${previewRun}` : 'hackerman-last-frame'}
+        src={isPlaying ? hackermanGif : hackermanLastFrame}
+        alt=""
+        aria-hidden="true"
+        className="h-full w-full object-cover"
       />
     </button>
   );
