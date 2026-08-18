@@ -23,6 +23,7 @@ import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
 } from '@/recipes';
 import LabelScanner from '@/LabelScanner';
+import WaterIntentAssistant, { type WaterAssistantResult } from './WaterIntentAssistant';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import Week1Guide, { type Week1Recipe } from './Week1Guide';
 import {
@@ -3504,6 +3505,27 @@ function App() {
     setWatermancerTargetOverride(targets);
   };
 
+  const applyWaterAssistantResult = (result: WaterAssistantResult) => {
+    if (result.workspace === 'watermancer') {
+      handleNerdLevelChange('watermancer');
+      handleWatermancerTargetOverrideChange(result.ionTargets as IonicTargetValues);
+      return;
+    }
+
+    handleNerdLevelChange('alchemist');
+    setActiveRecipeId('custom');
+    setExternalRecipeId('custom');
+    setBrewerRecipeOverride(null);
+    setWatermancerTargetOverride(null);
+    setWatermancerTargetSource('safe-profile');
+    setRows(SALTS.map(salt => ({
+      target: Number.isFinite(result.saltTargets?.[salt.id]) && Number(result.saltTargets[salt.id]) > 0
+        ? normalizeSaltTarget(result.saltTargets[salt.id])
+        : '',
+      formIdx: salt.defaultFormIdx ?? 0,
+    })));
+  };
+
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
   const handleSaveProfile = (profile: WaterProfile) => {
     setProfiles(prev => {
@@ -5560,6 +5582,8 @@ function App() {
              </div>
            </div>
          </div>
+
+          <WaterIntentAssistant apiBase={API_BASE} onApply={applyWaterAssistantResult} />
 
           {nerdLevel === 'brewer' && (
             <section className="relative overflow-hidden rounded-2xl border border-teal-300/25 bg-gradient-to-br from-teal-950/80 via-slate-900/80 to-indigo-950/70 px-5 py-5 shadow-xl shadow-teal-950/15 sm:px-6">
