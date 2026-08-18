@@ -186,11 +186,11 @@ router.post("/water-assistant", async (req: Request, res: Response) => {
         responseMimeType: "application/json",
         responseSchema: ASSISTANT_RESPONSE_SCHEMA,
         temperature: 0.25,
-        maxOutputTokens: 600,
+        maxOutputTokens: 1200,
       } as never,
     });
 
-    const result = await model.generateContent(prompt, { timeout: 30_000 });
+    const result = await model.generateContent(prompt, { timeout: 90_000 });
     const parsed = parseAssistantResponse(result.response.text().trim());
     if (!parsed) {
       res.status(422).json({ error: "Gemini returned an unreadable water plan." });
@@ -227,6 +227,8 @@ router.post("/water-assistant", async (req: Request, res: Response) => {
       res.status(500).json({ error: "Gemini API key is invalid." });
     } else if (msg.includes("429") || msg.includes("Too Many Requests") || msg.includes("quota")) {
       res.status(429).json({ error: "Gemini quota reached — try again later." });
+    } else if (msg.includes("503") || msg.includes("Service Unavailable") || msg.includes("high demand")) {
+      res.status(503).json({ error: "Gemini is temporarily busy. Please try the water design again in a moment." });
     } else if (msg.includes("timed out") || msg.includes("timeout") || msg.includes("aborted")) {
       res.status(504).json({ error: "The water design request timed out. Try one concise sentence or try again in a moment." });
     } else if (msg.includes("SAFETY")) {
