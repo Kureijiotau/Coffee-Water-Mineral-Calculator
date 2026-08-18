@@ -8,6 +8,8 @@ import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1786855239956.png';
+import kappMemeGif from '@assets/Kapp_1787058386404.gif';
+import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -3120,6 +3122,7 @@ function App() {
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
+  const [showMemeSalts, setShowMemeSalts] = useState(false);
   // Keep calculations/rendering safe across hot reloads and older in-memory
   // state when a new salt is added to the shared catalog.
   const safeRows = useMemo(
@@ -5863,7 +5866,9 @@ function App() {
              <span>Hydration form</span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
-          {SALTS.map((salt, i) => {
+           {SALTS.map((salt, i) => {
+             const isMemeSalt = salt.id === 'calact' || salt.id === 'mggly';
+             if (isMemeSalt && !showMemeSalts) return null;
             const row = safeRows[i];
             const form = salt.hydrationForms[row.formIdx];
             const target = dosingSaltTargets[salt.id] ?? 0;
@@ -5985,7 +5990,13 @@ function App() {
                 </div>
               </div>
             );
-         })}
+          })}
+           <div className="flex items-center justify-start border-t border-slate-700/30 px-4 py-1.5 sm:px-6">
+             <MemeSaltToggle
+               showMemeSalts={showMemeSalts}
+               onToggle={() => setShowMemeSalts(value => !value)}
+             />
+           </div>
           </>
             {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
             </>
@@ -9830,6 +9841,51 @@ function WatermancerIonCoverageBars({
          </div>
        )}
     </div>
+  );
+}
+
+function MemeSaltToggle({ showMemeSalts, onToggle }: { showMemeSalts: boolean; onToggle: () => void }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [previewRun, setPreviewRun] = useState(0);
+  const timerRef = useRef<number | null>(null);
+
+  const playPreview = useCallback(() => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    setIsPlaying(true);
+    setPreviewRun(run => run + 1);
+    timerRef.current = window.setTimeout(() => {
+      setIsPlaying(false);
+      timerRef.current = null;
+    }, 3200);
+  }, []);
+
+  useEffect(() => () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+  }, []);
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      onMouseEnter={playPreview}
+      onFocus={playPreview}
+      title="Display meme salts"
+      aria-label="Display meme salts"
+      aria-pressed={showMemeSalts}
+      className={`group relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-md border transition focus:outline-none focus:ring-2 focus:ring-fuchsia-300/70 ${
+        showMemeSalts
+          ? 'border-fuchsia-300/60 bg-fuchsia-500/15 shadow-[0_0_12px_-4px_rgba(232,121,249,0.9)]'
+          : 'border-slate-700/70 bg-slate-950/35 hover:border-fuchsia-300/45 hover:bg-fuchsia-500/10'
+      }`}
+    >
+      <img
+        key={isPlaying ? `meme-${previewRun}` : 'meme-last-frame'}
+        src={isPlaying ? kappMemeGif : kappMemeLastFrame}
+        alt=""
+        aria-hidden="true"
+        className="h-7 w-auto max-w-full object-contain"
+      />
+    </button>
   );
 }
 
