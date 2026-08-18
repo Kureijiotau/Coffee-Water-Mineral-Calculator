@@ -5993,14 +5993,14 @@ function App() {
               </div>
             );
           })}
-           <div className="flex items-center justify-start border-t border-slate-700/30 px-4 py-1.5 sm:px-6">
-             <MemeSaltToggle
-               showMemeSalts={showMemeSalts}
-               onToggle={() => setShowMemeSalts(value => !value)}
-             />
-           </div>
           </>
-            {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
+             {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
+             <div className="flex items-center justify-start px-4 pb-0 sm:px-6">
+               <MemeSaltToggle
+                 showMemeSalts={showMemeSalts}
+                 onToggle={() => setShowMemeSalts(value => !value)}
+               />
+             </div>
             </>
            </div>}
          {nerdLevel === 'brewer' && (
@@ -7384,16 +7384,16 @@ function App() {
                       );
                     })}
                   </div>
-                   <div className="flex items-center justify-start border-t border-slate-700/50 px-3 py-1">
-                     <MemeSaltToggle
-                       showMemeSalts={showWatermancerMemeSalts}
-                       onToggle={() => setShowWatermancerMemeSalts(value => !value)}
-                     />
-                   </div>
                    <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
                     The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.
                  </p>
                 </div>
+                 <div className="flex items-center justify-start px-3 pb-0">
+                   <MemeSaltToggle
+                     showMemeSalts={showWatermancerMemeSalts}
+                     onToggle={() => setShowWatermancerMemeSalts(value => !value)}
+                   />
+                 </div>
             </div>
           </div>
         )}
@@ -9880,8 +9880,9 @@ function MemeSaltToggle({ showMemeSalts, onToggle }: { showMemeSalts: boolean; o
     <button
       type="button"
       onClick={onToggle}
-      onMouseEnter={playPreview}
-      onFocus={playPreview}
+      onPointerEnter={event => {
+        if (event.pointerType === 'mouse') playPreview();
+      }}
       title="Display meme salts"
       aria-label="Display meme salts"
       aria-pressed={showMemeSalts}
