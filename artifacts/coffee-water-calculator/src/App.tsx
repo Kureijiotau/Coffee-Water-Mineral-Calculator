@@ -5995,7 +5995,7 @@ function App() {
           })}
           </>
              {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
-             <div className="flex items-center justify-start px-4 pb-0 sm:px-6">
+             <div className="flex items-center justify-start">
                <MemeSaltToggle
                  showMemeSalts={showMemeSalts}
                  onToggle={() => setShowMemeSalts(value => !value)}
@@ -7388,7 +7388,7 @@ function App() {
                     The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.
                  </p>
                 </div>
-                 <div className="flex items-center justify-start px-3 pb-0">
+                 <div className="flex items-center justify-start">
                    <MemeSaltToggle
                      showMemeSalts={showWatermancerMemeSalts}
                      onToggle={() => setShowWatermancerMemeSalts(value => !value)}
