@@ -4498,6 +4498,39 @@ function App() {
     ))
       ? 'matched'
       : 'partial';
+  const watermancerStatusLabel = watermancerCurrentStatus === 'matched'
+    ? 'Matched'
+    : watermancerCurrentStatus === 'partial'
+      ? 'Partial match'
+      : 'Needs inputs';
+  const watermancerStatusDescription = watermancerCurrentStatus === 'matched'
+    ? 'Your current water and salt route is within the active ion tolerances.'
+    : watermancerCurrentStatus === 'partial'
+      ? 'The route is usable, but one or more ions are still outside the active tolerances.'
+      : 'Add a water source or enable a salt to start comparing the route with your target.';
+  const watermancerStatusTone = watermancerCurrentStatus === 'matched'
+    ? {
+        border: 'border-emerald-300/35',
+        background: 'bg-emerald-500/[0.08]',
+        dot: 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]',
+        label: 'text-emerald-200',
+        value: 'text-emerald-100',
+      }
+    : watermancerCurrentStatus === 'partial'
+      ? {
+          border: 'border-amber-300/35',
+          background: 'bg-amber-500/[0.08]',
+          dot: 'bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.85)]',
+          label: 'text-amber-200',
+          value: 'text-amber-100',
+        }
+      : {
+          border: 'border-rose-300/30',
+          background: 'bg-rose-500/[0.06]',
+          dot: 'bg-rose-300 shadow-[0_0_12px_rgba(253,164,175,0.8)]',
+          label: 'text-rose-200',
+          value: 'text-rose-100',
+        };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
     setWatermancerDoseOverridesMg(current => ({
@@ -7711,22 +7744,52 @@ function App() {
                  </div>
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
                      <div className="flex items-center justify-end gap-2">
-                       <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wider ${
-                          watermancerCurrentStatus === 'matched'
-                           ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
-                            : watermancerCurrentStatus === 'partial'
-                             ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
-                             : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
-                       }`}>
-                          {watermancerCurrentStatus === 'matched'
-                           ? 'Matched'
-                            : watermancerCurrentStatus === 'partial'
-                             ? 'Partial match'
-                             : 'Needs inputs'}
+                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${
+                           watermancerCurrentStatus === 'matched'
+                            ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-300'
+                             : watermancerCurrentStatus === 'partial'
+                              ? 'border-amber-400/30 bg-amber-500/10 text-amber-300'
+                              : 'border-rose-400/30 bg-rose-500/10 text-rose-300'
+                        }`}>
+                           {watermancerStatusLabel}
                        </span>
                      </div>
                    </div>
                </div>
+                <div className={`watermancer-result-summary mt-4 rounded-2xl border ${watermancerStatusTone.border} ${watermancerStatusTone.background} p-3.5 sm:p-4`}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${watermancerStatusTone.dot}`} aria-hidden="true" />
+                      <div className="min-w-0">
+                        <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${watermancerStatusTone.label}`}>
+                          Current route
+                        </div>
+                        <div className={`mt-1 text-xl font-semibold tracking-tight ${watermancerStatusTone.value}`}>
+                          {watermancerStatusLabel}
+                        </div>
+                        <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-slate-300/75">
+                          {watermancerStatusDescription}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid min-w-[220px] flex-1 grid-cols-2 gap-2 sm:max-w-sm">
+                      <div className="rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2">
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Total deviation</div>
+                        <div className={`mt-1 text-lg font-semibold tabular-nums ${watermancerStatusTone.value}`}>
+                          {reviewTotalDeviation.toFixed(2)}
+                          <span className="ml-1 text-[10px] font-normal text-slate-400">ppm</span>
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2">
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ion gaps</div>
+                        <div className={`mt-1 text-lg font-semibold tabular-nums ${reviewDeviationCount === 0 ? 'text-emerald-200' : 'text-amber-200'}`}>
+                          {reviewDeviationCount === 0 ? 'None' : reviewDeviationCount}
+                          {reviewDeviationCount > 0 && <span className="ml-1 text-[10px] font-normal text-slate-400">outside</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match
