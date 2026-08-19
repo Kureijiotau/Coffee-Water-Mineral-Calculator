@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
-import html2canvas from 'html2canvas';
 import TasteProfileCard from './TasteProfileCard';
 import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
@@ -24,11 +23,17 @@ import {
 import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
 } from '@/recipes';
-import LabelScanner from '@/LabelScanner';
 import WaterIntentAssistant, { type WaterAssistantResult } from './WaterIntentAssistant';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
-import Week1Guide, { type Week1Recipe } from './Week1Guide';
+import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
+import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
+import {
+  HardnessCard as SharedHardnessCard,
+  SimpleMetricCard as SharedSimpleMetricCard,
+  TdsCard as SharedTdsCard,
+  WaterChemistryCard as SharedWaterChemistryCard,
+} from './components/MetricCards';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadNerdLevel, saveNerdLevel, createProfile,
@@ -74,6 +79,9 @@ import {
   type WatermancerSolverResult,
   type WatermancerPlan,
 } from './watermancerPlan';
+
+const LabelScanner = lazy(() => import('./LabelScanner'));
+const Week1Guide = lazy(() => import('./Week1Guide'));
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
@@ -5925,9 +5933,11 @@ function App() {
                   Back to Calculator
                 </button>
               </div>
-              <Week1Guide
-                onApplyRecipe={handleApplyWeek1Recipe}
-              />
+              <Suspense fallback={<div className="p-6 text-center text-sm text-emerald-100/80">Loading the guide…</div>}>
+                <Week1Guide
+                  onApplyRecipe={handleApplyWeek1Recipe}
+                />
+              </Suspense>
               <div className="border-t border-emerald-200/10 bg-slate-950/20">
                 <BrewerSimpleRecipeCard
                   prepMethod={prepMethod}
@@ -6507,7 +6517,7 @@ function App() {
               {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface order-2 relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
-           <SectionHeader
+           <SharedSectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
                title="2. Add waters — Batch volume"
              after={
@@ -6737,14 +6747,14 @@ function App() {
 
         {/* GH / KH Summary */}
         {showAlchemist && <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-          <SectionHeader
+          <SharedSectionHeader
             icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
             title="Base Salt Recipe Summary (as CaCO₃)"
           />
            <div className="app-card-body grid grid-cols-1 sm:grid-cols-3 gap-4">
-             <SimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
-             <SimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
-             <SimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
+             <SharedSimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
+             <SharedSimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
+             <SharedSimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
             <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
               <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
               <span className="h-4 w-px bg-slate-700" />
@@ -6761,7 +6771,7 @@ function App() {
 
         {showWatermancer && (
           <div className="order-7">
-             <WaterChemistryCard
+             <SharedWaterChemistryCard
               estimate={waterChemistry.estimate}
               basePH={waterChemistry.basePH}
               baseAlkalinity={waterChemistry.baseAlkalinity}
@@ -6794,7 +6804,7 @@ function App() {
 
         {/* Mineral Water Base */}
           {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
-          <SectionHeader
+          <SharedSectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title={showWatermancer ? '2. Add waters — Mineral water base' : 'Mineral Water Base'}
             after={<div className="flex items-center gap-2">
@@ -6827,6 +6837,7 @@ function App() {
                  Compare ions
                </button>
              )}
+              <Suspense fallback={<span className="text-[10px] text-slate-500">Loading scanner…</span>}>
               <LabelScanner onExtracted={vals => {
               // Silently use existing local water if ionic profile matches
               const match = localWaters.find(w => {
@@ -6865,6 +6876,7 @@ function App() {
                 }
               }
             }} />
+              </Suspense>
             </div>}
            />
            {(!showAlchemist || alchemistMineralWaterOpen) && (
@@ -7499,7 +7511,7 @@ function App() {
 
          {showWatermancer && activeWatermancerRoute && (
              <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="final-mixture" tabIndex={-1}>
-              <SectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
+              <SharedSectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
                The active route's modeled final mixture at the selected batch volume, including visible dose overrides.
             </div>
@@ -7510,9 +7522,9 @@ function App() {
                      {watermancerTargetSourceLabel} ion targets
                   </div>
                   <div className="grid gap-3 lg:contents">
-                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} GH target`} value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
-                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} KH target`} value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
-                     <SimpleMetricCard label={`${watermancerTargetSourceLabel} TDS target`} value={originalTargetTds} unit="mg/L" tone="tds" />
+                     <SharedSimpleMetricCard label={`${watermancerTargetSourceLabel} GH target`} value={originalTargetGh} unit="ppm CaCO₃" tone="hardness" />
+                     <SharedSimpleMetricCard label={`${watermancerTargetSourceLabel} KH target`} value={originalTargetKh} unit="ppm CaCO₃" tone="buffer" />
+                     <SharedSimpleMetricCard label={`${watermancerTargetSourceLabel} TDS target`} value={originalTargetTds} unit="mg/L" tone="tds" />
                   </div>
                   <div className="flex items-center justify-center gap-3 rounded-xl border border-indigo-400/20 bg-indigo-500/5 px-4 py-3">
                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{watermancerTargetSourceLabel} GH : KH ratio</span>
@@ -7532,9 +7544,9 @@ function App() {
                     Selected water + salts
                   </div>
                   <div className="grid gap-3 lg:contents">
-                    <HardnessCard label="General Hardness (GH)" value={reviewFinalGh} saltValue={reviewSaltGh} bottledValue={reviewWaterGh} />
-                    <HardnessCard label="Carbonate Hardness (KH)" value={reviewFinalKh} saltValue={reviewSaltKh} bottledValue={reviewWaterKh} />
-                    <TdsCard value={reviewFinalTds} saltValue={reviewSaltTds} bottledValue={reviewWaterTds} />
+                    <SharedHardnessCard label="General Hardness (GH)" value={reviewFinalGh} saltValue={reviewSaltGh} bottledValue={reviewWaterGh} />
+                    <SharedHardnessCard label="Carbonate Hardness (KH)" value={reviewFinalKh} saltValue={reviewSaltKh} bottledValue={reviewWaterKh} />
+                    <SharedTdsCard value={reviewFinalTds} saltValue={reviewSaltTds} bottledValue={reviewWaterTds} />
                   </div>
                   <div className="flex items-center justify-center gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3">
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Final GH : KH ratio</span>
@@ -7583,7 +7595,7 @@ function App() {
         {/* Mineral Water Addition */}
         {showWatermancer && batchMl > 0 && (
            <div className="app-card app-panel-surface order-3 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts" tabIndex={-1}>
-            <SectionHeader
+            <SharedSectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
              title="3. Choose salts"
             />
@@ -7749,7 +7761,7 @@ function App() {
 
          {showWatermancer && watermancerLiveResult && (
            <div className="app-card app-panel-surface order-4 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match" tabIndex={-1}>
-             <SectionHeader
+             <SharedSectionHeader
                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                 title="Find your best match"
              />
@@ -10318,29 +10330,6 @@ function HackermanAssistantButton({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function SectionHeader({ icon, title, after }: { icon: React.ReactNode; title: string; after?: React.ReactNode }) {
-  const numberedTitle = title.match(/^(\d+)\.\s+(.+)$/);
-  return (
-    <div className="app-section-header flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 border-b border-slate-700/40 text-slate-300">
-      <div className="app-section-header__title flex min-w-0 items-center gap-2">
-        {numberedTitle && (
-          <span className="app-section-header__step" aria-hidden="true">
-            {numberedTitle[1]}
-          </span>
-        )}
-        {icon}
-        <h2
-          className="truncate text-sm font-semibold uppercase tracking-wider"
-          aria-label={title}
-        >
-          {numberedTitle ? numberedTitle[2] : title}
-        </h2>
-      </div>
-      {after && <div className="app-section-header__after flex max-w-full flex-wrap items-center justify-end gap-2">{after}</div>}
-    </div>
-  );
-}
-
 function HardnessBalanceScale({ gh, kh }: { gh: number; kh: number }) {
   const totalHardness = gh + kh;
   const khShare = totalHardness > 0 ? kh / totalHardness : 0.4;
@@ -11536,6 +11525,7 @@ function ConcentrateRecipeStepsModal({
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
       const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(clone, {
         backgroundColor: '#0f172a',
         width,
@@ -12004,6 +11994,7 @@ function BrewerRecipeStepsModal({
 
       const width = Math.ceil(clone.getBoundingClientRect().width);
       const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
+      const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(clone, {
         backgroundColor: '#1e293b',
         width,
@@ -13341,142 +13332,6 @@ function SplitStockCard({
       )}
 
       </div>
-  );
-}
-
-function HardnessCard({ label, value, saltValue, bottledValue }: {
-  label: string; value: number; saltValue: number; bottledValue: number;
-}) {
-  return (
-    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="min-h-8 text-xs leading-relaxed text-slate-400">{label}</div>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
-        <span className="text-sm text-slate-400">ppm CaCO₃</span>
-      </div>
-      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="text-slate-400">Salts:</span>
-          <span className="font-mono text-emerald-300">{saltValue.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="text-slate-400">Mineral:</span>
-          <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SimpleMetricCard({ label, value, unit, tone = 'tds' }: {
-  label: string;
-  value: number;
-  unit: string;
-  tone?: 'hardness' | 'buffer' | 'tds';
-}) {
-  const valueTone = {
-    hardness: 'text-indigo-300',
-    buffer: 'text-amber-300',
-    tds: 'text-cyan-300',
-  }[tone];
-
-  return (
-    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="min-h-8 text-xs leading-relaxed text-slate-400">{label}</div>
-      <div className="flex items-baseline gap-2">
-        <span className={`text-2xl font-bold ${valueTone}`}>{value.toFixed(1)}</span>
-        <span className="text-sm text-slate-400">{unit}</span>
-      </div>
-    </div>
-  );
-}
-
-function TdsCard({ value, saltValue, bottledValue }: {
-  value: number; saltValue: number; bottledValue: number;
-}) {
-  return (
-    <div className="app-data-card flex flex-col bg-slate-900/40 rounded-xl border border-slate-700/40 px-4 py-3">
-      <div className="min-h-8 text-xs leading-relaxed text-slate-400">Total Dissolved Solids (TDS)</div>
-      <div className="flex items-baseline gap-2 mb-2">
-        <span className="text-2xl font-bold text-cyan-300">{value.toFixed(1)}</span>
-        <span className="text-sm text-slate-400">mg/L</span>
-      </div>
-      <div className="mt-auto flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="text-slate-400">Salts:</span>
-          <span className="font-mono text-emerald-300">{saltValue.toFixed(1)}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-sky-400" />
-          <span className="text-slate-400">Reported water:</span>
-          <span className="font-mono text-sky-300">{bottledValue.toFixed(1)}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function WaterChemistryCard({
-  estimate,
-  basePH,
-  baseAlkalinity,
-}: {
-  estimate?: number;
-  basePH?: number;
-  baseAlkalinity?: number;
-}) {
-  const hasEstimate = estimate !== undefined;
-  const status = hasEstimate
-    ? `Estimated pH: ${estimate.toFixed(2)}`
-    : basePH === undefined
-      ? 'Add base-water pH to estimate'
-      : 'Add base-water alkalinity to estimate';
-
-  return (
-    <details className="app-card app-panel-surface group bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
-      <summary className="app-section-header flex cursor-pointer list-none items-center justify-between gap-3 px-4 sm:px-6 [&::-webkit-details-marker]:hidden">
-        <div className="flex min-w-0 items-center gap-2">
-          <Info className="h-4 w-4 shrink-0 text-sky-300" />
-          <span className="text-sm font-semibold uppercase tracking-wider text-slate-300">Water Chemistry</span>
-          <span className="hidden truncate text-xs text-slate-500 sm:inline">pH and buffering estimate</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className={`text-xs ${hasEstimate ? 'text-sky-300' : 'text-slate-500'}`}>{status}</span>
-          <span className="text-slate-500 transition-transform group-open:rotate-180">⌄</span>
-        </div>
-      </summary>
-      <div className="app-card-body border-t border-slate-700/40">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Estimated final pH</div>
-            <div className="mt-1 text-2xl font-bold text-cyan-300">
-              {hasEstimate ? estimate.toFixed(2) : '—'}
-            </div>
-          </div>
-          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Base-water pH</div>
-            <div className="mt-1 text-2xl font-bold text-slate-200">
-              {basePH !== undefined ? basePH.toFixed(2) : '—'}
-            </div>
-          </div>
-          <div className="app-data-card rounded-xl border border-slate-700/50 bg-slate-900/40 px-4 py-3">
-            <div className="min-h-8 text-xs leading-relaxed text-slate-400">Base alkalinity</div>
-            <div className="mt-1 text-2xl font-bold text-slate-200">
-              {baseAlkalinity !== undefined ? baseAlkalinity.toFixed(1) : '—'}
-              <span className="ml-1 text-sm font-normal text-slate-500">mg/L CaCO₃</span>
-            </div>
-          </div>
-        </div>
-        <p className="mt-3 text-xs leading-relaxed text-slate-500">
-          {hasEstimate
-            ? 'Estimated from reported base-water pH and alkalinity plus the recipe’s carbonate and citrate balance. Verify with a calibrated pH meter.'
-            : 'Select a mineral-water source above that includes both reported pH and alkalinity to estimate the final pH. Ion concentrations alone are not enough to determine pH reliably.'}
-        </p>
-      </div>
-    </details>
   );
 }
 
