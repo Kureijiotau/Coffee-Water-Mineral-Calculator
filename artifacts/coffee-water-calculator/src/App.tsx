@@ -1,12 +1,10 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type SVGProps } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type DependencyList, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
-import TasteProfileCard from './TasteProfileCard';
-import TastePreferenceModal from './TastePreferenceModal';
 import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import watermancerMarkImage from '@assets/image_1786855239956.png';
+import watermancerMarkImage from '@assets/image_1786855239956.webp';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
@@ -23,7 +21,7 @@ import {
 import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
 } from '@/recipes';
-import WaterIntentAssistant, { type WaterAssistantResult } from './WaterIntentAssistant';
+import type { WaterAssistantResult } from './WaterIntentAssistant';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
@@ -82,6 +80,9 @@ import {
 
 const LabelScanner = lazy(() => import('./LabelScanner'));
 const Week1Guide = lazy(() => import('./Week1Guide'));
+const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
+const TastePreferenceModal = lazy(() => import('./TastePreferenceModal'));
+const WaterIntentAssistant = lazy(() => import('./WaterIntentAssistant'));
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
@@ -3413,6 +3414,66 @@ function MineralRecipePicker({
   );
 }
 
+function useDebouncedPersistence(
+  persist: () => void,
+  dependencies: DependencyList,
+  delayMs = 250,
+) {
+  const persistRef = useRef(persist);
+  const timerRef = useRef<number | null>(null);
+  persistRef.current = persist;
+
+  const flush = useCallback(() => {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    persistRef.current();
+  }, []);
+
+  useEffect(() => {
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    timerRef.current = window.setTimeout(flush, delayMs);
+  }, dependencies);
+
+  useEffect(() => {
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [flush]);
+}
+
+function DeferredMount({
+  children,
+  fallback,
+}: {
+  children: ReactNode;
+  fallback: ReactNode;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (mounted) return;
+    const host = hostRef.current;
+    if (!host || typeof IntersectionObserver === 'undefined') {
+      setMounted(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setMounted(true);
+      observer.disconnect();
+    }, { rootMargin: '240px 0px' });
+    observer.observe(host);
+    return () => observer.disconnect();
+  }, [mounted]);
+
+  return <div ref={hostRef}>{mounted ? children : fallback}</div>;
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -3526,17 +3587,17 @@ function App() {
     enterWatermancerManualMode();
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
-  useEffect(() => {
+  useDebouncedPersistence(() => {
     localStorage.setItem(AUTO_FILL_SETTINGS_STORAGE_KEY, JSON.stringify({
       preset: autoFillPriorityPreset,
       customPriority: autoFillCustomPriority,
       deviationPpm: autoFillDeviationPpm,
     }));
   }, [autoFillPriorityPreset, autoFillCustomPriority, autoFillDeviationPpm]);
-  useEffect(() => {
+  useDebouncedPersistence(() => {
     localStorage.setItem(WATERMANCER_OVERSHOOT_STORAGE_KEY, JSON.stringify(overshootSettings));
   }, [overshootSettings]);
-  useEffect(() => {
+  useDebouncedPersistence(() => {
     localStorage.setItem(DROPPER_CALIBRATION_STORAGE_KEY, String(brewerDropsPerMl));
   }, [brewerDropsPerMl]);
 
@@ -3552,22 +3613,35 @@ function App() {
   const [communityWaters, setCommunityWaters] = useState<CommunityWater[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
+  const communityWatersRequestRef = useRef<Promise<void> | null>(null);
   const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
   const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
   const [alchemistMineralWaterOpen, setAlchemistMineralWaterOpen] = useState(false);
   const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
-  const loadCommunityWaters = async () => {
-    setCommunityLoading(true);
-    try {
-      const resp = await fetch(`${API_BASE}/api/waters`);
-      if (resp.ok) {
-        const data = await resp.json();
-        setCommunityWaters(data.waters ?? []);
+  const loadCommunityWaters = useCallback(() => {
+    if (communityWatersRequestRef.current) return communityWatersRequestRef.current;
+    const request = (async () => {
+      setCommunityLoading(true);
+      try {
+        const resp = await fetch(`${API_BASE}/api/waters`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setCommunityWaters(data.waters ?? []);
+        }
+      } catch { /* server may be down */ }
+      finally {
+        setCommunityWatersLoaded(true);
+        setCommunityLoading(false);
       }
-    } catch { /* server may be down */ }
-    setCommunityWatersLoaded(true);
-    setCommunityLoading(false);
-  };
+    })();
+    communityWatersRequestRef.current = request;
+    void request.finally(() => {
+      if (communityWatersRequestRef.current === request) {
+        communityWatersRequestRef.current = null;
+      }
+    });
+    return request;
+  }, []);
   const openCommunityModal = async () => {
     setCommunityModalOpen(true);
     if (!communityWatersLoaded) await loadCommunityWaters();
@@ -3600,7 +3674,7 @@ function App() {
   const [watermancerIonSourcePreferences, setWatermancerIonSourcePreferences] = useState<Record<IonId, WatermancerIonSourcePreference>>(
     () => loadWatermancerIonSourcePreferences(),
   );
-  useEffect(() => {
+  useDebouncedPersistence(() => {
     localStorage.setItem(
       WATERMANCER_ION_SOURCE_STORAGE_KEY,
       JSON.stringify(watermancerIonSourcePreferences),
@@ -3626,8 +3700,8 @@ function App() {
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
-  useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
-  useEffect(() => { saveWaterPlans(savedPlans); }, [savedPlans]);
+  useDebouncedPersistence(() => saveSavedRecipes(savedRecipes), [savedRecipes]);
+  useDebouncedPersistence(() => saveWaterPlans(savedPlans), [savedPlans]);
   const sessionBaselineRef = useRef<string | null>(null);
   const lastAutoSavedSignatureRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -3787,10 +3861,10 @@ function App() {
   };
 
   // Persist on changes
-  useEffect(() => { saveProfiles(profiles); }, [profiles]);
-  useEffect(() => { saveActiveProfileId(activeProfileId); }, [activeProfileId]);
-  useEffect(() => { saveNerdLevel(nerdLevel); }, [nerdLevel]);
-  useEffect(() => { saveWatermancerProfiles(wmProfiles); }, [wmProfiles]);
+  useDebouncedPersistence(() => saveProfiles(profiles), [profiles]);
+  useDebouncedPersistence(() => saveActiveProfileId(activeProfileId), [activeProfileId]);
+  useDebouncedPersistence(() => saveNerdLevel(nerdLevel), [nerdLevel]);
+  useDebouncedPersistence(() => saveWatermancerProfiles(wmProfiles), [wmProfiles]);
 
   const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
     enterWatermancerManualMode();
@@ -3896,7 +3970,7 @@ function App() {
     () => computeIonTotals(brewerSuggestedSaltTargets, {}, 1),
     [brewerSuggestedSaltTargets],
   );
-  const applyBrewerFlavor = (flavor: BrewerFlavorInput) => {
+  const applyBrewerFlavor = useCallback((flavor: BrewerFlavorInput) => {
     const suggestedSaltTargets = brewerSaltSuggestion(flavor);
     setBrewerRecipeOverride(null);
     setActiveRecipeId('custom');
@@ -3907,11 +3981,12 @@ function App() {
         : '',
       formIdx: salt.defaultFormIdx ?? 0,
     })));
-  };
-  const handleBrewerFlavorChange = (flavor: BrewerFlavorInput) => {
+  }, []);
+  const handleBrewerFlavorChange = useCallback((flavor: BrewerFlavorInput) => {
     setBrewerFlavor(flavor);
     applyBrewerFlavor(flavor);
-  };
+  }, [applyBrewerFlavor]);
+  const openTastePreference = useCallback(() => setShowTastePreference(true), []);
   const handleApplyWeek1Recipe = (recipe: Week1Recipe) => {
     setBrewerRecipeOverride(recipe);
     setActiveRecipeId('custom');
@@ -6053,14 +6128,16 @@ function App() {
            </div>
          </div>
 
-           {WATER_ASSISTANT_ENABLED && (
+           {WATER_ASSISTANT_ENABLED && waterAssistantOpen && (
              <div data-water-intent-assistant>
-               <WaterIntentAssistant
-                 apiBase={API_BASE}
-                 open={waterAssistantOpen}
-                 onOpenChange={setWaterAssistantOpen}
-                 onApply={applyWaterAssistantResult}
-               />
+                <Suspense fallback={<div className="app-card rounded-2xl border border-fuchsia-300/20 bg-slate-900/70 px-4 py-6 text-center text-xs text-fuchsia-100/75">Loading the water assistant…</div>}>
+                  <WaterIntentAssistant
+                    apiBase={API_BASE}
+                    open={waterAssistantOpen}
+                    onOpenChange={setWaterAssistantOpen}
+                    onApply={applyWaterAssistantResult}
+                  />
+                </Suspense>
              </div>
            )}
 
@@ -6488,7 +6565,7 @@ function App() {
                flavor={brewerFlavor}
                 suggestedIons={brewerActiveIons}
                onChange={handleBrewerFlavorChange}
-                onOpenStartingRecipe={() => setShowTastePreference(true)}
+                onOpenStartingRecipe={openTastePreference}
              />
              <BrewerSimpleRecipeCard
                prepMethod={prepMethod}
@@ -6792,14 +6869,20 @@ function App() {
 
         {/* Taste Profile */}
         <div className="order-9">
-          <TasteProfileCard
-            ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
-            gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
-            kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
-            collapsed={showAlchemist || showWatermancer}
-            flavor={nerdLevel === 'brewer' ? brewerFlavor : undefined}
-            onFlavorChange={nerdLevel === 'brewer' ? handleBrewerFlavorChange : undefined}
-          />
+          <DeferredMount
+            fallback={<div className="h-28 rounded-2xl border border-slate-700/40 bg-slate-800/35" aria-hidden="true" />}
+          >
+            <Suspense fallback={<div className="h-28 rounded-2xl border border-slate-700/40 bg-slate-800/35" aria-hidden="true" />}>
+              <TasteProfileCard
+                ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
+                gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
+                kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
+                collapsed={showAlchemist || showWatermancer}
+                flavor={nerdLevel === 'brewer' ? brewerFlavor : undefined}
+                onFlavorChange={nerdLevel === 'brewer' ? handleBrewerFlavorChange : undefined}
+              />
+            </Suspense>
+          </DeferredMount>
         </div>
 
         {/* Mineral Water Base */}
@@ -8161,10 +8244,12 @@ function App() {
        )}
         </div>
         {showTastePreference && (
-        <TastePreferenceModal
-          onClose={() => setShowTastePreference(false)}
-          onApply={handleApplyTasteInference}
-        />
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 text-sm text-violet-100">Loading coffee preferences…</div>}>
+          <TastePreferenceModal
+            onClose={() => setShowTastePreference(false)}
+            onApply={handleApplyTasteInference}
+          />
+        </Suspense>
       )}
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
@@ -12508,7 +12593,7 @@ function BrewStationMode({
   );
 }
 
-function BrewerFlavorPanel({
+const BrewerFlavorPanel = memo(function BrewerFlavorPanel({
   flavor,
   suggestedIons,
   onChange,
@@ -12615,7 +12700,7 @@ function BrewerFlavorPanel({
       </p>
     </div>
   );
-}
+});
 
 function BrewerFlavorBar({
   value,
@@ -12706,6 +12791,8 @@ function BrewerFlavorPyramid({
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const draggingRef = useRef(false);
+  const pointerFrameRef = useRef<number | null>(null);
+  const pendingPointerPositionRef = useRef<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const apex = { x: 320, y: 42 };
@@ -12772,10 +12859,37 @@ function BrewerFlavorPyramid({
     };
   };
 
-  const updateFromPointer = (event: React.PointerEvent<SVGSVGElement>) => {
-    const position = getPointerPosition(event);
+  const flushPendingPointerUpdate = () => {
+    const position = pendingPointerPositionRef.current;
+    pendingPointerPositionRef.current = null;
     if (position) onChange(flavorFromPoint(position.x, position.y));
   };
+
+  const updateFromPointer = (
+    event: React.PointerEvent<SVGSVGElement>,
+    immediate = false,
+  ) => {
+    const position = getPointerPosition(event);
+    if (!position) return;
+    pendingPointerPositionRef.current = position;
+    if (immediate) {
+      if (pointerFrameRef.current !== null) {
+        cancelAnimationFrame(pointerFrameRef.current);
+        pointerFrameRef.current = null;
+      }
+      flushPendingPointerUpdate();
+      return;
+    }
+    if (pointerFrameRef.current !== null) return;
+    pointerFrameRef.current = requestAnimationFrame(() => {
+      pointerFrameRef.current = null;
+      flushPendingPointerUpdate();
+    });
+  };
+
+  useEffect(() => () => {
+    if (pointerFrameRef.current !== null) cancelAnimationFrame(pointerFrameRef.current);
+  }, []);
 
   const moveByKeyboard = (event: React.KeyboardEvent<SVGCircleElement>) => {
     const amount = event.shiftKey ? 10 : 5;
@@ -12810,19 +12924,28 @@ function BrewerFlavorPyramid({
              draggingRef.current = true;
              setIsDragging(true);
              event.currentTarget.setPointerCapture(event.pointerId);
-             updateFromPointer(event);
+              updateFromPointer(event, true);
            }}
            onPointerMove={event => {
              if (draggingRef.current) updateFromPointer(event);
            }}
            onPointerUp={event => {
+              updateFromPointer(event, true);
              draggingRef.current = false;
              setIsDragging(false);
              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
                event.currentTarget.releasePointerCapture(event.pointerId);
              }
            }}
-           onPointerCancel={() => { draggingRef.current = false; setIsDragging(false); }}
+            onPointerCancel={() => {
+              if (pointerFrameRef.current !== null) {
+                cancelAnimationFrame(pointerFrameRef.current);
+                pointerFrameRef.current = null;
+              }
+              flushPendingPointerUpdate();
+              draggingRef.current = false;
+              setIsDragging(false);
+            }}
            onPointerEnter={() => setIsHovering(true)}
            onPointerLeave={() => setIsHovering(false)}
            style={{ cursor: isDragging ? 'grabbing' : 'crosshair' }}

@@ -38,7 +38,7 @@ export default defineConfig({
         'src',
         'testAssetMock.ts',
       ),
-      '@assets/image_1786855239956.png': path.resolve(
+      '@assets/image_1786855239956.webp': path.resolve(
         import.meta.dirname,
         'src',
         'testAssetMock.ts',
