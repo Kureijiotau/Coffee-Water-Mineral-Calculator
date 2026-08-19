@@ -580,7 +580,7 @@ function VolumeInput({
   if (!showStepper) return input;
 
   return (
-    <div className="flex items-center gap-0.5">
+    <div className="grid grid-cols-[2rem_minmax(0,4.5rem)_2rem] items-center gap-1">
       <button
         type="button"
         onClick={() => stepValue(-1)}
@@ -6482,28 +6482,28 @@ function App() {
                  <span>Final batch volume</span>
                  <span className="text-[10px] font-normal uppercase tracking-[0.16em] text-cyan-200/45">Recipe output</span>
                </label>
-               <div className="flex h-11 items-center rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-950/70 to-slate-950/70 px-2 shadow-inner shadow-cyan-950/30 transition focus-within:border-cyan-200/80 focus-within:ring-2 focus-within:ring-cyan-400/30">
-                 <Droplet className="mr-1.5 h-4 w-4 text-cyan-300" aria-hidden="true" />
+      <div className="flex h-11 items-center gap-1.5 rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-950/70 to-slate-950/70 px-1.5 shadow-inner shadow-cyan-950/30 transition focus-within:border-cyan-200/80 focus-within:ring-2 focus-within:ring-cyan-400/30">
+                  <Droplet className="ml-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
                  <VolumeInput
                    liters={L}
                    unit={volumeUnit}
-                 showStepper
+                    showStepper
                    onChangeLiters={value => {
                      if (showWatermancer) enterWatermancerManualMode();
                      setLiters(value);
                    }}
                    placeholder={volumeUnitLabel(volumeUnit)}
                    ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
-                   className="w-24 border-0 bg-transparent px-1.5 py-2 text-base font-semibold tabular-nums text-slate-100 placeholder:text-cyan-100/30 focus:outline-none focus:ring-0"
+                    className="w-full border-0 bg-transparent px-0 py-2 text-center text-base font-semibold tabular-nums text-slate-100 placeholder:text-cyan-100/30 focus:outline-none focus:ring-0"
                  />
-                 <span className="pr-1 text-xs font-semibold uppercase tracking-wider text-cyan-200/65">
+                  <span className="w-5 text-center text-xs font-semibold uppercase tracking-wider text-cyan-200/65">
                    {volumeUnitShortLabel(volumeUnit)}
                  </span>
                </div>
                <VolumeUnitToggle
                  unit={volumeUnit}
                  onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-                 className="h-11 rounded-xl border-cyan-300/35 bg-cyan-400/10 px-3 text-[11px] uppercase tracking-wider shadow-sm shadow-cyan-950/30"
+                 className="h-11 min-w-[76px] justify-center rounded-xl border-cyan-300/35 bg-cyan-400/10 px-3 text-[11px] uppercase tracking-wider shadow-sm shadow-cyan-950/30"
                />
             </div>
 
