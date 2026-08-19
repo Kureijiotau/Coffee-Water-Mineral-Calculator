@@ -2997,23 +2997,41 @@ function WaterPlanManager({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {plans.map(plan => (
-                    <article key={plan.id} className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-3">
+                   {plans.map(plan => {
+                     const autoSaved = isAutoSavedWaterPlan(plan);
+                     return (
+                     <article
+                       key={plan.id}
+                       className={`water-plan-card rounded-xl border p-3 ${
+                         autoSaved
+                           ? 'water-plan-card--autosaved border-sky-300/35 bg-sky-500/[0.07]'
+                           : 'border-slate-700/70 bg-slate-950/35'
+                       }`}
+                     >
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
+                         <div className="flex min-w-0 items-start gap-2.5">
+                           <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
+                             autoSaved
+                               ? 'border-sky-300/35 bg-sky-400/15 text-sky-200'
+                               : 'border-indigo-300/25 bg-indigo-400/10 text-indigo-200'
+                           }`}>
+                             <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                           </div>
+                           <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <div className="truncate text-sm font-semibold text-slate-100">{plan.name}</div>
-                            {isAutoSavedWaterPlan(plan) && (
+                             {autoSaved && (
                               <span className="shrink-0 rounded-full border border-sky-300/30 bg-sky-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sky-200">
-                                Auto-saved
+                                 Live draft
                               </span>
                             )}
                           </div>
                           <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">
-                            {plan.snapshot.nerdLevel} · Updated {new Date(plan.updatedAt).toLocaleDateString()}
+                             {autoSaved ? 'Continuously saved' : `${plan.snapshot.nerdLevel} · Reusable snapshot`} · Updated {new Date(plan.updatedAt).toLocaleDateString()}
                           </div>
+                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
+                         <div className="flex flex-wrap items-center gap-1.5 sm:justify-end">
                           {renameId === plan.id ? (
                             <>
                               <input
@@ -3107,7 +3125,7 @@ function WaterPlanManager({
                               >
                                 Duplicate
                               </button>
-                              {!isAutoSavedWaterPlan(plan) && (
+                               {!autoSaved && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -3130,7 +3148,7 @@ function WaterPlanManager({
                               >
                                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
                               </button>
-                              {!isAutoSavedWaterPlan(plan) && (
+                               {!autoSaved && (
                                 <button
                                   type="button"
                                   onClick={() => setDeleteId(plan.id)}
@@ -3145,8 +3163,9 @@ function WaterPlanManager({
                           )}
                         </div>
                       </div>
-                    </article>
-                  ))}
+                     </article>
+                     );
+                   })}
                 </div>
               )}
             </div>

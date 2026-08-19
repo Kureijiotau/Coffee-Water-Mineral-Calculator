@@ -192,6 +192,22 @@ body {
   min-height: 100%;
 }
 
+.water-plan-card {
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.water-plan-card:hover {
+  border-color: rgb(129 140 248 / 0.48);
+  background-color: rgb(30 41 59 / 0.52);
+  box-shadow: 0 14px 28px -24px rgb(34 211 238 / 0.65);
+  transform: translateY(-1px);
+}
+
+.water-plan-card--autosaved:hover {
+  border-color: rgb(125 211 252 / 0.62);
+  background-color: rgb(14 116 144 / 0.14);
+}
+
 .watermancer-salt-table {
   --salt-grid-columns: minmax(15rem, 1.3fr) minmax(13rem, 1fr) minmax(17rem, 1.2fr) minmax(9.5rem, 0.8fr);
 }
