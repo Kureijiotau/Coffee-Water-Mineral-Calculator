@@ -9703,6 +9703,67 @@ function WatermancerIonProfileCard({
 
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
+  const targetSourcePickerGroups: RecipePickerGroup[] = [
+    {
+      label: 'Empirical Water Profiles',
+      accent: 'cyan',
+      options: profiles
+        .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id || profile.id === activeProfileId)
+        .map(profile => ({
+          value: `profile:${profile.id}`,
+          label: profile.name
+            .replace(/^Empirical Water — /, '')
+            .replace(/ ionic profile$/, ''),
+        })),
+    },
+    ...(wmProfiles.length > 0
+      ? [{
+          label: 'My saved profiles',
+          accent: 'violet' as const,
+          options: wmProfiles.map(profile => ({
+            value: `saved:${profile.id}`,
+            label: profile.name,
+          })),
+        }]
+      : []),
+    {
+      label: 'Kimoi.coffee Recipes',
+      accent: 'emerald',
+      options: allRecipes.map(recipe => ({
+        value: `recipe:${recipe.id}`,
+        label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
+      })),
+    },
+    {
+      label: 'Watering Hole · Filter',
+      accent: 'amber',
+      options: externalRecipes
+        .filter(recipe => recipe.method === 'Filter')
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Watering Hole · Espresso',
+      accent: 'amber',
+      options: externalRecipes
+        .filter(recipe => recipe.method === 'Espresso')
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Watering Hole · Tap-water proxy',
+      accent: 'amber',
+      options: externalRecipes
+        .filter(recipe => recipe.method.includes('tap-water'))
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Lotus Coffee Products',
+      accent: 'violet',
+      options: lotusRecipes.map(recipe => ({
+        value: `lotus:${recipe.id}`,
+        label: recipe.name,
+      })),
+    },
+  ];
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
@@ -9727,64 +9788,11 @@ function WatermancerIonProfileCard({
                </a>
              )}
              <div className="flex flex-col items-start gap-1">
-             <select
-               value={currentDropdownValue}
-               onChange={e => handleDropdownChange(e.target.value)}
-               aria-label="Select target water profile"
-               className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-             >
-            <optgroup label="Empirical Water Profiles">
-              {profiles.filter(p => p.id !== AIKI_DEFAULT_PROFILE.id).map(p => (
-                <option key={`profile:${p.id}`} value={`profile:${p.id}`}>
-                  {p.name
-                    .replace(/^Empirical Water — /, '')
-                    .replace(/ ionic profile$/, '')}
-                </option>
-              ))}
-            </optgroup>
-            {wmProfiles.length > 0 && (
-              <optgroup label="My saved profiles">
-                {wmProfiles.map(p => (
-                  <option key={`saved:${p.id}`} value={`saved:${p.id}`}>{p.name}</option>
-                ))}
-              </optgroup>
-            )}
-            <optgroup label="Kimoi.coffee Recipes">
-              {allRecipes.map(r => (
-                 <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                   {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
-                 </option>
-              ))}
-            </optgroup>
-            <optgroup label="Watering Hole · Filter">
-              {externalRecipes.filter(r => r.method === 'Filter').map(r => (
-                <option key={`external:${r.id}`} value={`external:${r.id}`}>
-                  {r.name}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Watering Hole · Espresso">
-              {externalRecipes.filter(r => r.method === 'Espresso').map(r => (
-                <option key={`external:${r.id}`} value={`external:${r.id}`}>
-                  {r.name}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Watering Hole · Tap-water proxy">
-              {externalRecipes.filter(r => r.method.includes('tap-water')).map(r => (
-                <option key={`external:${r.id}`} value={`external:${r.id}`}>
-                  {r.name}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="Lotus Coffee Products">
-              {lotusRecipes.map(r => (
-                <option key={`lotus:${r.id}`} value={`lotus:${r.id}`}>
-                  {r.name}
-                </option>
-              ))}
-            </optgroup>
-             </select>
+              <MineralRecipePicker
+                value={currentDropdownValue}
+                groups={targetSourcePickerGroups}
+                onChange={handleDropdownChange}
+              />
              </div>
               <button
                 type="button"
