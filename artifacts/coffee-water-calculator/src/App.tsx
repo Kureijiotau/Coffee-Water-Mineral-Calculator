@@ -6433,23 +6433,33 @@ function App() {
             }
           />
                <div className="app-card-body relative space-y-4 bg-transparent">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <label className="text-sm font-semibold text-cyan-100">Final batch volume:</label>
-              <VolumeInput
-                liters={L}
-                unit={volumeUnit}
-                onChangeLiters={value => {
-                  if (showWatermancer) enterWatermancerManualMode();
-                  setLiters(value);
-                }}
-                placeholder={volumeUnitLabel(volumeUnit)}
-                ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
-                className="w-32 bg-cyan-950/25 border border-cyan-300/35 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/60 focus:border-cyan-200 transition"
-              />
-              <VolumeUnitToggle
-                unit={volumeUnit}
-                onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-              />
+             <div className="flex flex-wrap items-center gap-3">
+               <label className="flex flex-col gap-0.5 text-sm font-semibold text-cyan-100">
+                 <span>Final batch volume</span>
+                 <span className="text-[10px] font-normal uppercase tracking-[0.16em] text-cyan-200/45">Recipe output</span>
+               </label>
+               <div className="flex h-11 items-center rounded-xl border border-cyan-300/35 bg-gradient-to-r from-cyan-950/70 to-slate-950/70 px-2 shadow-inner shadow-cyan-950/30 transition focus-within:border-cyan-200/80 focus-within:ring-2 focus-within:ring-cyan-400/30">
+                 <Droplet className="mr-1.5 h-4 w-4 text-cyan-300" aria-hidden="true" />
+                 <VolumeInput
+                   liters={L}
+                   unit={volumeUnit}
+                   onChangeLiters={value => {
+                     if (showWatermancer) enterWatermancerManualMode();
+                     setLiters(value);
+                   }}
+                   placeholder={volumeUnitLabel(volumeUnit)}
+                   ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
+                   className="w-24 border-0 bg-transparent px-1.5 py-2 text-base font-semibold tabular-nums text-slate-100 placeholder:text-cyan-100/30 focus:outline-none focus:ring-0"
+                 />
+                 <span className="pr-1 text-xs font-semibold uppercase tracking-wider text-cyan-200/65">
+                   {volumeUnitShortLabel(volumeUnit)}
+                 </span>
+               </div>
+               <VolumeUnitToggle
+                 unit={volumeUnit}
+                 onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
+                 className="h-11 rounded-xl border-cyan-300/35 bg-cyan-400/10 px-3 text-[11px] uppercase tracking-wider shadow-sm shadow-cyan-950/30"
+               />
             </div>
 
              {showAlchemist && concentrateOn && !splitMode && (
