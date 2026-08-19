@@ -32,3 +32,9 @@ When a Robert guide override is active, use the guide’s full mineral names in 
 **Why:** The sourced guide names minerals as sodium bicarbonate and sodium chloride, while the normal Brewer workflow intentionally uses friendlier labels such as baking soda and table salt.
 
 **How to apply:** Conditionalize labels on the active guide override without changing salt IDs, targets, hydration forms, or dose calculations.
+
+The seven-day crash course lives on a dedicated Guide workspace page rather than inline in Brewer. The home card remains its primary entry point, and applying a lesson recipe returns the user to Calculator with the shared recipe handoff.
+
+**Why:** The lesson needs room for its seven-day navigation and supporting context without making the Brewer workspace feel heavy.
+
+**How to apply:** Keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.

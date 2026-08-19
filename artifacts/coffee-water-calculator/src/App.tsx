@@ -12,7 +12,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -141,7 +141,7 @@ type BrewerFlavorInput = {
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `lotus:${string}` | `reference:${string}`;
-type AppTab = 'calculator' | 'concentrate';
+type AppTab = 'calculator' | 'guide' | 'concentrate';
 type ConcentrateMode = 'builder' | 'lotus';
 
 const DEFAULT_WATER_PLAN_CONCENTRATE: WaterPlanConcentrateSnapshot = {
@@ -3629,12 +3629,6 @@ function App() {
       formIdx: recipe.formIdx[salt.id] ?? salt.defaultFormIdx ?? 0,
     })));
   };
-  const scrollToWeek1Guide = () => {
-    const guide = document.getElementById('brewer-week1-guide');
-    if (!guide) return;
-    guide.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.setTimeout(() => guide.focus({ preventScroll: true }), 450);
-  };
   const scrollToWatermancerStage = (
     stage: 'target' | 'waters' | 'salts' | 'match' | 'closest-match' | 'final-mixture',
   ) => {
@@ -5264,7 +5258,7 @@ function App() {
 
   const captureWaterPlanSnapshot = (): WaterPlanSnapshot => ({
     version: 1,
-    appTab,
+    appTab: appTab === 'concentrate' ? 'concentrate' : 'calculator',
     nerdLevel,
     liters,
     volumeUnit,
@@ -5415,7 +5409,7 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerMarkImage}
@@ -5465,7 +5459,7 @@ function App() {
                 }}
               />
             )}
-            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs grid grid-cols-3 shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5 sm:grid-cols-4">
             <button
               type="button"
               role="tab"
@@ -5474,6 +5468,16 @@ function App() {
               className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Calculator
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={appTab === 'guide'}
+              onClick={() => setAppTab('guide')}
+              className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <BookOpen className="mr-1 inline-block h-3.5 w-3.5" aria-hidden="true" />
+              Guide
             </button>
             <button
               type="button"
@@ -5507,6 +5511,40 @@ function App() {
             onSnapshotChange={setConcentrateSnapshot}
           />
         </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (appTab === 'guide') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-6xl flex-col">
+            {appHeader}
+            <main className="app-card overflow-hidden rounded-2xl border border-emerald-300/20 shadow-2xl shadow-emerald-950/20">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-200/10 bg-slate-950/35 px-4 py-3 sm:px-6">
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/75">Guided tasting</div>
+                  <h1 className="mt-1 text-lg font-semibold text-white">Robert Asami&apos;s 7-day water crash course</h1>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAppTab('calculator')}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-emerald-200/45 hover:bg-emerald-300/10 hover:text-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-200/70"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  Back to Calculator
+                </button>
+              </div>
+              <Week1Guide
+                onApplyRecipe={recipe => {
+                  handleApplyWeek1Recipe(recipe);
+                  setAppTab('calculator');
+                }}
+              />
+            </main>
+          </div>
         </div>
       </div>
     );
@@ -5630,7 +5668,7 @@ function App() {
                 </div>
                 <button
                   type="button"
-                  onClick={scrollToWeek1Guide}
+                   onClick={() => setAppTab('guide')}
                   className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-teal-200/35 bg-teal-300/15 px-4 py-3 text-sm font-semibold text-teal-100 transition hover:-translate-y-0.5 hover:border-teal-200/65 hover:bg-teal-300/25 hover:shadow-lg hover:shadow-teal-950/25 focus:outline-none focus:ring-2 focus:ring-teal-200/70 focus:ring-offset-2 focus:ring-offset-slate-900"
                 >
                   Start the 7-day crash course
@@ -6071,7 +6109,6 @@ function App() {
                onChange={handleBrewerFlavorChange}
                 onOpenStartingRecipe={() => setShowTastePreference(true)}
              />
-              <Week1Guide onApplyRecipe={handleApplyWeek1Recipe} />
              <BrewerSimpleRecipeCard
                 recipeHandoffToken={brewerRecipeHandoffToken}
                  guideRecipe={brewerRecipeOverride}
