@@ -7539,9 +7539,9 @@ function App() {
 
                 <div className="watermancer-salt-table mt-2 overflow-hidden rounded-xl border border-slate-700/60">
                    <div className="watermancer-salt-table__header hidden bg-slate-950/50 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
-                    <span>Salt</span>
-                    <span>Hydration form</span>
-                    <span>Dose</span>
+                     <span className="text-left">Salt</span>
+                     <span>Hydration form</span>
+                     <span>Dose</span>
                     <div className="flex items-center justify-center gap-1.5">
                       <span>Use</span>
                       <button
@@ -7575,13 +7575,25 @@ function App() {
                       return (
                              <div
                                key={`${salt.id}-${MEME_SALT_IDS.has(salt.id) ? watermancerMemeSaltFlashNonce : 0}`}
-                               className={`watermancer-salt-table__row bg-slate-900/25 ${
+                                className={`watermancer-salt-table__row bg-slate-900/25 ${
+                                  used ? 'watermancer-salt-table__row--used' : ''
+                                } ${
                                  MEME_SALT_IDS.has(salt.id) && watermancerMemeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                                }`}
                              >
-                           <div className="watermancer-salt-table__salt">
+                            <div className="watermancer-salt-table__salt flex items-center gap-2 text-left sm:justify-start">
+                              <span
+                                className={`h-2 w-2 shrink-0 rounded-full transition ${
+                                  used
+                                    ? 'bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]'
+                                    : 'bg-slate-700'
+                                }`}
+                                aria-hidden="true"
+                              />
+                              <div className="min-w-0">
                              <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-200">{salt.name}</div>
                              <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
+                              </div>
                           </div>
                            <label className="watermancer-salt-table__hydration flex items-center gap-2">
                             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Hydration form</span>
@@ -7594,7 +7606,7 @@ function App() {
                                   rowIndex === index ? { ...row, formIdx } : row
                                 )));
                               }}
-                              className="min-w-0 flex-1 rounded-lg border border-slate-700 bg-slate-950/70 px-2 py-1.5 text-[11px] text-slate-200 outline-none focus:border-indigo-300/60"
+                               className="min-w-0 flex-1 cursor-pointer rounded-lg border border-cyan-300/20 bg-slate-950/70 px-2 py-1.5 text-[11px] font-medium text-slate-200 outline-none transition hover:border-cyan-300/45 focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-400/20"
                               aria-label={`${salt.name} hydration form`}
                             >
                               {salt.hydrationForms.map((form, formIdx) => (
@@ -7609,7 +7621,7 @@ function App() {
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, -1)}
                               disabled={!used || activeMg <= 0}
                               label={`Decrease ${salt.name} dose by 1 mg`}
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                             >
                               <Minus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
@@ -7625,19 +7637,19 @@ function App() {
                                   setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
                                 }}
                                 disabled={!used}
-                                className="min-w-0 w-16 rounded-md border border-cyan-400/25 bg-slate-950/70 px-1.5 py-1 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-300/70 disabled:cursor-not-allowed disabled:opacity-40"
+                                 className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label={`${salt.name} dose in milligrams`}
                               />
                               <span className={`watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
                                 {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
                               </span>
                             </div>
-                             <span className="watermancer-salt-table__dose-unit text-[10px] text-slate-500">mg</span>
+                              <span className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500">mg</span>
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, 1)}
                               disabled={!used}
                               label={`Increase ${salt.name} dose by 1 mg`}
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:bg-cyan-500/20"
+                               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 active:scale-90"
                             >
                               <Plus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
@@ -7653,7 +7665,7 @@ function App() {
                                 : [...current, salt.id]);
                             }}
                             aria-pressed={used}
-                            className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold transition ${
+                             className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold shadow-sm transition active:scale-95 ${
                               used
                                 ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25'
                                 : 'border-slate-700 bg-slate-950/40 text-slate-500 hover:border-indigo-300/50 hover:bg-indigo-500/10 hover:text-indigo-200'

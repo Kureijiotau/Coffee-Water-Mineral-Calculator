@@ -200,6 +200,15 @@ body {
 .watermancer-salt-table__row {
   padding: 0.75rem;
   text-align: center;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.watermancer-salt-table__row:hover {
+  background-color: rgb(30 41 59 / 0.42);
+}
+
+.watermancer-salt-table__row--used {
+  box-shadow: inset 3px 0 0 rgb(52 211 153 / 0.7);
 }
 
 .watermancer-salt-table__salt {
@@ -263,7 +272,7 @@ body {
 
 .watermancer-salt-table__dose-unit {
   flex: 0 0 1rem;
-  text-align: left;
+  text-align: center;
 }
 
 .watermancer-salt-table__dose-status {
@@ -308,6 +317,16 @@ body {
     column-gap: 1rem;
     row-gap: 0;
     min-height: 4.5rem;
+  }
+
+  .watermancer-salt-table__salt {
+    text-align: left;
+  }
+
+  .watermancer-salt-table__hydration,
+  .watermancer-salt-table__dose,
+  .watermancer-salt-table__use {
+    align-self: center;
   }
 }
 
