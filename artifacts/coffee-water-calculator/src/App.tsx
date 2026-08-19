@@ -12,7 +12,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, BookOpen, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -5461,7 +5461,7 @@ function App() {
                 }}
               />
             )}
-            <div role="tablist" aria-label="App workspace" className="app-header__tabs grid grid-cols-3 shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5 sm:grid-cols-4">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs grid grid-cols-3 shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
               role="tab"
@@ -5470,16 +5470,6 @@ function App() {
               className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               Calculator
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={appTab === 'guide'}
-              onClick={() => setAppTab('guide')}
-              className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-            >
-              <BookOpen className="mr-1 inline-block h-3.5 w-3.5" aria-hidden="true" />
-              Guide
             </button>
             <button
               type="button"
