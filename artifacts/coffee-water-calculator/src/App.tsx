@@ -12840,13 +12840,6 @@ function BrewerFlavorPyramid({
             strokeWidth="2"
             style={{ transition: 'stroke 160ms ease' }}
           />
-          {/* Reference midlines help gauge how far the star sits from the centroid. */}
-          <line x1={(left.x + right.x) / 2} y1={(left.y + right.y) / 2} x2={apex.x} y2={apex.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
-          <line x1={(apex.x + right.x) / 2} y1={(apex.y + right.y) / 2} x2={left.x} y2={left.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
-          <line x1={(apex.x + left.x) / 2} y1={(apex.y + left.y) / 2} x2={right.x} y2={right.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
-          <line x1={apex.x} y1={apex.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
-          <line x1={left.x} y1={left.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
-          <line x1={right.x} y1={right.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
           {[apex, left, right].map((vertex, index) => (
             <circle key={index} cx={vertex.x} cy={vertex.y} r="3.5" fill="rgb(125 211 252 / 0.75)" />
           ))}
