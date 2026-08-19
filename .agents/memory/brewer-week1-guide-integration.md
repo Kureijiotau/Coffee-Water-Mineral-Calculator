@@ -37,4 +37,4 @@ The seven-day crash course lives on a dedicated Guide workspace page rather than
 
 **Why:** The lesson needs room for its seven-day navigation and supporting context without making the Brewer workspace feel heavy.
 
-**How to apply:** Keep the preparation-method selector shared with Brewer’s recipe card, and keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.
+**How to apply:** Render the shared full Brewer preparation card beneath the lesson content, including method choice, live amounts, volume, dosing checklist, and recipe steps. Keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.
