@@ -38,6 +38,31 @@ export default defineConfig({
         'src',
         'testAssetMock.ts',
       ),
+      '@assets/image_1786855239956.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
+      '@assets/Kapp_1787058386404.gif': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
+      '@assets/Kapp_1787058386404_last.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
+      '@assets/hackerman_1787062754046.gif': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
+      '@assets/hackerman_1787062754046_last.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
     },
   },
 });
