@@ -1,3 +1,5 @@
+import { Droplets, Scale } from 'lucide-react';
+
 export type BrewerPrepMethod = 'dry' | 'dropper';
 
 type BrewerPrepMethodSelectorProps = {
@@ -13,8 +15,8 @@ export default function BrewerPrepMethodSelector({ value, onChange }: BrewerPrep
       </div>
       <div role="tablist" aria-label="Recipe dosing method" className="grid gap-1 sm:grid-cols-2">
         {([
-          ['dry', 'Weigh dry salts', 'Weigh the recipe on a scale'],
-          ['dropper', 'Use concentrate drops', 'Make stocks once, then dose by drops'],
+          ['dry', 'Weigh dry salts', 'Weigh the recipe on a scale', Scale],
+          ['dropper', 'Use concentrate drops', 'Make stocks once, then dose by drops', Droplets],
         ] as const).map(([method, label, description]) => (
           <button
             key={method}
@@ -28,7 +30,12 @@ export default function BrewerPrepMethodSelector({ value, onChange }: BrewerPrep
                 : 'border-transparent text-slate-400 hover:border-slate-600/60 hover:bg-slate-800/60 hover:text-slate-200'
             }`}
           >
-            <div className="text-xs font-semibold">{label}</div>
+            <div className="flex items-center gap-1.5 text-xs font-semibold">
+              <span className="text-sky-300" aria-hidden="true">
+                {method === 'dry' ? <Scale className="h-3.5 w-3.5" /> : <Droplets className="h-3.5 w-3.5" />}
+              </span>
+              {label}
+            </div>
             <div className="mt-0.5 text-[10px] text-slate-500">{description}</div>
           </button>
         ))}
