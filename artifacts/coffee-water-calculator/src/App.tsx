@@ -28,6 +28,7 @@ import LabelScanner from '@/LabelScanner';
 import WaterIntentAssistant, { type WaterAssistantResult } from './WaterIntentAssistant';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import Week1Guide, { type Week1Recipe } from './Week1Guide';
+import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadNerdLevel, saveNerdLevel, createProfile,
@@ -3288,6 +3289,7 @@ function App() {
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
   const [plansOpen, setPlansOpen] = useState(false);
   const [waterAssistantOpen, setWaterAssistantOpen] = useState(false);
@@ -5538,6 +5540,8 @@ function App() {
                 </button>
               </div>
               <Week1Guide
+                prepMethod={prepMethod}
+                onPrepMethodChange={setPrepMethod}
                 onApplyRecipe={recipe => {
                   handleApplyWeek1Recipe(recipe);
                   setAppTab('calculator');
@@ -6110,6 +6114,10 @@ function App() {
                 onOpenStartingRecipe={() => setShowTastePreference(true)}
              />
              <BrewerSimpleRecipeCard
+               prepMethod={prepMethod}
+               onPrepMethodChange={method => {
+                 setPrepMethod(method);
+               }}
                 recipeHandoffToken={brewerRecipeHandoffToken}
                  guideRecipe={brewerRecipeOverride}
                 saltTargets={brewerActiveSaltTargets}
@@ -10529,6 +10537,8 @@ function BrewerDropperCalibrationCard({
 }
 
 function BrewerSimpleRecipeCard({
+  prepMethod,
+  onPrepMethodChange,
   recipeHandoffToken,
   guideRecipe,
   saltTargets,
@@ -10544,6 +10554,8 @@ function BrewerSimpleRecipeCard({
   dropsPerMl,
   onOpenSteps,
 }: {
+  prepMethod: BrewerPrepMethod;
+  onPrepMethodChange: (method: BrewerPrepMethod) => void;
   recipeHandoffToken: number;
   guideRecipe: Week1Recipe | null;
   saltTargets: Record<string, number>;
@@ -10562,8 +10574,6 @@ function BrewerSimpleRecipeCard({
   const UNIVERSAL_STOCK_PERCENT = 5;
   const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
   const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / dropsPerMl;
-  type BrewerPrepMethod = 'dry' | 'dropper';
-  const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [stocksReady, setStocksReady] = useState(false);
   const [makeWaterOpen, setMakeWaterOpen] = useState(false);
   const [makeWaterStage, setMakeWaterStage] = useState<'choice' | 'prep' | 'dose'>('choice');
@@ -10691,37 +10701,14 @@ function BrewerSimpleRecipeCard({
 
   return (
     <div className="border-b border-slate-700/40 bg-emerald-500/5 px-4 py-4 sm:px-6">
-      <div className="rounded-xl border border-sky-400/20 bg-slate-900/30 p-2">
-        <div className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-sky-300">
-          Choose how you’ll measure minerals
-        </div>
-        <div role="tablist" aria-label="Recipe dosing method" className="grid gap-1 sm:grid-cols-2">
-          {([
-            ['dry', 'Weigh dry salts', 'Weigh the recipe on a scale'],
-            ['dropper', 'Use concentrate drops', 'Make stocks once, then dose by drops'],
-          ] as const).map(([method, label, description]) => (
-            <button
-              key={method}
-              type="button"
-              role="tab"
-              aria-selected={prepMethod === method}
-              onClick={() => {
-                setPrepMethod(method);
-                if (method === 'dry' && makeWaterOpen) setMakeWaterStage('dose');
-                if (method === 'dropper' && makeWaterOpen && !stocksReady) setMakeWaterStage('choice');
-              }}
-              className={`rounded-lg border px-3 py-2 text-left transition ${
-                prepMethod === method
-                  ? 'border-sky-400/50 bg-sky-500/15 text-sky-100 shadow-sm'
-                  : 'border-transparent text-slate-400 hover:border-slate-600/60 hover:bg-slate-800/60 hover:text-slate-200'
-              }`}
-            >
-              <div className="text-xs font-semibold">{label}</div>
-              <div className="mt-0.5 text-[10px] text-slate-500">{description}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+       <BrewerPrepMethodSelector
+         value={prepMethod}
+         onChange={method => {
+           onPrepMethodChange(method);
+           if (method === 'dry' && makeWaterOpen) setMakeWaterStage('dose');
+           if (method === 'dropper' && makeWaterOpen && !stocksReady) setMakeWaterStage('choice');
+         }}
+       />
       <div id="brewer-mineral-recipe" className="mt-3 scroll-mt-6 rounded-2xl border border-emerald-300/35 bg-gradient-to-br from-emerald-500/15 via-slate-900/25 to-violet-500/10 p-4 shadow-[0_0_30px_-10px_rgba(52,211,153,0.55)] ring-1 ring-emerald-300/10">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
