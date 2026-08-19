@@ -3136,6 +3136,212 @@ function WaterPlanManager({
   );
 }
 
+type RecipePickerOption = {
+  value: string;
+  label: string;
+};
+
+type RecipePickerGroup = {
+  label: string;
+  options: RecipePickerOption[];
+  accent: 'cyan' | 'violet' | 'emerald' | 'amber';
+};
+
+function MineralRecipePicker({
+  value,
+  groups,
+  onChange,
+}: {
+  value: string;
+  groups: RecipePickerGroup[];
+  onChange: (value: string) => void;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [menuPosition, setMenuPosition] = useState({
+    top: 0,
+    left: 0,
+    width: 240,
+    maxHeight: 360,
+    openAbove: false,
+  });
+  const options = groups.flatMap(group => group.options);
+  const selectedOption = options.find(option => option.value === value) ?? options[0];
+
+  const updatePosition = () => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const belowSpace = window.innerHeight - rect.bottom - 12;
+    const aboveSpace = rect.top - 12;
+    const openAbove = belowSpace < 240 && aboveSpace > belowSpace;
+    const maxHeight = Math.max(180, Math.min(360, openAbove ? aboveSpace : belowSpace));
+    setMenuPosition({
+      top: openAbove ? rect.top - maxHeight - 6 : rect.bottom + 6,
+      left: rect.left,
+      width: Math.max(rect.width, 260),
+      maxHeight,
+      openAbove,
+    });
+  };
+
+  useEffect(() => {
+    const selectedIndex = Math.max(0, options.findIndex(option => option.value === value));
+    setActiveIndex(selectedIndex);
+  }, [value, options.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    updatePosition();
+    const handleViewportChange = () => updatePosition();
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (!triggerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, open]);
+
+  const selectOption = (option: RecipePickerOption) => {
+    onChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setOpen(false);
+      return;
+    }
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      const delta = event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0;
+      const nextIndex = event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+        ? options.length - 1
+        : Math.min(options.length - 1, Math.max(0, activeIndex + delta));
+      setActiveIndex(nextIndex);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+      } else {
+        const option = options[activeIndex];
+        if (option) selectOption(option);
+      }
+    }
+  };
+
+  const accentStyles = {
+    cyan: 'text-cyan-200',
+    violet: 'text-violet-200',
+    emerald: 'text-emerald-200',
+    amber: 'text-amber-200',
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Select mineral recipe"
+        onClick={() => setOpen(previous => !previous)}
+        onKeyDown={handleKeyDown}
+        className={`inline-flex min-h-9 max-w-[260px] items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-300/70 ${
+          open
+            ? 'border-cyan-300/70 bg-indigo-900/80 text-white shadow-lg shadow-cyan-950/30'
+            : 'border-indigo-300/35 bg-gradient-to-r from-indigo-950/80 via-slate-900/80 to-cyan-950/70 text-indigo-100 hover:border-cyan-300/60 hover:text-white'
+        }`}
+      >
+        <FlaskConical className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate">{selectedOption?.label ?? 'Custom'}</span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-cyan-300 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          role="listbox"
+          aria-label="Mineral recipes"
+          className="fixed z-[100] overflow-y-auto rounded-2xl border border-cyan-300/30 bg-slate-950/95 p-1.5 shadow-2xl shadow-indigo-950/60 ring-1 ring-white/10 backdrop-blur-xl"
+          style={{
+            top: menuPosition.top,
+            left: menuPosition.left,
+            width: menuPosition.width,
+            maxHeight: menuPosition.maxHeight,
+          }}
+        >
+          {groups.map(group => (
+            <div key={group.label} role="group" aria-label={group.label} className="mb-1.5 last:mb-0">
+              <div className={`flex items-center gap-2 px-2.5 pb-1 pt-2 text-[9px] font-bold uppercase tracking-[0.18em] ${accentStyles[group.accent]}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]" aria-hidden="true" />
+                {group.label}
+              </div>
+              {group.options.map(option => {
+                const optionIndex = options.findIndex(item => item.value === option.value);
+                const selected = option.value === value;
+                const active = optionIndex === activeIndex;
+                return (
+                  <button
+                    key={option.value}
+                    ref={element => { optionRefs.current[optionIndex] = element; }}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onMouseEnter={() => setActiveIndex(optionIndex)}
+                    onClick={() => selectOption(option)}
+                    className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[11px] transition ${
+                      selected
+                        ? 'bg-cyan-400/15 text-cyan-50 ring-1 ring-cyan-300/35'
+                        : active
+                        ? 'bg-indigo-400/15 text-indigo-50'
+                        : 'text-slate-300 hover:bg-indigo-400/10 hover:text-white'
+                    }`}
+                  >
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${selected ? 'bg-emerald-300 shadow-[0_0_8px_rgba(110,231,183,0.9)]' : 'bg-slate-700'}`} aria-hidden="true" />
+                    <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                    {selected && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden="true" />}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -3353,7 +3559,6 @@ function App() {
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
   useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
   useEffect(() => { saveWaterPlans(savedPlans); }, [savedPlans]);
-  const [sessionDirty, setSessionDirty] = useState(false);
   const sessionBaselineRef = useRef<string | null>(null);
   const lastAutoSavedSignatureRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -4705,6 +4910,52 @@ function App() {
     : externalRecipeId !== 'custom'
     ? `external:${externalRecipeId}`
     : 'custom';
+  const mineralRecipePickerGroups: RecipePickerGroup[] = [
+    {
+      label: 'Current setup',
+      accent: 'emerald',
+      options: [{ value: 'custom', label: 'Custom' }],
+    },
+    {
+      label: 'Built-in',
+      accent: 'cyan',
+      options: RECIPES.map(recipe => ({
+        value: `recipe:${recipe.id}`,
+        label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
+      })),
+    },
+    ...(savedRecipes.length > 0
+      ? [{
+          label: 'My recipes',
+          accent: 'violet' as const,
+          options: savedRecipes.map(recipe => ({
+            value: `recipe:${recipe.id}`,
+            label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
+          })),
+        }]
+      : []),
+    {
+      label: 'Watering Hole · Filter',
+      accent: 'amber',
+      options: ROBERT_ASAMI_RECIPES
+        .filter(recipe => recipe.method === 'Filter')
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Watering Hole · Espresso',
+      accent: 'amber',
+      options: ROBERT_ASAMI_RECIPES
+        .filter(recipe => recipe.method === 'Espresso')
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Watering Hole · Tap-water proxy',
+      accent: 'amber',
+      options: ROBERT_ASAMI_RECIPES
+        .filter(recipe => recipe.method.includes('tap-water'))
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+  ];
   const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
   const hasSaltRecipeTargets = Object.values(saltTargets).some(target => target > 0);
   const selectedSourceRecipe = selectedExternalRecipe ?? (
@@ -5337,7 +5588,6 @@ function App() {
   const sessionSignature = (snapshot: WaterPlanSnapshot) => JSON.stringify(snapshot);
   const commitSessionBaseline = (snapshot: WaterPlanSnapshot) => {
     sessionBaselineRef.current = sessionSignature(snapshot);
-    setSessionDirty(false);
   };
 
   const handleSaveWaterPlan = (name: string) => {
@@ -5449,7 +5699,6 @@ function App() {
     }
 
     const dirty = signature !== sessionBaselineRef.current;
-    setSessionDirty(dirty);
     if (!dirty || signature === lastAutoSavedSignatureRef.current) return;
 
     if (autoSaveTimerRef.current !== null) {
@@ -5478,16 +5727,6 @@ function App() {
       }
     };
   });
-
-  useEffect(() => {
-    if (!sessionDirty) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [sessionDirty]);
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
@@ -5885,45 +6124,11 @@ function App() {
                   ?
                 </a>
               )}
-              <select
+              <MineralRecipePicker
                 value={mineralRecipeSelectorValue}
-                onChange={e => handleMineralRecipeChange(e.target.value)}
-                aria-label="Select mineral recipe"
-                className="max-w-[240px] rounded-lg border border-indigo-400/30 bg-indigo-950/30 px-2.5 py-1.5 text-[11px] text-indigo-100 transition focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-              >
-                <option value="custom">Custom</option>
-                <optgroup label="Built-in">
-                  {RECIPES.map(r => (
-                    <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                        {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
-                    </option>
-                  ))}
-                </optgroup>
-                {savedRecipes.length > 0 && (
-                  <optgroup label="My recipes">
-                    {savedRecipes.map(r => (
-                      <option key={`recipe:${r.id}`} value={`recipe:${r.id}`}>
-                      {r.id === 'kimoi' ? '⭐ ' : ''}{r.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                <optgroup label="Watering Hole · Filter">
-                  {ROBERT_ASAMI_RECIPES.filter(r => r.method === 'Filter').map(r => (
-                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Watering Hole · Espresso">
-                  {ROBERT_ASAMI_RECIPES.filter(r => r.method === 'Espresso').map(r => (
-                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Watering Hole · Tap-water proxy">
-                  {ROBERT_ASAMI_RECIPES.filter(r => r.method.includes('tap-water')).map(r => (
-                    <option key={`external:${r.id}`} value={`external:${r.id}`}>{r.name}</option>
-                  ))}
-                </optgroup>
-              </select>
+                groups={mineralRecipePickerGroups}
+                onChange={handleMineralRecipeChange}
+              />
               {activeRecipeId === 'custom' && (
                 <button
                   onClick={handleSaveRecipe}
