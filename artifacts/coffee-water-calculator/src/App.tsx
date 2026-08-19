@@ -10770,13 +10770,13 @@ function BrewerSimpleRecipeCard({
                 : ''
             }`}
           >
-            <Check className="h-4 w-4" />
+            <Droplet className="h-4 w-4" />
             Make this water
           </button>
           <button
             type="button"
             onClick={() => onOpenSteps(prepMethod)}
-            className="flex items-center justify-center gap-2 rounded-xl border border-slate-600/60 bg-slate-800/50 px-4 py-3 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/60 hover:text-slate-100"
+            className="flex items-center justify-center gap-2 rounded-xl border border-violet-300/40 bg-violet-400/15 px-4 py-3 text-xs font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/25 hover:text-white hover:shadow-lg hover:shadow-violet-950/25"
             title="View step-by-step recipe instructions"
           >
             <ListChecks className="h-4 w-4" />
