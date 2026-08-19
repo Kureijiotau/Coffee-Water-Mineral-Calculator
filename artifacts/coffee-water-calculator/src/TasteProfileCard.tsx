@@ -1,11 +1,21 @@
+import { useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { Coffee, Flame, Droplets, Wind } from 'lucide-react';
 import type { IonId } from '@/waterData';
+
+export type TasteProfileFlavor = {
+  brightness: number;
+  body: number;
+  juiciness: number;
+  sweetness: number;
+};
 
 interface Props {
   ionTotals: Record<IonId, number>;
   gh: number;
   kh: number;
   collapsed?: boolean;
+  flavor?: TasteProfileFlavor;
+  onFlavorChange?: (flavor: TasteProfileFlavor) => void;
 }
 
 function clamp(v: number, lo: number, hi: number) {
@@ -233,9 +243,166 @@ function TasteProfileCup() {
   );
 }
 
+function TasteProfileMiniTriangle({
+  flavor,
+  onChange,
+}: {
+  flavor: TasteProfileFlavor;
+  onChange: (flavor: TasteProfileFlavor) => void;
+}) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const draggingRef = useRef(false);
+  const apex = { x: 140, y: 24 };
+  const left = { x: 34, y: 150 };
+  const right = { x: 246, y: 150 };
+  const weights = {
+    apex: (flavor.brightness + flavor.juiciness) / 200,
+    left: flavor.sweetness / 100,
+    right: flavor.body / 100,
+  };
+  const weightTotal = weights.apex + weights.left + weights.right;
+  const point = {
+    x: weightTotal > 0
+      ? (apex.x * weights.apex + left.x * weights.left + right.x * weights.right) / weightTotal
+      : (apex.x + left.x + right.x) / 3,
+    y: weightTotal > 0
+      ? (apex.y * weights.apex + left.y * weights.left + right.y * weights.right) / weightTotal
+      : (apex.y + left.y + right.y) / 3,
+  };
+
+  const flavorFromPoint = (x: number, y: number): TasteProfileFlavor => {
+    const denominator =
+      (left.y - right.y) * (apex.x - right.x) + (right.x - left.x) * (apex.y - right.y);
+    let apexWeight =
+      ((left.y - right.y) * (x - right.x) + (right.x - left.x) * (y - right.y)) / denominator;
+    let leftWeight =
+      ((right.y - apex.y) * (x - right.x) + (apex.x - right.x) * (y - right.y)) / denominator;
+    let rightWeight = 1 - apexWeight - leftWeight;
+    const positiveWeights = {
+      apex: Math.max(0, apexWeight),
+      left: Math.max(0, leftWeight),
+      right: Math.max(0, rightWeight),
+    };
+    const total = positiveWeights.apex + positiveWeights.left + positiveWeights.right || 1;
+    apexWeight = positiveWeights.apex / total;
+    leftWeight = positiveWeights.left / total;
+    rightWeight = positiveWeights.right / total;
+    return {
+      brightness: Math.round(apexWeight * 100),
+      juiciness: Math.round(apexWeight * 100),
+      sweetness: Math.round(leftWeight * 100),
+      body: Math.round(rightWeight * 100),
+    };
+  };
+
+  const pointIsInsideTriangle = (x: number, y: number) => {
+    const denominator =
+      (left.y - right.y) * (apex.x - right.x) + (right.x - left.x) * (apex.y - right.y);
+    const apexWeight =
+      ((left.y - right.y) * (x - right.x) + (right.x - left.x) * (y - right.y)) / denominator;
+    const leftWeight =
+      ((right.y - apex.y) * (x - right.x) + (apex.x - right.x) * (y - right.y)) / denominator;
+    const rightWeight = 1 - apexWeight - leftWeight;
+    return apexWeight >= 0 && leftWeight >= 0 && rightWeight >= 0;
+  };
+
+  const getPointerPosition = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: ((event.clientX - rect.left) / rect.width) * 280,
+      y: ((event.clientY - rect.top) / rect.height) * 175,
+    };
+  };
+
+  const updateFromPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
+    const position = getPointerPosition(event);
+    if (position) onChange(flavorFromPoint(position.x, position.y));
+  };
+
+  const moveByKeyboard = (event: ReactKeyboardEvent<SVGCircleElement>) => {
+    const amount = event.shiftKey ? 10 : 5;
+    let x = point.x;
+    let y = point.y;
+    if (event.key === 'ArrowLeft') x -= amount;
+    else if (event.key === 'ArrowRight') x += amount;
+    else if (event.key === 'ArrowUp') y -= amount;
+    else if (event.key === 'ArrowDown') y += amount;
+    else return;
+    event.preventDefault();
+    onChange(flavorFromPoint(x, y));
+  };
+
+  return (
+    <div className="border-t border-slate-700/40 bg-slate-900/25 px-4 py-3">
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        Tune this cup
+      </div>
+      <div className="text-[10px] text-slate-600">Drag the star to update the Brewer recipe</div>
+      <div className="mt-1 flex justify-center">
+        <svg
+          ref={svgRef}
+          viewBox="0 0 280 175"
+          className="h-auto w-full max-w-[320px] touch-none select-none"
+          role="img"
+          aria-label="Mini interactive taste triangle. Drag the star between brightness and fruit acidity, sweetness and clarity, and body and mouthfeel."
+          onPointerDown={event => {
+            const position = getPointerPosition(event);
+            if (!position || !pointIsInsideTriangle(position.x, position.y)) return;
+            draggingRef.current = true;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            updateFromPointer(event);
+          }}
+          onPointerMove={event => {
+            if (draggingRef.current) updateFromPointer(event);
+          }}
+          onPointerUp={event => {
+            draggingRef.current = false;
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+          }}
+          onPointerCancel={() => { draggingRef.current = false; }}
+          style={{ cursor: 'crosshair' }}
+        >
+          <polygon
+            points={`${apex.x},${apex.y} ${left.x},${left.y} ${right.x},${right.y}`}
+            fill="rgb(14 165 233 / 0.08)"
+            stroke="rgb(125 211 252 / 0.55)"
+            strokeWidth="1.5"
+          />
+          <line x1={apex.x} y1={apex.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.2)" strokeDasharray="4 4" />
+          <line x1={left.x} y1={left.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.2)" strokeDasharray="4 4" />
+          <line x1={right.x} y1={right.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.2)" strokeDasharray="4 4" />
+          <text x={apex.x} y="12" textAnchor="middle" fill="rgb(148 163 184)" fontSize="8">Brightness / Fruit</text>
+          <text x="27" y="168" textAnchor="start" fill="rgb(148 163 184)" fontSize="8">Sweetness / Clarity</text>
+          <text x="253" y="168" textAnchor="end" fill="rgb(148 163 184)" fontSize="8">Body / Mouthfeel</text>
+          <circle cx={point.x} cy={point.y} r="11" fill="rgb(14 165 233 / 0.16)" />
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r="7"
+            fill="#f8fafc"
+            stroke="#38bdf8"
+            strokeWidth="2"
+            tabIndex={0}
+            role="slider"
+            aria-label="Mini taste profile position"
+            aria-valuetext={`${flavor.brightness} brightness, ${flavor.juiciness} fruit, ${flavor.sweetness} sweetness, ${flavor.body} body`}
+            onKeyDown={moveByKeyboard}
+            style={{ cursor: 'grab' }}
+          />
+          <text x={point.x} y={point.y + 3} textAnchor="middle" fill="#0284c7" fontSize="9" fontWeight="700">★</text>
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 // — Main component ————————————————————————————————————
 
-export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false }: Props) {
+export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false, flavor, onFlavorChange }: Props) {
   const sc = ionTotals.chloride > 0
     ? ionTotals.sulfate / ionTotals.chloride
     : ionTotals.sulfate > 0 ? 20 : 0;
@@ -313,6 +480,10 @@ export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false 
           </p>
         </div>
       </div>
+
+      {flavor && onFlavorChange && (
+        <TasteProfileMiniTriangle flavor={flavor} onChange={onFlavorChange} />
+      )}
 
       {/* Profile scores */}
       <div className="px-5 py-3 space-y-3">

@@ -6520,6 +6520,8 @@ function App() {
             gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
             kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
             collapsed={showAlchemist || showWatermancer}
+            flavor={nerdLevel === 'brewer' ? brewerFlavor : undefined}
+            onFlavorChange={nerdLevel === 'brewer' ? handleBrewerFlavorChange : undefined}
           />
         </div>
 
