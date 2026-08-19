@@ -12328,6 +12328,8 @@ function BrewerFlavorBar({
   label: string;
   onChange: (value: number) => void;
 }) {
+  const draggingRef = useRef(false);
+
   const setFromPointer = (event: React.PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const nextValue = Math.round(((event.clientX - rect.left) / rect.width) * 100);
@@ -12343,7 +12345,26 @@ function BrewerFlavorBar({
       aria-valuemax={100}
       aria-valuenow={value}
       aria-valuetext={`${value} out of 100`}
-      onClick={setFromPointer}
+      onPointerDown={event => {
+        draggingRef.current = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setFromPointer(event);
+      }}
+      onPointerMove={event => {
+        if (draggingRef.current) setFromPointer(event);
+      }}
+      onPointerUp={event => {
+        draggingRef.current = false;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
+      onPointerCancel={event => {
+        draggingRef.current = false;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
+      }}
       onKeyDown={event => {
         const amount = event.shiftKey ? 10 : 5;
         if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
@@ -12360,8 +12381,9 @@ function BrewerFlavorBar({
           onChange(100);
         }
       }}
-      className="group mt-2 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
-      title={`Click to set ${label}`}
+      className="group mt-2 cursor-grab select-none rounded-full outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 active:cursor-grabbing"
+      style={{ touchAction: 'none' }}
+      title={`Click or drag to set ${label}`}
     >
       <div className="relative h-2 overflow-hidden rounded-full bg-slate-700/70 transition group-hover:bg-slate-700">
         <div
