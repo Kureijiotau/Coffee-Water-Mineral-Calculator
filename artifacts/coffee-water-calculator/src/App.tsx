@@ -312,7 +312,7 @@ function HoldStepperButton({
         onStep();
       }}
       disabled={disabled}
-      className={className}
+      className={`volume-input ${className}`}
       aria-label={label}
     >
       {children}
@@ -522,6 +522,7 @@ function VolumeInput({
   ariaLabel,
   placeholder,
   className,
+  showStepper = false,
 }: {
   liters: number;
   unit: VolumeUnit;
@@ -529,6 +530,7 @@ function VolumeInput({
   ariaLabel: string;
   placeholder?: string;
   className: string;
+  showStepper?: boolean;
 }) {
   const [inputValue, setInputValue] = useState(() => litersToVolumeInput(liters, unit));
 
@@ -536,7 +538,15 @@ function VolumeInput({
     setInputValue(litersToVolumeInput(liters, unit));
   }, [liters, unit]);
 
-  return (
+  const stepValue = (direction: -1 | 1) => {
+    const currentValue = Number(litersToVolumeInput(liters, unit)) || 0;
+    const nextValue = Math.max(0, Number((currentValue + direction * 0.1).toFixed(2)));
+    const nextInput = String(nextValue);
+    setInputValue(nextInput);
+    onChangeLiters(String(volumeToLiters(nextInput, unit)));
+  };
+
+  const input = (
     <input
       type="number"
       inputMode="decimal"
@@ -554,10 +564,44 @@ function VolumeInput({
           onChangeLiters(String(volumeToLiters(nextValue, unit)));
         }
       }}
+      onKeyDown={event => {
+        if (!showStepper) return;
+        if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          stepValue(event.key === 'ArrowUp' ? 1 : -1);
+        }
+      }}
       placeholder={placeholder}
       aria-label={ariaLabel}
-      className={className}
+      className={`volume-input ${className}`}
     />
+  );
+
+  if (!showStepper) return input;
+
+  return (
+    <div className="flex items-center gap-0.5">
+      <button
+        type="button"
+        onClick={() => stepValue(-1)}
+        disabled={liters <= 0}
+        aria-label={`Decrease ${ariaLabel}`}
+        title="Decrease by 0.1"
+        className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/20 bg-slate-950/40 text-cyan-200/70 transition-all hover:border-cyan-200/60 hover:bg-cyan-400/15 hover:text-cyan-100 active:scale-90 active:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-25 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+      >
+        <Minus className="h-3.5 w-3.5 transition-transform group-active:scale-75" aria-hidden="true" />
+      </button>
+      {input}
+      <button
+        type="button"
+        onClick={() => stepValue(1)}
+        aria-label={`Increase ${ariaLabel}`}
+        title="Increase by 0.1"
+        className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/35 bg-cyan-400/10 text-cyan-100 transition-all hover:border-cyan-200/70 hover:bg-cyan-400/25 hover:shadow-[0_0_16px_rgba(34,211,238,0.18)] active:scale-90 active:bg-cyan-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+      >
+        <Plus className="h-3.5 w-3.5 transition-transform group-active:scale-75" aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 

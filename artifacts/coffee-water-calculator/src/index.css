@@ -17,6 +17,17 @@ body {
   background: #020617;
 }
 
+.volume-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.volume-input::-webkit-inner-spin-button,
+.volume-input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .app-shell {
   position: relative;
   isolation: isolate;
