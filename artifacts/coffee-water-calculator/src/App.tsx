@@ -1063,6 +1063,7 @@ const normalizeSaltTarget = (value: string | number): string => {
 const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
+const WATER_ASSISTANT_ENABLED = false;
 
 const AUTO_FILL_MAX_ML = 2000;
 const DEFAULT_AUTO_FILL_DEVIATION_PPM = 1;
@@ -5451,7 +5452,7 @@ function App() {
             onDelete={handleDeleteWaterPlan}
             onImport={handleImportWaterPlan}
           />
-            {appTab === 'calculator' && (
+            {WATER_ASSISTANT_ENABLED && appTab === 'calculator' && (
               <HackermanAssistantButton
                 onOpen={() => {
                   setWaterAssistantOpen(true);
@@ -5599,14 +5600,16 @@ function App() {
            </div>
          </div>
 
-          <div data-water-intent-assistant>
-            <WaterIntentAssistant
-              apiBase={API_BASE}
-              open={waterAssistantOpen}
-              onOpenChange={setWaterAssistantOpen}
-              onApply={applyWaterAssistantResult}
-            />
-          </div>
+           {WATER_ASSISTANT_ENABLED && (
+             <div data-water-intent-assistant>
+               <WaterIntentAssistant
+                 apiBase={API_BASE}
+                 open={waterAssistantOpen}
+                 onOpenChange={setWaterAssistantOpen}
+                 onApply={applyWaterAssistantResult}
+               />
+             </div>
+           )}
 
           {nerdLevel === 'brewer' && (
             <section className="relative overflow-hidden rounded-2xl border border-teal-300/25 bg-gradient-to-br from-teal-950/80 via-slate-900/80 to-indigo-950/70 px-5 py-5 shadow-xl shadow-teal-950/15 sm:px-6">
