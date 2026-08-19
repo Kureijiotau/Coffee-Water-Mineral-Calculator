@@ -3541,8 +3541,6 @@ function App() {
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
   const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
-  const [watermancerPrecisionOpen, setWatermancerPrecisionOpen] = useState(false);
-  const [watermancerPrecisionPlan, setWatermancerPrecisionPlan] = useState<'dry' | 'concentrate' | 'dropper'>('dry');
   const watermancerActionBusyRef = useRef(false);
   const watermancerActionGenerationRef = useRef(0);
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
@@ -4407,7 +4405,7 @@ function App() {
     watermancerUsedSaltIds,
   ]);
   // This is the single route used by Watermancer result cards, ion coverage,
-  // Recipe steps, precision guidance, and exports. The baseline route keeps
+  // Recipe steps, and exports. The baseline route keeps
   // the selected candidate's doses; the final pass materializes visible salt
   // selection and physical-dose overrides into the route itself.
   const activeWatermancerRoute = useMemo(
@@ -4456,23 +4454,6 @@ function App() {
     ))
       ? 'matched'
       : 'partial';
-  const watermancerPrecisionRecommendation = useMemo(
-    () => showWatermancer
-      ? buildWatermancerPrecisionRecommendation(
-        activeWatermancerSaltTargets,
-        rows,
-        L,
-        brewerDropsPerMl,
-      )
-      : null,
-    [
-      activeWatermancerSaltTargets,
-      brewerDropsPerMl,
-      L,
-      rows,
-      showWatermancer,
-    ],
-  );
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
     setWatermancerDoseOverridesMg(current => ({
@@ -4860,8 +4841,6 @@ function App() {
     setWatermancerBestMatchRunning(false);
     setWatermancerActionRunning(false);
     setWatermancerActionMessage(null);
-    setWatermancerPrecisionOpen(false);
-    setWatermancerPrecisionPlan('dry');
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
     setWatermancerResultSticky(false);
@@ -6473,162 +6452,6 @@ function App() {
               />
             </div>
 
-            {showWatermancer && (
-              <div className="rounded-xl border border-cyan-400/20 bg-slate-950/25">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3 sm:px-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-cyan-100">
-                      <Gauge className="h-3.5 w-3.5 text-cyan-300" />
-                      Precision check
-                    </div>
-                    {watermancerPrecisionRecommendation ? (
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                        Smallest dry-salt dose:{' '}
-                        <span className={`font-semibold ${
-                          watermancerPrecisionRecommendation.status === 'needs-volume'
-                            ? 'text-amber-200'
-                            : 'text-emerald-300'
-                        }`}>
-                          {watermancerPrecisionRecommendation.currentMinimumMassMg.toFixed(0)} mg
-                        </span>
-                        {watermancerPrecisionRecommendation.status === 'needs-volume'
-                          ? ' — small doses can be difficult to weigh reliably.'
-                          : ' — dry-salt dosing is comfortably measurable.'}
-                      </p>
-                    ) : (
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
-                        Select at least one salt below to check dosing precision.
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!watermancerPrecisionRecommendation}
-                    onClick={() => setWatermancerPrecisionOpen(open => !open)}
-                    className="shrink-0 rounded-lg border border-cyan-300/30 bg-cyan-500/10 px-3 py-2 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600"
-                  >
-                    {watermancerPrecisionOpen ? 'Hide precision plan' : 'Improve dosing precision'}
-                  </button>
-                </div>
-
-                {watermancerPrecisionOpen && watermancerPrecisionRecommendation && (
-                  <div className="border-t border-cyan-400/15 px-3.5 py-3.5 sm:px-4">
-                    <div className="mb-3">
-                      <div className="text-xs font-semibold text-slate-200">Precision-first options</div>
-                      <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-500">
-                        The calculator keeps your target profile, waters, salts, and hydration forms unchanged.
-                        Choose an option below only if you want to change how you prepare the recipe.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {([
-                        ['dry', 'Dry salt', 'Scale up the final batch', 'border-emerald-400/25 bg-emerald-500/[0.06]'],
-                        ['concentrate', 'Concentrate', 'Keep the final batch size', 'border-sky-400/25 bg-sky-500/[0.06]'],
-                        ['dropper', 'Dropper', 'Dose the concentrate by drops', 'border-violet-400/25 bg-violet-500/[0.06]'],
-                      ] as const).map(([id, label, description, tone]) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => setWatermancerPrecisionPlan(id)}
-                          className={`rounded-xl border p-3 text-left transition ${
-                            watermancerPrecisionPlan === id
-                              ? `${tone} ring-1 ring-cyan-300/50`
-                              : 'border-slate-700/60 bg-slate-900/35 hover:border-slate-500/70'
-                          }`}
-                          aria-pressed={watermancerPrecisionPlan === id}
-                        >
-                          <div className="text-xs font-semibold text-slate-100">{label}</div>
-                          <div className="mt-1 text-[10px] leading-relaxed text-slate-500">{description}</div>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/45 px-3 py-3">
-                      {watermancerPrecisionPlan === 'dry' && (
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
-                              Recommended dry batch
-                            </div>
-                            <div className="mt-1 text-sm font-semibold text-slate-100">
-                              {formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} {volumeUnitShortLabel(volumeUnit)}
-                              <span className="ml-2 text-[11px] font-normal text-slate-500">
-                                smallest dose ≈ {watermancerPrecisionRecommendation.recommendedMinimumMassMg.toFixed(0)} mg
-                              </span>
-                            </div>
-                            <p className="mt-1 text-[10px] text-slate-500">
-                              Uses a conservative 100 mg minimum for practical weighing.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            disabled={watermancerPrecisionRecommendation.recommendedBatchLiters <= L}
-                            onClick={() => {
-                              enterWatermancerManualMode();
-                              setLiters(String(watermancerPrecisionRecommendation.recommendedBatchLiters));
-                              setWatermancerActionMessage(`Final batch set to ${formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} for easier weighing.`);
-                            }}
-                            className="rounded-lg border border-emerald-300/35 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:cursor-default disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600"
-                          >
-                            {watermancerPrecisionRecommendation.recommendedBatchLiters <= L ? 'Already at target' : `Use ${formatVolumeValue(watermancerPrecisionRecommendation.recommendedBatchLiters, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)}`}
-                          </button>
-                        </div>
-                      )}
-
-                      {watermancerPrecisionPlan === 'concentrate' && (
-                        <div>
-                          <div className="flex flex-wrap items-baseline justify-between gap-2">
-                            <div>
-                              <div className="text-[10px] font-semibold uppercase tracking-wider text-sky-300">
-                                Precision-first concentrate
-                              </div>
-                              <div className="mt-1 text-sm font-semibold text-slate-100">
-                                500 mL stock · ×{PRECISION_STOCK_STRENGTH}
-                              </div>
-                            </div>
-                            <span className="text-[11px] font-semibold text-sky-200">
-                              2 mL per final liter
-                            </span>
-                          </div>
-                          <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-                            {watermancerPrecisionRecommendation.stockMasses.map(salt => (
-                              <div key={salt.id} className="flex items-center justify-between gap-3 text-[11px]">
-                                <span className="text-slate-400">{salt.name}</span>
-                                <span className="font-mono text-sky-200">{salt.stockMassMg >= 1000 ? `${(salt.stockMassMg / 1000).toFixed(2)} g` : `${salt.stockMassMg.toFixed(0)} mg`}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-                            This is a preparation plan only. Review solubility and use the existing concentrate workflow before making stock.
-                          </p>
-                        </div>
-                      )}
-
-                      {watermancerPrecisionPlan === 'dropper' && (
-                        <div className="flex flex-wrap items-baseline justify-between gap-3">
-                          <div>
-                            <div className="text-[10px] font-semibold uppercase tracking-wider text-violet-300">
-                              Dropper fallback
-                            </div>
-                            <div className="mt-1 text-sm font-semibold text-slate-100">
-                              Approximately {watermancerPrecisionRecommendation.stockDropsPerLiter} drops per final liter
-                            </div>
-                            <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
-                              Based on the calibrated {brewerDropsPerMl} drops/mL assumption; whole-drop dosing is convenient but less precise than measured volume.
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-violet-300/25 bg-violet-500/10 px-2.5 py-1 text-[10px] font-semibold text-violet-200">
-                            500× stock
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
              {showAlchemist && concentrateOn && !splitMode && (
                <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -6866,7 +6689,7 @@ function App() {
           {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
-             title={showWatermancer ? '2. Add waters — Base water' : 'Mineral Water Base'}
+            title={showWatermancer ? '2. Add waters — Mineral water base' : 'Mineral Water Base'}
             after={<div className="flex items-center gap-2">
               {showAlchemist && (
                 <button
