@@ -36,6 +36,7 @@ import {
 } from '@/profiles';
 import {
   createWaterPlan,
+  isAutoSavedWaterPlan,
   isValidWaterPlan,
   loadWaterPlans,
   parseWaterPlanFile,
@@ -44,6 +45,7 @@ import {
   type WaterPlan,
   type WaterPlanConcentrateSnapshot,
   type WaterPlanSnapshot,
+  WATER_PLAN_AUTOSAVE_NAME,
 } from './waterPlans';
 import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles,
@@ -2955,7 +2957,14 @@ function WaterPlanManager({
                     <article key={plan.id} className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-3">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-semibold text-slate-100">{plan.name}</div>
+                          <div className="flex items-center gap-2">
+                            <div className="truncate text-sm font-semibold text-slate-100">{plan.name}</div>
+                            {isAutoSavedWaterPlan(plan) && (
+                              <span className="shrink-0 rounded-full border border-sky-300/30 bg-sky-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-sky-200">
+                                Auto-saved
+                              </span>
+                            )}
+                          </div>
                           <div className="mt-1 text-[10px] uppercase tracking-wider text-slate-500">
                             {plan.snapshot.nerdLevel} · Updated {new Date(plan.updatedAt).toLocaleDateString()}
                           </div>
@@ -3054,18 +3063,20 @@ function WaterPlanManager({
                               >
                                 Duplicate
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setRenameId(plan.id);
-                                  setRenameName(plan.name);
-                                  setRestoreId(null);
-                                  setDeleteId(null);
-                                }}
-                                className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-300 transition hover:bg-slate-800 hover:text-white"
-                              >
-                                Rename
-                              </button>
+                              {!isAutoSavedWaterPlan(plan) && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRenameId(plan.id);
+                                    setRenameName(plan.name);
+                                    setRestoreId(null);
+                                    setDeleteId(null);
+                                  }}
+                                  className="inline-flex min-h-9 items-center rounded-lg border border-slate-700/70 px-2.5 text-[11px] text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                                >
+                                  Rename
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={() => handleExport(plan)}
@@ -3075,15 +3086,17 @@ function WaterPlanManager({
                               >
                                 <Download className="h-3.5 w-3.5" aria-hidden="true" />
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setDeleteId(plan.id)}
-                                className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-700/70 px-2.5 text-slate-400 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-200"
-                                aria-label={`Delete ${plan.name}`}
-                                title="Delete plan"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                              </button>
+                              {!isAutoSavedWaterPlan(plan) && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeleteId(plan.id)}
+                                  className="inline-flex min-h-9 items-center justify-center rounded-lg border border-slate-700/70 px-2.5 text-slate-400 transition hover:border-rose-400/40 hover:bg-rose-500/10 hover:text-rose-200"
+                                  aria-label={`Delete ${plan.name}`}
+                                  title="Delete plan"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                </button>
+                              )}
                             </>
                           )}
                         </div>
@@ -3340,6 +3353,10 @@ function App() {
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
   useEffect(() => { saveSavedRecipes(savedRecipes); }, [savedRecipes]);
   useEffect(() => { saveWaterPlans(savedPlans); }, [savedPlans]);
+  const [sessionDirty, setSessionDirty] = useState(false);
+  const sessionBaselineRef = useRef<string | null>(null);
+  const lastAutoSavedSignatureRef = useRef<string | null>(null);
+  const autoSaveTimerRef = useRef<number | null>(null);
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
@@ -5317,11 +5334,19 @@ function App() {
     },
   });
 
+  const sessionSignature = (snapshot: WaterPlanSnapshot) => JSON.stringify(snapshot);
+  const commitSessionBaseline = (snapshot: WaterPlanSnapshot) => {
+    sessionBaselineRef.current = sessionSignature(snapshot);
+    setSessionDirty(false);
+  };
+
   const handleSaveWaterPlan = (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return null;
-    const plan = createWaterPlan(trimmedName, captureWaterPlanSnapshot());
+    const snapshot = captureWaterPlanSnapshot();
+    const plan = createWaterPlan(trimmedName, snapshot);
     setSavedPlans(previous => [plan, ...previous]);
+    commitSessionBaseline(snapshot);
     return plan;
   };
 
@@ -5334,6 +5359,8 @@ function App() {
   const handleRenameWaterPlan = (id: string, name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
+    const existing = savedPlans.find(plan => plan.id === id);
+    if (existing && isAutoSavedWaterPlan(existing)) return;
     setSavedPlans(previous => previous.map(plan => plan.id === id
       ? { ...plan, name: trimmedName, updatedAt: new Date().toISOString() }
       : plan));
@@ -5345,6 +5372,8 @@ function App() {
   };
 
   const handleDeleteWaterPlan = (id: string) => {
+    const existing = savedPlans.find(plan => plan.id === id);
+    if (existing && isAutoSavedWaterPlan(existing)) return;
     setSavedPlans(previous => previous.filter(plan => plan.id !== id));
   };
 
@@ -5407,7 +5436,58 @@ function App() {
     setConcentrateSnapshot({ ...snapshot.concentrate });
     setAppTab(snapshot.appTab);
     setPlansOpen(false);
+    commitSessionBaseline(snapshot);
   };
+
+  useEffect(() => {
+    const snapshot = captureWaterPlanSnapshot();
+    const signature = sessionSignature(snapshot);
+
+    if (sessionBaselineRef.current === null) {
+      sessionBaselineRef.current = signature;
+      return;
+    }
+
+    const dirty = signature !== sessionBaselineRef.current;
+    setSessionDirty(dirty);
+    if (!dirty || signature === lastAutoSavedSignatureRef.current) return;
+
+    if (autoSaveTimerRef.current !== null) {
+      window.clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = window.setTimeout(() => {
+      const now = new Date().toISOString();
+      lastAutoSavedSignatureRef.current = signature;
+      setSavedPlans(previous => {
+        const existing = previous.find(isAutoSavedWaterPlan);
+        if (existing) {
+          return previous.map(plan => plan.id === existing.id
+            ? { ...plan, snapshot, updatedAt: now }
+            : plan);
+        }
+        return [createWaterPlan(WATER_PLAN_AUTOSAVE_NAME, snapshot, now), ...previous];
+      });
+      autoSaveTimerRef.current = null;
+    }, 900);
+
+    return () => {
+      if (autoSaveTimerRef.current !== null) {
+        window.clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  });
+
+  useEffect(() => {
+    if (!sessionDirty) return;
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [sessionDirty]);
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">

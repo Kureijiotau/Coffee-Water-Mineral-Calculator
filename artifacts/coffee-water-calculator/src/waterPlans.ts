@@ -89,6 +89,11 @@ export type WaterPlan = {
 
 export const WATER_PLAN_FILE_KIND = 'coffee-water-plan';
 export const WATER_PLAN_VERSION = 1;
+export const WATER_PLAN_AUTOSAVE_NAME = 'Last auto-saved session';
+
+export function isAutoSavedWaterPlan(plan: Pick<WaterPlan, 'name'>): boolean {
+  return plan.name === WATER_PLAN_AUTOSAVE_NAME;
+}
 
 const STORAGE_KEY = 'cwm.waterPlans';
 
