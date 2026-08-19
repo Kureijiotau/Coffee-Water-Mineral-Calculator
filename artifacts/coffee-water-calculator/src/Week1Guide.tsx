@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import { computeGH, computeIonTotals, computeKH, SALTS } from './waterData';
-import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
 
 export type Week1Recipe = {
   id: string;
@@ -25,8 +24,6 @@ export type Week1Recipe = {
 
 type Week1GuideProps = {
   onApplyRecipe: (recipe: Week1Recipe) => void;
-  prepMethod: BrewerPrepMethod;
-  onPrepMethodChange: (method: BrewerPrepMethod) => void;
 };
 
 type Week1Day = {
@@ -355,7 +352,7 @@ const saltDisplay: Record<string, { label: string; note: string }> = {
 
 const formatMass = (massMg: number) => `${(massMg / 1000).toFixed(3)} g`;
 
-export default function Week1Guide({ onApplyRecipe, prepMethod, onPrepMethodChange }: Week1GuideProps) {
+export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   const [activeDay, setActiveDay] = useState(1);
   const [appliedDay, setAppliedDay] = useState<number | null>(null);
   const [day5MagnesiumSwapped, setDay5MagnesiumSwapped] = useState(false);
@@ -483,7 +480,6 @@ export default function Week1Guide({ onApplyRecipe, prepMethod, onPrepMethodChan
           </nav>
 
           <div className="week1-content">
-             <div>
              <section className="week1-card week1-recipe" aria-labelledby="week1-recipe-title">
               <div className="week1-card-heading">
                 <div>
@@ -553,10 +549,6 @@ export default function Week1Guide({ onApplyRecipe, prepMethod, onPrepMethodChan
               </div>
               <div className="week1-table-foot"><Info /> Weigh the listed hydrated forms, then dissolve completely before brewing.</div>
             </section>
-             <div className="mt-3">
-               <BrewerPrepMethodSelector value={prepMethod} onChange={onPrepMethodChange} />
-             </div>
-             </div>
 
             <aside className="week1-side">
               <section className="week1-card week1-learning" aria-labelledby="week1-prompt-title">

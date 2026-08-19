@@ -5540,10 +5540,28 @@ function App() {
                 </button>
               </div>
               <Week1Guide
-                prepMethod={prepMethod}
-                onPrepMethodChange={setPrepMethod}
                 onApplyRecipe={handleApplyWeek1Recipe}
               />
+              <div className="border-t border-emerald-200/10 bg-slate-950/20">
+                <BrewerSimpleRecipeCard
+                  prepMethod={prepMethod}
+                  onPrepMethodChange={setPrepMethod}
+                  recipeHandoffToken={brewerRecipeHandoffToken}
+                  guideRecipe={brewerRecipeOverride}
+                  saltTargets={brewerActiveSaltTargets}
+                  recipeRows={rows}
+                  liters={L}
+                  volumeInput={liters}
+                  volumeUnit={volumeUnit}
+                  onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
+                  onVolumeChange={value => setLiters(value)}
+                  concentrateOn={concentrateOn}
+                  concentrateLiters={concL}
+                  concentrateStrength={concentrateStrength}
+                  dropsPerMl={brewerDropsPerMl}
+                  onOpenSteps={method => setShowBrewerSteps(method)}
+                />
+              </div>
             </main>
           </div>
         </div>
