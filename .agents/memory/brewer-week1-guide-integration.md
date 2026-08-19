@@ -33,8 +33,8 @@ When a Robert guide override is active, use the guide’s full mineral names in 
 
 **How to apply:** Conditionalize labels on the active guide override without changing salt IDs, targets, hydration forms, or dose calculations.
 
-The seven-day crash course lives on a dedicated Guide workspace page rather than inline in Brewer. The home card remains its primary entry point, and applying a lesson recipe returns the user to Calculator with the shared recipe handoff.
+The seven-day crash course lives on a dedicated Guide workspace page rather than inline in Brewer. The home card remains its primary entry point, and applying a lesson recipe keeps the user in Guide so they can choose dry-salt or dropper preparation in context.
 
 **Why:** The lesson needs room for its seven-day navigation and supporting context without making the Brewer workspace feel heavy.
 
-**How to apply:** Keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.
+**How to apply:** Keep the preparation-method selector shared with Brewer’s recipe card, and keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.

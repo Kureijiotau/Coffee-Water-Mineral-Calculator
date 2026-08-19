@@ -5542,10 +5542,7 @@ function App() {
               <Week1Guide
                 prepMethod={prepMethod}
                 onPrepMethodChange={setPrepMethod}
-                onApplyRecipe={recipe => {
-                  handleApplyWeek1Recipe(recipe);
-                  setAppTab('calculator');
-                }}
+                onApplyRecipe={handleApplyWeek1Recipe}
               />
             </main>
           </div>

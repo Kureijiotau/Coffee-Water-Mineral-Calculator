@@ -596,14 +596,14 @@ export default function Week1Guide({ onApplyRecipe, prepMethod, onPrepMethodChan
             </button>
             <button className={`week1-recipe-button ${appliedDay === currentDay.day ? 'applied' : ''}`} type="button" onClick={applyCurrentRecipe}>
               {appliedDay === currentDay.day ? <Check /> : <FlaskConical />}
-              {appliedDay === currentDay.day ? 'Recipe added to your calculator' : 'Use this recipe'}
+              {appliedDay === currentDay.day ? 'Recipe ready to prepare' : 'Use this recipe'}
             </button>
             <button className="week1-button" type="button" disabled={activeDay === DAYS.length} onClick={() => goToDay(activeDay + 1)}>
               Next <ArrowRight />
             </button>
           </div>
           <div className="week1-bottom">
-            <span>DAY {activeDay} OF 7 · {appliedDay === currentDay.day ? 'SAVED TO CALCULATOR' : 'READY TO EXPERIMENT'}</span>
+            <span>DAY {activeDay} OF 7 · {appliedDay === currentDay.day ? 'RECIPE READY TO PREPARE' : 'READY TO EXPERIMENT'}</span>
             <span>Source: <a className="week1-source" href="https://www.robertasami.com/water#rasamifilter" target="_blank" rel="noreferrer">Robert Asami’s Watering Hole</a></span>
           </div>
         </div>
