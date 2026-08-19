@@ -12275,6 +12275,11 @@ function BrewerFlavorPanel({
                 <span className={`text-[10px] font-semibold uppercase tracking-wide ${status.className}`}>{status.label}</span>
                 <span className="font-mono text-xs text-sky-300">{flavor[key]}</span>
               </div>
+              <BrewerFlavorBar
+                value={flavor[key]}
+                label={label}
+                onChange={value => onChange({ ...flavor, [key]: value })}
+              />
               <div className="mt-1 flex justify-between text-[9px] text-slate-600"><span>{low}</span><span>{high}</span></div>
             </div>
           );
@@ -12310,6 +12315,64 @@ function BrewerFlavorPanel({
       <p className="mt-2 text-[10px] text-slate-500">
         0–60 stays within Aiki’s safe band · 60–75 is elevated · 75–100 is out of range. Use the steps button for a simple preparation guide.
       </p>
+    </div>
+  );
+}
+
+function BrewerFlavorBar({
+  value,
+  label,
+  onChange,
+}: {
+  value: number;
+  label: string;
+  onChange: (value: number) => void;
+}) {
+  const setFromPointer = (event: React.PointerEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const nextValue = Math.round(((event.clientX - rect.left) / rect.width) * 100);
+    onChange(Math.max(0, Math.min(100, nextValue)));
+  };
+
+  return (
+    <div
+      role="slider"
+      tabIndex={0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={value}
+      aria-valuetext={`${value} out of 100`}
+      onClick={setFromPointer}
+      onKeyDown={event => {
+        const amount = event.shiftKey ? 10 : 5;
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          onChange(Math.max(0, value - amount));
+        } else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          onChange(Math.min(100, value + amount));
+        } else if (event.key === 'Home') {
+          event.preventDefault();
+          onChange(0);
+        } else if (event.key === 'End') {
+          event.preventDefault();
+          onChange(100);
+        }
+      }}
+      className="group mt-2 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70"
+      title={`Click to set ${label}`}
+    >
+      <div className="relative h-2 overflow-hidden rounded-full bg-slate-700/70 transition group-hover:bg-slate-700">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-sky-500/70 to-cyan-300 transition-[width]"
+          style={{ width: `${value}%` }}
+        />
+        <div
+          className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-100 bg-sky-300 shadow-[0_0_8px_rgb(56_189_248_/_0.7)] transition-[left]"
+          style={{ left: `${value}%` }}
+        />
+      </div>
     </div>
   );
 }
