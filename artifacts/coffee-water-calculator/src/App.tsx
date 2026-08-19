@@ -10720,7 +10720,7 @@ function BrewerSimpleRecipeCard({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-emerald-100">
-              <Sparkles className="h-4 w-4 text-emerald-300" />
+              <FlaskConical className="h-4 w-4 text-emerald-300" />
               Your mineral recipe
             </div>
             <p className="mt-1 text-xs text-slate-400">
