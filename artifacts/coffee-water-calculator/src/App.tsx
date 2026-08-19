@@ -12715,6 +12715,8 @@ function BrewerFlavorPyramid({
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const draggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const apex = { x: 320, y: 42 };
   const left = { x: 72, y: 290 };
   const right = { x: 568, y: 290 };
@@ -12798,9 +12800,11 @@ function BrewerFlavorPyramid({
   };
 
   return (
-    <div className="mt-4 rounded-xl border border-slate-700/50 bg-slate-900/35 px-2 py-3 sm:px-4">
+    <div className={`mt-4 rounded-xl border px-2 py-3 transition sm:px-4 ${
+      isDragging ? 'border-sky-300/45 bg-sky-500/[0.05]' : 'border-slate-700/50 bg-slate-900/35'
+    }`}>
       <div className="mb-1 text-center text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        Drag the star to shape your cup
+        {isDragging ? 'Release to lock in this balance' : 'Drag the star to shape your cup'}
       </div>
       <div className="flex justify-center">
         <svg
@@ -12813,6 +12817,7 @@ function BrewerFlavorPyramid({
              const position = getPointerPosition(event);
              if (!position || !pointIsInsidePyramid(position.x, position.y)) return;
              draggingRef.current = true;
+             setIsDragging(true);
              event.currentTarget.setPointerCapture(event.pointerId);
              updateFromPointer(event);
            }}
@@ -12821,12 +12826,15 @@ function BrewerFlavorPyramid({
            }}
            onPointerUp={event => {
              draggingRef.current = false;
+             setIsDragging(false);
              if (event.currentTarget.hasPointerCapture(event.pointerId)) {
                event.currentTarget.releasePointerCapture(event.pointerId);
              }
            }}
-           onPointerCancel={() => { draggingRef.current = false; }}
-           style={{ cursor: 'crosshair' }}
+           onPointerCancel={() => { draggingRef.current = false; setIsDragging(false); }}
+           onPointerEnter={() => setIsHovering(true)}
+           onPointerLeave={() => setIsHovering(false)}
+           style={{ cursor: isDragging ? 'grabbing' : 'crosshair' }}
         >
           <defs>
             <linearGradient id="brewer-pyramid-fill" x1="0" y1="0" x2="1" y2="1">
@@ -12834,29 +12842,66 @@ function BrewerFlavorPyramid({
               <stop offset="100%" stopColor="#0ea5e9" stopOpacity="0.04" />
             </linearGradient>
           </defs>
-          <polygon points={`${apex.x},${apex.y} ${left.x},${left.y} ${right.x},${right.y}`} fill="url(#brewer-pyramid-fill)" stroke="rgb(125 211 252 / 0.65)" strokeWidth="2" />
-          <line x1={apex.x} y1={apex.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
-          <line x1={left.x} y1={left.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
-          <line x1={right.x} y1={right.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.22)" strokeDasharray="5 5" />
+          <polygon
+            points={`${apex.x},${apex.y} ${left.x},${left.y} ${right.x},${right.y}`}
+            fill="url(#brewer-pyramid-fill)"
+            stroke={isDragging || isHovering ? 'rgb(125 211 252 / 0.9)' : 'rgb(125 211 252 / 0.65)'}
+            strokeWidth="2"
+            style={{ transition: 'stroke 160ms ease' }}
+          />
+          {/* Reference midlines help gauge how far the star sits from the centroid. */}
+          <line x1={(left.x + right.x) / 2} y1={(left.y + right.y) / 2} x2={apex.x} y2={apex.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
+          <line x1={(apex.x + right.x) / 2} y1={(apex.y + right.y) / 2} x2={left.x} y2={left.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
+          <line x1={(apex.x + left.x) / 2} y1={(apex.y + left.y) / 2} x2={right.x} y2={right.y} stroke="rgb(148 163 184 / 0.12)" strokeWidth="1" />
+          <line x1={apex.x} y1={apex.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
+          <line x1={left.x} y1={left.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
+          <line x1={right.x} y1={right.y} x2={point.x} y2={point.y} stroke="rgb(125 211 252 / 0.28)" strokeDasharray="5 5" />
+          {[apex, left, right].map((vertex, index) => (
+            <circle key={index} cx={vertex.x} cy={vertex.y} r="3.5" fill="rgb(125 211 252 / 0.75)" />
+          ))}
           <text x={apex.x} y="22" textAnchor="middle" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Brightness / Fruit Acidity</text>
           <text x="64" y="318" textAnchor="start" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Sweetness &amp; Clarity</text>
           <text x="576" y="318" textAnchor="end" fill="rgb(226 232 240)" fontSize="14" fontWeight="600">Body &amp; Mouthfeel</text>
-          <circle cx={point.x} cy={point.y} r="19" fill="rgb(14 165 233 / 0.16)" />
           <circle
             cx={point.x}
             cy={point.y}
-            r="12"
+            r={isDragging ? 26 : 19}
+            fill="rgb(14 165 233 / 0.16)"
+            style={{ transition: 'r 160ms ease' }}
+          />
+          {isDragging && (
+            <circle cx={point.x} cy={point.y} r="19" fill="none" stroke="rgb(56 189 248 / 0.45)" strokeWidth="2">
+              <animate attributeName="r" values="14;30" dur="0.9s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.6;0" dur="0.9s" repeatCount="indefinite" />
+            </circle>
+          )}
+          <circle
+            cx={point.x}
+            cy={point.y}
+            r={isDragging ? 14 : 12}
             fill="#f8fafc"
             stroke="#38bdf8"
-            strokeWidth="3"
+            strokeWidth={isDragging ? 4 : 3}
             tabIndex={0}
             role="slider"
             aria-label="Taste profile position"
             aria-valuetext={`${flavor.brightness} brightness, ${flavor.juiciness} fruit, ${flavor.sweetness} sweetness, ${flavor.body} body`}
             onKeyDown={moveByKeyboard}
-            style={{ cursor: 'grab' }}
+            onFocus={() => setIsHovering(true)}
+            onBlur={() => setIsHovering(false)}
+            style={{ cursor: isDragging ? 'grabbing' : 'grab', transition: 'r 160ms ease, stroke-width 160ms ease' }}
           />
-          <text x={point.x} y={point.y + 5} textAnchor="middle" fill="#0284c7" fontSize="15" fontWeight="700">★</text>
+          <text
+            x={point.x}
+            y={point.y + 5}
+            textAnchor="middle"
+            fill="#0284c7"
+            fontSize={isDragging ? 17 : 15}
+            fontWeight="700"
+            style={{ pointerEvents: 'none', transition: 'font-size 160ms ease' }}
+          >
+            ★
+          </text>
         </svg>
       </div>
     </div>
