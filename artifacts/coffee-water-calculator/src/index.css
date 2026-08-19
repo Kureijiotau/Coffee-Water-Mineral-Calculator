@@ -144,11 +144,32 @@ body {
 .app-section-header {
   min-height: 3.25rem;
   padding-block: 0.875rem;
+  background:
+    linear-gradient(100deg, rgb(56 189 248 / 0.065), transparent 38%, rgb(99 102 241 / 0.05)),
+    rgb(15 23 42 / 0.12);
 }
 
 .app-section-header__title {
   min-width: 0;
   line-height: 1.2;
+}
+
+.app-section-header__step {
+  display: inline-flex;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(103 232 249 / 0.32);
+  border-radius: 0.5rem;
+  background: linear-gradient(145deg, rgb(34 211 238 / 0.2), rgb(99 102 241 / 0.16));
+  color: rgb(165 243 252);
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.04) inset,
+    0 6px 16px -10px rgb(34 211 238 / 0.85);
 }
 
 .app-section-header__after {
