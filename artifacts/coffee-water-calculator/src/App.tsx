@@ -6487,6 +6487,7 @@ function App() {
                  <VolumeInput
                    liters={L}
                    unit={volumeUnit}
+                 showStepper
                    onChangeLiters={value => {
                      if (showWatermancer) enterWatermancerManualMode();
                      setLiters(value);
