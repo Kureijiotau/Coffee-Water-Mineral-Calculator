@@ -11538,6 +11538,17 @@ function ConcentrateRecipeStepsModal({
   const doseMlPerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
   const safeDropsPerMl = Number.isFinite(dropsPerMl) && dropsPerMl > 0 ? dropsPerMl : 20;
   const dropperStyleLabel = dropperStyle === 'round' ? 'Round' : 'Straight';
+  const saltMixGroup = (salt: typeof SALTS[number]) =>
+    salt.formula.includes('SO₄') ? 0
+      : salt.formula.includes('Cl') ? 1
+        : salt.formula.includes('HCO₃') || salt.formula.includes('CO₃') ? 3
+          : 2;
+  const orderedActiveSaltRows = [...activeSaltRows].sort((a, b) =>
+    saltMixGroup(a.salt) - saltMixGroup(b.salt)
+    || a.salt.name.localeCompare(b.salt.name),
+  );
+  const formatStockSaltMass = (massMg: number) =>
+    massMg >= 1000 ? `${(massMg / 1000).toFixed(3)} g` : `${massMg.toFixed(1)} mg`;
   const doseRows = [
     { label: '1 L', liters: 1 },
     { label: '1 US gallon', liters: 3.78541 },
@@ -11736,22 +11747,63 @@ function ConcentrateRecipeStepsModal({
                 </div>
               </section>
 
-              <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
-                <div className="text-xs font-semibold text-slate-100">Salts</div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {activeSaltRows.map(row => (
-                    <div key={row.salt.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-[11px] font-semibold text-slate-200">{row.salt.name}</div>
-                        <div className="mt-0.5 truncate text-[10px] text-slate-500">{row.form.label}</div>
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <div className="text-[10px] font-semibold tabular-nums text-slate-300">{row.target.toFixed(2)} ppm</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
+               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
+                 <div className="flex items-center justify-between gap-3">
+                   <div>
+                     <div className="text-xs font-semibold text-slate-100">Salts &amp; mixing order</div>
+                     <div className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                       Weigh these amounts for the full {recipeHandoff.finalLiters.toFixed(2)} L stock batch. Add one salt at a time and dissolve it completely before adding the next.
+                     </div>
+                   </div>
+                   <div className="shrink-0 rounded-md border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
+                     {orderedActiveSaltRows.length} salts
+                   </div>
+                 </div>
+                 <div className="mt-3 space-y-2">
+                   {orderedActiveSaltRows.map((row, index) => {
+                     const massMg = computeRecipeStockSaltMassMg(
+                       row.target,
+                       recipeHandoff.finalLiters * 1000,
+                       concentrateStrength,
+                       row.form.molarMass,
+                       row.salt.anhydrousMass,
+                     );
+                     const isCarbonate = saltMixGroup(row.salt) === 3;
+                     return (
+                       <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
+                         isCarbonate
+                           ? 'border-amber-300/35 bg-amber-500/[0.08]'
+                           : 'border-white/[0.08] bg-slate-900/50'
+                       }`}>
+                         <div className="flex items-start justify-between gap-3">
+                           <div className="flex min-w-0 items-start gap-2.5">
+                             <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                               isCarbonate
+                                 ? 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/25'
+                                 : 'bg-violet-400/15 text-violet-100 ring-1 ring-violet-300/20'
+                             }`}>
+                               {index + 1}
+                             </span>
+                             <div className="min-w-0">
+                               <div className="text-[11px] font-semibold text-slate-200">{row.salt.name}</div>
+                               <div className="mt-0.5 text-[10px] text-slate-500">{row.form.label} · {row.salt.formula}</div>
+                               {isCarbonate && (
+                                 <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+                                   Add last — reduce precipitation risk
+                                 </div>
+                               )}
+                             </div>
+                           </div>
+                           <div className="shrink-0 rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 px-2 py-1 text-right">
+                             <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Weigh</div>
+                             <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-fuchsia-100">{formatStockSaltMass(massMg)}</div>
+                           </div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </section>
             </>
           ) : (
             <section className="rounded-xl border border-amber-400/25 bg-amber-500/[0.07] p-3.5">
