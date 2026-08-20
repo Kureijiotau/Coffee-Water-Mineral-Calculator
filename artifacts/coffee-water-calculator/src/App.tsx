@@ -10167,7 +10167,7 @@ function WatermancerIonCoverageBars({
           </button>
         </div>
       </div>
-       <div className="app-card-body min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain">
+       <div className={`app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
         {ACTIVE_ION_IDS.map(id => {
           const ion = ION_MAP[id];
           const actual = actualIons[id] ?? 0;
