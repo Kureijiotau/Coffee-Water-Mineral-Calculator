@@ -1413,6 +1413,118 @@ describe('Watermancer salt-to-ion helpers', () => {
   });
 });
 
+describe('Watermancer reliability diagnostics', () => {
+  it('reports a zero-target counter-ion excess and a fixed-dose constraint', () => {
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { sodium: 0 },
+        selectedWaters: [],
+        selectedSalts: ['nacl'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: { nacl: 10 },
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['sodium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['sodium'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+    const diagnostics = result.primaryPlan.diagnostics!;
+    const sodiumConflict = diagnostics.conflicts.find(conflict => conflict.id === 'sodium');
+
+    expect(sodiumConflict?.direction).toBe('excess');
+    expect(sodiumConflict?.target).toBe(0);
+    expect(sodiumConflict?.outsidePolicyPpm).toBeGreaterThan(0);
+    expect(diagnostics.recommendations.some(item => item.kind === 'fixed-dose-constraint')).toBe(true);
+  });
+
+  it('shows a controlled overshoot as policy room rather than a conflict', () => {
+    const source = { ...water('source', { calcium: 12 }), volumeMl: '1000' };
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { calcium: 10 },
+        selectedWaters: [source],
+        selectedSalts: [],
+        fixedWaterVolumes: { source: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['calcium'],
+        allowOvershoot: true,
+        allowedOvershootIons: ['calcium'],
+        overshootLimits: { calcium: 2 },
+        overshootOrder: ['calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+
+    expect(result.primaryPlan.diagnostics?.conflicts.some(conflict => conflict.id === 'calcium')).toBe(false);
+    expect(result.primaryPlan.diagnostics?.policyAllowancePpm).toBeGreaterThan(0);
+  });
+
+  it('produces a source-preference recommendation for an unsatisfiable deficit', () => {
+    const source = { ...water('source', { magnesium: 2 }), volumeMl: '1000' };
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { magnesium: 10 },
+        selectedWaters: [source],
+        selectedSalts: ['mgso4'],
+        fixedWaterVolumes: { source: 1000 },
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['magnesium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['magnesium'],
+        ionSourcePreferences: { magnesium: 'water-only' },
+      },
+      batchMl: 1000,
+      baseWaters: [source],
+      additionWaters: [],
+    });
+    const diagnostics = result.primaryPlan.diagnostics!;
+
+    expect(diagnostics.conflicts.find(conflict => conflict.id === 'magnesium')?.direction).toBe('deficit');
+    expect(diagnostics.recommendations.some(item => item.kind === 'relax-source-preference')).toBe(true);
+  });
+
+  it('suggests an omitted optional salt when a practical dose floor leaves a deficit', () => {
+    const result = solveWatermancerRoutes({
+      plan: {
+        targetIons: { magnesium: 0.1 },
+        selectedWaters: [],
+        selectedSalts: ['mgso4'],
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['magnesium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        minimumSaltDosePpm: { mgso4: 10 },
+        overshootOrder: ['magnesium'],
+      },
+      batchMl: 1000,
+      baseWaters: [],
+      additionWaters: [],
+    });
+    const diagnostics = result.primaryPlan.diagnostics!;
+
+    expect(diagnostics.omittedOptionalSaltIds).toContain('mgso4');
+    expect(diagnostics.recommendations.some(item => item.kind === 'enable-salt')).toBe(true);
+  });
+});
+
 describe('buildWatermancerPrecisionRecommendation', () => {
   it('recommends the smallest half-liter batch that brings the smallest dose above 100 mg', () => {
     const recommendation = buildWatermancerPrecisionRecommendation(
