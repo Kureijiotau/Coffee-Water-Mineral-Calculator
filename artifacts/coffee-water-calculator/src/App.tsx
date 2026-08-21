@@ -6501,7 +6501,7 @@ function App() {
             const displayedRecipeTargetValue = Number(displayedRecipeTarget);
              const targetInputValue = Object.prototype.hasOwnProperty.call(targetInputDrafts, salt.id)
                ? targetInputDrafts[salt.id]
-               : (displayedRecipeTargetValue > 0 ? displayedRecipeTarget : '');
+               : (displayedRecipeTargetValue > 0 ? String(displayedRecipeTarget) : '');
             const updateTargetValue = (value: string) => {
                setTargetInputDrafts(current => ({ ...current, [salt.id]: value }));
               if (
