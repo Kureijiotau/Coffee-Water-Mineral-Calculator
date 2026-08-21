@@ -9,7 +9,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -3837,6 +3837,7 @@ function App() {
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
+  const [showWatermancerMatchDetails, setShowWatermancerMatchDetails] = useState(false);
   const [watermancerMemeSaltFlashNonce, setWatermancerMemeSaltFlashNonce] = useState(0);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
@@ -8100,15 +8101,19 @@ function App() {
          {showWatermancer && watermancerLiveResult && (
            <div className="app-card app-panel-surface order-4 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match" tabIndex={-1}>
              <SharedSectionHeader
-               icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
-                title="Find your best match"
+                icon={(
+                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-400/25 via-cyan-400/20 to-indigo-400/25 shadow-[0_0_18px_rgba(217,70,239,0.18)]">
+                    <Gem className="h-4 w-4 text-fuchsia-100" />
+                  </span>
+                )}
+                 title="Precision Auto-match"
              />
               <div className="app-card-body">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                  <div>
-                    <p className="text-xs font-semibold text-cyan-100">Search your selected waters and salts for a safe, useful match.</p>
+                     <p className="text-xs font-semibold text-cyan-100">A refined mineral match, tuned across your selected waters and salts.</p>
                     <p className="mt-1 max-w-2xl text-[10px] leading-relaxed text-slate-400">
-                         The calculator compares the available options behind the scenes, then applies the best recommendation automatically.
+                          Run the precision match, then open the details only when you want to tune the result.
                    </p>
                  </div>
                    <div className="flex shrink-0 flex-col items-stretch gap-2">
@@ -8141,25 +8146,19 @@ function App() {
                         </p>
                       </div>
                     </div>
-                    <div className="grid min-w-[220px] flex-1 grid-cols-2 gap-2 sm:max-w-sm">
-                      <div className="rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Total deviation</div>
-                        <div className={`mt-1 text-lg font-semibold tabular-nums ${watermancerStatusTone.value}`}>
-                          {reviewTotalDeviation.toFixed(2)}
-                          <span className="ml-1 text-[10px] font-normal text-slate-400">ppm</span>
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-white/10 bg-slate-950/25 px-3 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">Ion gaps</div>
-                        <div className={`mt-1 text-lg font-semibold tabular-nums ${reviewDeviationCount === 0 ? 'text-emerald-200' : 'text-amber-200'}`}>
-                          {reviewDeviationCount === 0 ? 'None' : reviewDeviationCount}
-                          {reviewDeviationCount > 0 && <span className="ml-1 text-[10px] font-normal text-slate-400">outside</span>}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
-                 {watermancerLiveResult.primaryPlan.diagnostics && (
+                 <details
+                   className="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/20"
+                   open={showWatermancerMatchDetails}
+                   onToggle={event => setShowWatermancerMatchDetails(event.currentTarget.open)}
+                 >
+                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-semibold text-slate-200">
+                     <span>Show match details</span>
+                     <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${showWatermancerMatchDetails ? 'rotate-180' : ''}`} />
+                   </summary>
+                   <div className="border-t border-slate-700/60 px-3 py-3">
+                  {watermancerLiveResult.primaryPlan.diagnostics && (
                    <div className="mt-3 rounded-xl border border-cyan-300/20 bg-slate-950/20 px-3 py-3">
                      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">
                        Why this match wins
@@ -8257,7 +8256,7 @@ function App() {
                       )}
                    </div>
                  )}
-                <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
+                 <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match
                     <span className="ml-2 text-[10px] font-normal text-slate-400">
@@ -8314,6 +8313,8 @@ function App() {
                     </p>
                   </div>
                 </details>
+                   </div>
+                 </details>
                   <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                   <button
                     type="button"
@@ -8322,15 +8323,11 @@ function App() {
                      className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                      title="Search your selected waters and salts for the best safe match."
                   >
-                      <img
-                        src={pepeImage}
-                        alt=""
-                        aria-hidden="true"
-                        className="h-8 w-8 object-contain"
-                      />
-                      <span aria-hidden="true" className="text-base leading-none">👉</span>
+                       <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-fuchsia-200/35 bg-gradient-to-br from-fuchsia-400/25 via-cyan-400/20 to-indigo-400/25 shadow-[0_0_16px_rgba(217,70,239,0.18)]" aria-hidden="true">
+                         <Gem className="h-4 w-4 text-fuchsia-100" />
+                       </span>
                      <span aria-live="polite">
-                       {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
+                        {watermancerActionRunning ? 'Refining your match…' : 'Run precision auto-match'}
                      </span>
                   </button>
                 </div>
