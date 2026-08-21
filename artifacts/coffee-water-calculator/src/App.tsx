@@ -44,6 +44,7 @@ import {
   loadWaterPlans,
   parseWaterPlanFile,
   saveWaterPlans,
+  serializeWaterRecipeFile,
   serializeWaterPlanFile,
   type WaterPlan,
   type WaterPlanConcentrateSnapshot,
@@ -5750,9 +5751,9 @@ function App() {
   };
 
   const handleShareWatermancerPlan = async () => {
-    const plan = createWaterPlan('Shared Watermancer plan', captureWaterPlanSnapshot());
-    const fileName = `watermancer-plan-${new Date().toISOString().slice(0, 10)}.json`;
-    const file = new File([serializeWaterPlanFile(plan)], fileName, { type: 'application/json' });
+    const recipeName = watermancerTargetSourceLabel || 'Custom recipe';
+    const fileName = `${recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe'}.json`;
+    const file = new File([serializeWaterRecipeFile(recipeName, watermancerIonTargets)], fileName, { type: 'application/json' });
     const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
@@ -5761,8 +5762,8 @@ function App() {
     try {
       if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
         await navigator.share({
-          title: 'Watermancer plan',
-          text: 'Watermancer plan file',
+          title: recipeName,
+          text: 'Coffee water recipe file',
           files: [file],
         });
         showShareStatus('shared');
@@ -6965,16 +6966,16 @@ function App() {
                         : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
                   }`}
                   aria-live="polite"
-                  title="Share or download this Watermancer plan as a JSON file"
+                  title="Share or download the current recipe as a JSON file"
                 >
                   <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
                   {watermancerShareStatus === 'downloaded'
-                    ? 'File downloaded'
+                    ? 'Recipe downloaded'
                     : watermancerShareStatus === 'shared'
                       ? 'Shared'
                       : watermancerShareStatus === 'error'
                         ? 'Share failed'
-                        : 'Share plan'}
+                        : 'Share recipe'}
                 </button>
               )}
               <Suspense fallback={<span className="text-[10px] text-slate-500">Loading scanner…</span>}>

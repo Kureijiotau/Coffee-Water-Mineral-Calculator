@@ -3,6 +3,7 @@ import {
   createWaterPlan,
   isValidWaterPlan,
   parseWaterPlanFile,
+  serializeWaterRecipeFile,
   serializeWaterPlanFile,
   type WaterPlanSnapshot,
 } from './waterPlans';
@@ -85,5 +86,21 @@ describe('water plan persistence', () => {
   it('rejects files with the wrong kind or version', () => {
     expect(parseWaterPlanFile(JSON.stringify({ kind: 'coffee-water-recipe', version: 1 }))).toBeNull();
     expect(parseWaterPlanFile(JSON.stringify({ kind: 'coffee-water-plan', version: 99 }))).toBeNull();
+  });
+
+  it('serializes only a named recipe and its ion targets', () => {
+    const parsed = JSON.parse(serializeWaterRecipeFile('Bright washed', {
+      calcium: 40,
+      magnesium: 12.5,
+      chloride: 0,
+      invalid: Number.NaN,
+    }));
+
+    expect(parsed).toEqual({
+      kind: 'coffee-water-recipe',
+      version: 1,
+      name: 'Bright washed',
+      ions: { calcium: 40, magnesium: 12.5, chloride: 0 },
+    });
   });
 });

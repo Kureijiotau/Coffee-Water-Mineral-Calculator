@@ -89,7 +89,16 @@ export type WaterPlan = {
 
 export const WATER_PLAN_FILE_KIND = 'coffee-water-plan';
 export const WATER_PLAN_VERSION = 1;
+export const WATER_RECIPE_FILE_KIND = 'coffee-water-recipe';
+export const WATER_RECIPE_FILE_VERSION = 1;
 export const WATER_PLAN_AUTOSAVE_NAME = 'Last auto-saved session';
+
+export type WaterRecipeShare = {
+  kind: typeof WATER_RECIPE_FILE_KIND;
+  version: typeof WATER_RECIPE_FILE_VERSION;
+  name: string;
+  ions: Record<string, number>;
+};
 
 export function isAutoSavedWaterPlan(plan: Pick<WaterPlan, 'name'>): boolean {
   return plan.name === WATER_PLAN_AUTOSAVE_NAME;
@@ -219,6 +228,20 @@ export function serializeWaterPlanFile(plan: WaterPlan): string {
     version: WATER_PLAN_VERSION,
     ...plan,
   }, null, 2);
+}
+
+export function serializeWaterRecipeFile(name: string, ions: Record<string, number>): string {
+  const recipe: WaterRecipeShare = {
+    kind: WATER_RECIPE_FILE_KIND,
+    version: WATER_RECIPE_FILE_VERSION,
+    name: name.trim() || 'Custom recipe',
+    ions: Object.fromEntries(
+      Object.entries(ions)
+        .filter(([, value]) => Number.isFinite(value))
+        .map(([id, value]) => [id, Math.max(0, value)]),
+    ),
+  };
+  return JSON.stringify(recipe, null, 2);
 }
 
 export function parseWaterPlanFile(text: string): WaterPlan | null {
