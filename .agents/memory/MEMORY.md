@@ -50,3 +50,4 @@
 - [Alchemist and Watermancer language](alchemist-watermancer-language.md) — shared workflow concepts use the same labels across both tabs
 - [Mode identity language](mode-identity-language.md) — Brewer is simple, Alchemist designs mineral recipes, Watermancer matches ion targets and source waters
 - [Gemini water assistant constraints](gemini-water-assistant-constraints.md) — keep the planner direct-key, one-shot, structured, rate-limited, and tolerant of Gemini model/latency changes
+- [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison

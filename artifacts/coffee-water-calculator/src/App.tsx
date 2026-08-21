@@ -154,6 +154,11 @@ type BrewerFlavorInput = {
 };
 type MagnesiumPreference = 'original' | 'chlorides' | 'sulfates';
 type WatermancerTargetSourceId = 'safe-profile' | 'salt-table' | `profile:${string}` | `saved:${string}` | `recipe:${string}` | `external:${string}` | `lotus:${string}` | `reference:${string}`;
+type WatermancerComparisonProfile = {
+  id: string;
+  name: string;
+  targets: Partial<Record<IonId, number>>;
+};
 type AppTab = 'calculator' | 'guide' | 'concentrate';
 type ConcentrateMode = 'builder' | 'lotus';
 
@@ -4160,6 +4165,39 @@ function App() {
       ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
     ) as Partial<Record<IonId, number>>;
   }, [activeRanges, allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
+  const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
+    ...profiles
+      .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id || profile.id === activeProfileId)
+      .map(profile => ({
+        id: `profile:${profile.id}`,
+        name: profile.name
+          .replace(/^Empirical Water — /, '')
+          .replace(/ ionic profile$/, ''),
+        targets: Object.fromEntries(
+          ACTIVE_ION_IDS.map(id => [id, profile.ranges[id].greenMax]),
+        ) as Partial<Record<IonId, number>>,
+      })),
+    ...wmProfiles.map(profile => ({
+      id: `saved:${profile.id}`,
+      name: profile.name,
+      targets: profile.targets,
+    })),
+    ...allRecipesForWatermancer.map(recipe => ({
+      id: `recipe:${recipe.id}`,
+      name: recipe.name,
+      targets: ionTotalsForSaltRecipe(recipe),
+    })),
+    ...ROBERT_ASAMI_RECIPES.map(recipe => ({
+      id: `external:${recipe.id}`,
+      name: recipe.name,
+      targets: ionTotalsForSaltRecipe(recipe),
+    })),
+    ...LOTUS_RECIPES.map(recipe => ({
+      id: `lotus:${recipe.id}`,
+      name: recipe.name,
+      targets: lotusIonTargetsForWatermancer(recipe),
+    })),
+  ], [activeProfileId, allRecipesForWatermancer, profiles, wmProfiles]);
   // Combined contribution from all bottled waters (base + addition, already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
@@ -6307,6 +6345,7 @@ function App() {
               externalRecipes={ROBERT_ASAMI_RECIPES}
               lotusRecipes={LOTUS_RECIPES}
               referenceWaters={EMPIRICAL_WATERS}
+               comparisonProfiles={watermancerComparisonProfiles}
               watermancerTargetSource={watermancerTargetSource}
               onSelectProfile={handleSelectProfile}
               onTargetSourceChange={handleWatermancerTargetSourceChange}
@@ -9667,6 +9706,7 @@ function WatermancerIonProfileCard({
   externalRecipes,
   lotusRecipes,
   referenceWaters,
+  comparisonProfiles,
   watermancerTargetSource,
   onSelectProfile,
   onTargetSourceChange,
@@ -9687,6 +9727,7 @@ function WatermancerIonProfileCard({
   externalRecipes: ExternalRecipe[];
   lotusRecipes: LotusRecipe[];
   referenceWaters: typeof EMPIRICAL_WATERS;
+  comparisonProfiles: WatermancerComparisonProfile[];
   watermancerTargetSource: WatermancerTargetSourceId;
   onSelectProfile: (id: string) => void;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
@@ -9703,6 +9744,29 @@ function WatermancerIonProfileCard({
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
   const importRecipeInputRef = useRef<HTMLInputElement>(null);
+  const [compareProfilesOpen, setCompareProfilesOpen] = useState(false);
+  const [comparisonLeftId, setComparisonLeftId] = useState(comparisonProfiles[0]?.id ?? '');
+  const [comparisonRightId, setComparisonRightId] = useState(comparisonProfiles[1]?.id ?? comparisonProfiles[0]?.id ?? '');
+
+  useEffect(() => {
+    if (!comparisonProfiles.some(profile => profile.id === comparisonLeftId)) {
+      setComparisonLeftId(comparisonProfiles[0]?.id ?? '');
+    }
+    if (!comparisonProfiles.some(profile => profile.id === comparisonRightId)) {
+      setComparisonRightId(comparisonProfiles[1]?.id ?? comparisonProfiles[0]?.id ?? '');
+    }
+  }, [comparisonLeftId, comparisonProfiles, comparisonRightId]);
+
+  const comparisonLeft = comparisonProfiles.find(profile => profile.id === comparisonLeftId);
+  const comparisonRight = comparisonProfiles.find(profile => profile.id === comparisonRightId);
+  const comparisonPickerGroups: RecipePickerGroup[] = [{
+    label: 'Watermancer profiles',
+    accent: 'cyan',
+    options: comparisonProfiles.map(profile => ({
+      value: profile.id,
+      label: profile.name,
+    })),
+  }];
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
     ? `profile:${activeProfileId}`
@@ -10035,6 +10099,95 @@ function WatermancerIonProfileCard({
              </div>
           )}
         </div>
+      </div>
+      <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
+        <button
+          type="button"
+          aria-expanded={compareProfilesOpen}
+          onClick={() => setCompareProfilesOpen(open => !open)}
+          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            compareProfilesOpen
+              ? 'border-cyan-300/60 bg-cyan-400/15 text-cyan-100'
+              : 'border-slate-600/70 bg-slate-900/35 text-slate-300 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
+          }`}
+        >
+          <span className="flex h-5 w-5 items-center justify-center rounded-md border border-current/30 bg-black/10 text-[10px]">↔</span>
+          Compare profiles
+          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${compareProfilesOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {compareProfilesOpen && (
+          <div className="mt-3 rounded-xl border border-cyan-400/25 bg-cyan-950/15 p-3 sm:p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">Profile comparison</div>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                  Compare target values side by side. Differences are calculated as <span className="font-semibold text-slate-300">Profile B − Profile A</span>.
+                </p>
+              </div>
+              <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200/70">
+                Informational
+              </span>
+            </div>
+            {comparisonProfiles.length >= 2 ? (
+              <>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-950/30 p-2.5">
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Profile A</div>
+                    <MineralRecipePicker
+                      value={comparisonLeftId}
+                      groups={comparisonPickerGroups}
+                      onChange={setComparisonLeftId}
+                    />
+                  </div>
+                  <div className="rounded-lg border border-slate-700/60 bg-slate-950/30 p-2.5">
+                    <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Profile B</div>
+                    <MineralRecipePicker
+                      value={comparisonRightId}
+                      groups={comparisonPickerGroups}
+                      onChange={setComparisonRightId}
+                    />
+                  </div>
+                </div>
+                {comparisonLeft && comparisonRight && (
+                  <div className="mt-3 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/25">
+                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] border-b border-slate-700/60 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500 sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]">
+                      <span>Ion</span>
+                      <span className="text-right">Profile A</span>
+                      <span className="text-right">Profile B</span>
+                      <span className="text-right">Difference</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/80">
+                      {ACTIVE_ION_IDS.map(id => {
+                        const leftValue = Number(comparisonLeft.targets[id] ?? 0);
+                        const rightValue = Number(comparisonRight.targets[id] ?? 0);
+                        const difference = rightValue - leftValue;
+                        const differenceTone = Math.abs(difference) <= 0.05
+                          ? 'text-slate-500'
+                          : difference > 0
+                            ? 'text-emerald-300'
+                            : 'text-amber-300';
+                        return (
+                          <div key={id} className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]">
+                            <span className="truncate font-medium text-slate-300">{ION_MAP[id].name}</span>
+                            <span className="text-right tabular-nums text-slate-400">{leftValue.toFixed(1)} ppm</span>
+                            <span className="text-right tabular-nums text-slate-200">{rightValue.toFixed(1)} ppm</span>
+                            <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
+                              {difference > 0.05 ? '+' : ''}{difference.toFixed(1)} ppm
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.06] px-3 py-2 text-[11px] text-amber-100">
+                Add at least two profiles to compare them.
+              </p>
+            )}
+          </div>
+        )}
       </div>
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
