@@ -8101,11 +8101,7 @@ function App() {
          {showWatermancer && watermancerLiveResult && (
            <div className="app-card app-panel-surface order-4 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match" tabIndex={-1}>
              <SharedSectionHeader
-                icon={(
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-400/25 via-cyan-400/20 to-indigo-400/25 shadow-[0_0_18px_rgba(217,70,239,0.18)]">
-                    <Gem className="h-4 w-4 text-fuchsia-100" />
-                  </span>
-                )}
+                icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                  title="Precision Auto-match"
              />
               <div className="app-card-body">
