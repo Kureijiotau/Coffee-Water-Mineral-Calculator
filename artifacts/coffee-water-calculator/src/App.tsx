@@ -5758,6 +5758,17 @@ function App() {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
     };
+    const downloadRecipeFile = () => {
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
 
     try {
       if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
@@ -5769,16 +5780,16 @@ function App() {
         showShareStatus('shared');
         return;
       }
-      const url = URL.createObjectURL(file);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = fileName;
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadRecipeFile();
       showShareStatus('downloaded');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
-      showShareStatus('error');
+      try {
+        downloadRecipeFile();
+        showShareStatus('downloaded');
+      } catch {
+        showShareStatus('error');
+      }
     }
   };
 
