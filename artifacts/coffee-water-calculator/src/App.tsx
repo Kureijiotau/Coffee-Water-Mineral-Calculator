@@ -6306,6 +6306,7 @@ function App() {
               onSaveWmProfile={handleSaveWmProfile}
                onShareRecipe={handleShareWatermancerPlan}
                shareStatus={watermancerShareStatus}
+               onImportRecipeFile={handleImportFile}
                onReset={() => setShowResetConfirm(true)}
             />
           </div>
@@ -9666,6 +9667,7 @@ function WatermancerIonProfileCard({
   onSaveWmProfile,
   onShareRecipe,
   shareStatus,
+  onImportRecipeFile,
   onReset,
 }: {
   ions: Partial<Record<IonId, number>>;
@@ -9685,6 +9687,7 @@ function WatermancerIonProfileCard({
   onSaveWmProfile: (profile: WatermancerProfile) => void;
   onShareRecipe: () => void;
   shareStatus: 'idle' | 'downloaded' | 'shared' | 'error';
+  onImportRecipeFile: (file: File) => void;
   onReset: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -9692,6 +9695,7 @@ function WatermancerIonProfileCard({
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
+  const importRecipeInputRef = useRef<HTMLInputElement>(null);
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
     ? `profile:${activeProfileId}`
@@ -9963,6 +9967,26 @@ function WatermancerIonProfileCard({
                          : 'Share recipe'}
                  </span>
                </button>
+               <button
+                 type="button"
+                 onClick={() => importRecipeInputRef.current?.click()}
+                 className="flex h-10 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 text-xs text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-500/20 hover:text-sky-100"
+                 title="Import a shared ion recipe file"
+               >
+                 <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                 <span className="hidden sm:inline">Import</span>
+               </button>
+               <input
+                 ref={importRecipeInputRef}
+                 type="file"
+                 accept=".json,application/json"
+                 className="hidden"
+                 onChange={event => {
+                   const file = event.target.files?.[0];
+                   if (file) onImportRecipeFile(file);
+                   event.target.value = '';
+                 }}
+               />
            </div>
            {!isEditingAny ? (
             <button
