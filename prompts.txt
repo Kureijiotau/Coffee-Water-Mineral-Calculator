@@ -1,0 +1,4 @@
+# One prompt per line. Blank lines and lines starting with # are ignored.
+# Replace these examples with the prompts you want to send.
+Explain the difference between a REST API and a GraphQL API in three bullet points.
+Give me five concise ideas for improving a coffee water calculator's onboarding flow.
