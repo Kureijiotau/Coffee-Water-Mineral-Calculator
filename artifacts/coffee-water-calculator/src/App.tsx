@@ -84,7 +84,6 @@ import {
   type WatermancerPlan,
 } from './watermancerPlan';
 import { solveBoundedCoupledSaltTargets } from './watermancerSaltSolver';
-import { rankGeminiWatermancerCandidates } from './watermancerGeminiSolver';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
@@ -3883,11 +3882,9 @@ function App() {
     );
   }, [watermancerIonSourcePreferences]);
   const [watermancerBestMatchPreview, setWatermancerBestMatchPreview] = useState<WatermancerBestMatchPreview | null>(null);
-  const [geminiBestMatchPreview, setGeminiBestMatchPreview] = useState<WatermancerBestMatchPreview | null>(null);
   const [watermancerAppliedBestMatchRoute, setWatermancerAppliedBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
-  const [geminiBestMatchRunning, setGeminiBestMatchRunning] = useState(false);
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
   const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
   const watermancerActionBusyRef = useRef(false);
@@ -4688,70 +4685,6 @@ function App() {
     // synchronous 48-route sweep starts.
     window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
   };
-  const handleFindGeminiBestWatermancerMatch = () => {
-    if (!beginWatermancerAction()) return;
-    setGeminiBestMatchRunning(true);
-    setGeminiBestMatchPreview(null);
-    setWatermancerBestMatchMessage(null);
-    const actionGeneration = watermancerActionGenerationRef.current;
-    const snapshot = {
-      plan: cloneWatermancerPlan(watermancerPlan),
-      batchMl,
-      baseWaters: cloneWatermancerWaters(mineralWaters),
-      additionWaters: cloneWatermancerWaters(additionWaters),
-      inputSignature: watermancerInputSignature,
-    };
-    const runSweep = () => {
-      try {
-        const isSnapshotCurrent = () => (
-          isWatermancerActionSnapshotCurrent(
-            actionGeneration,
-            watermancerActionGenerationRef.current,
-            snapshot.inputSignature,
-            watermancerInputSignatureRef.current,
-          )
-        );
-        if (!isSnapshotCurrent()) return;
-        const sweep = findBestWatermancerMatch(snapshot);
-        if (!isSnapshotCurrent()) return;
-        const rankedRoutes = rankGeminiWatermancerCandidates(
-          sweep.candidates.map(candidate => candidate.route),
-        );
-        const rankedRoute = rankedRoutes[0];
-        const winner = rankedRoute
-          ? sweep.candidates.find(candidate => candidate.route.id === rankedRoute.id
-            && candidate.route === rankedRoute)
-            ?? sweep.candidates.find(candidate => candidate.route.id === rankedRoute.id)
-          : undefined;
-        if (!winner) {
-          setGeminiBestMatchPreview(null);
-          setWatermancerBestMatchMessage('Gemini could not find a usable modern-chemistry match with the current inputs.');
-          return;
-        }
-        setGeminiBestMatchPreview({
-          route: cloneWatermancerRouteCandidate(winner.route),
-          strategy: winner.strategy,
-          saltObjective: winner.saltObjective,
-          priorityPreset: winner.priorityPreset,
-          deviationMode: winner.deviationMode,
-          totalDeviation: totalWatermancerAbsoluteDeviation(
-            winner.route.finalIons,
-            winner.route.plan.targetIons,
-          ),
-          status: winner.result.status === 'matched' ? 'matched' : 'partial',
-          explanation: 'Gemini lane: chemistry-aware ranking favors bicarbonate fidelity, practical hardness, and lower sulfate harshness before raw ppm distance.',
-          inputSignature: snapshot.inputSignature,
-        });
-      } catch {
-        setGeminiBestMatchPreview(null);
-        setWatermancerBestMatchMessage('The Gemini chemistry match could not finish. The original match lane is still available.');
-      } finally {
-        setGeminiBestMatchRunning(false);
-        finishWatermancerActionAfterPaint();
-      }
-    };
-    window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
-  };
   const handleUseWatermancerBestMatch = (
     previewOverride?: WatermancerBestMatchPreview,
   ) => {
@@ -4810,22 +4743,6 @@ function App() {
     setWatermancerBestMatchPreview(null);
     setWatermancerBestMatchMessage(null);
   };
-  const handleUseGeminiBestMatch = () => {
-    if (!geminiBestMatchPreview) return;
-    const preview = geminiBestMatchPreview;
-    if (!watermancerBestMatchPreviewIsCurrent(preview, watermancerInputSignature)) {
-      setGeminiBestMatchPreview(null);
-      setWatermancerBestMatchMessage('This Gemini recommendation is out of date. Run it again.');
-      return;
-    }
-    handleUseWatermancerBestMatch(preview);
-    setGeminiBestMatchPreview(null);
-    setWatermancerBestMatchMessage(
-      preview.status === 'matched'
-        ? 'Gemini chemistry match found and applied.'
-        : 'Gemini found and applied the closest practical partial match.',
-    );
-  };
   useEffect(() => {
     if (
       !watermancerBestMatchPreviewIsCurrent(watermancerBestMatchPreview, watermancerInputSignature)
@@ -4833,13 +4750,6 @@ function App() {
       setWatermancerBestMatchPreview(null);
     }
   }, [watermancerBestMatchPreview, watermancerInputSignature]);
-  useEffect(() => {
-    if (
-      !watermancerBestMatchPreviewIsCurrent(geminiBestMatchPreview, watermancerInputSignature)
-    ) {
-      setGeminiBestMatchPreview(null);
-    }
-  }, [geminiBestMatchPreview, watermancerInputSignature]);
   const appliedBestMatchRoute = watermancerAppliedBestMatchRoute
     && watermancerRouteMatchesCurrentInputs(
       watermancerAppliedBestMatchRoute,
@@ -8534,18 +8444,6 @@ function App() {
                         {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
                      </span>
                   </button>
-                   <button
-                     type="button"
-                     onClick={handleFindGeminiBestWatermancerMatch}
-                     disabled={watermancerActionRunning}
-                     className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border border-fuchsia-300/40 bg-gradient-to-r from-fuchsia-500/80 via-violet-500/80 to-cyan-400/80 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_0_22px_rgba(168,85,247,0.22)] transition hover:-translate-y-0.5 hover:shadow-[0_0_30px_rgba(34,211,238,0.22)] active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
-                     title="Run the separate Gemini chemistry-aware ranking lane without changing the current match."
-                   >
-                     <Sparkles className="h-4 w-4 text-fuchsia-100" aria-hidden="true" />
-                     <span aria-live="polite">
-                       {geminiBestMatchRunning ? 'Gemini is ranking chemistry…' : 'Gemini best match'}
-                     </span>
-                   </button>
                    </div>
                 </div>
                 {watermancerBestMatchPreview && (
@@ -8694,63 +8592,6 @@ function App() {
                         className="rounded-lg border border-violet-200/50 bg-violet-300/20 px-3 py-2 text-xs font-semibold text-white transition hover:bg-violet-300/30"
                       >
                         Use this match
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {geminiBestMatchPreview && (
-                  <div className="mt-3 rounded-xl border border-fuchsia-300/35 bg-gradient-to-br from-fuchsia-500/[0.12] via-violet-500/[0.08] to-cyan-400/[0.08] p-4 text-fuchsia-50 shadow-[0_0_26px_rgba(168,85,247,0.10)]">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200/90">
-                          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                          Gemini chemistry lane
-                        </div>
-                        <p className="mt-1 text-xs font-semibold text-white">
-                          A separate modern-chemistry ranking, not a replacement for the current solver.
-                        </p>
-                      </div>
-                      <span className="rounded-full border border-fuchsia-200/25 bg-fuchsia-200/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-100">
-                        {geminiBestMatchPreview.status === 'matched' ? 'Matched' : 'Closest practical'}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-[11px] leading-relaxed text-fuchsia-100/75">
-                      {geminiBestMatchPreview.explanation}
-                    </p>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                      <div className="rounded-lg border border-fuchsia-200/15 bg-slate-950/25 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-fuchsia-200/60">Water</div>
-                        <div className="mt-1 text-sm font-semibold tabular-nums">
-                          {[...geminiBestMatchPreview.route.baseWaters, ...geminiBestMatchPreview.route.additionWaters]
-                            .reduce((total, water) => total + num(water.volumeMl), 0)
-                            .toFixed(0)} mL
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-fuchsia-200/15 bg-slate-950/25 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-fuchsia-200/60">Active salts</div>
-                        <div className="mt-1 text-sm font-semibold">
-                          {Object.values(geminiBestMatchPreview.route.saltTargets).filter(target => target > 0.000001).length}
-                        </div>
-                      </div>
-                      <div className="rounded-lg border border-fuchsia-200/15 bg-slate-950/25 px-3 py-2">
-                        <div className="text-[10px] uppercase tracking-wider text-fuchsia-200/60">Raw deviation</div>
-                        <div className="mt-1 text-sm font-semibold tabular-nums">{geminiBestMatchPreview.totalDeviation.toFixed(2)} ppm</div>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex flex-wrap justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setGeminiBestMatchPreview(null)}
-                        className="rounded-lg border border-fuchsia-200/25 px-3 py-2 text-xs font-semibold text-fuchsia-100 transition hover:bg-fuchsia-200/10"
-                      >
-                        Keep current plan
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleUseGeminiBestMatch}
-                        className="rounded-lg border border-cyan-200/45 bg-cyan-300/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-cyan-300/25"
-                      >
-                        Use Gemini match
                       </button>
                     </div>
                   </div>
