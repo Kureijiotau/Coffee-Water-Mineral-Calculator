@@ -3691,7 +3691,7 @@ function App() {
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
   const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
-  const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'copied' | 'shared' | 'error'>('idle');
+  const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
   const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
   const watermancerWorkflowRailPinnedRef = useRef(false);
@@ -5751,40 +5751,33 @@ function App() {
 
   const handleShareWatermancerPlan = async () => {
     const plan = createWaterPlan('Shared Watermancer plan', captureWaterPlanSnapshot());
-    const shareUrl = `${window.location.href.split('#')[0]}#watermancer-plan=${encodeURIComponent(serializeWaterPlanFile(plan))}`;
-    const showShareStatus = (status: 'copied' | 'shared' | 'error') => {
+    const fileName = `watermancer-plan-${new Date().toISOString().slice(0, 10)}.json`;
+    const file = new File([serializeWaterPlanFile(plan)], fileName, { type: 'application/json' });
+    const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
     };
 
     try {
-      if (typeof navigator.share === 'function') {
+      if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'Watermancer plan',
-          text: 'Open this Watermancer plan in Coffee Water Calculator.',
-          url: shareUrl,
+          text: 'Watermancer plan file',
+          files: [file],
         });
         showShareStatus('shared');
         return;
       }
-      await navigator.clipboard.writeText(shareUrl);
-      showShareStatus('copied');
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      showShareStatus('downloaded');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
-      try {
-        const input = document.createElement('textarea');
-        input.value = shareUrl;
-        input.setAttribute('readonly', '');
-        input.style.position = 'fixed';
-        input.style.opacity = '0';
-        document.body.appendChild(input);
-        input.select();
-        const copied = document.execCommand('copy');
-        input.remove();
-        showShareStatus(copied ? 'copied' : 'error');
-      } catch {
-        showShareStatus('error');
-      }
+      showShareStatus('error');
     }
   };
 
@@ -5886,25 +5879,6 @@ function App() {
     setPlansOpen(false);
     commitSessionBaseline(snapshot);
   };
-
-  const sharedWatermancerPlanHandledRef = useRef(false);
-  useEffect(() => {
-    if (sharedWatermancerPlanHandledRef.current) return;
-    sharedWatermancerPlanHandledRef.current = true;
-    const prefix = '#watermancer-plan=';
-    if (!window.location.hash.startsWith(prefix)) return;
-
-    try {
-      const sharedPlan = parseWaterPlanFile(decodeURIComponent(window.location.hash.slice(prefix.length)));
-      if (!sharedPlan) throw new Error('Invalid Watermancer plan');
-      restoreWaterPlan(sharedPlan);
-      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-      setWatermancerShareStatus('shared');
-      window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
-    } catch {
-      setWatermancerShareStatus('error');
-    }
-  }, [restoreWaterPlan]);
 
   useEffect(() => {
     const snapshot = captureWaterPlanSnapshot();
@@ -6991,11 +6965,11 @@ function App() {
                         : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
                   }`}
                   aria-live="polite"
-                  title="Share this Watermancer plan as a restorable link"
+                  title="Share or download this Watermancer plan as a JSON file"
                 >
                   <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  {watermancerShareStatus === 'copied'
-                    ? 'Link copied'
+                  {watermancerShareStatus === 'downloaded'
+                    ? 'File downloaded'
                     : watermancerShareStatus === 'shared'
                       ? 'Shared'
                       : watermancerShareStatus === 'error'
