@@ -9391,9 +9391,14 @@ function RecipeConcentrateBuilder({
               </div>
             </div>
           </div>
-          <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-sky-200/80">Concentrate volume</span>
+          <div className="mt-3 rounded-xl border border-sky-300/25 bg-slate-950/25 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <span className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md border border-sky-300/25 bg-sky-400/10 text-sky-200">
+                  <Droplet className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span>Concentrate volume</span>
+              </span>
               <span className="text-[10px] text-slate-500">mL</span>
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -9401,9 +9406,9 @@ function RecipeConcentrateBuilder({
                 const groupName = group.name.replace(/ Stock$/, ' Concentrate');
                 const stockVolumeInput = stockVolumeInputs[group.id] ?? '100';
                 return (
-                  <label key={group.id} className="rounded-lg border border-sky-300/15 bg-slate-900/55 px-3 py-2">
+                  <label key={group.id} className="rounded-lg border border-slate-700/60 bg-slate-950/25 px-3 py-2">
                     <span className="block truncate text-[10px] font-semibold text-slate-300">{groupName}</span>
-                    <span className="mt-1 flex items-center gap-1.5 rounded-md border border-slate-600/70 bg-slate-950/50 px-2 py-1.5">
+                    <span className="mt-1 flex items-center gap-1.5">
                       <input
                         type="number"
                         min="1"
@@ -9413,7 +9418,7 @@ function RecipeConcentrateBuilder({
                           ...prev,
                           [group.id]: event.target.value,
                         }))}
-                        className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                        className="w-full border-b border-slate-600/70 bg-transparent py-1 text-right text-sm font-semibold tabular-nums text-slate-100 outline-none transition focus:border-sky-300/70"
                         aria-label={`${groupName} volume in milliliters`}
                       />
                       <span className="text-xs text-slate-400">mL</span>
@@ -9423,13 +9428,18 @@ function RecipeConcentrateBuilder({
               })}
             </div>
           </div>
-          <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.06] px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              <span>Dose</span>
+          <div className="mt-3 rounded-xl border border-indigo-300/25 bg-gradient-to-br from-indigo-400/[0.10] via-slate-950/30 to-sky-400/[0.08] px-3 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-indigo-100/70">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-indigo-300/30 bg-indigo-400/15 text-indigo-200">
+                  <CalculatorIcon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span>Dose per {doseReferenceLabel}</span>
+              </span>
               <button
                 type="button"
                 onClick={onToggleVolumeUnit}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-sky-100 transition hover:border-sky-200/60 hover:bg-sky-400/20"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300/30 bg-indigo-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-indigo-100 transition hover:border-indigo-200/60 hover:bg-indigo-400/20"
                 aria-label={`Switch dose reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
                 title={`Switch to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
               >
@@ -9437,8 +9447,11 @@ function RecipeConcentrateBuilder({
                 {volumeUnit === 'liters' ? '1 L' : '1 US gal'}
               </button>
             </div>
-            <div className="mt-2 text-lg font-semibold tabular-nums text-sky-100">
-              {doseMlPerReference.toFixed(2)} mL <span className="text-[10px] font-normal text-slate-500">each</span>
+            <div className="mt-3 flex items-baseline gap-2">
+              <span className="text-2xl font-semibold tabular-nums tracking-tight text-white">
+                {doseMlPerReference.toFixed(2)} mL
+              </span>
+              <span className="text-[10px] font-medium uppercase tracking-wider text-indigo-200/60">calculated dose</span>
             </div>
           </div>
         </div>
