@@ -71,7 +71,9 @@ import {
   normalizeWatermancerIonOrder,
   normalizeWatermancerIonSourcePreferences,
   type WatermancerIonDeviation,
+  type WatermancerIonConflict,
   type WatermancerIonSourcePreference,
+  type WatermancerMatchRecommendation,
   type WatermancerMatchDiagnostics,
   type WatermancerRouteCandidate,
   type WatermancerStrategy,
@@ -2257,21 +2259,123 @@ function watermancerDeviationBeyondPolicy(
   return Math.min(deviation.delta + softDeficitAllowance, 0);
 }
 
-function watermancerRouteDiagnostics(
-  route: Pick<WatermancerRouteCandidate, 'plan' | 'saltTargets' | 'finalIons' | 'deviations' | 'score'>,
-): WatermancerMatchDiagnostics {
-  const { plan, deviations, saltTargets, score } = route;
-  const policyAllowancePpm = deviations.reduce((total, deviation) => {
-    const overshootAllowance = plan.allowOvershoot
+function watermancerPolicyAllowanceFor(
+  deviation: WatermancerIonDeviation,
+  plan: WatermancerPlan,
+): number {
+  if (deviation.delta >= 0) {
+    return plan.allowOvershoot
       && plan.allowedOvershootIons.includes(deviation.id)
       && deviation.target > 0
       ? Math.max(0, plan.overshootLimits[deviation.id] ?? 0)
       : 0;
-    const softDeficitAllowance = plan.allowOvershoot
-      && plan.softDeficitIons?.includes(deviation.id)
-      ? Math.max(0, plan.softDeficitLimits?.[deviation.id] ?? 0)
-      : 0;
-    return total + (deviation.delta >= 0 ? overshootAllowance : softDeficitAllowance);
+  }
+  return plan.allowOvershoot && plan.softDeficitIons?.includes(deviation.id)
+    ? Math.max(0, plan.softDeficitLimits?.[deviation.id] ?? 0)
+    : 0;
+}
+
+function watermancerConflictSeverity(outsidePolicyPpm: number): WatermancerIonConflict['severity'] {
+  if (outsidePolicyPpm >= 10) return 'critical';
+  if (outsidePolicyPpm >= 1) return 'warning';
+  return 'notice';
+}
+
+function watermancerConflictSource(
+  ionId: IonId,
+  waterIons: Partial<Record<IonId, number>>,
+  saltIons: Partial<Record<IonId, number>>,
+): WatermancerIonConflict['source'] {
+  const waterContribution = Math.max(0, waterIons[ionId] ?? 0);
+  const saltContribution = Math.max(0, saltIons[ionId] ?? 0);
+  if (waterContribution > 0.05 && saltContribution > 0.05) return 'mixed';
+  if (waterContribution > 0.05) return 'water';
+  return 'salts';
+}
+
+function watermancerConflictRecommendations(
+  conflicts: WatermancerIonConflict[],
+  plan: WatermancerPlan,
+  saltTargets: Record<string, number>,
+): WatermancerMatchRecommendation[] {
+  const fixedSaltIds = new Set(Object.keys(plan.fixedSaltDoses));
+  const selectedSaltIds = plan.selectedSalts.filter(id => !fixedSaltIds.has(id));
+  const recommendations: WatermancerMatchRecommendation[] = [];
+  const addRecommendation = (recommendation: WatermancerMatchRecommendation): void => {
+    if (recommendations.some(existing => (
+      existing.kind === recommendation.kind
+      && existing.ionIds.join(',') === recommendation.ionIds.join(',')
+    ))) return;
+    if (recommendations.length < 4) recommendations.push(recommendation);
+  };
+
+  conflicts.forEach(conflict => {
+    const ionName = ION_MAP[conflict.id].name;
+    const preference = plan.ionSourcePreferences?.[conflict.id] ?? 'dont-care';
+    const contributingFixedSalts = Object.keys(plan.fixedSaltDoses)
+      .filter(saltId => (saltTargets[saltId] ?? 0) > 0 && saltIonFraction(saltId, conflict.id) > 0)
+      .map(saltId => SALTS.find(salt => salt.id === saltId)?.name ?? saltId);
+    const availableSalts = selectedSaltIds.filter(saltId => (
+      saltIonFraction(saltId, conflict.id) > 0
+      && (saltTargets[saltId] ?? 0) <= 0.000001
+    ));
+
+    if (conflict.direction === 'deficit') {
+      if (preference === 'water-only' || preference === 'salt-only') {
+        addRecommendation({
+          kind: 'relax-source-preference',
+          ionIds: [conflict.id],
+          label: `Relax the ${ionName} source preference`,
+          rationale: `The current ${preference} rule limits how Watermancer can cover the ${ionName} deficit.`,
+        });
+      } else if (availableSalts.length > 0) {
+        addRecommendation({
+          kind: 'enable-salt',
+          ionIds: [conflict.id],
+          label: `Enable a selected salt that supplies ${ionName}`,
+          rationale: 'An optional selected salt can cover this gap without changing the target automatically.',
+        });
+      } else if (!plan.allowOvershoot || !plan.softDeficitIons?.includes(conflict.id)) {
+        addRecommendation({
+          kind: 'allow-policy-room',
+          ionIds: [conflict.id],
+          label: `Allow a small ${ionName} deficit`,
+          rationale: `Allowing controlled policy room could reduce the remaining ${ionName} gap while preserving the coupled match.`,
+        });
+      } else {
+        addRecommendation({
+          kind: 'add-source',
+          ionIds: [conflict.id],
+          label: `Add a source with more ${ionName}`,
+          rationale: `The selected sources cannot provide enough ${ionName} for this target.`,
+        });
+      }
+    } else if (contributingFixedSalts.length > 0) {
+      addRecommendation({
+        kind: 'fixed-dose-constraint',
+        ionIds: [conflict.id],
+        label: `Review the fixed salt dose adding ${ionName}`,
+        rationale: `A fixed dose of ${contributingFixedSalts.join(', ')} contributes to this excess and is not available to the matcher.`,
+      });
+    } else {
+      addRecommendation({
+        kind: 'reduce-source',
+        ionIds: [conflict.id],
+        label: `Reduce the source adding excess ${ionName}`,
+        rationale: `The current water and salt combination contributes more ${ionName} than the target allows.`,
+      });
+    }
+  });
+
+  return recommendations;
+}
+
+function watermancerRouteDiagnostics(
+  route: Pick<WatermancerRouteCandidate, 'plan' | 'saltTargets' | 'finalIons' | 'deviations' | 'score'>,
+): WatermancerMatchDiagnostics {
+  const { plan, deviations, saltTargets, finalIons, score } = route;
+  const policyAllowancePpm = deviations.reduce((total, deviation) => {
+    return total + watermancerPolicyAllowanceFor(deviation, plan);
   }, 0);
   const policyViolations = deviations
     .map(deviation => watermancerDeviationBeyondPolicy(deviation, plan))
@@ -2284,6 +2388,28 @@ function watermancerRouteDiagnostics(
     [...route.plan.selectedWaters],
     route.plan.selectedWaters.reduce((total, water) => total + num(water.volumeMl), 0),
   );
+  const conflicts = deviations
+    .map((deviation): WatermancerIonConflict => {
+      const allowedDelta = watermancerPolicyAllowanceFor(deviation, plan);
+      const outsidePolicyPpm = Math.abs(watermancerDeviationBeyondPolicy(deviation, plan));
+      return {
+        id: deviation.id,
+        actual: finalIons[deviation.id] ?? deviation.actual,
+        target: Math.max(0, deviation.target),
+        delta: deviation.delta,
+        allowedDelta,
+        outsidePolicyPpm,
+        direction: deviation.delta < 0 ? 'deficit' : 'excess',
+        severity: watermancerConflictSeverity(outsidePolicyPpm),
+        source: watermancerConflictSource(deviation.id, waterIons, saltIons),
+      };
+    })
+    .filter(conflict => conflict.outsidePolicyPpm > 0.05)
+    .sort((a, b) => (
+      b.outsidePolicyPpm - a.outsidePolicyPpm
+      || ACTIVE_ION_IDS.indexOf(a.id) - ACTIVE_ION_IDS.indexOf(b.id)
+    ))
+    .slice(0, 6);
   const honoredSourcePreferenceIons = ACTIVE_ION_IDS.filter(id => {
     const preference = plan.ionSourcePreferences?.[id] ?? 'dont-care';
     const saltContribution = saltIons[id] ?? 0;
@@ -2306,6 +2432,8 @@ function watermancerRouteDiagnostics(
     omittedOptionalSaltIds,
     honoredSourcePreferenceIons,
     solverScore: score,
+    conflicts,
+    recommendations: watermancerConflictRecommendations(conflicts, plan, saltTargets),
   };
 }
 
@@ -8069,6 +8197,64 @@ function App() {
                          </div>
                        </div>
                      </div>
+                      {watermancerLiveResult.primaryPlan.diagnostics.conflicts.length > 0 && (
+                        <div className="mt-3 border-t border-cyan-300/10 pt-3">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">
+                            What is still conflicting
+                          </div>
+                          <ul className="mt-2 space-y-2" aria-label="Watermancer ion conflicts">
+                            {watermancerLiveResult.primaryPlan.diagnostics.conflicts.map(conflict => (
+                              <li
+                                key={conflict.id}
+                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/10 bg-amber-950/10 px-2.5 py-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-200">
+                                    <span>{ION_MAP[conflict.id].name}</span>
+                                    <span className="text-[10px] font-normal text-slate-500">{ION_MAP[conflict.id].formula}</span>
+                                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider ${
+                                      conflict.direction === 'deficit'
+                                        ? 'bg-amber-400/10 text-amber-200'
+                                        : 'bg-rose-400/10 text-rose-200'
+                                    }`}>
+                                      {conflict.direction}
+                                    </span>
+                                  </div>
+                                  <div className="mt-0.5 text-[10px] text-slate-400">
+                                    {conflict.source === 'water' ? 'Water contribution' : conflict.source === 'salts' ? 'Salt contribution' : 'Water + salt contribution'}
+                                  </div>
+                                </div>
+                                <div className="shrink-0 text-right text-[10px] tabular-nums">
+                                  <div className="text-slate-300">
+                                    {conflict.actual.toFixed(2)} actual <span className="text-slate-500">/</span> {conflict.target.toFixed(2)} target ppm
+                                  </div>
+                                  <div className="mt-0.5 font-semibold text-amber-200">
+                                    {conflict.outsidePolicyPpm.toFixed(2)} ppm outside policy
+                                  </div>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {watermancerLiveResult.primaryPlan.diagnostics.recommendations.length > 0 && (
+                        <div className="mt-3 border-t border-cyan-300/10 pt-3">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                            Ways to improve it
+                          </div>
+                          <p className="mt-1 text-[10px] text-slate-500">
+                            These are possible adjustments; Watermancer has not applied them.
+                          </p>
+                          <ul className="mt-2 space-y-1.5" aria-label="Watermancer improvement suggestions">
+                            {watermancerLiveResult.primaryPlan.diagnostics.recommendations.map(recommendation => (
+                              <li key={`${recommendation.kind}-${recommendation.ionIds.join('-')}`} className="rounded-lg border border-emerald-300/10 bg-emerald-950/10 px-2.5 py-2">
+                                <div className="text-[11px] font-semibold text-emerald-100">{recommendation.label}</div>
+                                <div className="mt-0.5 text-[10px] leading-relaxed text-slate-400">{recommendation.rationale}</div>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                    </div>
                  )}
                 <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>

@@ -54,6 +54,31 @@ export type WatermancerIonDeviation = {
   delta: number;
 };
 
+export type WatermancerIonConflict = {
+  id: IonId;
+  actual: number;
+  target: number;
+  delta: number;
+  allowedDelta: number;
+  outsidePolicyPpm: number;
+  direction: 'deficit' | 'excess';
+  severity: 'notice' | 'warning' | 'critical';
+  source: 'water' | 'salts' | 'mixed';
+};
+
+export type WatermancerMatchRecommendation = {
+  kind:
+    | 'add-source'
+    | 'allow-policy-room'
+    | 'enable-salt'
+    | 'reduce-source'
+    | 'relax-source-preference'
+    | 'fixed-dose-constraint';
+  ionIds: IonId[];
+  label: string;
+  rationale: string;
+};
+
 export type WatermancerMatchDiagnostics = {
   /** Sum of displayed final-ion distance before policy allowances. */
   targetDeviationPpm: number;
@@ -68,6 +93,8 @@ export type WatermancerMatchDiagnostics = {
   honoredSourcePreferenceIons: IonId[];
   /** Stable comparison score supplied by the route solver. */
   solverScore: number;
+  conflicts: WatermancerIonConflict[];
+  recommendations: WatermancerMatchRecommendation[];
 };
 
 export type WatermancerRouteCandidate = {
