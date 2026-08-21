@@ -1,0 +1,843 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap');
+@import "tailwindcss";
+
+/*
+ * The Botanist's Apothecary
+ * A warm archival notebook for precise coffee-water work.
+ *
+ * The existing React tree intentionally remains the instrument. These tokens
+ * give its controls, cards, dialogs, and reports one material language without
+ * changing any calculation or state path.
+ */
+:root {
+  color-scheme: light;
+  --lab-paper: #f4f1ea;
+  --paper-deep: #ebe7dd;
+  --paper-edge: #ddd7ca;
+  --ink: #2c2a28;
+  --ink-soft: #514d46;
+  --graphite: #6e6a62;
+  --graphite-light: #928c82;
+  --cobalt: #244a78;
+  --cobalt-soft: #dce6f0;
+  --malachite: #2b6f5b;
+  --malachite-soft: #dcebe3;
+  --copper: #b36c43;
+  --copper-soft: #f1e0d3;
+  --reagent: #e7d9bf;
+  --reagent-light: #f5eee2;
+  --hairline: rgb(44 42 40 / 0.16);
+  --shadow-paper: 0 18px 42px rgb(76 67 55 / 0.12), 0 2px 7px rgb(76 67 55 / 0.08);
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Space Mono', ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  min-width: 320px;
+  background: var(--lab-paper);
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background:
+    radial-gradient(circle at 12% 8%, rgb(231 217 191 / 0.48), transparent 25rem),
+    radial-gradient(circle at 91% 12%, rgb(220 230 240 / 0.55), transparent 28rem),
+    var(--lab-paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-synthesis: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+summary,
+select,
+input[type='checkbox'],
+input[type='radio'],
+input[type='range'] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+summary {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: var(--reagent);
+  color: var(--ink);
+}
+
+/* A quiet paper grain: fixed, non-interactive, and deliberately low contrast. */
+.app-shell::after {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background-image:
+    radial-gradient(rgb(44 42 40 / 0.045) 0.55px, transparent 0.7px),
+    radial-gradient(rgb(255 255 255 / 0.35) 0.6px, transparent 0.8px);
+  background-position: 0 0, 11px 13px;
+  background-size: 17px 17px, 23px 23px;
+  content: '';
+  opacity: 0.34;
+  pointer-events: none;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, transparent 0 4%, rgb(179 108 67 / 0.035) 4.05%, transparent 4.1%),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgb(44 42 40 / 0.035) 31px 32px),
+    var(--lab-paper) !important;
+  color: var(--ink) !important;
+}
+
+.app-shell::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgb(231 217 191 / 0.32), transparent 38rem),
+    radial-gradient(ellipse at 100% 18%, rgb(36 74 120 / 0.08), transparent 34rem);
+  content: '';
+  pointer-events: none;
+}
+
+/* Typography roles */
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell h4 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+.app-shell h1 {
+  letter-spacing: 0.01em;
+}
+
+.app-shell .font-mono,
+.app-shell code,
+.app-shell [class*='tabular-nums'] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell .text-xs,
+.app-shell .text-\[9px\],
+.app-shell .text-\[10px\],
+.app-shell .text-\[11px\] {
+  letter-spacing: 0.01em;
+}
+
+/* Translate the old utility vocabulary onto the notebook palette. */
+.app-shell .text-white,
+.app-shell .text-slate-100 { color: var(--ink) !important; }
+.app-shell .text-slate-200 { color: #3f3b36 !important; }
+.app-shell .text-slate-300 { color: var(--ink-soft) !important; }
+.app-shell .text-slate-400 { color: var(--graphite) !important; }
+.app-shell .text-slate-500 { color: #817b71 !important; }
+.app-shell .text-slate-600 { color: #9a9387 !important; }
+.app-shell .text-zinc-500 { color: #817b71 !important; }
+.app-shell .text-cyan-100,
+.app-shell .text-cyan-200,
+.app-shell .text-cyan-300,
+.app-shell .text-sky-100,
+.app-shell .text-sky-200,
+.app-shell .text-sky-300 { color: var(--cobalt) !important; }
+.app-shell .text-indigo-100,
+.app-shell .text-indigo-200,
+.app-shell .text-indigo-300 { color: var(--cobalt) !important; }
+.app-shell .text-emerald-100,
+.app-shell .text-emerald-200,
+.app-shell .text-emerald-300 { color: var(--malachite) !important; }
+.app-shell .text-amber-100,
+.app-shell .text-amber-200,
+.app-shell .text-amber-300 { color: var(--copper) !important; }
+.app-shell .text-rose-100,
+.app-shell .text-rose-200,
+.app-shell .text-rose-300,
+.app-shell .text-fuchsia-100,
+.app-shell .text-fuchsia-200,
+.app-shell .text-violet-100,
+.app-shell .text-violet-200 { color: #98563a !important; }
+
+.app-shell .bg-slate-950,
+.app-shell .bg-slate-950\/20,
+.app-shell .bg-slate-950\/25,
+.app-shell .bg-slate-950\/30,
+.app-shell .bg-slate-950\/35,
+.app-shell .bg-slate-950\/40,
+.app-shell .bg-slate-950\/50,
+.app-shell .bg-slate-950\/55,
+.app-shell .bg-slate-950\/60 { background-color: rgb(221 215 202 / 0.52) !important; }
+.app-shell .bg-slate-900,
+.app-shell .bg-slate-900\/35,
+.app-shell .bg-slate-900\/40,
+.app-shell .bg-slate-900\/60,
+.app-shell .bg-slate-900\/70,
+.app-shell .bg-slate-900\/80,
+.app-shell .bg-slate-900\/85 { background-color: rgb(244 241 234 / 0.78) !important; }
+.app-shell .bg-slate-800,
+.app-shell .bg-slate-800\/40,
+.app-shell .bg-slate-800\/50,
+.app-shell .bg-slate-800\/60,
+.app-shell .bg-slate-800\/70,
+.app-shell .bg-slate-800\/75 { background-color: rgb(235 231 221 / 0.76) !important; }
+.app-shell .bg-slate-700,
+.app-shell .bg-slate-700\/40,
+.app-shell .bg-slate-700\/50,
+.app-shell .bg-slate-700\/60 { background-color: rgb(221 215 202 / 0.78) !important; }
+.app-shell .bg-black\/15,
+.app-shell .bg-black\/20 { background-color: rgb(44 42 40 / 0.06) !important; }
+.app-shell .bg-white\/5,
+.app-shell .bg-white\/10,
+.app-shell .bg-white\/15,
+.app-shell .bg-white\/20,
+.app-shell .bg-white\/25 { background-color: rgb(255 255 255 / 0.42) !important; }
+
+.app-shell [class*='bg-gradient'] {
+  background-image: none !important;
+}
+
+.app-shell .border-white\/10,
+.app-shell .border-white\/15,
+.app-shell .border-white\/20,
+.app-shell .border-slate-700\/40,
+.app-shell .border-slate-700\/50,
+.app-shell .border-slate-700\/60,
+.app-shell .border-slate-700\/70,
+.app-shell .border-slate-600\/60 {
+  border-color: var(--hairline) !important;
+}
+.app-shell .border-cyan-300\/20,
+.app-shell .border-cyan-300\/25,
+.app-shell .border-cyan-300\/35,
+.app-shell .border-cyan-300\/45,
+.app-shell .border-sky-400\/25,
+.app-shell .border-sky-500\/30,
+.app-shell .border-indigo-400\/25 { border-color: rgb(36 74 120 / 0.28) !important; }
+.app-shell .border-emerald-400\/20,
+.app-shell .border-emerald-400\/25,
+.app-shell .border-emerald-400\/30,
+.app-shell .border-emerald-500\/20 { border-color: rgb(43 111 91 / 0.28) !important; }
+.app-shell .border-amber-400\/25,
+.app-shell .border-amber-500\/25,
+.app-shell .border-violet-300\/15,
+.app-shell .border-fuchsia-300\/20 { border-color: rgb(179 108 67 / 0.3) !important; }
+
+.app-shell .bg-cyan-400\/10,
+.app-shell .bg-cyan-500\/10,
+.app-shell .bg-sky-500\/10,
+.app-shell .bg-sky-500\/20,
+.app-shell .bg-indigo-500\/10,
+.app-shell .bg-indigo-500\/20 { background-color: var(--cobalt-soft) !important; }
+.app-shell .bg-emerald-400\/10,
+.app-shell .bg-emerald-500\/10,
+.app-shell .bg-emerald-500\/20 { background-color: var(--malachite-soft) !important; }
+.app-shell .bg-amber-500\/10,
+.app-shell .bg-amber-500\/\[0\.08\],
+.app-shell .bg-violet-500\/10,
+.app-shell .bg-fuchsia-300\/10 { background-color: var(--copper-soft) !important; }
+.app-shell .bg-rose-500\/10 { background-color: #f2dcd5 !important; }
+
+.app-shell .border-cyan-300\/20,
+.app-shell .border-cyan-300\/35,
+.app-shell .border-sky-500\/30 { border-color: rgb(36 74 120 / 0.28) !important; }
+
+/* A few workspaces use richer legacy hue names; keep their semantics while
+   moving every surface onto the same paper stock. */
+.app-shell [class*='bg-teal-'],
+.app-shell [class*='bg-cyan-'],
+.app-shell [class*='bg-sky-'],
+.app-shell [class*='bg-indigo-'] {
+  background-color: rgb(220 230 240 / 0.58) !important;
+}
+.app-shell [class*='bg-emerald-'] {
+  background-color: rgb(220 235 227 / 0.62) !important;
+}
+.app-shell [class*='bg-amber-'],
+.app-shell [class*='bg-violet-'],
+.app-shell [class*='bg-fuchsia-'] {
+  background-color: rgb(241 224 211 / 0.62) !important;
+}
+.app-shell [class*='bg-rose-'] {
+  background-color: rgb(242 220 213 / 0.7) !important;
+}
+.app-shell [class*='text-teal-'],
+.app-shell [class*='text-cyan-'],
+.app-shell [class*='text-sky-'],
+.app-shell [class*='text-indigo-'] {
+  color: var(--cobalt) !important;
+}
+.app-shell [class*='text-emerald-'] {
+  color: var(--malachite) !important;
+}
+.app-shell [class*='text-amber-'],
+.app-shell [class*='text-violet-'],
+.app-shell [class*='text-fuchsia-'] {
+  color: var(--copper) !important;
+}
+.app-shell [class*='text-rose-'] {
+  color: #98563a !important;
+}
+
+.app-shell.font-sans,
+.app-shell .font-sans {
+  font-family: var(--font-body) !important;
+}
+
+/* Panels read as paper specimens, not floating SaaS cards. */
+.app-page-stack {
+  gap: 1.15rem !important;
+}
+
+.app-card,
+.app-panel,
+.app-panel-surface {
+  border-radius: 0.85rem !important;
+  border-color: var(--hairline) !important;
+  box-shadow: var(--shadow-paper) !important;
+}
+
+.app-header {
+  overflow: visible !important;
+  border: 1px solid rgb(44 42 40 / 0.18) !important;
+  background: var(--paper-deep) !important;
+  box-shadow: 0 20px 40px rgb(76 67 55 / 0.14), 0 1px 0 rgb(255 255 255 / 0.8) inset !important;
+}
+
+.app-header__bar {
+  min-height: 5.8rem;
+  overflow: hidden;
+  border-radius: 0.8rem 0.8rem 0 0;
+  background: var(--cobalt) !important;
+  box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.18) !important;
+}
+
+.app-header__bar[class*='from-violet'],
+.app-header__bar[class*='from-fuchsia'] {
+  background: var(--copper) !important;
+}
+
+.app-header__bar[class*='from-emerald'] {
+  background: var(--malachite) !important;
+}
+
+.app-header__brand {
+  min-height: 5.8rem;
+}
+
+.watermancer-header__mark {
+  width: 5.8rem !important;
+  height: 5.8rem !important;
+  border-right: 1px solid rgb(255 255 255 / 0.2);
+  mix-blend-mode: normal !important;
+  opacity: 0.9;
+  -webkit-mask-image: none !important;
+  mask-image: none !important;
+  filter: sepia(0.22) saturate(0.7);
+}
+
+.app-header__brand h1 {
+  color: #f8f4eb !important;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 400 !important;
+  letter-spacing: 0.035em !important;
+  text-transform: none !important;
+}
+
+.app-header__brand p {
+  color: rgb(248 244 235 / 0.72) !important;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.app-header__controls {
+  padding-block: 0.75rem;
+}
+
+.app-header__discord,
+.app-header__ai-button,
+.app-header__controls .rounded-lg {
+  border-color: rgb(255 255 255 / 0.3) !important;
+  background: rgb(255 255 255 / 0.08) !important;
+  color: #f8f4eb !important;
+  box-shadow: none !important;
+}
+
+.app-header__tabs {
+  border: 1px solid rgb(255 255 255 / 0.28) !important;
+  border-radius: 0.45rem !important;
+  background: rgb(44 42 40 / 0.12) !important;
+  box-shadow: none !important;
+}
+
+.app-header__tabs > button {
+  position: relative;
+  min-height: 2.75rem;
+  border-radius: 0.3rem !important;
+  color: rgb(248 244 235 / 0.7) !important;
+}
+
+.app-header__tabs > button[aria-selected='true'] {
+  background: rgb(248 244 235 / 0.96) !important;
+  color: var(--cobalt) !important;
+  box-shadow: 0 2px 5px rgb(44 42 40 / 0.12) !important;
+}
+
+.app-header__tabs > button[aria-selected='true']::after,
+.mode-switcher__button[aria-pressed='true']::after {
+  position: absolute;
+  right: 16%;
+  bottom: 0.15rem;
+  left: 16%;
+  height: 0.4rem;
+  border-bottom: 2px solid currentColor;
+  border-radius: 50%;
+  content: '';
+  opacity: 0.7;
+  pointer-events: none;
+  transform: translateY(35%);
+}
+
+/* Detail-level selector becomes a specimen index. */
+.mode-switcher {
+  border-color: var(--hairline) !important;
+  border-radius: 0.65rem !important;
+  background: rgb(255 255 255 / 0.28) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7) !important;
+}
+
+.mode-switcher__button {
+  position: relative;
+  min-height: 2.75rem;
+  border-radius: 0.45rem !important;
+}
+
+.mode-switcher__button[aria-pressed='true'] {
+  border-color: transparent !important;
+  background: var(--reagent) !important;
+  color: var(--ink) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.65), 0 3px 8px rgb(76 67 55 / 0.1) !important;
+}
+
+.mode-guide {
+  border-color: rgb(36 74 120 / 0.22) !important;
+  background: rgb(220 230 240 / 0.42) !important;
+  box-shadow: none !important;
+}
+
+.mode-guide .rounded-full {
+  border-color: rgb(36 74 120 / 0.22) !important;
+  background: rgb(255 255 255 / 0.4) !important;
+}
+
+.workflow-rail {
+  border-color: var(--hairline) !important;
+  background: rgb(231 217 191 / 0.42) !important;
+  box-shadow: none !important;
+}
+
+.workflow-rail ol {
+  scrollbar-color: var(--cobalt) transparent;
+}
+
+/* Section headers are archival dividers with ink-stamp numbering. */
+.app-section-header {
+  min-height: 3.35rem;
+  border-color: var(--hairline) !important;
+  background: rgb(231 217 191 / 0.32) !important;
+  color: var(--ink-soft) !important;
+}
+
+.app-section-header__title h2 {
+  color: var(--ink) !important;
+  font-size: 0.85rem;
+  letter-spacing: 0.09em;
+}
+
+.app-section-header__step {
+  min-width: 1.65rem;
+  height: 1.65rem;
+  border: 1px solid var(--copper) !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  color: var(--copper) !important;
+  font-family: var(--font-mono);
+  box-shadow: none !important;
+}
+
+.app-card-body {
+  padding: 1.15rem !important;
+}
+
+.app-data-card {
+  border-color: var(--hairline) !important;
+  border-radius: 0.65rem !important;
+  background: rgb(255 255 255 / 0.34) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.58) !important;
+}
+
+.app-data-card .text-2xl,
+.app-data-card .text-xl,
+.app-data-card .font-mono {
+  color: var(--cobalt) !important;
+  font-family: var(--font-mono);
+  letter-spacing: -0.05em;
+}
+
+.app-data-card .text-emerald-300 { color: var(--malachite) !important; }
+.app-data-card .text-sky-300,
+.app-data-card .text-cyan-300 { color: var(--cobalt) !important; }
+.app-data-card .text-indigo-300 { color: var(--cobalt) !important; }
+.app-data-card .text-amber-300 { color: var(--copper) !important; }
+
+/* Controls: tactile, quiet, and never below the touch target floor. */
+.app-shell button,
+.app-shell a,
+.app-shell select,
+.app-shell input,
+.app-shell textarea {
+  outline-offset: 3px;
+}
+
+.app-shell button:focus-visible,
+.app-shell a:focus-visible,
+.app-shell select:focus-visible,
+.app-shell input:focus-visible,
+.app-shell textarea:focus-visible,
+.app-shell summary:focus-visible {
+  outline: 2px solid var(--cobalt) !important;
+  box-shadow: 0 0 0 4px rgb(36 74 120 / 0.17) !important;
+}
+
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  min-height: 2.75rem;
+  border-color: rgb(44 42 40 / 0.23) !important;
+  border-radius: 0.45rem !important;
+  background: rgb(255 255 255 / 0.62) !important;
+  color: var(--ink) !important;
+  box-shadow: inset 0 1px 2px rgb(76 67 55 / 0.06) !important;
+}
+
+.app-shell input::placeholder,
+.app-shell textarea::placeholder {
+  color: var(--graphite-light) !important;
+}
+
+.app-shell select {
+  color-scheme: light;
+}
+
+.app-shell select option {
+  background: var(--lab-paper);
+  color: var(--ink);
+}
+
+.app-shell .volume-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+  min-height: 2.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.app-shell .volume-input::-webkit-inner-spin-button,
+.app-shell .volume-input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.app-shell button {
+  min-height: 2.75rem;
+}
+
+.app-shell button.bg-emerald-600,
+.app-shell button.bg-emerald-500,
+.app-shell button.bg-cyan-600,
+.app-shell button.bg-sky-600 {
+  border: 1px solid var(--cobalt);
+  background: var(--cobalt) !important;
+  color: #f8f4eb !important;
+}
+
+.app-shell button.bg-emerald-600:hover,
+.app-shell button.bg-emerald-500:hover,
+.app-shell button.bg-cyan-600:hover,
+.app-shell button.bg-sky-600:hover {
+  background: #1b3b61 !important;
+}
+
+.app-shell button.bg-rose-600,
+.app-shell button.bg-red-600 {
+  background: #98563a !important;
+  color: #fff8ef !important;
+}
+
+.app-shell .watermancer-best-match-button,
+.app-shell .calibration-apply-button {
+  border: 1px solid var(--cobalt) !important;
+  background: var(--cobalt) !important;
+  box-shadow: 0 7px 16px rgb(36 74 120 / 0.2) !important;
+  animation: none !important;
+}
+
+.app-shell .watermancer-best-match-button:hover,
+.app-shell .calibration-apply-button:hover {
+  background: #1b3b61 !important;
+  box-shadow: 0 9px 20px rgb(36 74 120 / 0.26) !important;
+}
+
+.app-shell .watermancer-best-match-button__image {
+  filter: grayscale(1) brightness(4) !important;
+}
+
+/* Meniscus treatment on dense rows and active specimen controls. */
+.watermancer-salt-table__row--used {
+  border-left: 3px solid var(--malachite);
+  background: rgb(220 235 227 / 0.44) !important;
+  box-shadow: inset 0 -5px 0 -3px var(--malachite) !important;
+}
+
+.watermancer-salt-table__row:hover {
+  background: rgb(231 217 191 / 0.38) !important;
+}
+
+.watermancer-salt-table__dose-value input {
+  font-family: var(--font-mono);
+  color: var(--cobalt) !important;
+  font-weight: 700;
+}
+
+.app-shell input[type='range'] {
+  min-height: 2.75rem;
+  accent-color: var(--cobalt);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell input[type='checkbox'],
+.app-shell input[type='radio'] {
+  min-height: 1.1rem;
+  accent-color: var(--malachite);
+}
+
+.app-shell .group\/row:hover {
+  background: rgb(231 217 191 / 0.35);
+}
+
+/* Results, alerts, and empty states retain semantic color but gain paper contrast. */
+.app-shell [role='alert'] {
+  border-color: rgb(179 108 67 / 0.34) !important;
+  background: var(--copper-soft) !important;
+  color: #77432f !important;
+}
+
+.app-shell .text-emerald-200\/80,
+.app-shell .text-emerald-300\/80 {
+  color: var(--malachite) !important;
+}
+
+.app-shell details > summary {
+  min-height: 2.75rem;
+}
+
+.app-shell details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-shell .rounded-full {
+  border-radius: 999px;
+}
+
+.app-shell .recipe-steps-fab {
+  border: 1px solid var(--copper) !important;
+  background: var(--copper) !important;
+  color: #fff8ef !important;
+  box-shadow: 0 8px 18px rgb(179 108 67 / 0.22) !important;
+}
+
+/* Dialogs and export sheets are rendered through a body portal. They still
+   belong to this instrument, so mirror the material treatment outside the
+   .app-shell subtree as well. */
+body > *:not(#root) [class*='bg-slate-950'],
+body > *:not(#root) [class*='bg-slate-900'],
+body > *:not(#root) [class*='bg-slate-800'],
+body > *:not(#root)[class*='bg-slate-950'],
+body > *:not(#root)[class*='bg-slate-900'],
+body > *:not(#root)[class*='bg-slate-800'] {
+  background-color: var(--paper-deep) !important;
+}
+
+body > *:not(#root) [class*='bg-gradient'],
+body > *:not(#root)[class*='bg-gradient'] {
+  background-image: none !important;
+}
+
+body > *:not(#root) [class*='text-white'],
+body > *:not(#root) [class*='text-slate-100'],
+body > *:not(#root)[class*='text-white'],
+body > *:not(#root)[class*='text-slate-100'] { color: var(--ink) !important; }
+body > *:not(#root) [class*='text-slate-200'],
+body > *:not(#root)[class*='text-slate-200'] { color: #3f3b36 !important; }
+body > *:not(#root) [class*='text-slate-300'],
+body > *:not(#root)[class*='text-slate-300'] { color: var(--ink-soft) !important; }
+body > *:not(#root) [class*='text-slate-400'],
+body > *:not(#root)[class*='text-slate-400'] { color: var(--graphite) !important; }
+body > *:not(#root) [class*='text-slate-500'],
+body > *:not(#root) [class*='text-slate-600'],
+body > *:not(#root)[class*='text-slate-500'],
+body > *:not(#root)[class*='text-slate-600'] { color: #817b71 !important; }
+body > *:not(#root) [class*='text-cyan-'],
+body > *:not(#root) [class*='text-sky-'],
+body > *:not(#root) [class*='text-indigo-'],
+body > *:not(#root)[class*='text-cyan-'],
+body > *:not(#root)[class*='text-sky-'],
+body > *:not(#root)[class*='text-indigo-'] { color: var(--cobalt) !important; }
+body > *:not(#root) [class*='text-emerald-'],
+body > *:not(#root)[class*='text-emerald-'] { color: var(--malachite) !important; }
+body > *:not(#root) [class*='text-amber-'],
+body > *:not(#root) [class*='text-violet-'],
+body > *:not(#root) [class*='text-fuchsia-'],
+body > *:not(#root) [class*='text-rose-'],
+body > *:not(#root)[class*='text-amber-'],
+body > *:not(#root)[class*='text-violet-'],
+body > *:not(#root)[class*='text-fuchsia-'],
+body > *:not(#root)[class*='text-rose-'] { color: var(--copper) !important; }
+
+body > *:not(#root) input,
+body > *:not(#root) select,
+body > *:not(#root) textarea {
+  border-color: rgb(44 42 40 / 0.23);
+  background: rgb(255 255 255 / 0.62);
+  color: var(--ink);
+}
+
+/* Concentrate and guide surfaces use their own reagent marks, still on paper. */
+.concentrate-workspace {
+  padding-bottom: 2rem;
+}
+
+.concentrate-workspace .app-section-header {
+  background: rgb(241 224 211 / 0.55) !important;
+}
+
+.concentrate-workspace .app-section-header__step {
+  color: var(--copper) !important;
+  border-color: var(--copper) !important;
+}
+
+.concentrate-workspace .font-mono,
+.concentrate-workspace .tabular-nums {
+  color: var(--copper);
+}
+
+/* The old playful animations become restrained liquid movement. */
+@keyframes apothecary-meniscus {
+  0%, 100% { transform: translateY(0) scaleX(1); opacity: 0.68; }
+  50% { transform: translateY(-1px) scaleX(1.03); opacity: 0.92; }
+}
+
+.app-shell .mineral-water-beaker.is-active .mineral-water-liquid {
+  animation: apothecary-meniscus 2.8s ease-in-out infinite;
+}
+
+@media (min-width: 768px) {
+  .app-shell > .flex {
+    padding: 1.5rem 2rem !important;
+  }
+
+  .app-page-stack {
+    max-width: 78rem !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .app-shell > .flex {
+    padding: 0.75rem !important;
+  }
+
+  .app-header {
+    border-radius: 0.75rem !important;
+  }
+
+  .app-header__bar {
+    min-height: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+  }
+
+  .app-header__brand {
+    flex-basis: 100%;
+    min-height: 4.75rem;
+  }
+
+  .watermancer-header__mark {
+    width: 4.75rem !important;
+    height: 4.75rem !important;
+  }
+
+  .app-header__controls {
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .app-header__tabs {
+    max-width: calc(100vw - 5.75rem);
+    overflow-x: auto;
+  }
+
+  .app-header__tabs > button {
+    flex: 0 0 auto;
+    padding-inline: 0.65rem !important;
+  }
+
+  .app-card-body {
+    padding: 0.85rem !important;
+  }
+
+  .app-section-header {
+    padding-inline: 0.85rem !important;
+  }
+
+  .watermancer-salt-table__row {
+    padding: 0.85rem !important;
+  }
+
+  .mode-switcher {
+    width: 100% !important;
+  }
+
+  .mode-switcher__button {
+    padding-inline: 0.35rem !important;
+    font-size: 0.68rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

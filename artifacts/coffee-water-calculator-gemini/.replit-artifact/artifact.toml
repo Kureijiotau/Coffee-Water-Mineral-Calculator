@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/coffee-water-calculator-gemini/"
+title = "Coffee Water Calculator · Gemini Apothecary"
+description = "A fully functional visual redesign of the Coffee Water Calculator, preserving its chemistry and workflows while presenting them through Gemini's Botanist's Apothecary interface."
+version = "1.0.0"
+id = "artifacts/coffee-water-calculator-gemini"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/coffee-water-calculator-gemini/" ]
+localPort = 24177
+
+[services.development]
+run = "pnpm --filter @workspace/coffee-water-calculator-gemini run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/coffee-water-calculator-gemini", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/coffee-water-calculator-gemini/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24177"
+BASE_PATH = "/coffee-water-calculator-gemini/"
