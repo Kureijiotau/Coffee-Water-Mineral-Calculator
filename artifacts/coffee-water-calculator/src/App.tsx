@@ -6277,6 +6277,8 @@ function App() {
               onTargetSourceChange={handleWatermancerTargetSourceChange}
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
+               onShareRecipe={handleShareWatermancerPlan}
+               shareStatus={watermancerShareStatus}
                onReset={() => setShowResetConfirm(true)}
             />
           </div>
@@ -6954,30 +6956,6 @@ function App() {
                  Compare ions
                </button>
              )}
-              {showWatermancer && (
-                <button
-                  type="button"
-                  onClick={handleShareWatermancerPlan}
-                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
-                    watermancerShareStatus === 'error'
-                      ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
-                      : watermancerShareStatus !== 'idle'
-                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                        : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
-                  }`}
-                  aria-live="polite"
-                  title="Share or download the current recipe as a JSON file"
-                >
-                  <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
-                  {watermancerShareStatus === 'downloaded'
-                    ? 'Recipe downloaded'
-                    : watermancerShareStatus === 'shared'
-                      ? 'Shared'
-                      : watermancerShareStatus === 'error'
-                        ? 'Share failed'
-                        : 'Share recipe'}
-                </button>
-              )}
               <Suspense fallback={<span className="text-[10px] text-slate-500">Loading scanner…</span>}>
               <LabelScanner onExtracted={vals => {
               // Silently use existing local water if ionic profile matches
@@ -9659,6 +9637,8 @@ function WatermancerIonProfileCard({
   onTargetSourceChange,
   onTargetOverrideChange,
   onSaveWmProfile,
+  onShareRecipe,
+  shareStatus,
   onReset,
 }: {
   ions: Partial<Record<IonId, number>>;
@@ -9676,6 +9656,8 @@ function WatermancerIonProfileCard({
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
+  onShareRecipe: () => void;
+  shareStatus: 'idle' | 'downloaded' | 'shared' | 'error';
   onReset: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -9930,6 +9912,30 @@ function WatermancerIonProfileCard({
                 <RotateCcw className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Reset</span>
               </button>
+               <button
+                 type="button"
+                 onClick={onShareRecipe}
+                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                   shareStatus === 'error'
+                     ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
+                     : shareStatus !== 'idle'
+                       ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                       : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
+                 }`}
+                 aria-live="polite"
+                 title="Share or download the current recipe as a JSON file"
+               >
+                 <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                 <span className="hidden sm:inline">
+                   {shareStatus === 'downloaded'
+                     ? 'Recipe downloaded'
+                     : shareStatus === 'shared'
+                       ? 'Shared'
+                       : shareStatus === 'error'
+                         ? 'Share failed'
+                         : 'Share recipe'}
+                 </span>
+               </button>
            </div>
            {!isEditingAny ? (
             <button
