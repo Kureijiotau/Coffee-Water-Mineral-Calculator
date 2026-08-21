@@ -80,7 +80,6 @@ import {
   type WatermancerPlan,
 } from './watermancerPlan';
 
-const LabelScanner = lazy(() => import('./LabelScanner'));
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
 const TastePreferenceModal = lazy(() => import('./TastePreferenceModal'));
@@ -7019,46 +7018,6 @@ function App() {
                  Compare ions
                </button>
              )}
-              <Suspense fallback={<span className="text-[10px] text-slate-500">Loading scanner…</span>}>
-              <LabelScanner onExtracted={vals => {
-              // Silently use existing local water if ionic profile matches
-              const match = localWaters.find(w => {
-                for (const [k, raw] of Object.entries(vals)) {
-                  const v = parseFloat(raw ?? '0');
-                  if (!Number.isFinite(v) || v <= 0) continue;
-                  const existing = w.ions[k] ?? 0;
-                  const tolerance = Math.max(v * 0.10, 2);
-                  if (Math.abs(existing - v) > tolerance) return false;
-                }
-                return true;
-              });
-              if (match) {
-                const existing: Partial<Record<IonId, string>> = {};
-                for (const [k, v] of Object.entries(match.ions)) {
-                  if (v > 0) existing[k as IonId] = String(v);
-                }
-                addMineralWater({
-                  name: match.name || undefined,
-                  ions: existing,
-                  metadata: match.metadata ? metadataToStrings(match.metadata) : undefined,
-                });
-              } else {
-                addMineralWater({ ions: vals });
-                const name = window.prompt("Name this water (so you can find it later):");
-                if (name && name.trim()) {
-                  saveWaters([...localWaters, { id: newLocalWaterId(), name: name.trim(), ions: vals as Record<string, number> }]);
-                  const share = window.confirm("Also share this profile with the community?");
-                  if (share) {
-                    fetch(`${API_BASE}/api/waters`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ name: name.trim(), ions: vals, shared: 'yes' }),
-                    }).catch(() => {});
-                  }
-                }
-              }
-            }} />
-              </Suspense>
             </div>}
            />
            {(!showAlchemist || alchemistMineralWaterOpen) && (
