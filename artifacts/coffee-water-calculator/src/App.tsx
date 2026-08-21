@@ -8319,11 +8319,15 @@ function App() {
                      className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                      title="Search your selected waters and salts for the best safe match."
                   >
-                       <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-fuchsia-200/35 bg-gradient-to-br from-fuchsia-400/25 via-cyan-400/20 to-indigo-400/25 shadow-[0_0_16px_rgba(217,70,239,0.18)]" aria-hidden="true">
-                         <Gem className="h-4 w-4 text-fuchsia-100" />
-                       </span>
+                       <img
+                         src={pepeImage}
+                         alt=""
+                         aria-hidden="true"
+                         className="h-8 w-8 object-contain"
+                       />
+                       <span aria-hidden="true" className="text-base leading-none">👉</span>
                      <span aria-live="polite">
-                        {watermancerActionRunning ? 'Refining your match…' : 'Run precision auto-match'}
+                        {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
                      </span>
                   </button>
                 </div>
