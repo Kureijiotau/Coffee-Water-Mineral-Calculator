@@ -72,6 +72,7 @@ import {
   normalizeWatermancerIonSourcePreferences,
   type WatermancerIonDeviation,
   type WatermancerIonSourcePreference,
+  type WatermancerMatchDiagnostics,
   type WatermancerRouteCandidate,
   type WatermancerStrategy,
   type WatermancerSaltObjective,
@@ -1785,6 +1786,19 @@ function executeAddedWaterMineralFirstRoute(
     deviations,
     overshoots,
     score,
+    diagnostics: watermancerRouteDiagnostics({
+      plan: {
+        ...routePlan,
+        selectedWaters,
+        fixedWaterVolumes: Object.fromEntries(
+          selectedWaters.map(entry => [entry.id, num(entry.volumeMl)]),
+        ),
+      },
+      saltTargets: allSaltTargets,
+      finalIons,
+      deviations,
+      score,
+    }),
     qualityValid,
   };
 }
@@ -1973,6 +1987,13 @@ function executeWatermancerRoute(
     deviations,
     overshoots,
     score: score + hardnessPenalty,
+    diagnostics: watermancerRouteDiagnostics({
+      plan: candidatePlan,
+      saltTargets: allSaltTargets,
+      finalIons,
+      deviations,
+      score: score + hardnessPenalty,
+    }),
   };
 }
 
@@ -2234,6 +2255,87 @@ function watermancerDeviationBeyondPolicy(
     ? Math.max(0, plan.softDeficitLimits?.[deviation.id] ?? 0)
     : 0;
   return Math.min(deviation.delta + softDeficitAllowance, 0);
+}
+
+function watermancerRouteDiagnostics(
+  route: Pick<WatermancerRouteCandidate, 'plan' | 'saltTargets' | 'finalIons' | 'deviations' | 'score'>,
+): WatermancerMatchDiagnostics {
+  const { plan, deviations, saltTargets, score } = route;
+  const policyAllowancePpm = deviations.reduce((total, deviation) => {
+    const overshootAllowance = plan.allowOvershoot
+      && plan.allowedOvershootIons.includes(deviation.id)
+      && deviation.target > 0
+      ? Math.max(0, plan.overshootLimits[deviation.id] ?? 0)
+      : 0;
+    const softDeficitAllowance = plan.allowOvershoot
+      && plan.softDeficitIons?.includes(deviation.id)
+      ? Math.max(0, plan.softDeficitLimits?.[deviation.id] ?? 0)
+      : 0;
+    return total + (deviation.delta >= 0 ? overshootAllowance : softDeficitAllowance);
+  }, 0);
+  const policyViolations = deviations
+    .map(deviation => watermancerDeviationBeyondPolicy(deviation, plan))
+    .filter(value => Math.abs(value) > 0.05);
+  const fixedSaltIds = Object.keys(plan.fixedSaltDoses);
+  const optionalSaltIds = plan.selectedSalts.filter(id => !fixedSaltIds.includes(id));
+  const omittedOptionalSaltIds = optionalSaltIds.filter(id => (saltTargets[id] ?? 0) <= 0.000001);
+  const saltIons = computeIonTotals(saltTargets, {}, 1);
+  const waterIons = computeWatermancerBottledIons(
+    [...route.plan.selectedWaters],
+    route.plan.selectedWaters.reduce((total, water) => total + num(water.volumeMl), 0),
+  );
+  const honoredSourcePreferenceIons = ACTIVE_ION_IDS.filter(id => {
+    const preference = plan.ionSourcePreferences?.[id] ?? 'dont-care';
+    const saltContribution = saltIons[id] ?? 0;
+    const waterContribution = waterIons[id] ?? 0;
+    const target = Math.max(plan.targetIons[id] ?? 0, 0);
+    if (preference === 'water-only') return saltContribution <= 0.05;
+    if (preference === 'salt-only') return waterContribution <= 0.05;
+    if (preference === 'water-then-salt') {
+      return saltContribution <= Math.max(target - waterContribution, 0) + 0.05;
+    }
+    return false;
+  });
+  return {
+    targetDeviationPpm: deviations.reduce((total, deviation) => total + Math.abs(deviation.delta), 0),
+    policyAllowancePpm,
+    policyViolationPpm: policyViolations.reduce((total, value) => total + Math.abs(value), 0),
+    policyViolationCount: policyViolations.length,
+    fixedSaltIds,
+    optionalSaltIds,
+    omittedOptionalSaltIds,
+    honoredSourcePreferenceIons,
+    solverScore: score,
+  };
+}
+
+function watermancerPrimaryExplanation(
+  primary: WatermancerRouteCandidate,
+  alternatives: WatermancerRouteCandidate[],
+): string {
+  const diagnostics = primary.diagnostics;
+  if (!diagnostics) return primary.explanation;
+  const reasons: string[] = [];
+  const bestAlternative = alternatives
+    .filter(candidate => candidate.diagnostics)
+    .sort((a, b) => (a.diagnostics!.policyViolationCount - b.diagnostics!.policyViolationCount)
+      || (a.score - b.score))[0];
+  if (diagnostics.policyViolationCount === 0) reasons.push('keeps every gap and overshoot within policy');
+  else reasons.push(`leaves ${diagnostics.policyViolationCount} ion ${diagnostics.policyViolationCount === 1 ? 'deviation' : 'deviations'} outside policy`);
+  if (diagnostics.honoredSourcePreferenceIons.length > 0) {
+    reasons.push(`honors ${diagnostics.honoredSourcePreferenceIons.length} source preference${diagnostics.honoredSourcePreferenceIons.length === 1 ? '' : 's'}`);
+  }
+  if (diagnostics.fixedSaltIds.length > 0) {
+    reasons.push(`holds ${diagnostics.fixedSaltIds.length} fixed dose${diagnostics.fixedSaltIds.length === 1 ? '' : 's'}`);
+  }
+  if (diagnostics.omittedOptionalSaltIds.length > 0) {
+    reasons.push(`omits ${diagnostics.omittedOptionalSaltIds.length} optional salt${diagnostics.omittedOptionalSaltIds.length === 1 ? '' : 's'} that would add a worse counter-ion`);
+  }
+  if (bestAlternative && bestAlternative !== primary
+    && bestAlternative.diagnostics!.policyViolationCount > diagnostics.policyViolationCount) {
+    reasons.push('outperforms the other routes on policy violations');
+  }
+  return `The primary route wins because it ${reasons.join(', ')}.`;
 }
 
 export function totalWatermancerDeviation(
@@ -2585,9 +2687,7 @@ export function solveWatermancerRoutes({
     finalIons: primaryPlan.finalIons,
     deviations: primaryPlan.deviations,
     overshoots: primaryPlan.overshoots,
-    explanation: status === 'matched'
-      ? 'The automatic match reaches the requested ionic targets within tolerance.'
-      : 'The automatic match is the best available primary route; internal alternatives trade water coverage, salt coverage, and ion priority differently.',
+    explanation: watermancerPrimaryExplanation(primaryPlan, alternatives),
   };
 }
 
@@ -7931,6 +8031,46 @@ function App() {
                     </div>
                   </div>
                 </div>
+                 {watermancerLiveResult.primaryPlan.diagnostics && (
+                   <div className="mt-3 rounded-xl border border-cyan-300/20 bg-slate-950/20 px-3 py-3">
+                     <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">
+                       Why this match wins
+                     </div>
+                     <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                       {watermancerLiveResult.explanation}
+                     </p>
+                     <div className="mt-2 grid gap-2 sm:grid-cols-4">
+                       <div>
+                         <div className="text-[9px] uppercase tracking-wider text-slate-500">Target deviation</div>
+                         <div className="mt-0.5 text-xs font-semibold tabular-nums text-slate-200">
+                           {watermancerLiveResult.primaryPlan.diagnostics.targetDeviationPpm.toFixed(2)} ppm
+                         </div>
+                       </div>
+                       <div>
+                         <div className="text-[9px] uppercase tracking-wider text-slate-500">Policy allowance</div>
+                         <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">
+                           {watermancerLiveResult.primaryPlan.diagnostics.policyAllowancePpm.toFixed(2)} ppm
+                         </div>
+                       </div>
+                       <div>
+                         <div className="text-[9px] uppercase tracking-wider text-slate-500">Outside policy</div>
+                         <div className="mt-0.5 text-xs font-semibold tabular-nums text-rose-200">
+                           {watermancerLiveResult.primaryPlan.diagnostics.policyViolationPpm.toFixed(2)} ppm
+                         </div>
+                       </div>
+                       <div>
+                         <div className="text-[9px] uppercase tracking-wider text-slate-500">Salt choice</div>
+                         <div className="mt-0.5 text-xs font-semibold text-slate-200">
+                           {watermancerLiveResult.primaryPlan.diagnostics.optionalSaltIds.length
+                             - watermancerLiveResult.primaryPlan.diagnostics.omittedOptionalSaltIds.length} used
+                           <span className="font-normal text-slate-500">
+                             {' '}· {watermancerLiveResult.primaryPlan.diagnostics.fixedSaltIds.length} fixed
+                           </span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 )}
                 <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match

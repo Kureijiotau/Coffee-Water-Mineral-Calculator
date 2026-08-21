@@ -54,6 +54,22 @@ export type WatermancerIonDeviation = {
   delta: number;
 };
 
+export type WatermancerMatchDiagnostics = {
+  /** Sum of displayed final-ion distance before policy allowances. */
+  targetDeviationPpm: number;
+  /** Sum of explicit overshoot and soft-deficit room used by this route. */
+  policyAllowancePpm: number;
+  /** Sum of deviation that remains outside the route's policy. */
+  policyViolationPpm: number;
+  policyViolationCount: number;
+  fixedSaltIds: string[];
+  optionalSaltIds: string[];
+  omittedOptionalSaltIds: string[];
+  honoredSourcePreferenceIons: IonId[];
+  /** Stable comparison score supplied by the route solver. */
+  solverScore: number;
+};
+
 export type WatermancerRouteCandidate = {
   id: string;
   kind: WatermancerRouteKind;
@@ -67,6 +83,7 @@ export type WatermancerRouteCandidate = {
   deviations: WatermancerIonDeviation[];
   overshoots: IonOvershoot[];
   score: number;
+  diagnostics?: WatermancerMatchDiagnostics;
   /** Set only by quality-gated routes, such as Added-water mineral-first. */
   qualityValid?: boolean;
 };
