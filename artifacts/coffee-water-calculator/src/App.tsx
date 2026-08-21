@@ -3873,11 +3873,13 @@ function App() {
   const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
     enterWatermancerManualMode();
     setWatermancerTargetOverride(null);
+    setWatermancerImportedRecipeName(null);
     setWatermancerTargetSource(source);
   };
   const handleWatermancerTargetOverrideChange = (targets: IonicTargetValues | null) => {
     enterWatermancerManualMode();
     setWatermancerTargetOverride(targets);
+    setWatermancerImportedRecipeName(null);
   };
 
   const applyWaterAssistantResult = (result: WaterAssistantResult) => {
@@ -5140,6 +5142,7 @@ function App() {
     : saltOnlyIons;
   const autoFillUsesRecipeTargets = showAlchemist && hasSaltRecipeTargets;
   const watermancerTargetSourceLabel = useMemo(() => {
+    if (watermancerImportedRecipeName) return watermancerImportedRecipeName;
     if (watermancerTargetSource === 'safe-profile') return `${activeProfile.name} safe profile`;
     if (watermancerTargetSource === 'salt-table') return 'Current salt table';
     if (watermancerTargetSource.startsWith('profile:')) {
@@ -5158,7 +5161,7 @@ function App() {
       return LOTUS_RECIPES.find(item => item.id === watermancerTargetSource.slice('lotus:'.length))?.name ?? 'Lotus recipe';
     }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
-  }, [activeProfile.name, allRecipes, watermancerTargetSource, profiles, wmProfiles]);
+  }, [activeProfile.name, allRecipes, watermancerImportedRecipeName, watermancerTargetSource, profiles, wmProfiles]);
   const recipeStepsProfileName = showWatermancer
     ? watermancerTargetSource === 'safe-profile'
       ? activeProfile.name

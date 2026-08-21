@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createWaterPlan,
   isValidWaterPlan,
+  parseWaterRecipeFile,
   parseWaterPlanFile,
   serializeWaterRecipeFile,
   serializeWaterPlanFile,
@@ -101,6 +102,23 @@ describe('water plan persistence', () => {
       version: 1,
       name: 'Bright washed',
       ions: { calcium: 40, magnesium: 12.5, chloride: 0 },
+    });
+  });
+
+  it('reads a recipe-only share file without accepting extra plan state', () => {
+    const parsed = parseWaterRecipeFile(JSON.stringify({
+      kind: 'coffee-water-recipe',
+      version: 1,
+      name: 'Bright washed',
+      ions: { calcium: 40, magnesium: 12.5 },
+      waters: [{ name: 'ignored' }],
+    }));
+
+    expect(parsed).toEqual({
+      kind: 'coffee-water-recipe',
+      version: 1,
+      name: 'Bright washed',
+      ions: { calcium: 40, magnesium: 12.5 },
     });
   });
 });
