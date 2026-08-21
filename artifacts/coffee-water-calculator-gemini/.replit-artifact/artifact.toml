@@ -9,7 +9,7 @@ router = "path"
 [[services]]
 name = "web"
 paths = [ "/coffee-water-calculator-gemini/" ]
-localPort = 24177
+localPort = 24178
 
 [services.development]
 run = "pnpm --filter @workspace/coffee-water-calculator-gemini run dev"
@@ -24,5 +24,5 @@ from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "24177"
+PORT = "24178"
 BASE_PATH = "/coffee-water-calculator-gemini/"
