@@ -3691,6 +3691,7 @@ function App() {
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
   const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
+  const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'copied' | 'shared' | 'error'>('idle');
   const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
   const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
   const watermancerWorkflowRailPinnedRef = useRef(false);
@@ -5748,6 +5749,45 @@ function App() {
     sessionBaselineRef.current = sessionSignature(snapshot);
   };
 
+  const handleShareWatermancerPlan = async () => {
+    const plan = createWaterPlan('Shared Watermancer plan', captureWaterPlanSnapshot());
+    const shareUrl = `${window.location.href.split('#')[0]}#watermancer-plan=${encodeURIComponent(serializeWaterPlanFile(plan))}`;
+    const showShareStatus = (status: 'copied' | 'shared' | 'error') => {
+      setWatermancerShareStatus(status);
+      window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
+    };
+
+    try {
+      if (typeof navigator.share === 'function') {
+        await navigator.share({
+          title: 'Watermancer plan',
+          text: 'Open this Watermancer plan in Coffee Water Calculator.',
+          url: shareUrl,
+        });
+        showShareStatus('shared');
+        return;
+      }
+      await navigator.clipboard.writeText(shareUrl);
+      showShareStatus('copied');
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
+      try {
+        const input = document.createElement('textarea');
+        input.value = shareUrl;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand('copy');
+        input.remove();
+        showShareStatus(copied ? 'copied' : 'error');
+      } catch {
+        showShareStatus('error');
+      }
+    }
+  };
+
   const handleSaveWaterPlan = (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) return null;
@@ -5846,6 +5886,25 @@ function App() {
     setPlansOpen(false);
     commitSessionBaseline(snapshot);
   };
+
+  const sharedWatermancerPlanHandledRef = useRef(false);
+  useEffect(() => {
+    if (sharedWatermancerPlanHandledRef.current) return;
+    sharedWatermancerPlanHandledRef.current = true;
+    const prefix = '#watermancer-plan=';
+    if (!window.location.hash.startsWith(prefix)) return;
+
+    try {
+      const sharedPlan = parseWaterPlanFile(decodeURIComponent(window.location.hash.slice(prefix.length)));
+      if (!sharedPlan) throw new Error('Invalid Watermancer plan');
+      restoreWaterPlan(sharedPlan);
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      setWatermancerShareStatus('shared');
+      window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
+    } catch {
+      setWatermancerShareStatus('error');
+    }
+  }, [restoreWaterPlan]);
 
   useEffect(() => {
     const snapshot = captureWaterPlanSnapshot();
@@ -6920,6 +6979,30 @@ function App() {
                  Compare ions
                </button>
              )}
+              {showWatermancer && (
+                <button
+                  type="button"
+                  onClick={handleShareWatermancerPlan}
+                  className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
+                    watermancerShareStatus === 'error'
+                      ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
+                      : watermancerShareStatus !== 'idle'
+                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                        : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
+                  }`}
+                  aria-live="polite"
+                  title="Share this Watermancer plan as a restorable link"
+                >
+                  <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {watermancerShareStatus === 'copied'
+                    ? 'Link copied'
+                    : watermancerShareStatus === 'shared'
+                      ? 'Shared'
+                      : watermancerShareStatus === 'error'
+                        ? 'Share failed'
+                        : 'Share plan'}
+                </button>
+              )}
               <Suspense fallback={<span className="text-[10px] text-slate-500">Loading scanner…</span>}>
               <LabelScanner onExtracted={vals => {
               // Silently use existing local water if ionic profile matches
