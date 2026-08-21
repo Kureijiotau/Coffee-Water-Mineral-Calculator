@@ -42,6 +42,7 @@ import {
   isAutoSavedWaterPlan,
   isValidWaterPlan,
   loadWaterPlans,
+  parseWaterRecipeFile,
   parseWaterPlanFile,
   saveWaterPlans,
   serializeWaterRecipeFile,
@@ -3665,6 +3666,7 @@ function App() {
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
+  const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
   const [watermancerMemeSaltFlashNonce, setWatermancerMemeSaltFlashNonce] = useState(0);
@@ -5319,6 +5321,17 @@ function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const handleImportFile = async (file: File) => {
     const text = await file.text();
+    const waterRecipe = parseWaterRecipeFile(text);
+    if (waterRecipe) {
+      if (!showWatermancer) {
+        window.alert('Switch to Watermancer before importing an ion recipe.');
+        return;
+      }
+      setWatermancerTargetOverride(waterRecipe.ions as IonicTargetValues);
+      setWatermancerImportedRecipeName(waterRecipe.name);
+      setWatermancerTargetSource('salt-table');
+      return;
+    }
     const recipe = parseRecipeFile(text);
     if (!recipe) {
       window.alert("Couldn't read that file — it doesn't look like a valid coffee water recipe.");

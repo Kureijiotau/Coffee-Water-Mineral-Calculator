@@ -244,6 +244,28 @@ export function serializeWaterRecipeFile(name: string, ions: Record<string, numb
   return JSON.stringify(recipe, null, 2);
 }
 
+export function parseWaterRecipeFile(text: string): WaterRecipeShare | null {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    if (!isRecord(parsed)
+      || parsed.kind !== WATER_RECIPE_FILE_KIND
+      || parsed.version !== WATER_RECIPE_FILE_VERSION
+      || typeof parsed.name !== 'string'
+      || !parsed.name.trim()
+      || !isNumberRecord(parsed.ions)) return null;
+    return {
+      kind: WATER_RECIPE_FILE_KIND,
+      version: WATER_RECIPE_FILE_VERSION,
+      name: parsed.name.trim(),
+      ions: Object.fromEntries(
+        Object.entries(parsed.ions).map(([id, value]) => [id, Math.max(0, value)]),
+      ),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function parseWaterPlanFile(text: string): WaterPlan | null {
   try {
     const parsed: unknown = JSON.parse(text);
