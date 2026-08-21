@@ -544,8 +544,10 @@ function VolumeInput({
   showStepper?: boolean;
 }) {
   const [inputValue, setInputValue] = useState(() => litersToVolumeInput(liters, unit));
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (inputRef.current === document.activeElement) return;
     setInputValue(litersToVolumeInput(liters, unit));
   }, [liters, unit]);
 
@@ -559,7 +561,8 @@ function VolumeInput({
 
   const input = (
     <input
-      type="number"
+      ref={inputRef}
+      type="text"
       inputMode="decimal"
       min="0"
       step="0.1"
@@ -576,6 +579,10 @@ function VolumeInput({
         }
       }}
       onKeyDown={event => {
+        if (event.key === 'e' || event.key === 'E' || event.key === '+' || event.key === '-') {
+          event.preventDefault();
+          return;
+        }
         if (!showStepper) return;
         if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
           event.preventDefault();
@@ -3481,6 +3488,8 @@ function App() {
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
   );
+  const [targetInputDrafts, setTargetInputDrafts] = useState<Record<string, string>>({});
+  const [directDoseInputDrafts, setDirectDoseInputDrafts] = useState<Record<string, string>>({});
   const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [memeSaltFlashNonce, setMemeSaltFlashNonce] = useState(0);
   // Keep calculations/rendering safe across hot reloads and older in-memory
@@ -6490,7 +6499,11 @@ function App() {
             const publishedTargetEntry = publishedTargetRecipe?.salts[salt.id];
             const displayedRecipeTarget = publishedTargetEntry?.sourceTarget ?? recipeTarget;
             const displayedRecipeTargetValue = Number(displayedRecipeTarget);
+             const targetInputValue = Object.prototype.hasOwnProperty.call(targetInputDrafts, salt.id)
+               ? targetInputDrafts[salt.id]
+               : (displayedRecipeTargetValue > 0 ? displayedRecipeTarget : '');
             const updateTargetValue = (value: string) => {
+               setTargetInputDrafts(current => ({ ...current, [salt.id]: value }));
               if (
                 value.trim() === ''
                 || !publishedTargetEntry?.sourceTarget
@@ -6521,7 +6534,11 @@ function App() {
               ? `${(displayMass / 1000).toFixed(2)} g`
               : `${displayMass.toFixed(2)} mg`;
             const directDoseValue = recipeMass > 0 ? recipeMass.toFixed(2) : '';
+             const directDoseInputValue = Object.prototype.hasOwnProperty.call(directDoseInputDrafts, salt.id)
+               ? directDoseInputDrafts[salt.id]
+               : directDoseValue;
             const updateDirectDose = (value: string) => {
+               setDirectDoseInputDrafts(current => ({ ...current, [salt.id]: value }));
               if (value.trim() === '') {
                 updateRow(i, { target: '' });
                 return;
@@ -6550,14 +6567,23 @@ function App() {
                   <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
                   <input
                     id={`salt-target-${salt.id}`}
-                    type="number"
+                     type="text"
                     inputMode="decimal"
                     min="0"
                     aria-label={`${salt.name} target ppm`}
-                    value={displayedRecipeTargetValue > 0 ? displayedRecipeTarget : ''}
+                     value={targetInputValue}
+                     onFocus={() => setTargetInputDrafts(current => ({
+                       ...current,
+                       [salt.id]: targetInputValue,
+                     }))}
+                     onBlur={() => setTargetInputDrafts(current => {
+                       const next = { ...current };
+                       delete next[salt.id];
+                       return next;
+                     })}
                     onChange={e => updateTargetValue(e.target.value)}
                     onKeyDown={e => {
-                      if (e.key === '-') e.preventDefault();
+                       if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                     }}
                     placeholder="0"
                     className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
@@ -6586,15 +6612,24 @@ function App() {
                   {showAlchemist ? (
                     <div className="flex items-center gap-2">
                       <input
-                        type="number"
+                         type="text"
+                         inputMode="decimal"
                         min="0"
                         step="0.01"
-                        inputMode="decimal"
                         aria-label={`${salt.name} direct dose in milligrams`}
-                        value={directDoseValue}
+                         value={directDoseInputValue}
+                         onFocus={() => setDirectDoseInputDrafts(current => ({
+                           ...current,
+                           [salt.id]: directDoseInputValue,
+                         }))}
+                         onBlur={() => setDirectDoseInputDrafts(current => {
+                           const next = { ...current };
+                           delete next[salt.id];
+                           return next;
+                         })}
                         onChange={e => updateDirectDose(e.target.value)}
                         onKeyDown={e => {
-                          if (e.key === '-') e.preventDefault();
+                           if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                         }}
                         placeholder="0"
                         className="min-w-0 w-full bg-slate-900/60 border border-emerald-400/30 rounded-lg px-3 py-2 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
