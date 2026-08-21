@@ -73,6 +73,7 @@ import {
   type WatermancerIonDeviation,
   type WatermancerIonConflict,
   type WatermancerIonSourcePreference,
+  type WatermancerMatchRecommendationAction,
   type WatermancerMatchRecommendation,
   type WatermancerMatchDiagnostics,
   type WatermancerRouteCandidate,
@@ -2327,20 +2328,36 @@ function watermancerConflictRecommendations(
           ionIds: [conflict.id],
           label: `Relax the ${ionName} source preference`,
           rationale: `The current ${preference} rule limits how Watermancer can cover the ${ionName} deficit.`,
+          action: {
+            type: 'relax-source-preference',
+            ionId: conflict.id,
+          },
         });
       } else if (availableSalts.length > 0) {
+        const saltId = availableSalts[0];
+        const saltName = SALTS.find(salt => salt.id === saltId)?.name ?? saltId;
         addRecommendation({
           kind: 'enable-salt',
           ionIds: [conflict.id],
-          label: `Enable a selected salt that supplies ${ionName}`,
+          label: `Enable ${saltName} for ${ionName}`,
           rationale: 'An optional selected salt can cover this gap without changing the target automatically.',
+          action: {
+            type: 'enable-salt',
+            saltId,
+          },
         });
       } else if (!plan.allowOvershoot || !plan.softDeficitIons?.includes(conflict.id)) {
+        const limitPpm = Math.max(1, Math.min(10, Math.ceil(conflict.outsidePolicyPpm)));
         addRecommendation({
           kind: 'allow-policy-room',
           ionIds: [conflict.id],
           label: `Allow a small ${ionName} deficit`,
-          rationale: `Allowing controlled policy room could reduce the remaining ${ionName} gap while preserving the coupled match.`,
+          rationale: `Allowing up to ${limitPpm} ppm of controlled policy room could reduce the remaining ${ionName} gap while preserving the coupled match.`,
+          action: {
+            type: 'allow-policy-room',
+            ionId: conflict.id,
+            limitPpm,
+          },
         });
       } else {
         addRecommendation({
@@ -2348,6 +2365,10 @@ function watermancerConflictRecommendations(
           ionIds: [conflict.id],
           label: `Add a source with more ${ionName}`,
           rationale: `The selected sources cannot provide enough ${ionName} for this target.`,
+          action: {
+            type: 'review-controls',
+            focus: 'waters',
+          },
         });
       }
     } else if (contributingFixedSalts.length > 0) {
@@ -2356,6 +2377,10 @@ function watermancerConflictRecommendations(
         ionIds: [conflict.id],
         label: `Review the fixed salt dose adding ${ionName}`,
         rationale: `A fixed dose of ${contributingFixedSalts.join(', ')} contributes to this excess and is not available to the matcher.`,
+        action: {
+          type: 'review-controls',
+          focus: 'salts',
+        },
       });
     } else {
       addRecommendation({
@@ -2363,6 +2388,10 @@ function watermancerConflictRecommendations(
         ionIds: [conflict.id],
         label: `Reduce the source adding excess ${ionName}`,
         rationale: `The current water and salt combination contributes more ${ionName} than the target allows.`,
+        action: {
+          type: 'review-controls',
+          focus: 'waters',
+        },
       });
     }
   });
@@ -4546,6 +4575,42 @@ function App() {
       },
     ));
     setWatermancerActionMessage('Base waters filled toward the current target.');
+    finishWatermancerActionAfterPaint();
+  };
+  const handleApplyWatermancerRecommendation = (recommendation: WatermancerMatchRecommendation) => {
+    if (!beginWatermancerAction()) return;
+    setShowWatermancerMatchDetails(true);
+    setWatermancerBestMatchMessage(null);
+    const action = recommendation.action;
+    if (action.type === 'enable-salt') {
+      setWatermancerUsedSaltIds(current => current.includes(action.saltId)
+        ? current
+        : [...current, action.saltId]);
+      setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
+    } else if (action.type === 'relax-source-preference') {
+      setWatermancerIonSourcePreferences(current => ({
+        ...current,
+        [action.ionId]: 'dont-care',
+      }));
+      setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
+    } else if (action.type === 'allow-policy-room') {
+      setOvershootSettings(current => ({
+        enabled: true,
+        allowedIons: current.allowedIons.includes(action.ionId)
+          ? current.allowedIons
+          : [...current.allowedIons, action.ionId],
+        limits: {
+          ...current.limits,
+          [action.ionId]: Math.max(current.limits[action.ionId] ?? 0, action.limitPpm),
+        },
+      }));
+      setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
+    } else {
+      const stage = document.querySelector<HTMLElement>(`[data-watermancer-stage="${action.focus}"]`);
+      stage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      stage?.focus({ preventScroll: true });
+      setWatermancerActionMessage(`Review the ${action.focus} controls to adjust this constraint.`);
+    }
     finishWatermancerActionAfterPaint();
   };
   const handleFindBestWatermancerMatch = () => {

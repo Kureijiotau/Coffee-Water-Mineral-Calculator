@@ -66,6 +66,25 @@ export type WatermancerIonConflict = {
   source: 'water' | 'salts' | 'mixed';
 };
 
+export type WatermancerMatchRecommendationAction =
+  | {
+      type: 'enable-salt';
+      saltId: string;
+    }
+  | {
+      type: 'relax-source-preference';
+      ionId: IonId;
+    }
+  | {
+      type: 'allow-policy-room';
+      ionId: IonId;
+      limitPpm: number;
+    }
+  | {
+      type: 'review-controls';
+      focus: 'waters' | 'salts';
+    };
+
 export type WatermancerMatchRecommendation = {
   kind:
     | 'add-source'
@@ -77,6 +96,7 @@ export type WatermancerMatchRecommendation = {
   ionIds: IonId[];
   label: string;
   rationale: string;
+  action: WatermancerMatchRecommendationAction;
 };
 
 export type WatermancerMatchDiagnostics = {
