@@ -79,6 +79,7 @@ import {
   type WatermancerSolverResult,
   type WatermancerPlan,
 } from './watermancerPlan';
+import { solveBoundedCoupledSaltTargets } from './watermancerSaltSolver';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
@@ -965,95 +966,21 @@ export function autoCraftSaltTargets(
     return score + sourcePreferencePenalty(saltTargets);
   };
 
-  const solveLinearSystem = (matrix: number[][], vector: number[]): number[] | null => {
-    const size = vector.length;
-    const augmented = matrix.map((row, rowIndex) => [...row, vector[rowIndex]]);
-    for (let column = 0; column < size; column += 1) {
-      let pivot = column;
-      for (let row = column + 1; row < size; row += 1) {
-        if (Math.abs(augmented[row][column]) > Math.abs(augmented[pivot][column])) {
-          pivot = row;
-        }
-      }
-      if (Math.abs(augmented[pivot][column]) < 1e-10) return null;
-      [augmented[column], augmented[pivot]] = [augmented[pivot], augmented[column]];
-      const divisor = augmented[column][column];
-      for (let index = column; index <= size; index += 1) {
-        augmented[column][index] /= divisor;
-      }
-      for (let row = 0; row < size; row += 1) {
-        if (row === column) continue;
-        const factor = augmented[row][column];
-        if (Math.abs(factor) < 1e-12) continue;
-        for (let index = column; index <= size; index += 1) {
-          augmented[row][index] -= factor * augmented[column][index];
-        }
-      }
-    }
-    return augmented.map(row => row[size]);
-  };
-
   const solveGlobalSaltTargets = (): Record<string, number> | null => {
-    // The allowed salt inventory is small in practice. Enumerating active
-    // sets lets the solver replace several coupled salts together instead of
-    // getting trapped by coordinate descent at a harmful local choice.
-    if (allowedSalts.length > 15) return null;
-    const columns = allowedSalts.map(salt => IONS.map(ion => (
-      salt.ions.find(item => item.ionId === ion.id)?.fraction ?? 0
-    )));
     const weights = IONS.map(ion => {
       const target = targetIons[ion.id] ?? 0;
       if (target <= 0) return 4;
       return overshootPolicy?.softDeficitIons?.includes(ion.id) ? 2 : 12;
     });
-    let best: Record<string, number> | null = null;
-    let bestScore = Number.POSITIVE_INFINITY;
-
-    for (let mask = 0; mask < (1 << allowedSalts.length); mask += 1) {
-      const activeIndexes = allowedSalts
-        .map((_, index) => index)
-        .filter(index => (mask & (1 << index)) !== 0);
-      const candidateTargets = Object.fromEntries(
-        allowedSalts.map(salt => [salt.id, 0]),
-      ) as Record<string, number>;
-
-      if (activeIndexes.length > 0) {
-        const normal = activeIndexes.map(leftIndex => activeIndexes.map(rightIndex => (
-          columns[leftIndex].reduce(
-            (sum, value, ionIndex) => (
-              sum + weights[ionIndex] * value * columns[rightIndex][ionIndex]
-            ),
-            0,
-          )
-        )));
-        const rhs = activeIndexes.map(leftIndex => columns[leftIndex].reduce(
-          (sum, value, ionIndex) => (
-            sum + weights[ionIndex] * value * (
-              (targetIons[IONS[ionIndex].id] ?? 0)
-              - (fixedIonTotals[IONS[ionIndex].id] ?? 0)
-            )
-          ),
-          0,
-        ));
-        // A tiny ridge makes rank-deficient active sets deterministic.
-        normal.forEach((row, index) => { row[index] += 1e-9; });
-        const solution = solveLinearSystem(normal, rhs);
-        if (!solution || solution.some(value => value < -1e-7 || value > 5000)) continue;
-        activeIndexes.forEach((saltIndex, index) => {
-          candidateTargets[allowedSalts[saltIndex].id] = practicalSaltDose(
-            allowedSalts[saltIndex].id,
-            solution[index],
-          );
-        });
-      }
-
-      const score = scoreForSaltTargets(candidateTargets);
-      if (score < bestScore - 1e-7) {
-        bestScore = score;
-        best = candidateTargets;
-      }
-    }
-    return best;
+    return solveBoundedCoupledSaltTargets({
+      allowedSalts,
+      fixedIonTotals,
+      targetIons,
+      ionWeights: Object.fromEntries(IONS.map((ion, index) => [ion.id, weights[index]])),
+      scoreCandidate: scoreForSaltTargets,
+      minimumDosePpmFor,
+      maxDosePpm: 5000,
+    })?.saltTargets ?? null;
   };
 
   // Coordinate descent over an L1 objective. For each salt, the optimum lies
