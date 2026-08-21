@@ -9390,24 +9390,6 @@ function RecipeConcentrateBuilder({
                 <span className="text-sm text-slate-400">×</span>
               </div>
             </div>
-            <div className="rounded-xl border border-sky-300/25 bg-sky-400/[0.06] px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                <span>Dose</span>
-                <button
-                  type="button"
-                  onClick={onToggleVolumeUnit}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-sky-100 transition hover:border-sky-200/60 hover:bg-sky-400/20"
-                  aria-label={`Switch dose reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
-                  title={`Switch to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
-                >
-                  <RotateCcw className="h-3 w-3" aria-hidden="true" />
-                  {volumeUnit === 'liters' ? '1 L' : '1 US gal'}
-                </button>
-              </div>
-              <div className="mt-2 text-lg font-semibold tabular-nums text-sky-100">
-                {doseMlPerReference.toFixed(2)} mL <span className="text-[10px] font-normal text-slate-500">each</span>
-              </div>
-            </div>
           </div>
           <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.05] px-3 py-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -9439,6 +9421,24 @@ function RecipeConcentrateBuilder({
                   </label>
                 );
               })}
+            </div>
+          </div>
+          <div className="mt-3 rounded-xl border border-sky-300/25 bg-sky-400/[0.06] px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              <span>Dose</span>
+              <button
+                type="button"
+                onClick={onToggleVolumeUnit}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-300/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold normal-case tracking-normal text-sky-100 transition hover:border-sky-200/60 hover:bg-sky-400/20"
+                aria-label={`Switch dose reference to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
+                title={`Switch to ${volumeUnit === 'liters' ? '1 US gallon' : '1 liter'}`}
+              >
+                <RotateCcw className="h-3 w-3" aria-hidden="true" />
+                {volumeUnit === 'liters' ? '1 L' : '1 US gal'}
+              </button>
+            </div>
+            <div className="mt-2 text-lg font-semibold tabular-nums text-sky-100">
+              {doseMlPerReference.toFixed(2)} mL <span className="text-[10px] font-normal text-slate-500">each</span>
             </div>
           </div>
         </div>
