@@ -4126,7 +4126,10 @@ function App() {
     () => computeIonTotals(saltTargets, {}, 1),
     [saltTargets],
   );
-  const allRecipesForWatermancer = [...RECIPES, ...savedRecipes];
+  const allRecipesForWatermancer = useMemo(
+    () => [...RECIPES, ...savedRecipes],
+    [savedRecipes],
+  );
   const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
     if (watermancerTargetOverride) return watermancerTargetOverride;
     if (watermancerTargetSource === 'salt-table') return saltOnlyIons;
@@ -9759,14 +9762,14 @@ function WatermancerIonProfileCard({
 
   const comparisonLeft = comparisonProfiles.find(profile => profile.id === comparisonLeftId);
   const comparisonRight = comparisonProfiles.find(profile => profile.id === comparisonRightId);
-  const comparisonPickerGroups: RecipePickerGroup[] = [{
+  const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => [{
     label: 'Watermancer profiles',
     accent: 'cyan',
     options: comparisonProfiles.map(profile => ({
       value: profile.id,
       label: profile.name,
     })),
-  }];
+  }], [comparisonProfiles]);
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
     ? `profile:${activeProfileId}`
@@ -9914,7 +9917,7 @@ function WatermancerIonProfileCard({
 
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
-  const targetSourcePickerGroups: RecipePickerGroup[] = [
+  const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => [
     {
       label: 'Empirical Water Profiles',
       accent: 'cyan',
@@ -9974,7 +9977,7 @@ function WatermancerIonProfileCard({
         label: recipe.name,
       })),
     },
-  ];
+  ], [activeProfileId, allRecipes, externalRecipes, lotusRecipes, profiles, wmProfiles]);
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
