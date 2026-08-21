@@ -13,7 +13,10 @@ export type GeminiChemistryPolicy = {
   ghBalanceWeight: number;
   counterIonWeight: number;
   sulfateHarshnessWeight: number;
+  sulfateSoftCeilingPpm: number;
+  chlorideExcessWeight: number;
   sodiumCostWeight: number;
+  bicarbonateClosureReward: number;
   sodiumHeadroomPpm: number;
   practicalMinimumDosePpm: Partial<Record<string, number>>;
   sourcePreferences: Partial<Record<IonId, 'water-only' | 'water-then-salt' | 'salt-only' | 'dont-care'>>;
@@ -27,7 +30,10 @@ export const DEFAULT_GEMINI_CHEMISTRY_POLICY: GeminiChemistryPolicy = {
   ghBalanceWeight: 2,
   counterIonWeight: 1,
   sulfateHarshnessWeight: 4,
+  sulfateSoftCeilingPpm: 15,
+  chlorideExcessWeight: 0.65,
   sodiumCostWeight: 2,
+  bicarbonateClosureReward: 1.5,
   sodiumHeadroomPpm: 10,
   practicalMinimumDosePpm: {},
   sourcePreferences: {},
@@ -79,8 +85,16 @@ export function scoreGeminiWatermancerCandidate(
     if (outside > 0.05) hard += outside;
     // Sulfate becomes disproportionately unpleasant beyond the green range.
     if (id === 'sulfate') {
-      const excess = Math.max(n(candidate.finalIons[id]) - 15, 0);
+      // A requested sulfate target is intent, not accidental harshness. Penalize
+      // only the amount beyond the greater of the profile floor and target.
+      const excess = Math.max(
+        n(candidate.finalIons[id]) - Math.max(policy.sulfateSoftCeilingPpm, target(candidate, id)),
+        0,
+      );
       score += policy.sulfateHarshnessWeight * excess * excess / 15;
+    }
+    if (id === 'chloride' && delta > 0) {
+      score -= delta * (1 - policy.chlorideExcessWeight);
     }
   }
   // Magnesium/calcium balance is a useful sensory proxy for GH quality.
@@ -97,8 +111,13 @@ export function scoreGeminiWatermancerCandidate(
   // NaHCO3 is welcome when it materially closes KH, but sodium remains a cost.
   const nahco3 = n(candidate.saltTargets.nahco3);
   if (nahco3 > 0) {
-    const hco3Gap = Math.max(target(candidate, 'bicarbonate') - n(candidate.finalIons.bicarbonate) + nahco3 * 0.726, 0);
-    if (hco3Gap < 1) score += policy.sodiumCostWeight * nahco3 * 0.05;
+    const hco3Gap = Math.max(target(candidate, 'bicarbonate') - n(candidate.finalIons.bicarbonate), 0);
+    const sodiumWithinHeadroom = sodium <= target(candidate, 'sodium') + policy.sodiumHeadroomPpm;
+    if (hco3Gap <= 1 && sodiumWithinHeadroom) {
+      score -= policy.bicarbonateClosureReward * Math.min(nahco3, 20);
+    } else if (hco3Gap > 1) {
+      score += policy.sodiumCostWeight * nahco3 * 0.05;
+    }
   }
 
   const fixed = new Set(Object.keys(candidate.plan.fixedSaltDoses));

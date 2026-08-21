@@ -54,3 +54,4 @@
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
+- [Gemini chemistry lane](watermancer-gemini-lane.md) — keep the modern chemistry ranking lane additive, deterministic, and separately reviewable beside the established matcher
