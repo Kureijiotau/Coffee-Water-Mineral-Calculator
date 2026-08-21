@@ -464,6 +464,81 @@ body {
   transform: scale(1.04);
 }
 
+.precision-match-card {
+  position: relative;
+  isolation: isolate;
+  border-color: rgb(103 232 249 / 0.32);
+  background:
+    linear-gradient(135deg, rgb(15 23 42 / 0.98), rgb(30 41 59 / 0.94) 52%, rgb(23 37 84 / 0.92)),
+    rgb(15 23 42);
+  box-shadow:
+    0 24px 60px -34px rgb(8 145 178 / 0.45),
+    0 0 0 1px rgb(255 255 255 / 0.035) inset,
+    0 1px 0 rgb(255 255 255 / 0.08) inset;
+}
+
+.precision-match-card::before {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 14%;
+  left: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(165 243 252 / 0.85) 30%, rgb(196 181 253 / 0.9) 70%, transparent);
+  box-shadow: 0 0 18px rgb(103 232 249 / 0.7);
+  content: '';
+  pointer-events: none;
+}
+
+.precision-match-card::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 12% 0%, rgb(34 211 238 / 0.12), transparent 28%),
+    radial-gradient(circle at 88% 0%, rgb(129 140 248 / 0.13), transparent 30%);
+  content: '';
+  pointer-events: none;
+}
+
+.precision-match-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.precision-match-card .app-section-header {
+  min-height: 4rem;
+  border-bottom-color: rgb(103 232 249 / 0.14);
+  background: linear-gradient(90deg, rgb(8 47 73 / 0.28), rgb(15 23 42 / 0.04) 55%, rgb(49 46 129 / 0.18));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.035) inset;
+}
+
+.precision-match-card .app-section-header h2 {
+  color: rgb(224 242 254 / 0.92);
+  letter-spacing: 0.16em;
+}
+
+.precision-match-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgb(165 243 252 / 0.22);
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgb(34 211 238 / 0.1), rgb(129 140 248 / 0.12));
+  padding: 0.35rem 0.6rem;
+  color: rgb(186 230 253 / 0.72);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.precision-match-card .app-card-body {
+  background: linear-gradient(180deg, rgb(15 23 42 / 0.12), transparent 42%);
+}
+
 /* Existing surface tokens receive one consistent material treatment. */
 .app-shell [class~='bg-slate-800/70'],
 .app-shell [class~='bg-slate-800/75'] {

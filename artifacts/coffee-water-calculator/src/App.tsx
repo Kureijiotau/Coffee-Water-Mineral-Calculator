@@ -8099,9 +8099,15 @@ function App() {
         )}
 
          {showWatermancer && watermancerLiveResult && (
-           <div className="app-card app-panel-surface order-4 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl border border-cyan-400/35 shadow-2xl shadow-cyan-950/20 overflow-hidden" data-watermancer-stage="match" tabIndex={-1}>
+            <div className="precision-match-card app-card app-panel-surface order-4 scroll-mt-4 outline-none overflow-hidden rounded-2xl border bg-slate-800/70 backdrop-blur" data-watermancer-stage="match" tabIndex={-1}>
              <SharedSectionHeader
                 icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
+                 after={(
+                   <span className="precision-match-card__badge">
+                     <Sparkles className="h-3 w-3" aria-hidden="true" />
+                     Advanced engine
+                   </span>
+                 )}
                  title="Precision Auto-match"
              />
               <div className="app-card-body">
