@@ -3349,7 +3349,7 @@ function MineralRecipePicker({
         aria-label="Select mineral recipe"
         onClick={() => setOpen(previous => !previous)}
         onKeyDown={handleKeyDown}
-        className={`inline-flex min-h-9 max-w-[260px] items-center gap-2 rounded-xl border px-3 py-1.5 text-left text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-300/70 ${
+        className={`inline-flex h-10 max-w-[260px] items-center gap-2 rounded-xl border px-3 text-left text-[11px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-indigo-300/70 ${
           open
             ? 'border-cyan-300/70 bg-indigo-900/80 text-white shadow-lg shadow-cyan-950/30'
             : 'border-indigo-300/35 bg-gradient-to-r from-indigo-950/80 via-slate-900/80 to-cyan-950/70 text-indigo-100 hover:border-cyan-300/60 hover:text-white'
@@ -9894,7 +9894,7 @@ function WatermancerIonProfileCard({
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-           <div className="flex items-start gap-1">
+           <div className="flex h-10 items-center gap-1">
              {selectedTargetSourceUrl && (
                <a
                  href={selectedTargetSourceUrl}
@@ -9902,12 +9902,12 @@ function WatermancerIonProfileCard({
                  rel="noreferrer"
                  aria-label={`Open source page for ${selectedTargetSourceName}`}
                  title={`Open source page for ${selectedTargetSourceName}`}
-                 className="mt-[6px] flex h-4 w-4 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[9px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+                  className="flex h-4 w-4 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[9px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
                >
                  ?
                </a>
              )}
-             <div className="flex flex-col items-start gap-1">
+              <div className="flex items-center gap-1">
               <MineralRecipePicker
                 value={currentDropdownValue}
                 groups={targetSourcePickerGroups}
@@ -9917,7 +9917,7 @@ function WatermancerIonProfileCard({
               <button
                 type="button"
                 onClick={onReset}
-                className="flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-200 transition hover:border-amber-300/45 hover:bg-amber-500/20 hover:text-amber-100"
+                 className="flex h-10 items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 text-xs text-amber-200 transition hover:border-amber-300/45 hover:bg-amber-500/20 hover:text-amber-100"
                 title="Reset all inputs to defaults"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -9926,7 +9926,7 @@ function WatermancerIonProfileCard({
                <button
                  type="button"
                  onClick={onShareRecipe}
-                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition ${
+                  className={`flex h-10 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition ${
                    shareStatus === 'error'
                      ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
                      : shareStatus !== 'idle'
@@ -9952,7 +9952,7 @@ function WatermancerIonProfileCard({
             <button
               type="button"
               onClick={startEditing}
-              className="flex items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-sky-500"
+               className="flex h-10 items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 text-[11px] text-white transition hover:bg-sky-500"
             >
               <Plus className="w-3.5 h-3.5" />
               Add new
