@@ -4880,12 +4880,12 @@ function App() {
     ? 'Matched'
     : watermancerCurrentStatus === 'partial'
       ? 'Partial match'
-      : 'Needs inputs';
+      : 'Ready to match';
   const watermancerStatusDescription = watermancerCurrentStatus === 'matched'
     ? 'Your current water and salt route is within the active ion tolerances.'
     : watermancerCurrentStatus === 'partial'
       ? 'The route is usable, but one or more ions are still outside the active tolerances.'
-      : 'Add a water source or enable a salt to start comparing the route with your target.';
+      : 'Choose a water source or enable a salt to start comparing the route with your target.';
   const watermancerStatusTone = watermancerCurrentStatus === 'matched'
     ? {
         border: 'border-emerald-300/35',
@@ -4903,11 +4903,11 @@ function App() {
           value: 'text-amber-100',
         }
       : {
-          border: 'border-rose-300/30',
-          background: 'bg-rose-500/[0.06]',
-          dot: 'bg-rose-300 shadow-[0_0_12px_rgba(253,164,175,0.8)]',
-          label: 'text-rose-200',
-          value: 'text-rose-100',
+          border: 'border-cyan-300/25',
+          background: 'bg-cyan-500/[0.045]',
+          dot: 'bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.65)]',
+          label: 'text-cyan-200/80',
+          value: 'text-slate-100',
         };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
@@ -8305,17 +8305,59 @@ function App() {
                       )}
                       {watermancerLiveResult.primaryPlan.diagnostics.recommendations.length > 0 && (
                         <div className="mt-3 border-t border-cyan-300/10 pt-3">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
-                            Ways to improve it
-                          </div>
+                           <div className="flex flex-wrap items-center justify-between gap-2">
+                             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
+                               Ways to improve it
+                             </div>
+                             {watermancerLiveResult.primaryPlan.diagnostics.recommendations.some(
+                               recommendation => recommendation.action.type !== 'review-controls',
+                             ) && (
+                               <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-200">
+                                 One-click fixes available
+                               </span>
+                             )}
+                           </div>
                           <p className="mt-1 text-[10px] text-slate-500">
-                            These are possible adjustments; Watermancer has not applied them.
+                             Apply a safe adjustment directly, or review the controls for changes that need your judgment.
                           </p>
+                           {(() => {
+                             const nextFix = watermancerLiveResult.primaryPlan.diagnostics.recommendations.find(
+                               recommendation => recommendation.action.type !== 'review-controls',
+                             );
+                             return nextFix ? (
+                               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500/[0.1] via-cyan-500/[0.06] to-transparent px-3 py-2.5">
+                                 <div className="min-w-0">
+                                   <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-200/75">Recommended next move</div>
+                                   <div className="mt-0.5 text-[11px] font-semibold text-emerald-50">{nextFix.label}</div>
+                                 </div>
+                                 <button
+                                   type="button"
+                                   onClick={() => handleApplyWatermancerRecommendation(nextFix)}
+                                   disabled={watermancerActionRunning}
+                                   className="shrink-0 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/25 disabled:cursor-wait disabled:opacity-60"
+                                 >
+                                   Apply fix
+                                 </button>
+                               </div>
+                             ) : null;
+                           })()}
                           <ul className="mt-2 space-y-1.5" aria-label="Watermancer improvement suggestions">
                             {watermancerLiveResult.primaryPlan.diagnostics.recommendations.map(recommendation => (
                               <li key={`${recommendation.kind}-${recommendation.ionIds.join('-')}`} className="rounded-lg border border-emerald-300/10 bg-emerald-950/10 px-2.5 py-2">
-                                <div className="text-[11px] font-semibold text-emerald-100">{recommendation.label}</div>
-                                <div className="mt-0.5 text-[10px] leading-relaxed text-slate-400">{recommendation.rationale}</div>
+                                 <div className="flex flex-wrap items-start justify-between gap-2">
+                                   <div className="min-w-0">
+                                     <div className="text-[11px] font-semibold text-emerald-100">{recommendation.label}</div>
+                                     <div className="mt-0.5 text-[10px] leading-relaxed text-slate-400">{recommendation.rationale}</div>
+                                   </div>
+                                   <button
+                                     type="button"
+                                     onClick={() => handleApplyWatermancerRecommendation(recommendation)}
+                                     disabled={watermancerActionRunning}
+                                     className="shrink-0 rounded-md border border-emerald-300/20 bg-emerald-400/[0.08] px-2 py-1 text-[9px] font-semibold text-emerald-200 transition hover:border-emerald-200/50 hover:bg-emerald-400/15 disabled:cursor-wait disabled:opacity-60"
+                                   >
+                                     {recommendation.action.type === 'review-controls' ? 'Review controls' : 'Apply'}
+                                   </button>
+                                 </div>
                               </li>
                             ))}
                           </ul>
