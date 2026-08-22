@@ -12451,7 +12451,7 @@ function ConcentrateRecipeStepsModal({
                             {groupRows.map((row, index) => {
                      const massMg = computeRecipeStockSaltMassMg(
                        row.target,
-                       recipeHandoff.finalLiters * 1000,
+                        isGhKhPlan ? group.volumeMl : recipeHandoff.finalLiters * 1000,
                        concentrateStrength,
                        row.form.molarMass,
                        row.salt.anhydrousMass,
