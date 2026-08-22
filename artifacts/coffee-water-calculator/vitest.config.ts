@@ -43,6 +43,11 @@ export default defineConfig({
         'src',
         'testAssetMock.ts',
       ),
+      '@assets/image_1787373159788.png': path.resolve(
+        import.meta.dirname,
+        'src',
+        'testAssetMock.ts',
+      ),
       '@assets/Kapp_1787058386404.gif': path.resolve(
         import.meta.dirname,
         'src',

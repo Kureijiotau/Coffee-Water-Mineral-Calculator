@@ -4,7 +4,7 @@ import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
-import watermancerMarkImage from '@assets/image_1786855239956.webp';
+import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
