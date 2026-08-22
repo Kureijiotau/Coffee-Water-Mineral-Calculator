@@ -12223,6 +12223,8 @@ function ConcentrateRecipeStepsModal({
       drops: milliliters * safeDropsPerMl,
     };
   });
+  const isGhKhPlan = plan?.strategy === 'gh-kh';
+  const activeSaltRowsById = new Map(activeSaltRows.map(row => [row.salt.id, row]));
   const handleSaveJpg = async () => {
     const source = exportCardRef.current;
     if (!source || isSavingJpg) return;
@@ -12409,20 +12411,44 @@ function ConcentrateRecipeStepsModal({
                 </div>
               </section>
 
-               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
-                 <div className="flex items-center justify-between gap-3">
-                   <div>
-                     <div className="text-xs font-semibold text-slate-100">Salts &amp; mixing order</div>
-                     <div className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                       Weigh these amounts for the full {recipeHandoff.finalLiters.toFixed(2)} L stock batch. Add one salt at a time and dissolve it completely before adding the next.
-                     </div>
-                   </div>
-                   <div className="shrink-0 rounded-md border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
-                     {orderedActiveSaltRows.length} salts
-                   </div>
-                 </div>
-                 <div className="mt-3 space-y-2">
-                   {orderedActiveSaltRows.map((row, index) => {
+                <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold text-slate-100">
+                        {isGhKhPlan ? 'Prepare each concentrate separately' : 'Salts &amp; mixing order'}
+                      </div>
+                      <div className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                        {isGhKhPlan
+                          ? 'Prepare the GH and KH stocks in separate bottles. Do not combine the two concentrates; each bottle is dosed separately below.'
+                          : `Weigh these amounts for the full ${recipeHandoff.finalLiters.toFixed(2)} L stock batch. Add one salt at a time and dissolve it completely before adding the next.`}
+                      </div>
+                    </div>
+                    <div className="shrink-0 rounded-md border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
+                      {orderedActiveSaltRows.length} salts
+                    </div>
+                  </div>
+                  <div className="mt-3 space-y-3">
+                    {(isGhKhPlan
+                      ? plan.groups
+                      : [{ id: 'all-salts', name: 'Stock', volumeMl: recipeHandoff.finalLiters * 1000, saltIds: orderedActiveSaltRows.map(row => row.salt.id) }]
+                    ).map(group => {
+                      const groupRows = group.saltIds
+                        .map(saltId => activeSaltRowsById.get(saltId))
+                        .filter((row): row is NonNullable<typeof row> => row !== undefined)
+                        .sort((a, b) => saltMixGroup(a.salt) - saltMixGroup(b.salt) || a.salt.name.localeCompare(b.salt.name));
+                      return (
+                        <div key={group.id} className="rounded-xl border border-white/[0.08] bg-slate-900/35 p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <div className="text-[11px] font-semibold text-fuchsia-100">{isGhKhPlan ? group.name : 'Stock salts'}</div>
+                              <div className="mt-0.5 text-[10px] text-slate-400">
+                                Add to <span className="font-semibold text-sky-200">{isGhKhPlan ? `${group.volumeMl.toFixed(0)} mL` : `${recipeHandoff.finalLiters.toFixed(2)} L`}</span> of water, then dissolve completely.
+                              </div>
+                            </div>
+                            <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">{groupRows.length} {groupRows.length === 1 ? 'salt' : 'salts'}</div>
+                          </div>
+                          <div className="mt-2 space-y-2">
+                            {groupRows.map((row, index) => {
                      const massMg = computeRecipeStockSaltMassMg(
                        row.target,
                        recipeHandoff.finalLiters * 1000,
@@ -12431,8 +12457,8 @@ function ConcentrateRecipeStepsModal({
                        row.salt.anhydrousMass,
                      );
                      const isCarbonate = saltMixGroup(row.salt) === 3;
-                     return (
-                       <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
+                              return (
+                                <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
                          isCarbonate
                            ? 'border-amber-300/35 bg-amber-500/[0.08]'
                            : 'border-white/[0.08] bg-slate-900/50'
@@ -12461,10 +12487,14 @@ function ConcentrateRecipeStepsModal({
                              <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-fuchsia-100">{formatStockSaltMass(massMg)}</div>
                            </div>
                          </div>
-                       </div>
-                     );
-                   })}
-                 </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                </section>
             </>
           ) : (
@@ -12500,16 +12530,33 @@ function ConcentrateRecipeStepsModal({
                     <div className="text-sm font-semibold text-slate-100">{row.label}</div>
                   </div>
                   {recipeHandoff && plan && concentrateStrength > 0 ? (
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <div className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">mL</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
+                    isGhKhPlan ? (
+                      <div className="mt-3 space-y-2">
+                        {plan.groups.map(group => (
+                          <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
+                            <div className="min-w-0">
+                              <div className="text-[10px] font-semibold text-violet-100">{group.name}</div>
+                              <div className="mt-0.5 text-[9px] text-slate-400">Dose this bottle</div>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className="text-sm font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
+                              <div className="text-[10px] font-semibold tabular-nums text-fuchsia-200">{Math.round(row.drops)} drops</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/10 px-2.5 py-2">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Drops</div>
-                        <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{Math.round(row.drops)} drops</div>
+                    ) : (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
+                          <div className="text-[9px] font-semibold uppercase tracking-wider text-violet-200/70">mL</div>
+                          <div className="mt-1 text-lg font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
+                        </div>
+                        <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/10 px-2.5 py-2">
+                          <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Drops</div>
+                          <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{Math.round(row.drops)} drops</div>
+                        </div>
                       </div>
-                    </div>
+                    )
                   ) : (
                     <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/50 px-3 py-3 text-[11px] text-slate-500">
                       No recipe.
