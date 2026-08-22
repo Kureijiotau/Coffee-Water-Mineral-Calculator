@@ -216,6 +216,19 @@ type OvershootSettings = {
   allowedIons: IonId[];
   limits: Partial<Record<IonId, number>>;
 };
+type WatermancerAppliedFix =
+  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'enable-salt' }>; kind: 'salts'; before: string[]; after: string[] }
+  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'relax-source-preference' }>; kind: 'source'; before: WatermancerIonSourcePreference; after: WatermancerIonSourcePreference }
+  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'allow-policy-room' }>; kind: 'policy'; before: OvershootSettings; after: OvershootSettings };
+
+function watermancerRecommendationKey(recommendation: WatermancerMatchRecommendation): string {
+  const action = recommendation.action;
+  return action.type === 'enable-salt'
+    ? `${action.type}:${action.saltId}`
+    : action.type === 'relax-source-preference' || action.type === 'allow-policy-room'
+      ? `${action.type}:${action.ionId}`
+      : `${action.type}:${action.focus}`;
+}
 
 const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-preferences';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
@@ -3885,6 +3898,7 @@ function App() {
   const [watermancerAppliedBestMatchRoute, setWatermancerAppliedBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
+  const [watermancerAppliedFixes, setWatermancerAppliedFixes] = useState<Record<string, WatermancerAppliedFix>>({});
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
   const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
   const watermancerActionBusyRef = useRef(false);
@@ -4583,26 +4597,39 @@ function App() {
     setWatermancerBestMatchMessage(null);
     const action = recommendation.action;
     if (action.type === 'enable-salt') {
-      setWatermancerUsedSaltIds(current => current.includes(action.saltId)
-        ? current
-        : [...current, action.saltId]);
+      const before = [...watermancerUsedSaltIds];
+      const after = before.includes(action.saltId) ? before : [...before, action.saltId];
+      setWatermancerUsedSaltIds(after);
+      setWatermancerAppliedFixes(current => ({
+        ...current,
+        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'salts', before, after },
+      }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else if (action.type === 'relax-source-preference') {
-      setWatermancerIonSourcePreferences(current => ({
+      const before = watermancerIonSourcePreferences[action.ionId] ?? 'dont-care';
+      const after: WatermancerIonSourcePreference = 'dont-care';
+      setWatermancerIonSourcePreferences(current => ({ ...current, [action.ionId]: after }));
+      setWatermancerAppliedFixes(current => ({
         ...current,
-        [action.ionId]: 'dont-care',
+        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'source', before, after },
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else if (action.type === 'allow-policy-room') {
-      setOvershootSettings(current => ({
+      const before = { enabled: overshootSettings.enabled, allowedIons: [...overshootSettings.allowedIons], limits: { ...overshootSettings.limits } };
+      const after = {
         enabled: true,
-        allowedIons: current.allowedIons.includes(action.ionId)
-          ? current.allowedIons
-          : [...current.allowedIons, action.ionId],
+        allowedIons: before.allowedIons.includes(action.ionId)
+          ? before.allowedIons
+          : [...before.allowedIons, action.ionId],
         limits: {
-          ...current.limits,
-          [action.ionId]: Math.max(current.limits[action.ionId] ?? 0, action.limitPpm),
+          ...before.limits,
+          [action.ionId]: Math.max(before.limits[action.ionId] ?? 0, action.limitPpm),
         },
+      };
+      setOvershootSettings(after);
+      setWatermancerAppliedFixes(current => ({
+        ...current,
+        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'policy', before, after },
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else {
@@ -4610,6 +4637,39 @@ function App() {
       stage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       stage?.focus({ preventScroll: true });
       setWatermancerActionMessage(`Review the ${action.focus} controls to adjust this constraint.`);
+    }
+    if (action.type !== 'review-controls') {
+      setWatermancerRecalculationNonce(current => current + 1);
+    }
+    finishWatermancerActionAfterPaint();
+  };
+  const handleUndoWatermancerFix = (fix: WatermancerAppliedFix) => {
+    if (!beginWatermancerAction()) return;
+    if (fix.kind === 'salts') {
+      if (JSON.stringify(watermancerUsedSaltIds) !== JSON.stringify(fix.after)) {
+        setWatermancerActionMessage('This fix was changed manually, so it was not undone.');
+      } else {
+        setWatermancerUsedSaltIds([...fix.before]);
+        setWatermancerAppliedFixes(current => { const next = { ...current }; delete next[fix.id]; return next; });
+        setWatermancerActionMessage('Fix undone. Recalculating the match.');
+        setWatermancerRecalculationNonce(current => current + 1);
+      }
+    } else if (fix.kind === 'source') {
+      if ((watermancerIonSourcePreferences[fix.action.ionId] ?? 'dont-care') !== fix.after) {
+        setWatermancerActionMessage('This fix was changed manually, so it was not undone.');
+      } else {
+        setWatermancerIonSourcePreferences(current => ({ ...current, [fix.action.ionId]: fix.before }));
+        setWatermancerAppliedFixes(current => { const next = { ...current }; delete next[fix.id]; return next; });
+        setWatermancerActionMessage('Fix undone. Recalculating the match.');
+        setWatermancerRecalculationNonce(current => current + 1);
+      }
+    } else if (JSON.stringify(overshootSettings) !== JSON.stringify(fix.after)) {
+      setWatermancerActionMessage('This fix was changed manually, so it was not undone.');
+    } else {
+      setOvershootSettings(fix.before);
+      setWatermancerAppliedFixes(current => { const next = { ...current }; delete next[fix.id]; return next; });
+      setWatermancerActionMessage('Fix undone. Recalculating the match.');
+      setWatermancerRecalculationNonce(current => current + 1);
     }
     finishWatermancerActionAfterPaint();
   };
