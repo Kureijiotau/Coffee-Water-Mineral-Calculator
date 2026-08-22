@@ -8437,7 +8437,7 @@ function App() {
                                  <button
                                    type="button"
                                    onClick={() => handleApplyWatermancerRecommendation(nextFix)}
-                                   disabled={watermancerActionRunning}
+                                    disabled={watermancerBestMatchRunning}
                                    className="shrink-0 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/25 disabled:cursor-wait disabled:opacity-60"
                                  >
                                    Apply fix
@@ -8460,7 +8460,7 @@ function App() {
                                        <button
                                          type="button"
                                          onClick={() => handleUndoWatermancerFix(fix)}
-                                         disabled={!current || watermancerActionRunning}
+                                          disabled={!current || watermancerBestMatchRunning}
                                          className="shrink-0 rounded-md border border-cyan-300/25 bg-cyan-400/[0.08] px-2 py-1 text-[9px] font-semibold text-cyan-200 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-45"
                                        >
                                          {current ? 'Undo' : 'Changed'}
@@ -8486,7 +8486,7 @@ function App() {
                                         if (fix) handleUndoWatermancerFix(fix);
                                         else handleApplyWatermancerRecommendation(recommendation);
                                       }}
-                                     disabled={watermancerActionRunning}
+                                      disabled={watermancerBestMatchRunning}
                                      className="shrink-0 rounded-md border border-emerald-300/20 bg-emerald-400/[0.08] px-2 py-1 text-[9px] font-semibold text-emerald-200 transition hover:border-emerald-200/50 hover:bg-emerald-400/15 disabled:cursor-wait disabled:opacity-60"
                                    >
                                       {recommendation.action.type === 'review-controls'
