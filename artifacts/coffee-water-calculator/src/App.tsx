@@ -9974,7 +9974,7 @@ function RecipeConcentrateBuilder({
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
           <span className="text-[11px] text-slate-500">
-            ×{strength || 0} · {stockGroups.length} {stockGroups.length === 1 ? 'bottle' : 'bottles'}
+            {stockStrategy === 'all-in-one' ? `×${strength || 0}` : 'Individual strengths'} · {stockGroups.length} {stockGroups.length === 1 ? 'bottle' : 'bottles'}
           </span>
         </div>
         {stockGroups.map(group => {
@@ -9983,7 +9983,8 @@ function RecipeConcentrateBuilder({
           const stockVolumeInput = stockVolumeInputs[group.id] ?? '100';
           const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
           const groupTargets = groupTargetsFor(group);
-          const warnings = strength > 0 ? checkConcentrate(strength, groupTargets) : [];
+          const groupStrength = groupStrengthFor(group);
+          const warnings = groupStrength > 0 ? checkConcentrate(groupStrength, groupTargets) : [];
           const groupMaxSafeStrength = findStrongestSafeConcentrateStrength(groupTargets);
           const stockRows = group.saltIds.map(saltId => {
             const salt = SALTS.find(item => item.id === saltId);
@@ -9994,7 +9995,7 @@ function RecipeConcentrateBuilder({
             const massMg = computeRecipeStockSaltMassMg(
               target,
               stockVolumeMl,
-              strength,
+              groupStrength,
               form.molarMass,
               salt.anhydrousMass,
             );
@@ -10023,12 +10024,12 @@ function RecipeConcentrateBuilder({
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Max</div>
                     <div className={`mt-1 text-lg font-semibold tabular-nums ${
-                      strength > groupMaxSafeStrength ? 'text-rose-300' : 'text-emerald-300/90'
-                    }`}>×{groupMaxSafeStrength}</div>
+                       groupStrength > groupMaxSafeStrength ? 'text-rose-300' : 'text-emerald-300/90'
+                     }`}>×{groupMaxSafeStrength}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose</div>
-                    <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{doseMlPerReference.toFixed(2)} mL</div>
+                     <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{(groupStrength > 0 ? 1000 / groupStrength * doseReferenceLiters : 0).toFixed(2)} mL</div>
                   </div>
                 </div>
               </div>
@@ -12475,6 +12476,7 @@ function ConcentrateRecipeStepsModal({
                           </div>
                           <div className="shrink-0 text-right">
                             <div className="text-sm font-semibold tabular-nums text-sky-100">{group.volumeMl.toFixed(0)} mL</div>
+                            <div className="text-[9px] font-semibold tabular-nums text-fuchsia-200">×{group.strength}</div>
                           </div>
                         </div>
                       );
@@ -12502,7 +12504,14 @@ function ConcentrateRecipeStepsModal({
                   <div className="mt-3 space-y-3">
                     {(isGhKhPlan
                       ? plan.groups
-                      : [{ id: 'all-salts', name: 'Stock', volumeMl: recipeHandoff.finalLiters * 1000, saltIds: orderedActiveSaltRows.map(row => row.salt.id) }]
+                      : [{
+                          id: 'all-salts',
+                          name: 'Stock',
+                          volumeMl: recipeHandoff.finalLiters * 1000,
+                          strength: concentrateStrength,
+                          maxSafeStrength: plan.maxSafeStrength ?? 1,
+                          saltIds: orderedActiveSaltRows.map(row => row.salt.id),
+                        }]
                     ).map(group => {
                       const groupRows = group.saltIds
                         .map(saltId => activeSaltRowsById.get(saltId))
@@ -12524,7 +12533,7 @@ function ConcentrateRecipeStepsModal({
                      const massMg = computeRecipeStockSaltMassMg(
                        row.target,
                         isGhKhPlan ? group.volumeMl : recipeHandoff.finalLiters * 1000,
-                       concentrateStrength,
+                        isGhKhPlan ? group.strength : concentrateStrength,
                        row.form.molarMass,
                        row.salt.anhydrousMass,
                      );
@@ -12611,8 +12620,8 @@ function ConcentrateRecipeStepsModal({
                               <div className="mt-0.5 text-[9px] text-slate-400">Dose this bottle</div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <div className="text-sm font-semibold tabular-nums text-violet-100">{row.milliliters.toFixed(2)} mL</div>
-                              <div className="text-[10px] font-semibold tabular-nums text-fuchsia-200">{Math.round(row.drops)} drops</div>
+                              <div className="text-sm font-semibold tabular-nums text-violet-100">{(group.strength > 0 ? 1000 / group.strength * row.liters : 0).toFixed(2)} mL</div>
+                              <div className="text-[10px] font-semibold tabular-nums text-fuchsia-200">{Math.round((group.strength > 0 ? 1000 / group.strength * row.liters : 0) * safeDropsPerMl)} drops</div>
                             </div>
                           </div>
                         ))}
