@@ -2411,7 +2411,32 @@ function watermancerConflictRecommendations(
     }
   });
 
-  return recommendations;
+  const actionRank = (recommendation: WatermancerMatchRecommendation): number => {
+    switch (recommendation.action.type) {
+      case 'enable-salt': return 0;
+      case 'relax-source-preference': return 1;
+      case 'review-controls': return 2;
+      case 'allow-policy-room': return 3;
+    }
+  };
+  const ionRank = (recommendation: WatermancerMatchRecommendation): number => Math.min(
+    ...recommendation.ionIds.map(id => {
+      const index = plan.ionPriority.indexOf(id);
+      return index >= 0 ? index : plan.ionPriority.length + ACTIVE_ION_IDS.indexOf(id);
+    }),
+  );
+  const severityRank = (recommendation: WatermancerMatchRecommendation): number => Math.max(
+    ...recommendation.ionIds.map(id => {
+      const conflict = conflicts.find(item => item.id === id);
+      return conflict?.severity === 'critical' ? 0 : conflict?.severity === 'warning' ? 1 : 2;
+    }),
+  );
+  return recommendations.sort((a, b) => (
+    actionRank(a) - actionRank(b)
+    || ionRank(a) - ionRank(b)
+    || severityRank(a) - severityRank(b)
+    || watermancerRecommendationKey(a).localeCompare(watermancerRecommendationKey(b))
+  ));
 }
 
 function watermancerRouteDiagnostics(
