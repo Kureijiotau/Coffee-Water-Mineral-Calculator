@@ -7433,8 +7433,8 @@ function App() {
                     ))}
                   </div>
                 )}
-              </details>
-            </div>
+                </details>
+              </div>
 
              {/* Add button */}
              <div className={`grid gap-2 ${showWatermancer ? 'sm:grid-cols-2' : ''}`}>
@@ -8242,39 +8242,39 @@ function App() {
                        <div>
                          <div className="text-[9px] uppercase tracking-wider text-slate-500">Target deviation</div>
                          <div className="mt-0.5 text-xs font-semibold tabular-nums text-slate-200">
-                           {watermancerLiveResult.primaryPlan.diagnostics.targetDeviationPpm.toFixed(2)} ppm
+                            {watermancerLiveResult.primaryPlan.diagnostics!.targetDeviationPpm.toFixed(2)} ppm
                          </div>
                        </div>
                        <div>
                          <div className="text-[9px] uppercase tracking-wider text-slate-500">Policy allowance</div>
                          <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">
-                           {watermancerLiveResult.primaryPlan.diagnostics.policyAllowancePpm.toFixed(2)} ppm
+                            {watermancerLiveResult.primaryPlan.diagnostics!.policyAllowancePpm.toFixed(2)} ppm
                          </div>
                        </div>
                        <div>
                          <div className="text-[9px] uppercase tracking-wider text-slate-500">Outside policy</div>
                          <div className="mt-0.5 text-xs font-semibold tabular-nums text-rose-200">
-                           {watermancerLiveResult.primaryPlan.diagnostics.policyViolationPpm.toFixed(2)} ppm
+                            {watermancerLiveResult.primaryPlan.diagnostics!.policyViolationPpm.toFixed(2)} ppm
                          </div>
                        </div>
                        <div>
                          <div className="text-[9px] uppercase tracking-wider text-slate-500">Salt choice</div>
                          <div className="mt-0.5 text-xs font-semibold text-slate-200">
-                           {watermancerLiveResult.primaryPlan.diagnostics.optionalSaltIds.length
-                             - watermancerLiveResult.primaryPlan.diagnostics.omittedOptionalSaltIds.length} used
+                            {watermancerLiveResult.primaryPlan.diagnostics!.optionalSaltIds.length
+                              - watermancerLiveResult.primaryPlan.diagnostics!.omittedOptionalSaltIds.length} used
                            <span className="font-normal text-slate-500">
-                             {' '}· {watermancerLiveResult.primaryPlan.diagnostics.fixedSaltIds.length} fixed
+                              {' '}· {watermancerLiveResult.primaryPlan.diagnostics!.fixedSaltIds.length} fixed
                            </span>
                          </div>
                        </div>
                      </div>
-                      {watermancerLiveResult.primaryPlan.diagnostics.conflicts.length > 0 && (
+                       {watermancerLiveResult.primaryPlan.diagnostics!.conflicts.length > 0 && (
                         <div className="mt-3 border-t border-cyan-300/10 pt-3">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200/80">
                             What is still conflicting
                           </div>
                           <ul className="mt-2 space-y-2" aria-label="Watermancer ion conflicts">
-                            {watermancerLiveResult.primaryPlan.diagnostics.conflicts.map(conflict => (
+                            {watermancerLiveResult.primaryPlan.diagnostics!.conflicts.map(conflict => (
                               <li
                                 key={conflict.id}
                                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/10 bg-amber-950/10 px-2.5 py-2"
@@ -8308,13 +8308,13 @@ function App() {
                           </ul>
                         </div>
                       )}
-                      {watermancerLiveResult.primaryPlan.diagnostics.recommendations.length > 0 && (
+                      {watermancerLiveResult.primaryPlan.diagnostics!.recommendations.length > 0 && (
                         <div className="mt-3 border-t border-cyan-300/10 pt-3">
                            <div className="flex flex-wrap items-center justify-between gap-2">
                              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/80">
                                Ways to improve it
                              </div>
-                             {watermancerLiveResult.primaryPlan.diagnostics.recommendations.some(
+                              {watermancerLiveResult.primaryPlan.diagnostics!.recommendations.some(
                                recommendation => recommendation.action.type !== 'review-controls',
                              ) && (
                                <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-200">
@@ -8326,7 +8326,7 @@ function App() {
                              Apply a safe adjustment directly, or review the controls for changes that need your judgment.
                           </p>
                            {(() => {
-                               const nextFix = watermancerLiveResult.primaryPlan.diagnostics.recommendations.find(
+                                const nextFix = watermancerLiveResult.primaryPlan.diagnostics!.recommendations.find(
                                  recommendation => recommendation.action.type !== 'review-controls',
                               );
                              return nextFix ? (
@@ -8337,7 +8337,7 @@ function App() {
                                  </div>
                                  <button
                                    type="button"
-                                   onClick={() => handleApplyWatermancerRecommendation(nextFix)}
+                                      onClick={() => nextFix && handleApplyWatermancerRecommendation(nextFix)}
                                     disabled={watermancerActionRunning}
                                    className="shrink-0 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/25 disabled:cursor-wait disabled:opacity-60"
                                  >
@@ -8347,7 +8347,7 @@ function App() {
                              ) : null;
                            })()}
                           <ul className="mt-2 space-y-1.5" aria-label="Watermancer improvement suggestions">
-                            {watermancerLiveResult.primaryPlan.diagnostics.recommendations.map(recommendation => (
+                            {watermancerLiveResult.primaryPlan.diagnostics!.recommendations.map(recommendation => (
                                <li key={`${recommendation.kind}-${recommendation.ionIds.join('-')}`} className="rounded-lg border border-emerald-300/10 bg-emerald-950/10 px-2.5 py-2">
                                  <div className="flex flex-wrap items-start justify-between gap-2">
                                    <div className="min-w-0">
@@ -8370,7 +8370,8 @@ function App() {
                       )}
                    </div>
                  )}
-                 </details>)}
+                    </div>
+                  </details>)}
                  <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match
@@ -8426,10 +8427,9 @@ function App() {
                     <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
                       Water only avoids salt contribution where possible. Salt only keeps the selected water out of that ion’s target. Coupled ions may still be reported as gaps or overshoots.
                     </p>
-                  </div>
-                </details>
                    </div>
-                   <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
+                 </details>
+                    <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                    <div className="grid gap-2 sm:grid-cols-2">
                    <button
                      type="button"
