@@ -7722,25 +7722,25 @@ function App() {
                    const target = autoFillTargets[id] ?? 0;
                   const covered = bottledIons[id] ?? 0;
                   const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
-                   const aikiRange = AIKI_DEFAULT_PROFILE.ranges[id];
-                   const aikiGreenMax = aikiRange.greenMax;
-                   const aikiYellowPercent = aikiGreenMax > 0
-                     ? (aikiRange.yellowMax / aikiGreenMax) * 100
+                   const profileRange = activeProfile.ranges[id];
+                   const profileGreenMax = profileRange.greenMax;
+                   const profileYellowPercent = profileGreenMax > 0
+                     ? (profileRange.yellowMax / profileGreenMax) * 100
                      : 100;
-                   const aikiPercent = aikiGreenMax > 0
-                     ? (covered / aikiGreenMax) * 100
+                   const profilePercent = profileGreenMax > 0
+                     ? (covered / profileGreenMax) * 100
                      : 0;
                    // Keep enough track beyond the green ceiling to show
-                   // over-100% values while preserving both Aiki markers.
-                   const aikiScalePercent = Math.max(100, aikiYellowPercent, aikiPercent);
-                   const aikiFillPercent = aikiScalePercent > 0
-                     ? Math.min((aikiPercent / aikiScalePercent) * 100, 100)
+                   // over-100% values while preserving both profile markers.
+                   const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
+                   const profileFillPercent = profileScalePercent > 0
+                     ? Math.min((profilePercent / profileScalePercent) * 100, 100)
                      : 0;
-                   const aikiGreenMarkerPercent = aikiScalePercent > 0
-                     ? Math.min((100 / aikiScalePercent) * 100, 100)
+                   const profileGreenMarkerPercent = profileScalePercent > 0
+                     ? Math.min((100 / profileScalePercent) * 100, 100)
                      : 100;
-                   const aikiYellowMarkerPercent = aikiScalePercent > 0
-                     ? Math.min((aikiYellowPercent / aikiScalePercent) * 100, 100)
+                   const profileYellowMarkerPercent = profileScalePercent > 0
+                     ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
                      : 100;
                   // Coverage is displayed to one decimal place, so classify
                   // against that same precision instead of exposing tiny
@@ -7770,33 +7770,33 @@ function App() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                            <div
-                             className="group/aiki-bar relative min-w-0 flex-1 cursor-help outline-none"
+                            className="group/profile-coverage-bar relative min-w-0 flex-1 cursor-help outline-none"
                              tabIndex={0}
                              role="img"
-                             aria-label={`${ion.name}: hover comparison with Aiki's reference range`}
-                             title={`Hover to compare ${ion.name} with Aiki's reference range`}
+                            aria-label={`${ion.name}: hover comparison with ${activeProfile.name} range`}
+                            title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
                            >
-                             <div className="h-2 overflow-hidden rounded-full bg-slate-700/60 transition-opacity group-hover/aiki-bar:hidden group-focus/aiki-bar:hidden">
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-700/60 transition-opacity group-hover/profile-coverage-bar:hidden group-focus/profile-coverage-bar:hidden">
                                <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
                              </div>
                              <div
-                               className="relative hidden h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-indigo-300/20 group-hover/aiki-bar:block group-focus/aiki-bar:block"
+                               className="relative hidden h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-indigo-300/20 group-hover/profile-coverage-bar:block group-focus/profile-coverage-bar:block"
                                aria-hidden="true"
                              >
                                <div
                                  className="relative h-full rounded-full bg-emerald-400 transition-all"
-                                 style={{ width: `${aikiFillPercent}%` }}
+                                 style={{ width: `${profileFillPercent}%` }}
                                />
                                <div
                                  className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
-                                 style={{ left: `${aikiGreenMarkerPercent}%` }}
+                                 style={{ left: `${profileGreenMarkerPercent}%` }}
                                />
                                <div
                                  className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
-                                 style={{ left: `${aikiYellowMarkerPercent}%` }}
+                                 style={{ left: `${profileYellowMarkerPercent}%` }}
                                />
                                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
-                                 {Math.round(aikiPercent)}%
+                                 {Math.round(profilePercent)}%
                                </span>
                              </div>
                           </div>
@@ -11027,7 +11027,7 @@ function WatermancerIonCoverageBars({
                   aria-label={coveragePercent === null
                      ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
                      : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
-                   title={`Hover to compare ${ion.name} with Aiki's reference range`}
+                   title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
                 >
                    <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
                      <div
