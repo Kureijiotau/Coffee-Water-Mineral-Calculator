@@ -1,0 +1,9 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "rUmSb__1Ua8X-fMJWgLrD"
+uri = "file://research/notes.md"
+type = "text"
+title = "Research Notes: Brewing-Ion Effects"
+description = "Deep-research plan and running findings for the eight Watermancer ion tooltips."
