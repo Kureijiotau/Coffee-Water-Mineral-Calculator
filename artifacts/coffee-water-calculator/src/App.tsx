@@ -225,8 +225,10 @@ function watermancerRecommendationKey(recommendation: WatermancerMatchRecommenda
   const action = recommendation.action;
   return action.type === 'enable-salt'
     ? `${action.type}:${action.saltId}`
-    : action.type === 'relax-source-preference' || action.type === 'allow-policy-room'
+    : action.type === 'relax-source-preference'
       ? `${action.type}:${action.ionId}`
+      : action.type === 'allow-policy-room'
+        ? `${action.type}:${action.ionId}:${action.limitPpm}`
       : `${action.type}:${action.focus}`;
 }
 
@@ -4596,13 +4598,18 @@ function App() {
     setShowWatermancerMatchDetails(true);
     setWatermancerBestMatchMessage(null);
     const action = recommendation.action;
+    const fixId = watermancerRecommendationKey(recommendation);
+    if (action.type !== 'review-controls' && watermancerAppliedFixes[fixId]) {
+      finishWatermancerActionAfterPaint();
+      return;
+    }
     if (action.type === 'enable-salt') {
       const before = [...watermancerUsedSaltIds];
       const after = before.includes(action.saltId) ? before : [...before, action.saltId];
       setWatermancerUsedSaltIds(after);
       setWatermancerAppliedFixes(current => ({
         ...current,
-        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'salts', before, after },
+        [fixId]: { id: fixId, label: recommendation.label, action, kind: 'salts', before, after },
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else if (action.type === 'relax-source-preference') {
@@ -4611,7 +4618,7 @@ function App() {
       setWatermancerIonSourcePreferences(current => ({ ...current, [action.ionId]: after }));
       setWatermancerAppliedFixes(current => ({
         ...current,
-        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'source', before, after },
+        [fixId]: { id: fixId, label: recommendation.label, action, kind: 'source', before, after },
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else if (action.type === 'allow-policy-room') {
@@ -4629,7 +4636,7 @@ function App() {
       setOvershootSettings(after);
       setWatermancerAppliedFixes(current => ({
         ...current,
-        [watermancerRecommendationKey(recommendation)]: { id: watermancerRecommendationKey(recommendation), label: recommendation.label, action, kind: 'policy', before, after },
+        [fixId]: { id: fixId, label: recommendation.label, action, kind: 'policy', before, after },
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else {
@@ -4642,6 +4649,15 @@ function App() {
       setWatermancerRecalculationNonce(current => current + 1);
     }
     finishWatermancerActionAfterPaint();
+  };
+  const watermancerFixMatchesLiveState = (fix: WatermancerAppliedFix): boolean => {
+    if (fix.kind === 'salts') {
+      return JSON.stringify(watermancerUsedSaltIds) === JSON.stringify(fix.after);
+    }
+    if (fix.kind === 'source') {
+      return (watermancerIonSourcePreferences[fix.action.ionId] ?? 'dont-care') === fix.after;
+    }
+    return JSON.stringify(overshootSettings) === JSON.stringify(fix.after);
   };
   const handleUndoWatermancerFix = (fix: WatermancerAppliedFix) => {
     if (!beginWatermancerAction()) return;
@@ -8381,8 +8397,9 @@ function App() {
                              Apply a safe adjustment directly, or review the controls for changes that need your judgment.
                           </p>
                            {(() => {
-                             const nextFix = watermancerLiveResult.primaryPlan.diagnostics.recommendations.find(
-                               recommendation => recommendation.action.type !== 'review-controls',
+                              const nextFix = watermancerLiveResult.primaryPlan.diagnostics.recommendations.find(
+                                recommendation => recommendation.action.type !== 'review-controls'
+                                  && !watermancerAppliedFixes[watermancerRecommendationKey(recommendation)],
                              );
                              return nextFix ? (
                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500/[0.1] via-cyan-500/[0.06] to-transparent px-3 py-2.5">
@@ -8401,9 +8418,35 @@ function App() {
                                </div>
                              ) : null;
                            })()}
+                           {Object.values(watermancerAppliedFixes).length > 0 && (
+                             <div className="mt-2 rounded-xl border border-cyan-300/15 bg-cyan-950/10 px-3 py-2.5">
+                               <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Applied fixes</div>
+                               <ul className="mt-1.5 space-y-1.5" aria-label="Applied Watermancer fixes">
+                                 {Object.values(watermancerAppliedFixes).map(fix => {
+                                   const current = watermancerFixMatchesLiveState(fix);
+                                   return (
+                                     <li key={fix.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-cyan-300/10 bg-slate-950/20 px-2.5 py-2">
+                                       <span className={`text-[10px] font-semibold ${current ? 'text-cyan-100' : 'text-slate-500'}`}>
+                                         {fix.label}
+                                         {!current && <span className="ml-1 font-normal text-amber-300/80">(changed)</span>}
+                                       </span>
+                                       <button
+                                         type="button"
+                                         onClick={() => handleUndoWatermancerFix(fix)}
+                                         disabled={!current || watermancerActionRunning}
+                                         className="shrink-0 rounded-md border border-cyan-300/25 bg-cyan-400/[0.08] px-2 py-1 text-[9px] font-semibold text-cyan-200 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-45"
+                                       >
+                                         {current ? 'Undo' : 'Changed'}
+                                       </button>
+                                     </li>
+                                   );
+                                 })}
+                               </ul>
+                             </div>
+                           )}
                           <ul className="mt-2 space-y-1.5" aria-label="Watermancer improvement suggestions">
                             {watermancerLiveResult.primaryPlan.diagnostics.recommendations.map(recommendation => (
-                              <li key={`${recommendation.kind}-${recommendation.ionIds.join('-')}`} className="rounded-lg border border-emerald-300/10 bg-emerald-950/10 px-2.5 py-2">
+                               <li key={`${recommendation.kind}-${recommendation.ionIds.join('-')}`} className="rounded-lg border border-emerald-300/10 bg-emerald-950/10 px-2.5 py-2">
                                  <div className="flex flex-wrap items-start justify-between gap-2">
                                    <div className="min-w-0">
                                      <div className="text-[11px] font-semibold text-emerald-100">{recommendation.label}</div>
@@ -8411,11 +8454,19 @@ function App() {
                                    </div>
                                    <button
                                      type="button"
-                                     onClick={() => handleApplyWatermancerRecommendation(recommendation)}
+                                      onClick={() => {
+                                        const fix = watermancerAppliedFixes[watermancerRecommendationKey(recommendation)];
+                                        if (fix) handleUndoWatermancerFix(fix);
+                                        else handleApplyWatermancerRecommendation(recommendation);
+                                      }}
                                      disabled={watermancerActionRunning}
                                      className="shrink-0 rounded-md border border-emerald-300/20 bg-emerald-400/[0.08] px-2 py-1 text-[9px] font-semibold text-emerald-200 transition hover:border-emerald-200/50 hover:bg-emerald-400/15 disabled:cursor-wait disabled:opacity-60"
                                    >
-                                     {recommendation.action.type === 'review-controls' ? 'Review controls' : 'Apply'}
+                                      {recommendation.action.type === 'review-controls'
+                                        ? 'Review controls'
+                                        : watermancerAppliedFixes[watermancerRecommendationKey(recommendation)]
+                                          ? watermancerFixMatchesLiveState(watermancerAppliedFixes[watermancerRecommendationKey(recommendation)]) ? 'Undo' : 'Changed'
+                                          : 'Apply'}
                                    </button>
                                  </div>
                               </li>
