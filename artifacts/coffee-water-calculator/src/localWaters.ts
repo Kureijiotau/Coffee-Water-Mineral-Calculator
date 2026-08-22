@@ -34,8 +34,17 @@ function writeJSON(key: string, value: unknown): void {
   }
 }
 
+function isValidLocalWater(value: unknown): value is LocalWater {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const water = value as Partial<LocalWater>;
+  if (typeof water.id !== 'string' || typeof water.name !== 'string') return false;
+  if (!water.ions || typeof water.ions !== 'object' || Array.isArray(water.ions)) return false;
+  return Object.values(water.ions).every(ion => typeof ion === 'number' && Number.isFinite(ion));
+}
+
 export function loadLocalWaters(): LocalWater[] {
-  return readJSON<LocalWater[]>(LOCAL_WATERS_KEY, []);
+  const parsed = readJSON<unknown>(LOCAL_WATERS_KEY, []);
+  return Array.isArray(parsed) ? parsed.filter(isValidLocalWater) : [];
 }
 
 export function saveLocalWaters(waters: LocalWater[]): void {

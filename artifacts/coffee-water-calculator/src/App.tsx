@@ -3865,7 +3865,6 @@ function App() {
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
-  const [showWatermancerMatchDetails, setShowWatermancerMatchDetails] = useState(false);
   const [watermancerMemeSaltFlashNonce, setWatermancerMemeSaltFlashNonce] = useState(0);
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
@@ -4584,7 +4583,6 @@ function App() {
   };
   const handleApplyWatermancerRecommendation = (recommendation: WatermancerMatchRecommendation) => {
     if (!beginWatermancerAction()) return;
-    setShowWatermancerMatchDetails(true);
     setWatermancerBestMatchMessage(null);
     const action = recommendation.action;
     if (action.type === 'enable-salt') {
@@ -8222,12 +8220,11 @@ function App() {
                 </div>
                  {false && (<details
                    className="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/20"
-                   open={showWatermancerMatchDetails}
-                   onToggle={event => setShowWatermancerMatchDetails(event.currentTarget.open)}
+                   open={false}
                  >
-                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-semibold text-slate-200">
+                     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 text-xs font-semibold text-slate-200">
                      <span>Show match details</span>
-                     <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${showWatermancerMatchDetails ? 'rotate-180' : ''}`} />
+                      <ChevronDown className="h-4 w-4 text-slate-500" />
                    </summary>
                    <div className="border-t border-slate-700/60 px-3 py-3">
                   {watermancerLiveResult.primaryPlan.diagnostics && (

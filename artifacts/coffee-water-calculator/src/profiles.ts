@@ -51,7 +51,19 @@ function writeJSON(key: string, value: unknown): void {
 }
 
 export function loadProfiles(): WaterProfile[] {
-  const stored = readJSON<WaterProfile[]>(PROFILES_KEY, []);
+  const parsed = readJSON<unknown>(PROFILES_KEY, []);
+  const stored = Array.isArray(parsed)
+    ? parsed.filter((profile): profile is WaterProfile => (
+      Boolean(profile)
+      && typeof profile === 'object'
+      && !Array.isArray(profile)
+      && typeof (profile as Partial<WaterProfile>).id === 'string'
+      && typeof (profile as Partial<WaterProfile>).name === 'string'
+      && Boolean((profile as Partial<WaterProfile>).ranges)
+      && typeof (profile as Partial<WaterProfile>).ranges === 'object'
+      && !Array.isArray((profile as Partial<WaterProfile>).ranges)
+    ))
+    : [];
   // Always ensure built-in profiles are present and up to date
   const withoutBuiltIns = stored.filter(p => !BUILT_IN_PROFILE_IDS.has(p.id));
   // Migrate stored profiles that are missing any ions (e.g. newly added citrates)
