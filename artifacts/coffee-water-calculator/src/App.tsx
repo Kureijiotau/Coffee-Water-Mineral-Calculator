@@ -10486,7 +10486,6 @@ function WatermancerIonProfileCard({
                     : 'text-slate-500 hover:bg-slate-700/40 hover:text-slate-300'
                 }`}
                 aria-pressed={activeProfileId === profile.id}
-                title={`Use ${profile.name} ion guidance`}
               >
                 {profile.id === AIKI_DEFAULT_PROFILE.id && (
                   <span
