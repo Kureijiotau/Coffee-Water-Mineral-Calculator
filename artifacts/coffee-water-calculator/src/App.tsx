@@ -113,6 +113,16 @@ type ConcentratePlanSnapshot = {
   }>;
 };
 
+const ION_TOOLTIP_KEYWORDS = /\b(acid(?:ity|ic)?|sweet(?:ness)?|dull|bitter|dry|smooth(?:er)?|full(?:er)?|sour|metallic|salty|brackish|chalky|harsh|clear|bright|flavor)\b/gi;
+
+function renderIonTooltipText(text: string): ReactNode {
+  return text.split(ION_TOOLTIP_KEYWORDS).map((part, index) =>
+    index % 2 === 1
+      ? <strong key={`${part}-${index}`} className="font-semibold text-cyan-200">{part}</strong>
+      : part,
+  );
+}
+
 export function computeRecipeStockSaltMassMg(
   targetPpm: number,
   stockVolumeMl: number,
@@ -10717,7 +10727,7 @@ function WatermancerIonProfileCard({
                 </>
               )}
               <span className={`pointer-events-none absolute left-0 w-56 z-10 rounded-lg bg-slate-900 border border-slate-600/60 px-3 py-2 text-xs text-slate-300 opacity-0 group-hover/ion:opacity-100 transition-opacity shadow-xl ${tooltipAbove ? 'bottom-full mb-2' : 'top-full mt-2'}`}>
-                {ion.tasteNote}
+                {renderIonTooltipText(ion.tasteNote)}
               </span>
             </div>
           );
