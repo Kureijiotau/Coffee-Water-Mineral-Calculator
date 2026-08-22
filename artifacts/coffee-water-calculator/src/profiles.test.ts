@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   AIKI_DEFAULT_PROFILE,
+  WATERMANCER_SENSORY_PROFILE,
   IONS,
   classifyIon,
   type RangeSet,
@@ -69,11 +70,12 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     expect(profiles[0].locked).toBe(true);
   });
 
-  it('returns Aiki and the built-in Empirical profiles when localStorage is empty', () => {
+  it('returns Aiki, Watermancer Sensory, and built-in Empirical profiles when localStorage is empty', () => {
     const profiles = loadProfiles();
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
-    expect(profiles.slice(1).map(p => p.id)).toEqual(EMPIRICAL_PROFILES.map(p => p.id));
-    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
+    expect(profiles[1].id).toBe(WATERMANCER_SENSORY_PROFILE.id);
+    expect(profiles.slice(2).map(p => p.id)).toEqual(EMPIRICAL_PROFILES.map(p => p.id));
+    expect(profiles).toHaveLength(2 + EMPIRICAL_PROFILES.length);
   });
 
   it('uses published Empirical values for Good and 20% for Elevated', () => {
@@ -89,10 +91,10 @@ describe('loadProfiles / saveProfiles round-trip', () => {
 
     const loaded = loadProfiles();
     // Aiki default is re-injected from code, not from storage
-    expect(loaded).toHaveLength(2 + EMPIRICAL_PROFILES.length);
+    expect(loaded).toHaveLength(3 + EMPIRICAL_PROFILES.length);
     expect(loaded[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
-    expect(loaded[EMPIRICAL_PROFILES.length + 1].id).toBe(custom.id);
-    expect(loaded[EMPIRICAL_PROFILES.length + 1].name).toBe('My Profile');
+    expect(loaded[EMPIRICAL_PROFILES.length + 2].id).toBe(custom.id);
+    expect(loaded[EMPIRICAL_PROFILES.length + 2].name).toBe('My Profile');
   });
 
   it('never persists the Aiki default profile to storage', () => {
@@ -111,7 +113,7 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     const profiles = loadProfiles();
     // The authoritative in-code version should win
     expect(profiles[0].name).toBe(AIKI_DEFAULT_PROFILE.name);
-    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length); // stale copy stripped, not duplicated
+    expect(profiles).toHaveLength(2 + EMPIRICAL_PROFILES.length); // stale copy stripped, not duplicated
   });
 
   it('migrates a stored profile that is missing newly added ion keys', () => {
@@ -137,7 +139,7 @@ describe('loadProfiles / saveProfiles round-trip', () => {
     saveProfiles([AIKI_DEFAULT_PROFILE, a, b]);
 
     const loaded = loadProfiles();
-    expect(loaded).toHaveLength(3 + EMPIRICAL_PROFILES.length);
+    expect(loaded).toHaveLength(4 + EMPIRICAL_PROFILES.length);
     expect(loaded.map(p => p.id)).toContain(a.id);
     expect(loaded.map(p => p.id)).toContain(b.id);
   });
@@ -145,7 +147,7 @@ describe('loadProfiles / saveProfiles round-trip', () => {
   it('handles corrupt JSON in storage gracefully, returning built-in profiles', () => {
     localStorageMock.setItem('cwm.profiles', '{NOT_VALID_JSON');
     const profiles = loadProfiles();
-    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
+    expect(profiles).toHaveLength(2 + EMPIRICAL_PROFILES.length);
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
   });
 });
@@ -291,7 +293,7 @@ describe('deleting the active profile falls back to Aiki default', () => {
     // Delete all custom
     saveProfiles([AIKI_DEFAULT_PROFILE]);
     const profiles = loadProfiles();
-    expect(profiles).toHaveLength(1 + EMPIRICAL_PROFILES.length);
+    expect(profiles).toHaveLength(2 + EMPIRICAL_PROFILES.length);
     expect(profiles[0].id).toBe(AIKI_DEFAULT_PROFILE.id);
   });
 });

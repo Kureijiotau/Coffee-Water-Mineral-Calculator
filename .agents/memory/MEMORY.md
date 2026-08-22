@@ -56,3 +56,4 @@
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
 - [Coffee-water amounts and balance](coffee-water-amounts-boundary.md) — treat ion thresholds and ratios as context-dependent guidance, not universal solver rules
+- [Ion guidance profile toggle](ion-guidance-profile-toggle.md) — keep Aiki and Watermancer Sensory ranges selectable without changing chemistry behavior

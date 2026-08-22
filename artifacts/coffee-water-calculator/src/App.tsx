@@ -13,7 +13,7 @@ import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Sav
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, splitIntoStockGroups,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
@@ -6940,7 +6940,13 @@ function App() {
             );
           })}
           </>
-             {showAlchemist && <IonWatchDisclosure ions={saltOnlyIons} />}
+             {showAlchemist && (
+               <IonWatchDisclosure
+                 ions={saltOnlyIons}
+                 activeProfile={activeProfile}
+                 onSelectProfile={handleSelectProfile}
+               />
+             )}
              <div className="flex items-center justify-start">
                <MemeSaltToggle
                  showMemeSalts={showMemeSalts}
@@ -7937,6 +7943,7 @@ function App() {
                supplementalIons={computeSupplementalIonTotals(activeWatermancerSaltTargets)}
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
+              activeProfile={activeProfile}
                sticky={watermancerResultSticky}
                 dockPosition={watermancerResultDock}
                 onDockPositionChange={setWatermancerResultDock}
@@ -10464,6 +10471,38 @@ function WatermancerIonProfileCard({
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-indigo-300/20 bg-slate-950/25 p-0.5" role="group" aria-label="Ion guidance profile">
+            {[AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE].map(profile => (
+              <button
+                key={profile.id}
+                type="button"
+                onClick={() => {
+                  cancelEditing();
+                  onSelectProfile(profile.id);
+                }}
+                className={`group/profile-toggle relative rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+                  activeProfileId === profile.id
+                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-300/35'
+                    : 'text-slate-500 hover:bg-slate-700/40 hover:text-slate-300'
+                }`}
+                aria-pressed={activeProfileId === profile.id}
+                title={`Use ${profile.name} ion guidance`}
+              >
+                {profile.id === AIKI_DEFAULT_PROFILE.id && (
+                  <span
+                    aria-label="About ion guidance profiles"
+                    className="text-amber-300"
+                  >
+                    ✦
+                  </span>
+                )}
+                {profile.id === AIKI_DEFAULT_PROFILE.id ? 'Aiki' : 'Sensory'}
+                <span className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-left text-[11px] font-normal leading-relaxed text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/profile-toggle:opacity-100">
+                  Switches the ion guidance used for green, yellow, and red flags and Watermancer comparison bars. It does not change recipe math, targets, or solver behavior.
+                </span>
+              </button>
+            ))}
+          </div>
            <div className="flex h-10 items-center gap-1">
              {selectedTargetSourceUrl && (
                <a
@@ -10807,6 +10846,7 @@ function WatermancerIonCoverageBars({
   supplementalIons,
   targetIons,
   targetLabel,
+  activeProfile,
   sticky,
   dockPosition,
   onDockPositionChange,
@@ -10816,6 +10856,7 @@ function WatermancerIonCoverageBars({
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
+  activeProfile: WaterProfile;
   sticky: boolean;
   dockPosition: 'center' | 'left' | 'right';
   onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
@@ -10936,23 +10977,23 @@ function WatermancerIonCoverageBars({
           const coverageLabel = coveragePercent === null
             ? '—'
             : `${Math.round(coveragePercent).toLocaleString()}%`;
-           const aikiRange = AIKI_DEFAULT_PROFILE.ranges[id];
-           const aikiGreenMax = aikiRange.greenMax;
-           const aikiYellowPercent = aikiGreenMax > 0
-             ? (aikiRange.yellowMax / aikiGreenMax) * 100
+           const profileRange = activeProfile.ranges[id];
+           const profileGreenMax = profileRange.greenMax;
+           const profileYellowPercent = profileGreenMax > 0
+             ? (profileRange.yellowMax / profileGreenMax) * 100
              : 100;
-           const aikiPercent = aikiGreenMax > 0
-             ? (actual / aikiGreenMax) * 100
+           const profilePercent = profileGreenMax > 0
+             ? (actual / profileGreenMax) * 100
              : 0;
-           const aikiScalePercent = Math.max(100, aikiYellowPercent, aikiPercent);
-           const aikiFillPercent = aikiScalePercent > 0
-             ? Math.min((aikiPercent / aikiScalePercent) * 100, 100)
+           const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
+           const profileFillPercent = profileScalePercent > 0
+             ? Math.min((profilePercent / profileScalePercent) * 100, 100)
              : 0;
-           const aikiGreenMarkerPercent = aikiScalePercent > 0
-             ? Math.min((100 / aikiScalePercent) * 100, 100)
+           const profileGreenMarkerPercent = profileScalePercent > 0
+             ? Math.min((100 / profileScalePercent) * 100, 100)
              : 100;
-           const aikiYellowMarkerPercent = aikiScalePercent > 0
-             ? Math.min((aikiYellowPercent / aikiScalePercent) * 100, 100)
+           const profileYellowMarkerPercent = profileScalePercent > 0
+             ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
              : 100;
           const barColor = overshoot
             ? 'bg-rose-400'
@@ -10981,15 +11022,15 @@ function WatermancerIonCoverageBars({
               <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
               <div className="min-w-0">
                 <div
-                   className="group/aiki-result-bar relative min-w-0 cursor-help outline-none"
+                   className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
                    tabIndex={0}
                    role="img"
                   aria-label={coveragePercent === null
-                     ? `${ion.name}: no target set; hover to compare with Aiki's reference range`
-                     : `${ion.name}: ${coverageLabel} of target; hover to compare with Aiki's reference range`}
+                     ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
+                     : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
                    title={`Hover to compare ${ion.name} with Aiki's reference range`}
                 >
-                   <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/aiki-result-bar:hidden group-focus/aiki-result-bar:hidden">
+                   <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
                      <div
                        className={`h-full rounded-full transition-all duration-300 ${barColor}`}
                        style={{ width: `${percentage}%` }}
@@ -11001,23 +11042,23 @@ function WatermancerIonCoverageBars({
                      </span>
                    </div>
                    <div
-                     className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/aiki-result-bar:block group-focus/aiki-result-bar:block"
+                     className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
                      aria-hidden="true"
                    >
                      <div
                        className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
-                       style={{ width: `${aikiFillPercent}%` }}
+                                 style={{ width: `${profileFillPercent}%` }}
                      />
                      <div
                        className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
-                       style={{ left: `${aikiGreenMarkerPercent}%` }}
+                                 style={{ left: `${profileGreenMarkerPercent}%` }}
                      />
                      <div
                        className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
-                       style={{ left: `${aikiYellowMarkerPercent}%` }}
+                                 style={{ left: `${profileYellowMarkerPercent}%` }}
                      />
                      <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
-                       {Math.round(aikiPercent)}%
+                                 {Math.round(profilePercent)}%
                      </span>
                    </div>
                 </div>
@@ -14027,12 +14068,20 @@ function WaterMetadataFields({
   );
 }
 
-function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) {
+function IonWatchDisclosure({
+  ions,
+  activeProfile,
+  onSelectProfile,
+}: {
+  ions: Partial<Record<IonId, number>>;
+  activeProfile: WaterProfile;
+  onSelectProfile: (id: string) => void;
+}) {
   const flaggedIons = ACTIVE_ION_IDS
     .map(id => {
       const ion = ION_MAP[id];
       const ppm = ions[id] ?? 0;
-      const level = classifyIon(ppm, AIKI_DEFAULT_PROFILE.ranges[id]);
+      const level = classifyIon(ppm, activeProfile.ranges[id]);
       return { id, ion, ppm, level };
     })
     .filter(item => item.level !== 'green');
@@ -14060,7 +14109,7 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
             }`}
           />
         </span>
-        <span className="font-semibold">Aiki&apos;s ion check</span>
+        <span className="font-semibold">{activeProfile.name} ion check</span>
         <span className="text-slate-500">
           {flaggedIons.length === 0
             ? 'All monitored ions in range'
@@ -14069,16 +14118,46 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
         <span className="ml-auto text-slate-500 transition-transform group-open:rotate-180">⌄</span>
       </summary>
       <div className="space-y-2 border-t border-indigo-400/10 px-4 py-3 sm:px-6">
+        <div className="flex items-center gap-1.5" role="group" aria-label="Ion guidance profile">
+          {[AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE].map(profile => (
+            <button
+              key={profile.id}
+              type="button"
+              onClick={() => onSelectProfile(profile.id)}
+              className={`group/profile-toggle relative rounded-md border px-2 py-1 text-[10px] font-semibold transition ${
+                activeProfile.id === profile.id
+                  ? 'border-indigo-300/45 bg-indigo-500/20 text-indigo-100'
+                  : 'border-slate-700/60 bg-slate-900/30 text-slate-500 hover:border-indigo-300/30 hover:text-slate-300'
+              }`}
+              aria-pressed={activeProfile.id === profile.id}
+            >
+              {profile.id === AIKI_DEFAULT_PROFILE.id && (
+                <span
+                  aria-label="About ion guidance profiles"
+                  className="text-amber-300"
+                >
+                  ✦
+                </span>
+              )}
+              {profile.id === AIKI_DEFAULT_PROFILE.id ? 'Aiki' : 'Watermancer Sensory'}
+              <span className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-left text-[11px] font-normal leading-relaxed text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/profile-toggle:opacity-100">
+                Switches the ion guidance used for green, yellow, and red flags and Watermancer comparison bars. It does not change recipe math, targets, or solver behavior.
+              </span>
+            </button>
+          ))}
+        </div>
         <p className="text-[11px] leading-relaxed text-slate-500">
-          Based on the final source-water-plus-salts mixture and Aiki&apos;s light-roast pourover ranges.{' '}
-          <a
-            href="https://discord.com/channels/1194136643637096508/1423022322465505380/1504865270882373775"
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium text-indigo-300 underline decoration-indigo-300/40 underline-offset-2 transition hover:text-indigo-200"
-          >
-            View Aiki&apos;s original Discord post
-          </a>
+          Based on the final source-water-plus-salts mixture and {activeProfile.name} guidance.{' '}
+          {activeProfile.id === AIKI_DEFAULT_PROFILE.id && (
+            <a
+              href="https://discord.com/channels/1194136643637096508/1423022322465505380/1504865270882373775"
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-indigo-300 underline decoration-indigo-300/40 underline-offset-2 transition hover:text-indigo-200"
+            >
+              View Aiki&apos;s original Discord post
+            </a>
+          )}
         </p>
         {flaggedIons.length === 0 ? (
           <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.06] px-3 py-2 text-[11px] text-emerald-200">
@@ -14087,7 +14166,7 @@ function IonWatchDisclosure({ ions }: { ions: Partial<Record<IonId, number>> }) 
         ) : (
           flaggedIons.map(({ id, ion, ppm, level }) => {
             const style = TRAFFIC_STYLES[level];
-            const range = AIKI_DEFAULT_PROFILE.ranges[id];
+            const range = activeProfile.ranges[id];
             return (
               <div key={id} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
