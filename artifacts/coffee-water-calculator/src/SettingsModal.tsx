@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Lock, Save, Trash2, Copy, RotateCcw, X, Plus, Check } from 'lucide-react';
 import {
-  ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE,
+  ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE,
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
 import { createProfile, emptyRangeSet } from '@/profiles';
@@ -27,6 +27,10 @@ export function SettingsModal({
   inline = false,
 }: Props) {
   const active = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
+  const selectableProfiles = profiles.filter(
+    profile => profile.id !== AIKI_DEFAULT_PROFILE.id
+      && profile.id !== WATERMANCER_SENSORY_PROFILE.id,
+  );
   const isLocked = active.locked;
   const [draftRanges, setDraftRanges] = useState<RangeSet>(structuredClone(active.ranges));
   const [naming, setNaming] = useState(false);
@@ -95,17 +99,23 @@ export function SettingsModal({
           <div>
             <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-2">Profile</label>
             <div className="flex flex-wrap items-center gap-3">
-              <select
-                value={activeProfileId}
-                onChange={e => onSelectProfile(e.target.value)}
-                className="flex-1 min-w-[200px] bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
-              >
-                {profiles.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}{p.locked ? ' — default' : ''}
-                  </option>
-                ))}
-              </select>
+              {activeProfileId === AIKI_DEFAULT_PROFILE.id ? (
+                <div className="flex-1 min-w-[200px] rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-300">
+                  Default ion guidance
+                </div>
+              ) : (
+                <select
+                  value={activeProfileId}
+                  onChange={e => onSelectProfile(e.target.value)}
+                  className="flex-1 min-w-[200px] bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
+                >
+                  {selectableProfiles.map(p => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{p.locked ? ' — default' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
               {!isLocked && (
                 <button
                   onClick={handleSaveOverwrite}

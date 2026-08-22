@@ -4366,7 +4366,8 @@ function App() {
   }, [allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
   const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
     ...profiles
-      .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id || profile.id === activeProfileId)
+      .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id
+        && profile.id !== WATERMANCER_SENSORY_PROFILE.id)
       .map(profile => ({
         id: `profile:${profile.id}`,
         name: profile.name
@@ -10403,7 +10404,8 @@ function WatermancerIonProfileCard({
       label: 'Empirical Water Profiles',
       accent: 'cyan',
       options: profiles
-        .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id || profile.id === activeProfileId)
+        .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id
+          && profile.id !== WATERMANCER_SENSORY_PROFILE.id)
         .map(profile => ({
           value: `profile:${profile.id}`,
           label: profile.name
