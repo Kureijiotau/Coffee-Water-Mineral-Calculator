@@ -4570,6 +4570,12 @@ function App() {
     ],
   );
   const beginWatermancerAction = () => {
+    // A deferred best-match callback can finish after a mode transition and
+    // leave the ref behind even though the UI is no longer busy. Never let an
+    // invisible stale lock make the recommendation buttons no-ops.
+    if (watermancerActionBusyRef.current && !watermancerActionRunning) {
+      watermancerActionBusyRef.current = false;
+    }
     if (watermancerActionBusyRef.current) return false;
     watermancerActionBusyRef.current = true;
     setWatermancerActionRunning(true);
