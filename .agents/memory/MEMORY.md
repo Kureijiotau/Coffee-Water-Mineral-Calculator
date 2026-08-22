@@ -54,4 +54,3 @@
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
-- [Watermancer action guard](watermancer-action-guard.md) — recover stale single-flight locks so Apply and Undo never silently no-op
