@@ -8220,7 +8220,7 @@ function App() {
                     </div>
                   </div>
                 </div>
-                 <details
+                 {false && (<details
                    className="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/20"
                    open={showWatermancerMatchDetails}
                    onToggle={event => setShowWatermancerMatchDetails(event.currentTarget.open)}
@@ -8338,7 +8338,7 @@ function App() {
                                  <button
                                    type="button"
                                    onClick={() => handleApplyWatermancerRecommendation(nextFix)}
-                                    disabled={watermancerBestMatchRunning}
+                                    disabled={watermancerActionRunning}
                                    className="shrink-0 rounded-lg border border-emerald-300/35 bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-400/25 disabled:cursor-wait disabled:opacity-60"
                                  >
                                    Apply fix
@@ -8370,6 +8370,7 @@ function App() {
                       )}
                    </div>
                  )}
+                 </details>)}
                  <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match
@@ -8428,8 +8429,7 @@ function App() {
                   </div>
                 </details>
                    </div>
-                 </details>
-                  <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
+                   <div className="mt-3 rounded-xl border border-cyan-400/30 bg-cyan-950/15 p-3 shadow-[0_0_24px_rgba(34,211,238,0.06)] sm:p-4">
                    <div className="grid gap-2 sm:grid-cols-2">
                    <button
                      type="button"
