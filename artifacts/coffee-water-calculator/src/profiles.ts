@@ -1,5 +1,5 @@
 import {
-  AIKI_DEFAULT_PROFILE, ACTIVE_ION_IDS, ION_MAP, IONS,
+  AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, ACTIVE_ION_IDS, ION_MAP, IONS,
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
@@ -29,6 +29,7 @@ export const EMPIRICAL_PROFILES: WaterProfile[] = EMPIRICAL_WATERS.map(water => 
 
 const BUILT_IN_PROFILE_IDS = new Set([
   AIKI_DEFAULT_PROFILE.id,
+  WATERMANCER_SENSORY_PROFILE.id,
   ...EMPIRICAL_PROFILES.map(profile => profile.id),
 ]);
 
@@ -76,7 +77,7 @@ export function loadProfiles(): WaterProfile[] {
     }
     return { ...p, ranges };
   });
-  return [AIKI_DEFAULT_PROFILE, ...EMPIRICAL_PROFILES, ...migrated];
+  return [AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, ...EMPIRICAL_PROFILES, ...migrated];
 }
 
 export function saveProfiles(profiles: WaterProfile[]): void {

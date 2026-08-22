@@ -185,6 +185,26 @@ export const AIKI_DEFAULT_PROFILE: WaterProfile = {
   ranges: Object.fromEntries(IONS.map(i => [i.id, { greenMax: i.greenMax, yellowMax: i.yellowMax }])) as RangeSet,
 };
 
+export const WATERMANCER_SENSORY_PROFILE: WaterProfile = {
+  id: 'watermancer-sensory',
+  name: 'Watermancer Sensory',
+  locked: true,
+  description: 'Loose working ranges based on the latest coffee-water research. These are sensory suggestions, not universal taste limits or solver constraints.',
+  ranges: Object.fromEntries(IONS.map(i => {
+    const ranges: Partial<Record<IonId, IonRanges>> = {
+      sodium: { greenMax: 30, yellowMax: 100 },
+      potassium: { greenMax: 20, yellowMax: 50 },
+      magnesium: { greenMax: 40, yellowMax: 50 },
+      calcium: { greenMax: 40, yellowMax: 50 },
+      chloride: { greenMax: 30, yellowMax: 40 },
+      sulfate: { greenMax: 30, yellowMax: 40 },
+      bicarbonate: { greenMax: 50, yellowMax: 60 },
+      citrates: { greenMax: 25, yellowMax: 35 },
+    };
+    return [i.id, ranges[i.id] ?? { greenMax: i.greenMax, yellowMax: i.yellowMax }];
+  })) as RangeSet,
+};
+
 export const ION_MAP = Object.fromEntries(IONS.map(i => [i.id, i])) as Record<IonId, IonInfo>;
 
 export interface IonChemistry {
