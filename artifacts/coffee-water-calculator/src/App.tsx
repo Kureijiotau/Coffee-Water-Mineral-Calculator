@@ -9572,13 +9572,22 @@ function RecipeConcentrateBuilder({
   });
 
   useEffect(() => {
-    setStrengthInput('500');
+    const initialAllInOneStrength = allInOneStockGroups.length > 0
+      ? findStrongestSafeConcentrateStrength(groupTargetsFor(allInOneStockGroups[0]))
+      : 1;
+    const initialStockStrengths = Object.fromEntries(
+      compatibleStockGroups.map(group => [
+        group.id,
+        String(findStrongestSafeConcentrateStrength(groupTargetsFor(group))),
+      ]),
+    );
+    setStrengthInput(String(initialAllInOneStrength));
     setStockStrategy('gh-kh');
     setStockStrengthInputs({
-      hardness: '500',
-      alkalinity: '500',
-      citrate: '500',
-      'all-in-one': '500',
+      hardness: initialStockStrengths.hardness ?? '1',
+      alkalinity: initialStockStrengths.alkalinity ?? '1',
+      citrate: initialStockStrengths.citrate ?? '1',
+      'all-in-one': String(initialAllInOneStrength),
     });
     setStockVolumeInputs({
       hardness: '100',
