@@ -107,6 +107,8 @@ type ConcentratePlanSnapshot = {
     id: string;
     name: string;
     volumeMl: number;
+    strength: number;
+    maxSafeStrength: number;
     saltIds: string[];
   }>;
 };
@@ -9556,6 +9558,12 @@ function RecipeConcentrateBuilder({
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
   const [stockStrategy, setStockStrategy] = useState<'gh-kh' | 'all-in-one' | 'individual'>('gh-kh');
+  const [stockStrengthInputs, setStockStrengthInputs] = useState<Record<string, string>>({
+    hardness: '500',
+    alkalinity: '500',
+    citrate: '500',
+    'all-in-one': '500',
+  });
   const [stockVolumeInputs, setStockVolumeInputs] = useState<Record<string, string>>({
     hardness: '100',
     alkalinity: '100',
@@ -9566,6 +9574,12 @@ function RecipeConcentrateBuilder({
   useEffect(() => {
     setStrengthInput('500');
     setStockStrategy('gh-kh');
+    setStockStrengthInputs({
+      hardness: '500',
+      alkalinity: '500',
+      citrate: '500',
+      'all-in-one': '500',
+    });
     setStockVolumeInputs({
       hardness: '100',
       alkalinity: '100',
@@ -9619,6 +9633,11 @@ function RecipeConcentrateBuilder({
     individual: maxSafeStrengthFor(individualStockGroups),
   };
   const maxSafeStrength = maxSafeStrengthByStrategy[stockStrategy];
+  const groupStrengthFor = (group: { id: string }) => stockStrategy === 'all-in-one'
+    ? strength
+    : Math.max(0, Number(stockStrengthInputs[group.id] ?? '500') || 0);
+  const groupMaxSafeStrengthFor = (group: { saltIds: string[] }) =>
+    findStrongestSafeConcentrateStrength(groupTargetsFor(group));
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
@@ -9644,6 +9663,10 @@ function RecipeConcentrateBuilder({
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([groupId, volume]) => `${groupId}:${volume}`)
     .join('|');
+  const planStrengthSignature = Object.entries(stockStrengthInputs)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([groupId, groupStrength]) => `${groupId}:${groupStrength}`)
+    .join('|');
 
   useEffect(() => {
     onPlanChange({
@@ -9655,6 +9678,8 @@ function RecipeConcentrateBuilder({
         id: group.id,
         name: group.name.replace(/ Stock$/, ' Concentrate'),
         volumeMl: Math.max(0, Number(stockVolumeInputs[group.id] ?? '100') || 0),
+        strength: groupStrengthFor(group),
+        maxSafeStrength: groupMaxSafeStrengthFor(group),
         saltIds: [...group.saltIds],
       })),
     });
@@ -9663,6 +9688,7 @@ function RecipeConcentrateBuilder({
     onPlanChange,
     planGroupSignature,
     planVolumeSignature,
+    planStrengthSignature,
     stockStrategy,
     stockStrategyDetails.label,
     strength,
@@ -9772,44 +9798,90 @@ function RecipeConcentrateBuilder({
         </div>
         <div className="mt-4">
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                <span className="flex items-center gap-2">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
-                    <BottleWine className="h-4 w-4" aria-hidden="true" />
+            {stockStrategy === 'all-in-one' ? (
+              <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
+                      <BottleWine className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <label htmlFor="recipe-stock-strength">Concentrate strength</label>
                   </span>
-                  <label htmlFor="recipe-stock-strength">Concentrate strength</label>
-                </span>
-                {maxSafeStrength != null && (
-                  <button
-                    type="button"
-                    onClick={() => setStrengthInput(String(maxSafeStrength))}
-                    className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
-                      strength > maxSafeStrength
-                        ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
-                        : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
-                    }`}
-                    aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
-                    title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
-                  >
-                    Max ×{maxSafeStrength}
-                  </button>
-                )}
+                  {maxSafeStrength != null && (
+                    <button
+                      type="button"
+                      onClick={() => setStrengthInput(String(maxSafeStrength))}
+                      className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
+                        strength > maxSafeStrength
+                          ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
+                          : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
+                      }`}
+                      aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
+                      title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
+                    >
+                      Max ×{maxSafeStrength}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    id="recipe-stock-strength"
+                    type="number"
+                    min="1"
+                    step="10"
+                    value={strengthInput}
+                    onChange={event => setStrengthInput(event.target.value)}
+                    className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                    aria-label="Recipe concentrate strength multiplier"
+                  />
+                  <span className="text-sm text-slate-400">×</span>
+                </div>
               </div>
-              <div className="mt-1 flex items-center gap-2">
-                <input
-                  id="recipe-stock-strength"
-                  type="number"
-                  min="1"
-                  step="10"
-                  value={strengthInput}
-                  onChange={event => setStrengthInput(event.target.value)}
-                  className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
-                  aria-label="Recipe concentrate strength multiplier"
-                />
-                <span className="text-sm text-slate-400">×</span>
-              </div>
-            </div>
+            ) : (
+              stockGroups.map(group => {
+                const groupName = group.name.replace(/ Stock$/, ' Concentrate');
+                const groupMaxSafeStrength = groupMaxSafeStrengthFor(group);
+                const groupStrength = groupStrengthFor(group);
+                return (
+                  <div key={group.id} className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                      <span className="flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 text-fuchsia-200">
+                          <BottleWine className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <label htmlFor={`recipe-stock-strength-${group.id}`}>{groupName} strength</label>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setStockStrengthInputs(prev => ({ ...prev, [group.id]: String(groupMaxSafeStrength) }))}
+                        className={`rounded-md px-1.5 py-1 text-[10px] font-semibold uppercase tracking-wider transition focus:outline-none focus:ring-2 focus:ring-emerald-300/50 ${
+                          groupStrength > groupMaxSafeStrength
+                            ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
+                            : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
+                        }`}
+                        aria-label={`Apply max safe ${groupName} strength of ${groupMaxSafeStrength} times`}
+                        title={`Apply max safe ${groupName} strength ×${groupMaxSafeStrength}`}
+                      >
+                        Max ×{groupMaxSafeStrength}
+                      </button>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2">
+                      <input
+                        id={`recipe-stock-strength-${group.id}`}
+                        type="number"
+                        min="1"
+                        step="10"
+                        value={stockStrengthInputs[group.id] ?? '500'}
+                        onChange={event => setStockStrengthInputs(prev => ({ ...prev, [group.id]: event.target.value }))}
+                        className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                        aria-label={`${groupName} strength multiplier`}
+                      />
+                      <span className="text-sm text-slate-400">×</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
           <div className="mt-3 rounded-xl border border-sky-300/25 bg-slate-950/25 px-3 py-2.5">
             <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
