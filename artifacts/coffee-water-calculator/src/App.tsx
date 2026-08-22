@@ -4361,9 +4361,9 @@ function App() {
       if (p) return p.targets;
     }
     return Object.fromEntries(
-      ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+      ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
     ) as Partial<Record<IonId, number>>;
-  }, [activeRanges, allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
+  }, [allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
   const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
     ...profiles
       .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id || profile.id === activeProfileId)
@@ -5423,13 +5423,13 @@ function App() {
     ? saltOnlyIons
     : noRecipeSelected
     ? Object.fromEntries(
-        ACTIVE_ION_IDS.map(id => [id, activeRanges[id].greenMax]),
+        ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
       ) as Partial<Record<IonId, number>>
     : saltOnlyIons;
   const autoFillUsesRecipeTargets = showAlchemist && hasSaltRecipeTargets;
   const watermancerTargetSourceLabel = useMemo(() => {
     if (watermancerImportedRecipeName) return watermancerImportedRecipeName;
-    if (watermancerTargetSource === 'safe-profile') return `${activeProfile.name} safe profile`;
+    if (watermancerTargetSource === 'safe-profile') return `${AIKI_DEFAULT_PROFILE.name} safe profile`;
     if (watermancerTargetSource === 'salt-table') return 'Current salt table';
     if (watermancerTargetSource.startsWith('profile:')) {
       return profiles.find(p => p.id === watermancerTargetSource.slice('profile:'.length))?.name ?? '';
@@ -5447,10 +5447,10 @@ function App() {
       return LOTUS_RECIPES.find(item => item.id === watermancerTargetSource.slice('lotus:'.length))?.name ?? 'Lotus recipe';
     }
     return ROBERT_ASAMI_RECIPES.find(item => item.id === watermancerTargetSource.slice('external:'.length))?.name ?? 'Watering Hole recipe';
-  }, [activeProfile.name, allRecipes, watermancerImportedRecipeName, watermancerTargetSource, profiles, wmProfiles]);
+  }, [allRecipes, watermancerImportedRecipeName, watermancerTargetSource, profiles, wmProfiles]);
   const recipeStepsProfileName = showWatermancer
     ? watermancerTargetSource === 'safe-profile'
-      ? activeProfile.name
+      ? AIKI_DEFAULT_PROFILE.name
       : watermancerTargetSourceLabel
     : displayedRecipeName;
   // Recipe steps must describe the same salts the active tab will actually
@@ -10255,7 +10255,7 @@ function WatermancerIonProfileCard({
   }], [comparisonProfiles]);
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
-    ? `profile:${activeProfileId}`
+    ? `profile:${AIKI_DEFAULT_PROFILE.id}`
     : watermancerTargetSource;
 
   const selectedTargetSourceUrl = (() => {
@@ -10308,9 +10308,7 @@ function WatermancerIonProfileCard({
   const handleDropdownChange = (value: string) => {
     cancelEditing();
     if (value.startsWith('profile:')) {
-      const profileId = value.slice('profile:'.length);
-      onSelectProfile(profileId);
-      onTargetSourceChange('safe-profile');
+      onTargetSourceChange(value as WatermancerTargetSourceId);
     } else {
       onTargetSourceChange(value as WatermancerTargetSourceId);
     }
