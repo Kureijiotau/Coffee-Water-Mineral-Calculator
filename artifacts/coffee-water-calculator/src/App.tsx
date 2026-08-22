@@ -4625,7 +4625,6 @@ function App() {
     finishWatermancerActionAfterPaint();
   };
   const handleApplyWatermancerRecommendation = (recommendation: WatermancerMatchRecommendation) => {
-    if (!beginWatermancerAction()) return;
     setShowWatermancerMatchDetails(true);
     setWatermancerBestMatchMessage(null);
     const action = recommendation.action;
@@ -4679,7 +4678,6 @@ function App() {
     if (action.type !== 'review-controls') {
       setWatermancerRecalculationNonce(current => current + 1);
     }
-    finishWatermancerActionAfterPaint();
   };
   const watermancerFixMatchesLiveState = (fix: WatermancerAppliedFix): boolean => {
     if (fix.kind === 'salts') {
@@ -4691,7 +4689,6 @@ function App() {
     return JSON.stringify(overshootSettings) === JSON.stringify(fix.after);
   };
   const handleUndoWatermancerFix = (fix: WatermancerAppliedFix) => {
-    if (!beginWatermancerAction()) return;
     if (fix.kind === 'salts') {
       if (JSON.stringify(watermancerUsedSaltIds) !== JSON.stringify(fix.after)) {
         setWatermancerActionMessage('This fix was changed manually, so it was not undone.');
@@ -4718,7 +4715,6 @@ function App() {
       setWatermancerActionMessage('Fix undone. Recalculating the match.');
       setWatermancerRecalculationNonce(current => current + 1);
     }
-    finishWatermancerActionAfterPaint();
   };
   const handleFindBestWatermancerMatch = () => {
     if (!beginWatermancerAction()) return;
