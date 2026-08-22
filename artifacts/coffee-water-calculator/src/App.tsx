@@ -33,7 +33,7 @@ import {
   WaterChemistryCard as SharedWaterChemistryCard,
 } from './components/MetricCards';
 import {
-  loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
+  loadProfiles, saveProfiles, saveActiveProfileId,
   loadNerdLevel, saveNerdLevel, createProfile,
   type NerdLevel,
 } from '@/profiles';
@@ -3860,7 +3860,7 @@ function App() {
 
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
-  const [activeProfileId, setActiveProfileId] = useState<string>(() => loadActiveProfileId());
+  const [activeProfileId, setActiveProfileId] = useState<string>(AIKI_DEFAULT_PROFILE.id);
   const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
@@ -10469,37 +10469,6 @@ function WatermancerIonProfileCard({
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-lg border border-indigo-300/20 bg-slate-950/25 p-0.5" role="group" aria-label="Ion guidance profile">
-            {[AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE].map(profile => (
-              <button
-                key={profile.id}
-                type="button"
-                onClick={() => {
-                  cancelEditing();
-                  onSelectProfile(profile.id);
-                }}
-                className={`group/profile-toggle relative rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
-                  activeProfileId === profile.id
-                    ? 'bg-cyan-500/20 text-cyan-100 ring-1 ring-cyan-300/35'
-                    : 'text-slate-500 hover:bg-slate-700/40 hover:text-slate-300'
-                }`}
-                aria-pressed={activeProfileId === profile.id}
-              >
-                {profile.id === AIKI_DEFAULT_PROFILE.id && (
-                  <span
-                    aria-label="About ion guidance profiles"
-                    className="text-amber-300"
-                  >
-                    ✦
-                  </span>
-                )}
-                {profile.id === AIKI_DEFAULT_PROFILE.id ? 'Aiki' : 'Sensory'}
-                <span className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-left text-[11px] font-normal leading-relaxed text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/profile-toggle:opacity-100">
-                  Switches the ion guidance used for green, yellow, and red flags and Watermancer comparison bars. It does not change recipe math, targets, or solver behavior.
-                </span>
-              </button>
-            ))}
-          </div>
            <div className="flex h-10 items-center gap-1">
              {selectedTargetSourceUrl && (
                <a
@@ -14115,34 +14084,6 @@ function IonWatchDisclosure({
         <span className="ml-auto text-slate-500 transition-transform group-open:rotate-180">⌄</span>
       </summary>
       <div className="space-y-2 border-t border-indigo-400/10 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-1.5" role="group" aria-label="Ion guidance profile">
-          {[AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE].map(profile => (
-            <button
-              key={profile.id}
-              type="button"
-              onClick={() => onSelectProfile(profile.id)}
-              className={`group/profile-toggle relative rounded-md border px-2 py-1 text-[10px] font-semibold transition ${
-                activeProfile.id === profile.id
-                  ? 'border-indigo-300/45 bg-indigo-500/20 text-indigo-100'
-                  : 'border-slate-700/60 bg-slate-900/30 text-slate-500 hover:border-indigo-300/30 hover:text-slate-300'
-              }`}
-              aria-pressed={activeProfile.id === profile.id}
-            >
-              {profile.id === AIKI_DEFAULT_PROFILE.id && (
-                <span
-                  aria-label="About ion guidance profiles"
-                  className="text-amber-300"
-                >
-                  ✦
-                </span>
-              )}
-              {profile.id === AIKI_DEFAULT_PROFILE.id ? 'Aiki' : 'Watermancer Sensory'}
-              <span className="pointer-events-none absolute left-0 top-full z-20 mt-2 w-64 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-left text-[11px] font-normal leading-relaxed text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/profile-toggle:opacity-100">
-                Switches the ion guidance used for green, yellow, and red flags and Watermancer comparison bars. It does not change recipe math, targets, or solver behavior.
-              </span>
-            </button>
-          ))}
-        </div>
         <p className="text-[11px] leading-relaxed text-slate-500">
           Based on the final source-water-plus-salts mixture and {activeProfile.name} guidance.{' '}
           {activeProfile.id === AIKI_DEFAULT_PROFILE.id && (
