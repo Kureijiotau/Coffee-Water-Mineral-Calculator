@@ -21,3 +21,10 @@ uri = "file://research/gemini-brand-ion-refinement.md"
 type = "text"
 title = "Gemini Brand-Source Ion Research"
 description = "Deep cross-check of Apax Lab, Lotus Water, Empirical Water, other published coffee-water guidance, and academic evidence for the eight ion tooltips."
+
+[[outputs]]
+id = "4jUjTbMNuQJrdjX9XoaWO"
+uri = "file://research/gemini-amounts-ratios-balance.md"
+type = "text"
+title = "Gemini Coffee-Water Amounts, Ratios & Balance Research"
+description = "Deep quantitative review of unpleasantness thresholds, ion ratios, total mineral balance, and published coffee-water brand recipes."
