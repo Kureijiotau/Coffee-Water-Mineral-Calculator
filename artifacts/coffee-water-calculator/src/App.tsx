@@ -216,22 +216,6 @@ type OvershootSettings = {
   allowedIons: IonId[];
   limits: Partial<Record<IonId, number>>;
 };
-type WatermancerAppliedFix =
-  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'enable-salt' }>; kind: 'salts'; before: string[]; after: string[] }
-  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'relax-source-preference' }>; kind: 'source'; before: WatermancerIonSourcePreference; after: WatermancerIonSourcePreference }
-  | { id: string; label: string; action: Extract<WatermancerMatchRecommendationAction, { type: 'allow-policy-room' }>; kind: 'policy'; before: OvershootSettings; after: OvershootSettings };
-
-function watermancerRecommendationKey(recommendation: WatermancerMatchRecommendation): string {
-  const action = recommendation.action;
-  return action.type === 'enable-salt'
-    ? `${action.type}:${action.saltId}`
-    : action.type === 'relax-source-preference'
-      ? `${action.type}:${action.ionId}`
-      : action.type === 'allow-policy-room'
-        ? `${action.type}:${action.ionId}:${action.limitPpm}`
-      : `${action.type}:${action.focus}`;
-}
-
 const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-preferences';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
@@ -3925,7 +3909,6 @@ function App() {
   const [watermancerAppliedBestMatchRoute, setWatermancerAppliedBestMatchRoute] = useState<WatermancerRouteCandidate | null>(null);
   const [watermancerBestMatchMessage, setWatermancerBestMatchMessage] = useState<string | null>(null);
   const [watermancerBestMatchRunning, setWatermancerBestMatchRunning] = useState(false);
-  const [watermancerAppliedFixes, setWatermancerAppliedFixes] = useState<Record<string, WatermancerAppliedFix>>({});
   const [watermancerActionRunning, setWatermancerActionRunning] = useState(false);
   const [watermancerActionMessage, setWatermancerActionMessage] = useState<string | null>(null);
   const watermancerActionBusyRef = useRef(false);
