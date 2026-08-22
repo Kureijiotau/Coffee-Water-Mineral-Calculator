@@ -3677,6 +3677,7 @@ function App() {
   );
   const [targetInputDrafts, setTargetInputDrafts] = useState<Record<string, string>>({});
   const [directDoseInputDrafts, setDirectDoseInputDrafts] = useState<Record<string, string>>({});
+  const directDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [memeSaltFlashNonce, setMemeSaltFlashNonce] = useState(0);
   // Keep calculations/rendering safe across hot reloads and older in-memory
@@ -6802,7 +6803,11 @@ function App() {
              const directDoseInputValue = Object.prototype.hasOwnProperty.call(directDoseInputDrafts, salt.id)
                ? directDoseInputDrafts[salt.id]
                : directDoseValue;
-            const updateDirectDose = (value: string) => {
+             const updateDirectDose = (
+               value: string,
+               selectionStart: number | null,
+               selectionEnd: number | null,
+             ) => {
                setDirectDoseInputDrafts(current => ({ ...current, [salt.id]: value }));
               if (value.trim() === '') {
                 updateRow(i, { target: '' });
@@ -6816,6 +6821,13 @@ function App() {
                 salt.anhydrousMass,
               );
               updateRow(i, { target: Number.isFinite(targetPpm) ? String(targetPpm) : '' });
+               if (selectionStart !== null && selectionEnd !== null) {
+                 window.requestAnimationFrame(() => {
+                   const input = directDoseInputRefs.current[salt.id];
+                   if (!input || input.value !== value) return;
+                   input.setSelectionRange(selectionStart, selectionEnd);
+                 });
+               }
             };
              return (
                <div
@@ -6877,6 +6889,7 @@ function App() {
                   {showAlchemist ? (
                     <div className="flex items-center gap-2">
                       <input
+                         ref={input => { directDoseInputRefs.current[salt.id] = input; }}
                          type="text"
                          inputMode="decimal"
                         min="0"
@@ -6892,7 +6905,11 @@ function App() {
                            delete next[salt.id];
                            return next;
                          })}
-                        onChange={e => updateDirectDose(e.target.value)}
+                         onChange={e => updateDirectDose(
+                           e.target.value,
+                           e.target.selectionStart,
+                           e.target.selectionEnd,
+                         )}
                         onKeyDown={e => {
                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                         }}
