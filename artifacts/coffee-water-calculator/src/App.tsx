@@ -8333,7 +8333,7 @@ function App() {
                                <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-300/20 bg-gradient-to-r from-emerald-500/[0.1] via-cyan-500/[0.06] to-transparent px-3 py-2.5">
                                  <div className="min-w-0">
                                    <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-emerald-200/75">Recommended next move</div>
-                                   <div className="mt-0.5 text-[11px] font-semibold text-emerald-50">{nextFix.label}</div>
+                                    <div className="mt-0.5 text-[11px] font-semibold text-emerald-50">{nextFix?.label}</div>
                                  </div>
                                  <button
                                    type="button"
