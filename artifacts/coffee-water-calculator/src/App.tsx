@@ -12465,12 +12465,25 @@ function ConcentrateRecipeStepsModal({
                     <div className="mt-1 text-sm font-semibold text-violet-100">{plan.strategyLabel}</div>
                   </div>
                   <div className="rounded-lg border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-3 py-2.5">
-                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Concentrate strength</div>
-                    <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">×{plan.strength || 0}</div>
-                    {plan.maxSafeStrength != null && (
-                      <div className={`mt-0.5 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
-                        Max ×{plan.maxSafeStrength}
-                      </div>
+                    {isGhKhPlan ? (
+                      <>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Independent bottle strengths</div>
+                        <div className="mt-1 space-y-0.5 text-sm font-semibold tabular-nums text-fuchsia-100">
+                          {plan.groups.map(group => (
+                            <div key={group.id}>{group.name.replace(/ Concentrate$/, '')} ×{group.strength}</div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Concentrate strength</div>
+                        <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">×{plan.strength || 0}</div>
+                        {plan.maxSafeStrength != null && (
+                          <div className={`mt-0.5 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
+                            Max ×{plan.maxSafeStrength}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
