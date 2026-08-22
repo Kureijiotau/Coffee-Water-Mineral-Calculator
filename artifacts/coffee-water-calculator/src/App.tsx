@@ -3448,7 +3448,7 @@ function MineralRecipePicker({
     maxHeight: 360,
     openAbove: false,
   });
-  const options = groups.flatMap(group => group.options);
+  const options = useMemo(() => groups.flatMap(group => group.options), [groups]);
   const selectedOption = options.find(option => option.value === value) ?? options[0];
 
   const updatePosition = () => {
@@ -6588,7 +6588,6 @@ function App() {
               referenceWaters={EMPIRICAL_WATERS}
                comparisonProfiles={watermancerComparisonProfiles}
               watermancerTargetSource={watermancerTargetSource}
-              onSelectProfile={handleSelectProfile}
               onTargetSourceChange={handleWatermancerTargetSourceChange}
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
@@ -6945,7 +6944,6 @@ function App() {
                <IonWatchDisclosure
                  ions={saltOnlyIons}
                  activeProfile={activeProfile}
-                 onSelectProfile={handleSelectProfile}
                />
              )}
              <div className="flex items-center justify-start">
@@ -10195,7 +10193,6 @@ function WatermancerIonProfileCard({
   referenceWaters,
   comparisonProfiles,
   watermancerTargetSource,
-  onSelectProfile,
   onTargetSourceChange,
   onTargetOverrideChange,
   onSaveWmProfile,
@@ -10216,7 +10213,6 @@ function WatermancerIonProfileCard({
   referenceWaters: typeof EMPIRICAL_WATERS;
   comparisonProfiles: WatermancerComparisonProfile[];
   watermancerTargetSource: WatermancerTargetSourceId;
-  onSelectProfile: (id: string) => void;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
@@ -14039,11 +14035,9 @@ function WaterMetadataFields({
 function IonWatchDisclosure({
   ions,
   activeProfile,
-  onSelectProfile,
 }: {
   ions: Partial<Record<IonId, number>>;
   activeProfile: WaterProfile;
-  onSelectProfile: (id: string) => void;
 }) {
   const flaggedIons = ACTIVE_ION_IDS
     .map(id => {
