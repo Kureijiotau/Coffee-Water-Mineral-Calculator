@@ -1,6 +1,6 @@
 # Research Notes: Brewing-Ion Effects on the Final Cup
 
-**Status:** researching
+**Status:** complete
 **Depth:** Deep
 
 ## Plan
@@ -31,12 +31,12 @@
 
 ## Findings Log
 
-Research collection has not started.
+Gemini completed five focused investigations and a synthesis. See `research/gemini-ion-deep-dive.md` and `research/gemini-ion-investigations.md`.
 
 ## Conflicts & Open Questions
 
-To be populated during source comparison.
+Gemini flagged isolated-ion attribution, universal taste thresholds, and chloride/sulfate ratio claims as areas requiring caution.
 
 ## Gaps
 
-To be populated during gap analysis.
+Direct coffee sensory evidence is strongest for hardness and alkalinity; potassium, isolated chloride/sulfate effects, and added citrate remain more limited.

@@ -69,7 +69,7 @@ export interface SaltInfo {
 export const IONS: IonInfo[] = [
   {
     id: 'sodium', name: 'Sodium', formula: 'Na⁺', greenMax: 10, yellowMax: 20,
-    tasteNote: 'Enhances sweetness and body at low levels; excessive sodium makes the cup taste flat, salty, or metallic, and dulls acidity.',
+    tasteNote: 'A monovalent ion that can soften bitterness at low levels and make sweetness feel more apparent. Too much tastes salty or flat and can mute delicate acidity; the result also depends on its paired anion, roast, and brew recipe.',
     flagNotes: {
       green: 'Balanced — adds a touch of sweetness and mouthfeel without overpowering other flavors.',
       yellow: 'Elevated — sweetness becomes pronounced but acidity starts to feel muted and the cup may taste slightly flat.',
@@ -78,7 +78,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'potassium', name: 'Potassium', formula: 'K⁺', greenMax: 3, yellowMax: 5,
-    tasteNote: 'Similar to sodium but milder — can add a soft sweetness; too much gives a bitter, soapy, or astringent impression.',
+    tasteNote: 'Coffee grounds already contribute substantial potassium, so small water additions are unlikely to drive extraction. Higher levels can add harsh, bitter, or metallic notes; evidence for a useful coffee-brewing role is limited.',
     flagNotes: {
       green: 'Balanced — subtle sweetness with no negative impact on flavor.',
       yellow: 'Elevated — sweetness intensifies but a faint bitterness or astringency may appear in the finish.',
@@ -87,7 +87,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'magnesium', name: 'Magnesium', formula: 'Mg²⁺', greenMax: 20, yellowMax: 40,
-    tasteNote: 'Adds structure and clarity to the cup; magnesium-rich water tends to produce a crisp, clean extraction with well-defined flavors.',
+    tasteNote: 'A divalent hardness ion that binds and extracts many polar coffee compounds efficiently. It is often associated with vivid acidity and clarity, but excess can taste dry or bitter; roast, paired anions, alkalinity, and total mineral load matter.',
     flagNotes: {
       green: 'Balanced — contributes to a clean, crisp cup with well-defined flavor clarity.',
       yellow: 'Elevated — the cup may feel increasingly sharp or dry as structure begins to outweigh sweetness.',
@@ -96,7 +96,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'calcium', name: 'Calcium', formula: 'Ca²⁺', greenMax: 12, yellowMax: 25,
-    tasteNote: 'Builds body, sweetness, and extraction efficiency; too much calcium makes the cup heavy, dull, and can leave a chalky residue.',
+    tasteNote: 'A divalent hardness ion that supports extraction and can add weight to the cup. Higher levels may mute delicate acidity, feel chalky, and increase scale risk when alkalinity is present; sensory effects depend on the coffee and paired anion.',
     flagNotes: {
       green: 'Balanced — adds body and sweetness while supporting efficient extraction.',
       yellow: 'Elevated — body becomes heavy and the cup may start to taste dull or thick.',
@@ -105,7 +105,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'chloride', name: 'Chloride', formula: 'Cl⁻', greenMax: 25, yellowMax: 35,
-    tasteNote: 'Generally neutral in taste but acts as a counter-ion; high chloride can impart a faint salty or chemical note and may corrode equipment.',
+    tasteNote: 'A non-buffering counter-ion whose cup effect is difficult to separate from its paired cation. It may make a brew feel smoother or fuller at modest levels; too much can taste brackish and raises corrosion risk in hot equipment.',
     flagNotes: {
       green: 'Balanced — neutral flavor impact; serves as an unobtrusive counter-ion.',
       yellow: 'Elevated — a faint salty or chemical edge may begin to appear in the background.',
@@ -114,7 +114,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'sulfate', name: 'Sulfate', formula: 'SO₄²⁻', greenMax: 15, yellowMax: 25,
-    tasteNote: 'Can add a dry, crisp edge to the cup; at high levels sulfate introduces a bitter, astringent, or even medicinal character.',
+    tasteNote: 'A non-buffering counter-ion that contributes to total ionic strength, but its isolated coffee flavor effect is not well established. Dry or crisp impressions may reflect the paired cation and overall mineral load; excess can taste harsh or astringent.',
     flagNotes: {
       green: 'Balanced — adds a clean, dry crispness without bitterness.',
       yellow: 'Elevated — a dry, astringent edge begins to build in the finish.',
@@ -123,7 +123,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'bicarbonate', name: 'Bicarbonate', formula: 'HCO₃⁻', greenMax: 20, yellowMax: 35,
-    tasteNote: 'The primary acidity buffer — bicarbonate controls how bright or muted the coffee tastes. Higher levels tame sharp, fruity acidity; too little leaves the cup tasting thin and sour.',
+    tasteNote: 'The main alkalinity buffer: it neutralizes acids released during brewing and strongly shapes perceived brightness. More bicarbonate softens sharp acidity but can make coffee dull; too little can leave acidity aggressive. Roast, brew ratio, and hardness also matter.',
     flagNotes: {
       green: 'Balanced — acidity is well-integrated; bright, fruity notes shine without tasting sour.',
       yellow: 'Elevated — acidity becomes increasingly muted; the cup tastes smoother but may lose vibrancy.',
@@ -141,7 +141,7 @@ export const IONS: IonInfo[] = [
   },
   {
     id: 'citrates', name: 'Citrates', formula: 'C₆H₅O₇³⁻', greenMax: 5, yellowMax: 10,
-    tasteNote: 'Adds a bright, citrusy acidity of its own; can enhance fruity and floral notes but too much tastes sour or tart.',
+    tasteNote: 'An added organic buffer and chelator, not simply “citrus flavor.” It can change acidity and bind calcium or magnesium, so its extraction effect is context-dependent; direct coffee evidence is limited and excess may taste sharply sour or salty.',
     flagNotes: {
       green: 'Balanced — enhances citrusy, fruity brightness without overwhelming.',
       yellow: 'Elevated — the cup becomes increasingly tart or sour.',

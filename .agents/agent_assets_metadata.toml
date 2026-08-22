@@ -7,3 +7,10 @@ uri = "file://research/notes.md"
 type = "text"
 title = "Research Notes: Brewing-Ion Effects"
 description = "Deep-research plan and running findings for the eight Watermancer ion tooltips."
+
+[[outputs]]
+id = "4mhOLOXgAecijgt_40K5T"
+uri = "file://research/gemini-ion-deep-dive.md"
+type = "text"
+title = "Gemini Deep Research: Coffee Brewing Ions"
+description = "Five focused Gemini investigations synthesized into evidence-aware tooltip guidance for the eight Watermancer ion cards."
