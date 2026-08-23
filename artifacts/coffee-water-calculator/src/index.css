@@ -224,8 +224,28 @@ body {
 }
 
 .watermancer-salt-table__row {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "salt use"
+    "hydration hydration"
+    "dose dose";
   row-gap: 0.75rem;
+}
+
+.watermancer-salt-table__salt {
+  grid-area: salt;
+}
+
+.watermancer-salt-table__hydration {
+  grid-area: hydration;
+}
+
+.watermancer-salt-table__dose {
+  grid-area: dose;
+}
+
+.watermancer-salt-table__use {
+  grid-area: use;
 }
 
 .watermancer-salt-table__header {
@@ -324,10 +344,16 @@ body {
 
 .watermancer-salt-table__use button {
   display: flex;
-  width: 100%;
+  width: auto;
   min-height: 2rem;
   align-items: center;
   justify-content: center;
+}
+
+.mode-switcher__button:focus-visible {
+  outline: 2px solid rgb(125 211 252 / 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(15 23 42 / 0.9);
 }
 
 @media (max-width: 1023px) and (min-width: 640px) {
@@ -351,18 +377,21 @@ body {
 
   .watermancer-salt-table__row {
     grid-template-columns: var(--salt-grid-columns);
+    grid-template-areas: none;
     column-gap: 1rem;
     row-gap: 0;
     min-height: 4.5rem;
   }
 
   .watermancer-salt-table__salt {
+    grid-area: auto;
     text-align: left;
   }
 
   .watermancer-salt-table__hydration,
   .watermancer-salt-table__dose,
   .watermancer-salt-table__use {
+    grid-area: auto;
     align-self: center;
   }
 }

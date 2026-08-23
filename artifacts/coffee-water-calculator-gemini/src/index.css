@@ -645,6 +645,58 @@ summary {
   background: rgb(231 217 191 / 0.35);
 }
 
+.mode-switcher__button:focus-visible {
+  outline: 2px solid rgb(36 74 120 / 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(249 246 238 / 0.9);
+}
+
+@media (max-width: 639px) {
+  .watermancer-salt-table__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "salt use"
+      "hydration hydration"
+      "dose dose";
+    row-gap: 0.75rem;
+    align-items: center;
+  }
+
+  .watermancer-salt-table__salt {
+    grid-area: salt;
+  }
+
+  .watermancer-salt-table__hydration {
+    grid-area: hydration;
+  }
+
+  .watermancer-salt-table__dose {
+    grid-area: dose;
+  }
+
+  .watermancer-salt-table__use {
+    grid-area: use;
+  }
+
+  .watermancer-salt-table__use button {
+    width: auto;
+  }
+}
+
+@media (min-width: 640px) {
+  .watermancer-salt-table__row {
+    grid-area: auto;
+  }
+
+  .watermancer-salt-table__salt,
+  .watermancer-salt-table__hydration,
+  .watermancer-salt-table__dose,
+  .watermancer-salt-table__use {
+    grid-area: auto;
+  }
+}
+
 /* Results, alerts, and empty states retain semantic color but gain paper contrast. */
 .app-shell [role='alert'] {
   border-color: rgb(179 108 67 / 0.34) !important;
