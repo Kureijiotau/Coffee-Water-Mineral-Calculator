@@ -147,7 +147,7 @@ export function WaterChemistryCard({
         </div>
         <p className="mt-3 text-xs leading-relaxed text-slate-500">
           {hasEstimate
-            ? 'Estimated from reported base-water pH and alkalinity plus the recipe’s carbonate and citrate balance. Verify with a calibrated pH meter.'
+            ? 'Predicted from the reported source-water pH and alkalinity, final water blend, batch dilution, and the recipe’s full modeled carbonate, citrate, and phosphate balance. Verify with a calibrated pH meter.'
             : 'Select a mineral-water source above that includes both reported pH and alkalinity to estimate the final pH. Ion concentrations alone are not enough to determine pH reliably.'}
         </p>
       </div>

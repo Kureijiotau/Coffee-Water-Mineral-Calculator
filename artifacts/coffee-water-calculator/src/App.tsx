@@ -5195,18 +5195,34 @@ function App() {
     }
     const basePH = pHVolume > 0 ? pHWeighted / pHVolume : undefined;
     const baseAlkalinity = alkalinityVolume > 0 ? alkalinityWeighted / alkalinityVolume : undefined;
-    const saltAlkalinity = Math.max(
-      (saltOnlyIons.bicarbonate ?? 0) + 2 * (saltOnlyIons.carbonate ?? 0),
+    const finalAlkalinity = Math.max(
+      (reviewFinalIons.bicarbonate ?? 0) + 2 * (reviewFinalIons.carbonate ?? 0),
       0,
     ) * 50 / 61;
-    const saltCitrate = Math.max(saltOnlyIons.citrates ?? 0, 0);
+    const waterAlkalinity = Math.max(
+      (reviewWaterIons.bicarbonate ?? 0) + 2 * (reviewWaterIons.carbonate ?? 0),
+      0,
+    ) * 50 / 61;
+    const recipeAlkalinity = Math.max(finalAlkalinity - waterAlkalinity, 0);
+    const finalCitrate = Math.max(reviewFinalIons.citrates ?? 0, 0);
+    const finalBiphosphate = Math.max(reviewFinalIons.biphosphates ?? 0, 0);
+    const finalPhosphate = Math.max(reviewFinalIons.phosphates ?? 0, 0);
+    const finalBaseAlkalinity = Math.max((baseAlkalinity ?? 0) * Math.max(0, Math.min(1, dil)), 1);
     const estimate = basePH !== undefined && baseAlkalinity !== undefined
       ? Math.max(4, Math.min(10, basePH
-        + 0.12 * Math.log10(1 + saltAlkalinity / Math.max(baseAlkalinity, 1))
-        - 0.08 * Math.log10(1 + saltCitrate / Math.max(baseAlkalinity, 1))))
+        + 0.12 * Math.log10(1 + recipeAlkalinity / finalBaseAlkalinity)
+        - 0.08 * Math.log10(1 + finalCitrate / finalBaseAlkalinity)
+        - 0.04 * Math.log10(1 + (finalBiphosphate + finalPhosphate) / finalBaseAlkalinity)))
       : undefined;
     return { basePH, baseAlkalinity, estimate };
-  }, [mineralWaters, additionWaters, sourceScale, saltOnlyIons]);
+  }, [
+    additionWaters,
+    dil,
+    mineralWaters,
+    reviewFinalIons,
+    reviewWaterIons,
+    sourceScale,
+  ]);
 
   // ── Concentrate state ──────────────────────────────
   const [concentrateOn, setConcentrateOn] = useState(false);
