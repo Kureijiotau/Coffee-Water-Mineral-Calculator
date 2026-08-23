@@ -350,6 +350,19 @@ body {
   justify-content: center;
 }
 
+.watermancer-salt-table__hydration select:focus-visible,
+.watermancer-salt-table__dose input:focus-visible {
+  outline: 2px solid rgb(103 232 249 / 0.9);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(15 23 42 / 0.9);
+}
+
+.watermancer-salt-table__salt-formula,
+.watermancer-salt-table__dose-label,
+.watermancer-salt-table__dose-unit {
+  color: rgb(148 163 184 / 0.9);
+}
+
 .mode-switcher__button:focus-visible {
   outline: 2px solid rgb(125 211 252 / 0.9);
   outline-offset: 2px;
@@ -397,8 +410,40 @@ body {
 }
 
 @media (max-width: 639px) {
+  .watermancer-salt-table {
+    scroll-margin-inline: 0.75rem;
+  }
+
   .watermancer-salt-table__row {
     min-height: 0;
+    margin: 0.5rem;
+    border: 1px solid rgb(51 65 85 / 0.6);
+    border-radius: 0.75rem;
+    background: rgb(15 23 42 / 0.4);
+    padding: 1rem;
+  }
+
+  .watermancer-salt-table__row:last-child {
+    margin-bottom: 0.5rem;
+  }
+
+  .watermancer-salt-table__dose-controls button {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  .watermancer-salt-table__dose input {
+    min-height: 2.75rem;
+  }
+
+  .workflow-rail {
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 1rem;
+    mask-image: linear-gradient(to right, black 84%, transparent 100%);
+  }
+
+  .workflow-rail ol > li {
+    scroll-snap-align: start;
   }
 
   .app-header__bar {
