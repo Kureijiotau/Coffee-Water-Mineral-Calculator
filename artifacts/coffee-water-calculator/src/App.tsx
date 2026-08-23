@@ -5617,9 +5617,15 @@ function App() {
         window.alert('Switch to Watermancer before importing an ion recipe.');
         return;
       }
+      const importedProfileName = file.name.replace(/\.[^/.]+$/, '').trim() || waterRecipe.name;
+      const importedProfile = createWatermancerProfile(
+        importedProfileName,
+        waterRecipe.ions as IonicTargetValues,
+      );
+      setWmProfiles(prev => [...prev, importedProfile]);
       setWatermancerTargetOverride(waterRecipe.ions as IonicTargetValues);
-      setWatermancerImportedRecipeName(waterRecipe.name);
-      setWatermancerTargetSource('salt-table');
+      setWatermancerImportedRecipeName(importedProfile.name);
+      setWatermancerTargetSource(`saved:${importedProfile.id}`);
       return;
     }
     const recipe = parseRecipeFile(text);
