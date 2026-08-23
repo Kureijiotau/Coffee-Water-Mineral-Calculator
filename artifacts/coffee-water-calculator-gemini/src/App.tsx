@@ -32,6 +32,7 @@ import {
   TdsCard as SharedTdsCard,
   WaterChemistryCard as SharedWaterChemistryCard,
 } from './components/MetricCards';
+import { IonicTelemetryCard } from './IonicTelemetryCard';
 import {
   loadProfiles, saveProfiles, loadActiveProfileId, saveActiveProfileId,
   loadNerdLevel, saveNerdLevel, createProfile,
@@ -7771,6 +7772,17 @@ function App() {
                    </span>
                  </div>
                </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-fuchsia-400/15 bg-fuchsia-500/[0.04] px-4 py-3">
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-fuchsia-200/80">Share the signature</div>
+                    <div className="mt-1 text-[10px] text-slate-500">Turn this modeled route into a compact image for your brew notes or coffee community.</div>
+                  </div>
+                  <IonicTelemetryCard
+                    route={activeWatermancerRoute}
+                    recipeName={watermancerTargetSourceLabel}
+                    volumeLiters={L}
+                  />
+                </div>
             </div>
           </div>
         )}
