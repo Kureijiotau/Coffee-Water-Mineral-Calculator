@@ -3751,7 +3751,7 @@ function App() {
       ? {
           eyebrow: 'Ionic target studio',
           title: 'Craft water around your ionic targets',
-          description: 'Set the ions you want in the finished water, then use mineral waters for coverage and addition salts to close the remaining gaps.',
+          description: 'Set target ions for your finished water. The solver blends your selected mineral waters and salts to match.',
           tags: ['Set ion targets', 'Mineral waters', 'Addition salts'],
           tone: 'border-indigo-400/25 bg-indigo-500/[0.07] text-indigo-200',
         }
