@@ -4537,6 +4537,16 @@ function App() {
 
   useEffect(() => {
     if (!showWatermancer || watermancerMatchMode !== 'automatic') return;
+    // Vite injects React Refresh into App.tsx during development. Because the
+    // worker imports the computation export from this large legacy module,
+    // that refresh runtime would execute without `window` inside the worker.
+    // Keep development stable with the synchronous fallback until the solver
+    // is extracted into a React-free engine module.
+    if (!import.meta.env.PROD) {
+      watermancerWorkerFailedRef.current = true;
+      setWatermancerWorkerGeneration(generation => generation + 1);
+      return;
+    }
     if (!watermancerWorkerRef.current) {
       try {
         watermancerWorkerRef.current = createWatermancerWorkerClient(() => {
