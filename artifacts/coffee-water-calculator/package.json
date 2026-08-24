@@ -34,7 +34,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "artifactName": "Watermancer-Setup-${version}.${ext}"
@@ -78,6 +80,7 @@
     "@replit/vite-plugin-cartographer": "catalog:",
     "@replit/vite-plugin-dev-banner": "catalog:",
     "@replit/vite-plugin-runtime-error-modal": "catalog:",
+    "@rollup/rollup-win32-x64-msvc": "4.62.2",
     "@tailwindcss/typography": "^0.5.15",
     "@tanstack/react-query": "catalog:",
     "@types/node": "catalog:",
