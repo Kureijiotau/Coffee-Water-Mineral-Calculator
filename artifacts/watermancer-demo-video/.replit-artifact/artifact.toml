@@ -1,0 +1,28 @@
+kind = "video"
+previewPath = "/watermancer-demo-video/"
+title = "Watermancer — Product Walkthrough"
+description = "A concise animated product walkthrough showcasing the Brewer, Alchemist, Watermancer, and Concentrate workspaces of the offline-first coffee water chemistry calculator."
+version = "1.0.0"
+id = "artifacts/watermancer-demo-video"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/watermancer-demo-video/" ]
+localPort = 23100
+
+[services.development]
+run = "pnpm --filter @workspace/watermancer-demo-video run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/watermancer-demo-video", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/watermancer-demo-video/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23100"
+BASE_PATH = "/watermancer-demo-video/"

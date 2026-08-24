@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Beaker, Droplets, FlaskConical, Layers3, Sparkles } from 'lucide-react';
 import { useVideoPlayer } from '../../lib/video/hooks';
@@ -8,7 +9,14 @@ import { Scene4 } from './video_scenes/Scene4';
 import { Scene5 } from './video_scenes/Scene5';
 import { Scene6 } from './video_scenes/Scene6';
 
-const SCENE_DURATIONS = [4200, 4600, 5000, 5000, 4500, 4200];
+const SCENE_DURATIONS = {
+  intro: 4200,
+  brewer: 4600,
+  alchemist: 5000,
+  watermancer: 5000,
+  concentrate: 4500,
+  outro: 4200,
+};
 const SCENES = [Scene1, Scene2, Scene3, Scene4, Scene5, Scene6];
 const WORKSPACES = [
   { label: 'Brewer', icon: Droplets, color: 'var(--cyan)' },
@@ -18,10 +26,22 @@ const WORKSPACES = [
 ];
 
 export function VideoTemplate() {
-  const { currentScene, elapsed } = useVideoPlayer(SCENE_DURATIONS);
+  const { currentScene } = useVideoPlayer({ durations: SCENE_DURATIONS });
+  const sceneDurations = Object.values(SCENE_DURATIONS);
+  const [sceneElapsed, setSceneElapsed] = useState(0);
+  useEffect(() => {
+    setSceneElapsed(0);
+    const startedAt = performance.now();
+    let frame = 0;
+    const update = (now: number) => {
+      setSceneElapsed(Math.min(sceneDurations[currentScene], now - startedAt));
+      frame = requestAnimationFrame(update);
+    };
+    frame = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frame);
+  }, [currentScene]);
   const Scene = SCENES[currentScene];
-  const beforeScene = SCENE_DURATIONS.slice(0, currentScene).reduce((sum, duration) => sum + duration, 0);
-  const progress = Math.min(1, Math.max(0, (elapsed - beforeScene) / SCENE_DURATIONS[currentScene]));
+  const progress = Math.min(1, Math.max(0, sceneElapsed / sceneDurations[currentScene]));
 
   return (
     <main className="video-root">
@@ -111,3 +131,5 @@ export function VideoTemplate() {
     </main>
   );
 }
+
+export default VideoTemplate;
