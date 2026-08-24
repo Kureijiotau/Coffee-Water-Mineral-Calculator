@@ -34,9 +34,9 @@ This produces an x64 NSIS installer in `dist/electron`. A Windows runner is
 recommended for the final build and smoke test. Linux cross-compilation may
 require Wine and is not treated as a release validation environment.
 
-## Offline-first scope
+## Online API features
 
-The Windows package is intended to be self-contained and offline-first. Core
-calculator features, saved snapshots, recipe import/export, and image export do
-not require the API server. Online community and assistant features are not
-part of the desktop release scope.
+The packaged renderer is built with `BASE_PATH=./` so local assets resolve from
+the installed app. If online API features are needed in the installer, provide
+`VITE_API_URL` during the build with the public API origin. Core calculator
+features remain available without that setting.

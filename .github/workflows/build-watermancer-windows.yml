@@ -36,6 +36,10 @@ jobs:
       - name: Build Windows installer
         working-directory: artifacts/coffee-water-calculator
         run: pnpm run desktop:build
+        env:
+          # Core calculator features work offline. Set this repository variable
+          # when online API features should be included in the installer.
+          VITE_API_URL: ${{ vars.WATERMANCER_API_URL }}
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
