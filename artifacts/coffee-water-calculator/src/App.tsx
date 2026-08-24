@@ -84,6 +84,11 @@ import {
   type WatermancerPlan,
 } from './watermancerPlan';
 import { solveBoundedCoupledSaltTargets } from './watermancerSaltSolver';
+import {
+  createWatermancerWorkerClient,
+  isLatestWatermancerWorkerRequest,
+  type WatermancerWorkerClient,
+} from './watermancerWorkerClient';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
@@ -4521,15 +4526,114 @@ function App() {
   );
   const watermancerInputSignatureRef = useRef(watermancerInputSignature);
   watermancerInputSignatureRef.current = watermancerInputSignature;
-  const watermancerLiveResult = useMemo(
-    () => showWatermancer && watermancerMatchMode === 'automatic'
+  const watermancerWorkerRef = useRef<WatermancerWorkerClient | null>(null);
+  const watermancerWorkerLatestRequestRef = useRef(0);
+  const watermancerWorkerFailedRef = useRef(false);
+  const [watermancerWorkerResult, setWatermancerWorkerResult] = useState<{
+    inputSignature: string;
+    result: WatermancerSolverResult;
+  } | null>(null);
+  const [watermancerWorkerGeneration, setWatermancerWorkerGeneration] = useState(0);
+
+  useEffect(() => {
+    if (!showWatermancer || watermancerMatchMode !== 'automatic') return;
+    if (!watermancerWorkerRef.current) {
+      try {
+        watermancerWorkerRef.current = createWatermancerWorkerClient(() => {
+          watermancerWorkerFailedRef.current = true;
+          setWatermancerWorkerGeneration(generation => generation + 1);
+        });
+      } catch {
+        watermancerWorkerFailedRef.current = true;
+        setWatermancerWorkerGeneration(generation => generation + 1);
+      }
+    }
+    const workerClient = watermancerWorkerRef.current;
+    if (!workerClient || watermancerWorkerFailedRef.current) return;
+
+    const requestId = watermancerWorkerLatestRequestRef.current + 1;
+    watermancerWorkerLatestRequestRef.current = requestId;
+    const requestSignature = watermancerInputSignature;
+    const requestStartedAt = performance.now();
+    void workerClient.solve({
+      plan: cloneWatermancerPlan(watermancerPlan),
+      batchMl,
+      baseWaters: cloneWatermancerWaters(mineralWaters),
+      additionWaters: cloneWatermancerWaters(additionWaters),
+    }).then(({ requestId: completedRequestId, elapsedMs, result }) => {
+      if (!isLatestWatermancerWorkerRequest(
+        completedRequestId,
+        watermancerWorkerLatestRequestRef.current,
+      )) return;
+      if (requestSignature !== watermancerInputSignatureRef.current) return;
+      setWatermancerWorkerResult({ inputSignature: requestSignature, result });
+      if (import.meta.env.DEV) {
+        console.debug('[watermancer] worker solve', {
+          requestId: completedRequestId,
+          elapsedMs: Number(elapsedMs.toFixed(2)),
+          inputToResultMs: Number((performance.now() - requestStartedAt).toFixed(2)),
+        });
+      }
+    }).catch(error => {
+      if (error instanceof Error && error.message === 'Watermancer solve superseded.') return;
+      if (requestSignature !== watermancerInputSignatureRef.current) return;
+      watermancerWorkerFailedRef.current = true;
+      setWatermancerWorkerGeneration(generation => generation + 1);
+    });
+  }, [
+    additionWaters,
+    batchMl,
+    mineralWaters,
+    showWatermancer,
+    watermancerInputSignature,
+    watermancerMatchMode,
+    watermancerPlan,
+    watermancerRecalculationNonce,
+  ]);
+
+  useEffect(() => () => {
+    watermancerWorkerRef.current?.dispose();
+    watermancerWorkerRef.current = null;
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const startedAt = performance.now();
+    const memory = (performance as Performance & {
+      memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+    }).memory;
+    const longTaskObserver = typeof PerformanceObserver === 'undefined'
+      ? null
+      : new PerformanceObserver(list => {
+        const durationMs = list.getEntries().reduce((total, entry) => total + entry.duration, 0);
+        console.debug('[watermancer] long-task baseline', {
+          count: list.getEntries().length,
+          durationMs: Number(durationMs.toFixed(2)),
+        });
+      });
+    longTaskObserver?.observe({ entryTypes: ['longtask'] });
+    const frameId = window.requestAnimationFrame(() => {
+      console.debug('[watermancer] startup baseline', {
+        firstFrameMs: Number((performance.now() - startedAt).toFixed(2)),
+        usedHeapMb: memory ? Number((memory.usedJSHeapSize / 1_000_000).toFixed(2)) : null,
+        heapLimitMb: memory ? Number((memory.jsHeapSizeLimit / 1_000_000).toFixed(2)) : null,
+      });
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      longTaskObserver?.disconnect();
+    };
+  }, []);
+
+  const watermancerSynchronousFallback = useMemo(
+    () => watermancerWorkerFailedRef.current && showWatermancer && watermancerMatchMode === 'automatic'
       ? solveWatermancerRoutes({
         plan: watermancerPlan,
         batchMl,
         baseWaters: mineralWaters,
         additionWaters,
       })
-      : createInactiveWatermancerResult(watermancerPlan),
+      : null,
     [
       additionWaters,
       batchMl,
@@ -4537,9 +4641,26 @@ function App() {
       showWatermancer,
       watermancerMatchMode,
       watermancerPlan,
-      watermancerRecalculationNonce,
+      watermancerWorkerGeneration,
     ],
   );
+  const watermancerLiveResult = useMemo(() => {
+    if (!showWatermancer || watermancerMatchMode !== 'automatic') {
+      return createInactiveWatermancerResult(watermancerPlan);
+    }
+    if (watermancerSynchronousFallback) return watermancerSynchronousFallback;
+    if (watermancerWorkerResult?.inputSignature === watermancerInputSignature) {
+      return watermancerWorkerResult.result;
+    }
+    return watermancerWorkerResult?.result ?? createInactiveWatermancerResult(watermancerPlan);
+  }, [
+    showWatermancer,
+    watermancerInputSignature,
+    watermancerMatchMode,
+    watermancerPlan,
+    watermancerSynchronousFallback,
+    watermancerWorkerResult,
+  ]);
   const beginWatermancerAction = () => {
     // A deferred best-match callback can finish after a mode transition and
     // leave the ref behind even though the UI is no longer busy. Never let an
