@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
+  "description": "Watermancer coffee-water chemistry calculator",
+  "author": "Watermancer",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
