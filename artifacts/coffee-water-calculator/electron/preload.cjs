@@ -1,0 +1,1 @@
+// Keep the renderer browser-like. No Node.js APIs are exposed to the app.
