@@ -1,3 +1,5 @@
+import { COMMERCIAL_WATERS } from "./commercialWaters";
+
 export interface SharedWater {
   id: number;
   name: string;
@@ -17,6 +19,7 @@ export interface SharedWater {
  * calculator reliable without requiring a Vercel database migration.
  */
 export const SHARED_WATERS: SharedWater[] = [
+  ...COMMERCIAL_WATERS,
   {
     id: 48,
     name: "Gerolsteiner",
