@@ -12,19 +12,20 @@ type Water = {
   use: string;
   note: string;
   noteColors: string[];
+  noteIonKeys: string[];
 };
 
 const waters: Water[] = [
-  { name: "Donat Mg", country: "Slovenia · carbonated", ca: 380, mg: 1000, na: 1500, hco3: 7800, so4: 2100, cl: 66, use: "Specialty", note: "extreme Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"] },
-  { name: "Vichy Catalan", country: "Spain · carbonated", ca: 14, mg: 6, na: 1097, hco3: 2081, so4: 50, cl: 584, use: "Blend-only", note: "high sodium + chloride", noteColors: ["#ffb85c", "#fb7185"] },
-  { name: "Courmayeur", country: "Italy · still", ca: 576, mg: 53, na: 1.2, hco3: 151, so4: 1420, cl: 0.5, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"] },
-  { name: "Contrex", country: "France · still", ca: 468, mg: 74, na: 9.4, hco3: 372, so4: 1121, cl: 7.6, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"] },
-  { name: "Gerolsteiner", country: "Germany · carbonated", ca: 348, mg: 108, na: 118, hco3: 1816, cl: 40, so4: 38, use: "Blend-only", note: "high Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"] },
-  { name: "Magnesia", country: "Czechia · carbonated", ca: 37.4, mg: 170, na: 6.1, hco3: 970, cl: 2.1, so4: 11, use: "Specialty", note: "high magnesium", noteColors: ["#64e4f1"] },
-  { name: "S.Pellegrino", country: "Italy · carbonated", ca: 169, mg: 49.2, na: 31.2, hco3: 249, cl: 49.8, so4: 403, use: "Blend-only", note: "sulfate + body", noteColors: ["#9b8cff", "#76a9ff"] },
-  { name: "Evian", country: "France · still", ca: 80, mg: 26, na: 6.5, hco3: 360, cl: 10, so4: 14, use: "Good base", note: "balanced base", noteColors: ["#76a9ff", "#64e4f1"] },
-  { name: "Acqua Panna", country: "Italy · still", ca: 32, mg: 6.2, na: 6.4, hco3: 106, cl: 7.1, so4: 22, use: "Good base", note: "light mineral base", noteColors: ["#76a9ff"] },
-  { name: "Volvic", country: "France · still", ca: 12, mg: 8, na: 12, hco3: 74, cl: 15, so4: 9, use: "Good base", note: "low mineral canvas", noteColors: ["#94a3b8"] },
+  { name: "Donat Mg", country: "Slovenia · carbonated", ca: 380, mg: 1000, na: 1500, hco3: 7800, so4: 2100, cl: 66, use: "Specialty", note: "extreme Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"], noteIonKeys: ["mg", "hco3"] },
+  { name: "Vichy Catalan", country: "Spain · carbonated", ca: 14, mg: 6, na: 1097, hco3: 2081, so4: 50, cl: 584, use: "Blend-only", note: "high sodium + chloride", noteColors: ["#ffb85c", "#fb7185"], noteIonKeys: ["na", "cl"] },
+  { name: "Courmayeur", country: "Italy · still", ca: 576, mg: 53, na: 1.2, hco3: 151, so4: 1420, cl: 0.5, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"], noteIonKeys: ["ca", "so4"] },
+  { name: "Contrex", country: "France · still", ca: 468, mg: 74, na: 9.4, hco3: 372, so4: 1121, cl: 7.6, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"], noteIonKeys: ["ca", "so4"] },
+  { name: "Gerolsteiner", country: "Germany · carbonated", ca: 348, mg: 108, na: 118, hco3: 1816, cl: 40, so4: 38, use: "Blend-only", note: "high Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"], noteIonKeys: ["mg", "hco3"] },
+  { name: "Magnesia", country: "Czechia · carbonated", ca: 37.4, mg: 170, na: 6.1, hco3: 970, cl: 2.1, so4: 11, use: "Specialty", note: "high magnesium", noteColors: ["#64e4f1"], noteIonKeys: ["mg"] },
+  { name: "S.Pellegrino", country: "Italy · carbonated", ca: 169, mg: 49.2, na: 31.2, hco3: 249, cl: 49.8, so4: 403, use: "Blend-only", note: "sulfate + body", noteColors: ["#9b8cff", "#76a9ff"], noteIonKeys: ["so4", "ca"] },
+  { name: "Evian", country: "France · still", ca: 80, mg: 26, na: 6.5, hco3: 360, cl: 10, so4: 14, use: "Good base", note: "balanced base", noteColors: ["#76a9ff", "#64e4f1"], noteIonKeys: ["ca", "mg"] },
+  { name: "Acqua Panna", country: "Italy · still", ca: 32, mg: 6.2, na: 6.4, hco3: 106, cl: 7.1, so4: 22, use: "Good base", note: "light mineral base", noteColors: ["#76a9ff"], noteIonKeys: ["ca"] },
+  { name: "Volvic", country: "France · still", ca: 12, mg: 8, na: 12, hco3: 74, cl: 15, so4: 9, use: "Good base", note: "low mineral canvas", noteColors: ["#94a3b8"], noteIonKeys: ["hco3"] },
 ];
 
 const columns = [
@@ -64,6 +65,10 @@ export function SortableTable() {
     }
   };
   const max = (key: keyof Water) => Math.max(...waters.map((water) => Number(water[key])));
+  const strongestNoteIon = (water: Water) =>
+    water.noteIonKeys.reduce((strongest, key) =>
+      Number(water[key as keyof Water]) > Number(water[strongest as keyof Water]) ? key : strongest,
+    water.noteIonKeys[0]);
 
   return (
     <div className="min-h-screen bg-[#071526] p-7 text-slate-100">
@@ -100,7 +105,7 @@ export function SortableTable() {
           {visible.map((water) => (
             <div key={water.name} className="grid min-w-[950px] grid-cols-[1.8fr_repeat(6,0.75fr)_0.9fr] items-center gap-3 border-t border-slate-800 px-4 py-3 hover:bg-cyan-950/20">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50 leading-none" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
+                <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50 leading-none" style={{ borderColor: ionColors[strongestNoteIon(water)] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[strongestNoteIon(water)] ?? "#64e4f1"}22` }}>
                   <b className="text-[11px] tabular-nums tracking-tight">{water[sort]}</b>
                   <small className="mt-1 text-[7px] leading-none text-slate-500">mg/L</small>
                 </div>
