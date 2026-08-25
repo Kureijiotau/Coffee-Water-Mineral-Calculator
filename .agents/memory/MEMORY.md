@@ -61,3 +61,4 @@
 - [Vite worker ES format](vite-worker-es-format.md) — code-split browser workers require Vite’s ES worker output format
 - [Ion profile draft editing](ion-profile-draft-editing.md) — edit several ion targets in one draft session, then save or cancel once
 - [Watermancer target source persistence](watermancer-target-source-persistence.md) — restore the last valid ion target source after refresh
+- [Watermancer salt reset](watermancer-salt-reset.md) — compact Dose-header reset clears selected salts and manual dose overrides
