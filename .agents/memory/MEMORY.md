@@ -62,3 +62,4 @@
 - [Ion profile draft editing](ion-profile-draft-editing.md) — edit several ion targets in one draft session, then save or cancel once
 - [Watermancer target source persistence](watermancer-target-source-persistence.md) — restore the last valid ion target source after refresh
 - [Watermancer salt reset](watermancer-salt-reset.md) — compact Dose-header reset clears selected salts and manual dose overrides
+- [Watermancer salt row order](watermancer-salt-order.md) — group Watermancer salt rows by anion and keep citrate salts at the bottom

@@ -97,6 +97,19 @@ const WaterIntentAssistant = lazy(() => import('./WaterIntentAssistant'));
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
+const WATERMANCER_SALT_ORDER = [
+  'mgcl2',
+  'cacl2',
+  'nacl',
+  'kcl',
+  'mgso4',
+  'nahco3',
+  'khco3',
+  'calact',
+  'mggly',
+  'mgcit',
+  'cacit',
+] as const;
 export type ConcentrateRecipeHandoff = {
   name: string;
   salts: Record<string, SaltRecipeEntry>;
@@ -4472,6 +4485,17 @@ function App() {
         : 0,
     };
   }), [L, rows, watermancerIonGaps]);
+  const watermancerSaltRows = useMemo(
+    () => WATERMANCER_SALT_ORDER.map(saltId => {
+      const index = SALTS.findIndex(salt => salt.id === saltId);
+      return {
+        salt: SALTS[index],
+        index,
+        option: watermancerSaltOptions[index],
+      };
+    }),
+    [watermancerSaltOptions],
+  );
   const watermancerFixedSaltDoses = useMemo(() => {
     const fixedDoses: Record<string, number> = {};
     SALTS.forEach((salt, index) => {
@@ -8273,9 +8297,8 @@ function App() {
                     </div>
                   </div>
                   <div className="divide-y divide-slate-700/50">
-                     {SALTS.map((salt, index) => {
+                     {watermancerSaltRows.map(({ salt, index, option }) => {
                        if (MEME_SALT_IDS.has(salt.id) && !showWatermancerMemeSalts) return null;
-                      const option = watermancerSaltOptions[index];
                       const used = watermancerUsedSaltIds.includes(salt.id);
                        const doseIsAdjusted = Object.prototype.hasOwnProperty.call(watermancerDoseOverridesMg, salt.id);
                         const activePpm = used ? Math.max(0, Number(activeWatermancerSaltTargets[salt.id] ?? 0)) : 0;
