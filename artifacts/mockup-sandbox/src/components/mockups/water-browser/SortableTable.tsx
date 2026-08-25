@@ -34,6 +34,15 @@ const columns = [
   ["cl", "Cl"],
 ] as const;
 
+const ionColors: Record<string, string> = {
+  mg: "#64e4f1",
+  na: "#ffb85c",
+  hco3: "#c79bf6",
+  ca: "#76a9ff",
+  so4: "#9b8cff",
+  cl: "#fb7185",
+};
+
 export function SortableTable() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<keyof Water>("mg");
@@ -88,8 +97,14 @@ export function SortableTable() {
           </div>
           {visible.map((water) => (
             <div key={water.name} className="grid min-w-[950px] grid-cols-[1.8fr_repeat(6,0.75fr)_0.9fr] items-center gap-3 border-t border-slate-800 px-4 py-3 hover:bg-cyan-950/20">
-              <div><div className="text-xs font-semibold text-slate-100">{water.name}</div><div className="mt-1 text-[9px] text-slate-500">{water.country}</div></div>
-              {columns.map(([key]) => <div key={key}><div className="mb-1 h-1 rounded-full bg-slate-800"><div className={`h-full rounded-full ${sort === key ? "bg-cyan-300" : "bg-slate-600"}`} style={{ width: `${Math.max(4, (Number(water[key as keyof Water]) / max(key as keyof Water)) * 100)}%` }} /></div><span className={`text-xs tabular-nums ${sort === key ? "text-cyan-200" : "text-slate-300"}`}>{water[key as keyof Water]}</span></div>)}
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
+                  <b className="text-sm leading-none">{water[sort]}</b>
+                  <small className="mt-1 text-[7px] text-slate-500">mg/L</small>
+                </div>
+                <div><div className="text-xs font-semibold text-slate-100">{water.name}</div><div className="mt-1 text-[9px] text-slate-500">{water.country}</div></div>
+              </div>
+              {columns.map(([key]) => <div key={key}><div className="mb-1 h-1 rounded-full bg-slate-800"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (Number(water[key as keyof Water]) / max(key as keyof Water)) * 100)}%`, backgroundColor: ionColors[key] ?? "#64748b" }} /></div><span className="text-xs tabular-nums" style={{ color: ionColors[key] ?? "#cbd5e1" }}>{water[key as keyof Water]}</span></div>)}
               <span className="rounded-full border border-slate-600 px-2 py-1 text-center text-[9px] text-slate-300">{water.use}</span>
             </div>
           ))}
