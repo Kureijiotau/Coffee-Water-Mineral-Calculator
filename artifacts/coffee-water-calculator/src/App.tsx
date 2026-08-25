@@ -7824,6 +7824,15 @@ function App() {
                         placeholder="0"
                         className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                       />
+                      <button
+                        type="button"
+                        onClick={() => updateMineralWater(entry.id, { volumeMl: '0' })}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700/70 bg-slate-800/70 text-slate-500 transition hover:border-sky-400/50 hover:bg-sky-500/10 hover:text-sky-300"
+                        aria-label="Reset water volume to 0 mL"
+                        title="Reset volume to 0 mL"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </button>
                       <span className="text-xs text-slate-400 shrink-0">mL</span>
                     </div>
                   </div>
