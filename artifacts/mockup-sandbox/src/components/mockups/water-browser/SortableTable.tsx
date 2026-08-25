@@ -10,19 +10,21 @@ type Water = {
   so4: number;
   cl: number;
   use: string;
+  note: string;
+  noteColors: string[];
 };
 
 const waters: Water[] = [
-  { name: "Donat Mg", country: "Slovenia · carbonated", ca: 380, mg: 1000, na: 1500, hco3: 7800, so4: 2100, cl: 66, use: "Specialty" },
-  { name: "Vichy Catalan", country: "Spain · carbonated", ca: 14, mg: 6, na: 1097, hco3: 2081, so4: 50, cl: 584, use: "Blend-only" },
-  { name: "Courmayeur", country: "Italy · still", ca: 576, mg: 53, na: 1.2, hco3: 151, so4: 1420, cl: 0.5, use: "Specialty" },
-  { name: "Contrex", country: "France · still", ca: 468, mg: 74, na: 9.4, hco3: 372, so4: 1121, cl: 7.6, use: "Specialty" },
-  { name: "Gerolsteiner", country: "Germany · carbonated", ca: 348, mg: 108, na: 118, hco3: 1816, so4: 38, cl: 40, use: "Blend-only" },
-  { name: "Magnesia", country: "Czechia · carbonated", ca: 37.4, mg: 170, na: 6.1, hco3: 970, so4: 11, cl: 2.1, use: "Specialty" },
-  { name: "S.Pellegrino", country: "Italy · carbonated", ca: 169, mg: 49.2, na: 31.2, hco3: 249, so4: 403, cl: 49.8, use: "Blend-only" },
-  { name: "Evian", country: "France · still", ca: 80, mg: 26, na: 6.5, hco3: 360, so4: 14, cl: 10, use: "Good base" },
-  { name: "Acqua Panna", country: "Italy · still", ca: 32, mg: 6.2, na: 6.4, hco3: 106, so4: 22, cl: 7.1, use: "Good base" },
-  { name: "Volvic", country: "France · still", ca: 12, mg: 8, na: 12, hco3: 74, so4: 9, cl: 15, use: "Good base" },
+  { name: "Donat Mg", country: "Slovenia · carbonated", ca: 380, mg: 1000, na: 1500, hco3: 7800, so4: 2100, cl: 66, use: "Specialty", note: "extreme Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"] },
+  { name: "Vichy Catalan", country: "Spain · carbonated", ca: 14, mg: 6, na: 1097, hco3: 2081, so4: 50, cl: 584, use: "Blend-only", note: "high sodium + chloride", noteColors: ["#ffb85c", "#fb7185"] },
+  { name: "Courmayeur", country: "Italy · still", ca: 576, mg: 53, na: 1.2, hco3: 151, so4: 1420, cl: 0.5, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"] },
+  { name: "Contrex", country: "France · still", ca: 468, mg: 74, na: 9.4, hco3: 372, so4: 1121, cl: 7.6, use: "Specialty", note: "calcium + sulfate", noteColors: ["#76a9ff", "#9b8cff"] },
+  { name: "Gerolsteiner", country: "Germany · carbonated", ca: 348, mg: 108, na: 118, hco3: 1816, cl: 40, so4: 38, use: "Blend-only", note: "high Mg + buffer", noteColors: ["#64e4f1", "#c79bf6"] },
+  { name: "Magnesia", country: "Czechia · carbonated", ca: 37.4, mg: 170, na: 6.1, hco3: 970, cl: 2.1, so4: 11, use: "Specialty", note: "high magnesium", noteColors: ["#64e4f1"] },
+  { name: "S.Pellegrino", country: "Italy · carbonated", ca: 169, mg: 49.2, na: 31.2, hco3: 249, cl: 49.8, so4: 403, use: "Blend-only", note: "sulfate + body", noteColors: ["#9b8cff", "#76a9ff"] },
+  { name: "Evian", country: "France · still", ca: 80, mg: 26, na: 6.5, hco3: 360, cl: 10, so4: 14, use: "Good base", note: "balanced base", noteColors: ["#76a9ff", "#64e4f1"] },
+  { name: "Acqua Panna", country: "Italy · still", ca: 32, mg: 6.2, na: 6.4, hco3: 106, cl: 7.1, so4: 22, use: "Good base", note: "light mineral base", noteColors: ["#76a9ff"] },
+  { name: "Volvic", country: "France · still", ca: 12, mg: 8, na: 12, hco3: 74, cl: 15, so4: 9, use: "Good base", note: "low mineral canvas", noteColors: ["#94a3b8"] },
 ];
 
 const columns = [
@@ -98,14 +100,20 @@ export function SortableTable() {
           {visible.map((water) => (
             <div key={water.name} className="grid min-w-[950px] grid-cols-[1.8fr_repeat(6,0.75fr)_0.9fr] items-center gap-3 border-t border-slate-800 px-4 py-3 hover:bg-cyan-950/20">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
-                  <b className="text-sm leading-none">{water[sort]}</b>
-                  <small className="mt-1 text-[7px] text-slate-500">mg/L</small>
+                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50 leading-none" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
+                  <b className="text-sm tabular-nums">{water[sort]}</b>
+                  <small className="mt-1 text-[7px] leading-none text-slate-500">mg/L</small>
                 </div>
                 <div><div className="text-xs font-semibold text-slate-100">{water.name}</div><div className="mt-1 text-[9px] text-slate-500">{water.country}</div></div>
               </div>
               {columns.map(([key]) => <div key={key}><div className="mb-1 h-1 rounded-full bg-slate-800"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (Number(water[key as keyof Water]) / max(key as keyof Water)) * 100)}%`, backgroundColor: ionColors[key] ?? "#64748b" }} /></div><span className="text-xs tabular-nums" style={{ color: ionColors[key] ?? "#cbd5e1" }}>{water[key as keyof Water]}</span></div>)}
-              <span className="rounded-full border border-slate-600 px-2 py-1 text-center text-[9px] text-slate-300">{water.use}</span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 text-[9px] font-semibold leading-tight" style={{ color: water.noteColors[0] }}>
+                  <span className="flex shrink-0 gap-0.5">{water.noteColors.map((color) => <i key={color} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />)}</span>
+                  <span>{water.note}</span>
+                </div>
+                <span className="mt-1 block text-[8px] text-slate-500">{water.use}</span>
+              </div>
             </div>
           ))}
           <div className="border-t border-slate-800 px-4 py-3 text-[10px] text-slate-500">Showing {visible.length} of 46 waters · every number is mg/L</div>
