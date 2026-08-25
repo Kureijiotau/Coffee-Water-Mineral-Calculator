@@ -3015,6 +3015,39 @@ interface CommunityWater {
   metadata?: WaterMetadata;
 }
 
+const COMMUNITY_BROWSER_ION_IDS: IonId[] = [
+  'magnesium', 'bicarbonate', 'sodium', 'calcium', 'sulfate', 'chloride', 'potassium',
+];
+
+const COMMUNITY_BROWSER_ION_COLORS: Partial<Record<IonId, string>> = {
+  magnesium: '#64e4f1',
+  bicarbonate: '#c79bf6',
+  sodium: '#ffb85c',
+  calcium: '#76a9ff',
+  sulfate: '#9b8cff',
+  chloride: '#fb7185',
+  potassium: '#fbbf24',
+};
+
+const communityBrowserIonLabel = (id: IonId): string => ION_MAP[id]?.formula ?? id;
+
+function communityBrowserNote(water: CommunityWater): { text: string; ionIds: IonId[] } {
+  const ranked = COMMUNITY_BROWSER_ION_IDS
+    .map(id => ({ id, value: Number(water.ions[id] ?? 0) }))
+    .sort((a, b) => b.value - a.value);
+  const top = ranked[0];
+  const second = ranked[1];
+  if (!top || top.value <= 0) return { text: 'low mineral canvas', ionIds: ['bicarbonate'] };
+  if (top.id === 'bicarbonate' && second?.id === 'magnesium') return { text: 'high Mg + buffer', ionIds: ['magnesium', 'bicarbonate'] };
+  if (top.id === 'sodium' && second?.id === 'chloride') return { text: 'high sodium + chloride', ionIds: ['sodium', 'chloride'] };
+  if (top.id === 'sulfate' && second?.id === 'calcium') return { text: 'sulfate + body', ionIds: ['sulfate', 'calcium'] };
+  if (top.id === 'calcium' && second?.id === 'sulfate') return { text: 'calcium + sulfate', ionIds: ['calcium', 'sulfate'] };
+  return {
+    text: `high ${ION_MAP[top.id].name.toLowerCase()}`,
+    ionIds: second && second.value > 0 ? [top.id, second.id] : [top.id],
+  };
+}
+
 type WaterComparisonSource = {
   key: string;
   name: string;
@@ -3866,6 +3899,9 @@ function App() {
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
   const communityWatersRequestRef = useRef<Promise<void> | null>(null);
   const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
+  const [communitySearch, setCommunitySearch] = useState('');
+  const [communitySortIon, setCommunitySortIon] = useState<IonId | 'name'>('magnesium');
+  const [communitySortDescending, setCommunitySortDescending] = useState(true);
   const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
   const [alchemistMineralWaterOpen, setAlchemistMineralWaterOpen] = useState(false);
   const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
@@ -3897,6 +3933,20 @@ function App() {
     setCommunityModalOpen(true);
     if (!communityWatersLoaded) await loadCommunityWaters();
   };
+  const communityVisibleWaters = useMemo(() => {
+    const query = communitySearch.trim().toLowerCase();
+    return communityWaters
+      .filter(w => w.shared === 'yes')
+      .filter(w => !query || w.name.toLowerCase().includes(query))
+      .slice()
+      .sort((a, b) => {
+        if (communitySortIon === 'name') return (communitySortDescending ? 1 : -1) * a.name.localeCompare(b.name);
+        const delta = Number(b.ions[communitySortIon] ?? 0) - Number(a.ions[communitySortIon] ?? 0);
+        return delta === 0
+          ? a.name.localeCompare(b.name)
+          : (communitySortDescending ? 1 : -1) * delta;
+      });
+  }, [communityWaters, communitySearch, communitySortIon, communitySortDescending]);
 
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
@@ -9015,22 +9065,107 @@ function App() {
               </button>
             </div>
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div className="flex-1 overflow-y-auto p-4">
               {communityLoading ? (
                 <p className="text-xs text-slate-500 italic text-center py-8">Loading community waters…</p>
               ) : communityWaters.length === 0 ? (
                 <p className="text-xs text-slate-500 italic text-center py-8">No community waters found yet.</p>
               ) : (
-                communityWaters
-                  .filter(w => w.shared === 'yes')
-                  .map(w => {
+                <>
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <label className="flex min-w-[190px] flex-1 items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-sky-300">
+                      <span className="text-base leading-none">⌕</span>
+                      <input
+                        value={communitySearch}
+                        onChange={event => setCommunitySearch(event.target.value)}
+                        placeholder="Search water or country…"
+                        aria-label="Search community waters"
+                        className="w-full bg-transparent text-xs text-slate-200 outline-none placeholder:text-slate-500"
+                      />
+                    </label>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500">Sort</span>
+                    <select
+                      value={communitySortIon}
+                      onChange={event => {
+                        const value = event.target.value;
+                        if (value === 'name' || COMMUNITY_BROWSER_ION_IDS.includes(value as IonId)) setCommunitySortIon(value as IonId | 'name');
+                      }}
+                      aria-label="Sort community waters"
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-slate-300 outline-none"
+                    >
+                      <option value="name">Name</option>
+                      {COMMUNITY_BROWSER_ION_IDS.map(id => <option key={id} value={id}>{communityBrowserIonLabel(id)}</option>)}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setCommunitySortDescending(value => !value)}
+                      className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300 transition hover:border-sky-400/50 hover:text-sky-200"
+                      aria-label={`Sort ${communitySortDescending ? 'ascending' : 'descending'}`}
+                      title={`Sort ${communitySortDescending ? 'ascending' : 'descending'}`}
+                    >
+                      {communitySortDescending ? '↓ High' : '↑ Low'}
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/30">
+                    <div className="min-w-[940px]">
+                      <div className="grid grid-cols-[2fr_repeat(7,0.78fr)_0.95fr] items-center gap-3 bg-slate-900/80 px-4 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                        <span>Water / focus</span>
+                        {COMMUNITY_BROWSER_ION_IDS.map(id => (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              if (communitySortIon === id) setCommunitySortDescending(value => !value);
+                              else {
+                                setCommunitySortIon(id);
+                                setCommunitySortDescending(true);
+                              }
+                            }}
+                            className={`text-left transition hover:text-sky-200 ${communitySortIon === id ? 'text-sky-300' : ''}`}
+                            aria-label={`Sort by ${ION_MAP[id].name}`}
+                          >
+                            {communityBrowserIonLabel(id)}
+                          </button>
+                        ))}
+                        <span>Action</span>
+                      </div>
+                      {communityVisibleWaters.map(w => {
                     const alreadyAdded = localWaters.some(l => l.sourceId === w.id);
+                    const note = communityBrowserNote(w);
+                    const strongestNoteIon = note.ionIds.reduce((strongest, id) =>
+                      Number(w.ions[id] ?? 0) > Number(w.ions[strongest] ?? 0) ? id : strongest,
+                    note.ionIds[0]);
+                    const circleIon = communitySortIon === 'name' ? strongestNoteIon : communitySortIon;
+                    const circleValue = Number(w.ions[circleIon] ?? 0);
+                    const circleColor = COMMUNITY_BROWSER_ION_COLORS[strongestNoteIon];
+                    const maxIon = (id: IonId) => Math.max(1, ...communityWaters.map(water => Number(water.ions[id] ?? 0)));
                     return (
-                      <div key={w.id} className="flex items-center justify-between gap-3 bg-slate-900/40 border border-slate-700/50 rounded-lg px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <span className="text-sm text-slate-200 block truncate">{w.name || `Water #${w.id}`}</span>
-                          <span className="text-[10px] text-slate-500">{Object.keys(w.ions).length} ions</span>
+                      <div key={w.id} className="grid grid-cols-[2fr_repeat(7,0.78fr)_0.95fr] items-center gap-3 border-t border-slate-800 px-4 py-3 transition hover:bg-sky-950/20">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/70 leading-none" style={{ borderColor: circleColor, boxShadow: `0 0 16px ${circleColor}22` }}>
+                            <b className="text-[11px] tabular-nums tracking-tight">{circleValue.toLocaleString(undefined, { maximumFractionDigits: 1 })}</b>
+                            <small className="mt-1 text-[7px] leading-none text-slate-500">mg/L</small>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold leading-tight" style={{ color: circleColor }}>
+                              <span className="flex shrink-0 gap-0.5">{note.ionIds.map(id => <i key={id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COMMUNITY_BROWSER_ION_COLORS[id] }} />)}</span>
+                              <span className="truncate">{note.text}</span>
+                            </div>
+                            <span className="mt-1 block truncate text-xs font-medium text-slate-200">{w.name || `Water #${w.id}`}</span>
+                            <span className="mt-1 block truncate text-[10px] text-slate-500">{Object.keys(w.ions).length} ions in profile</span>
+                          </div>
                         </div>
+                        {COMMUNITY_BROWSER_ION_IDS.map(id => {
+                          const value = Number(w.ions[id] ?? 0);
+                          return (
+                            <div key={id}>
+                              <div className="mb-1 h-1 rounded-full bg-slate-800">
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(value > 0 ? 4 : 0, value / maxIon(id) * 100)}%`, backgroundColor: COMMUNITY_BROWSER_ION_COLORS[id] }} />
+                              </div>
+                              <span className="text-xs tabular-nums" style={{ color: COMMUNITY_BROWSER_ION_COLORS[id] }}>{value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                            </div>
+                          );
+                        })}
                         <button
                           onClick={() => {
                             if (alreadyAdded) return;
@@ -9054,7 +9189,7 @@ function App() {
                            });
                           }}
                           disabled={alreadyAdded}
-                          className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
+                          className={`text-xs font-medium rounded-lg px-3 py-1.5 transition ${
                             alreadyAdded
                               ? 'text-slate-500 bg-slate-700/30 cursor-default'
                               : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
@@ -9064,10 +9199,17 @@ function App() {
                         </button>
                       </div>
                     );
-                  })
+                  })}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[10px] text-slate-500">{communityVisibleWaters.length} public source profiles · click an ion header to sort</p>
+                </>
               )}
               {!communityLoading && communityWaters.filter(w => w.shared === 'yes').length === 0 && communityWaters.length > 0 && (
                 <p className="text-xs text-slate-500 italic text-center py-4">No publicly shared waters available.</p>
+              )}
+              {!communityLoading && communityWaters.filter(w => w.shared === 'yes').length > 0 && communityVisibleWaters.length === 0 && (
+                <p className="text-xs text-slate-500 italic text-center py-4">No waters match that search.</p>
               )}
             </div>
           </div>
