@@ -8325,12 +8325,11 @@ function App() {
                           type="button"
                           onClick={() => {
                             enterWatermancerManualMode();
-                            setWatermancerUsedSaltIds([]);
                             setWatermancerDoseOverridesMg({});
                           }}
                           className="rounded border border-slate-600/70 bg-slate-900/60 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-slate-400 transition hover:border-indigo-300/50 hover:bg-indigo-500/15 hover:text-indigo-200"
-                          aria-label="Reset salt selections and doses"
-                          title="Reset salt selections and dose adjustments"
+                          aria-label="Reset salt doses"
+                          title="Reset salt dose adjustments while keeping Used salts"
                         >
                           Reset
                         </button>
