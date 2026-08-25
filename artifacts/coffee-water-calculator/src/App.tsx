@@ -10477,6 +10477,12 @@ function WatermancerIonProfileCard({
   };
 
   const startIonEditing = (id: IonId) => {
+    if (editing || editingIonId !== null) {
+      setEditing(false);
+      setEditingIonId(id);
+      setNamingMode(null);
+      return;
+    }
     setDraftTargets(
       Object.fromEntries(
         ACTIVE_ION_IDS.map(targetId => [targetId, String(targetIons[targetId] ?? 0)]),
@@ -10840,17 +10846,17 @@ function WatermancerIonProfileCard({
           return (
              <div
               key={id}
-               className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!isEditingAny ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
-               role={!isEditingAny ? 'button' : undefined}
-               tabIndex={!isEditingAny ? 0 : -1}
-               onClick={!isEditingAny ? () => startIonEditing(id) : undefined}
-               onKeyDown={!isEditingAny ? event => {
+                className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!editing ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
+                role={!editing ? 'button' : undefined}
+                tabIndex={!editing ? 0 : -1}
+                onClick={!editing ? () => startIonEditing(id) : undefined}
+                onKeyDown={!editing ? event => {
                  if (event.key === 'Enter' || event.key === ' ') {
                    event.preventDefault();
                    startIonEditing(id);
                  }
                } : undefined}
-               aria-label={!isEditingAny ? `Edit ${ion.name} target` : undefined}
+                aria-label={!editing ? `Edit ${ion.name} target` : undefined}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>

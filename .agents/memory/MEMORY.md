@@ -59,3 +59,4 @@
 - [Ion guidance profile toggle](ion-guidance-profile-toggle.md) — keep Aiki and Watermancer Sensory ranges selectable without changing chemistry behavior
 - [Windows Rollup dependency](windows-rollup-optional-dependency.md) — frozen pnpm installs need the Windows Rollup binary explicitly locked for cross-platform CI
 - [Vite worker ES format](vite-worker-es-format.md) — code-split browser workers require Vite’s ES worker output format
+- [Ion profile draft editing](ion-profile-draft-editing.md) — edit several ion targets in one draft session, then save or cancel once
