@@ -100,20 +100,21 @@ export function SortableTable() {
           {visible.map((water) => (
             <div key={water.name} className="grid min-w-[950px] grid-cols-[1.8fr_repeat(6,0.75fr)_0.9fr] items-center gap-3 border-t border-slate-800 px-4 py-3 hover:bg-cyan-950/20">
               <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50 leading-none" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
-                  <b className="text-sm tabular-nums">{water[sort]}</b>
+                <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/50 leading-none" style={{ borderColor: ionColors[sort] ?? "#64e4f1", boxShadow: `0 0 16px ${ionColors[sort] ?? "#64e4f1"}22` }}>
+                  <b className="text-[11px] tabular-nums tracking-tight">{water[sort]}</b>
                   <small className="mt-1 text-[7px] leading-none text-slate-500">mg/L</small>
                 </div>
-                <div><div className="text-xs font-semibold text-slate-100">{water.name}</div><div className="mt-1 text-[9px] text-slate-500">{water.country}</div></div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-[10px] font-semibold leading-tight" style={{ color: water.noteColors[0] }}>
+                    <span className="flex shrink-0 gap-0.5">{water.noteColors.map((color) => <i key={color} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />)}</span>
+                    <span className="truncate">{water.note}</span>
+                  </div>
+                  <div className="mt-1 text-xs font-semibold text-slate-100">{water.name}</div>
+                  <div className="mt-1 text-[9px] text-slate-500">{water.country}</div>
+                </div>
               </div>
               {columns.map(([key]) => <div key={key}><div className="mb-1 h-1 rounded-full bg-slate-800"><div className="h-full rounded-full" style={{ width: `${Math.max(4, (Number(water[key as keyof Water]) / max(key as keyof Water)) * 100)}%`, backgroundColor: ionColors[key] ?? "#64748b" }} /></div><span className="text-xs tabular-nums" style={{ color: ionColors[key] ?? "#cbd5e1" }}>{water[key as keyof Water]}</span></div>)}
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 text-[9px] font-semibold leading-tight" style={{ color: water.noteColors[0] }}>
-                  <span className="flex shrink-0 gap-0.5">{water.noteColors.map((color) => <i key={color} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />)}</span>
-                  <span>{water.note}</span>
-                </div>
-                <span className="mt-1 block text-[8px] text-slate-500">{water.use}</span>
-              </div>
+              <span className="rounded-full border border-slate-600 px-2 py-1 text-center text-[9px] text-slate-300">{water.use}</span>
             </div>
           ))}
           <div className="border-t border-slate-800 px-4 py-3 text-[10px] text-slate-500">Showing {visible.length} of 46 waters · every number is mg/L</div>
