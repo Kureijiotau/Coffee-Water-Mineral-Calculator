@@ -234,6 +234,7 @@ type OvershootSettings = {
   limits: Partial<Record<IonId, number>>;
 };
 const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-preferences';
+const WATERMANCER_TARGET_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-target-source';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
   label: string;
@@ -243,6 +244,27 @@ const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   { value: 'salt-only', label: 'Salt only' },
   { value: 'dont-care', label: 'Optimized' },
 ];
+
+function loadWatermancerTargetSource(): WatermancerTargetSourceId {
+  try {
+    const stored = localStorage.getItem(WATERMANCER_TARGET_SOURCE_STORAGE_KEY);
+    if (
+      stored === 'safe-profile'
+      || stored === 'salt-table'
+      || stored?.startsWith('profile:')
+      || stored?.startsWith('saved:')
+      || stored?.startsWith('recipe:')
+      || stored?.startsWith('external:')
+      || stored?.startsWith('lotus:')
+      || stored?.startsWith('reference:')
+    ) {
+      return stored as WatermancerTargetSourceId;
+    }
+  } catch {
+    // Use the default source when localStorage is unavailable.
+  }
+  return 'safe-profile';
+}
 
 function loadWatermancerIonSourcePreferences(): Record<IonId, WatermancerIonSourcePreference> {
   try {
@@ -3878,7 +3900,9 @@ function App() {
   const [pendingConcentrateRestore, setPendingConcentrateRestore] = useState<WaterPlanConcentrateSnapshot | null>(null);
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
-  const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>('safe-profile');
+  const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>(
+    () => loadWatermancerTargetSource(),
+  );
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
@@ -4083,6 +4107,18 @@ function App() {
   useDebouncedPersistence(() => saveActiveProfileId(activeProfileId), [activeProfileId]);
   useDebouncedPersistence(() => saveNerdLevel(nerdLevel), [nerdLevel]);
   useDebouncedPersistence(() => saveWatermancerProfiles(wmProfiles), [wmProfiles]);
+  useDebouncedPersistence(() => {
+    localStorage.setItem(WATERMANCER_TARGET_SOURCE_STORAGE_KEY, watermancerTargetSource);
+  }, [watermancerTargetSource]);
+
+  useEffect(() => {
+    if (
+      watermancerTargetSource.startsWith('saved:')
+      && !wmProfiles.some(profile => profile.id === watermancerTargetSource.slice('saved:'.length))
+    ) {
+      setWatermancerTargetSource('safe-profile');
+    }
+  }, [watermancerTargetSource, wmProfiles]);
 
   const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
     enterWatermancerManualMode();
