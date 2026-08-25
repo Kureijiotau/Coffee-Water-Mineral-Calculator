@@ -1,0 +1,790 @@
+{
+  "generated_by": "Gemini research pass",
+  "generated_at": "2026-08-25",
+  "integration_status": "reviewable-candidates",
+  "catalog_ion_keys": [
+    "calcium",
+    "magnesium",
+    "sodium",
+    "potassium",
+    "bicarbonate",
+    "chloride",
+    "sulfate"
+  ],
+  "research_scope": "Comprehensive analysis of commercially available natural mineral waters with unique ion balances (e.g., calcium without chloride, magnesium without sulfate, high sulfate, high buffer) designed to complement standard coffee-water brewing salts.",
+  "candidates": [
+    {
+      "name": "Magnesia",
+      "aliases": [
+        "Magnesia Natural Mineral Water",
+        "Magnesia Sparkling"
+      ],
+      "country": "Czechia",
+      "source_region": "Karlovy Vary",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 37.4,
+        "magnesium": 170,
+        "sodium": 6.1,
+        "bicarbonate": 970,
+        "chloride": 2.1,
+        "sulfate": 11
+      },
+      "metadata": {
+        "tds": 1198,
+        "ph": 6.2
+      },
+      "source_url": "https://www.magnesia.cz/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "duplicate_risk: Ensure you are using the natural mineral water, not flavored variants. High magnesium bicarbonate source.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "Provides a massive dose of magnesium bicarbonate without introducing unwanted sulfates or chlorides. Essential for creating high-Mg buffer solutions. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:10 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Contrex",
+      "aliases": [
+        "Contrexéville"
+      ],
+      "country": "France",
+      "source_region": "Vosges",
+      "water_type": "still",
+      "ions": {
+        "calcium": 468,
+        "magnesium": 74,
+        "sodium": 9.4,
+        "potassium": 2.8,
+        "bicarbonate": 372,
+        "chloride": 7.6,
+        "sulfate": 1121
+      },
+      "metadata": {
+        "tds": 2078,
+        "ph": 7.4
+      },
+      "source_url": "https://www.contrex.fr/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Highly mineralized. Exceptional sulfate to chloride ratio.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "An incredible source of calcium and sulfate without the sodium or chloride baggage. Useful for dialing in high-sulfate profiles for enhanced perceived acidity in light roasts.",
+      "recommended_starting_dilution": "1:10 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Courmayeur",
+      "aliases": [],
+      "country": "Italy",
+      "source_region": "Aosta Valley",
+      "water_type": "still",
+      "ions": {
+        "calcium": 576,
+        "magnesium": 53,
+        "sodium": 1.2,
+        "bicarbonate": 151,
+        "chloride": 0.5,
+        "sulfate": 1420
+      },
+      "metadata": {
+        "tds": 2146,
+        "ph": 7.6
+      },
+      "source_url": "https://www.eau-courmayeur.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "One of the highest calcium sulfate natural waters available commercially with virtually zero sodium or chloride.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "Isolates calcium and sulfate additions almost perfectly. With 0.5mg/L chloride and 1.2mg/L sodium, it allows for pure Ca/SO4 structural adjustments.",
+      "recommended_starting_dilution": "1:15 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Aqua Carpatica (Naturally Sparkling)",
+      "aliases": [
+        "Aqua Carpatica Forte"
+      ],
+      "country": "Romania",
+      "source_region": "Carpathian Mountains",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 286,
+        "magnesium": 89,
+        "sodium": 5.3,
+        "potassium": 1,
+        "bicarbonate": 1281,
+        "chloride": 19,
+        "sulfate": 20
+      },
+      "metadata": {
+        "tds": 1701,
+        "ph": 5.7
+      },
+      "source_url": "https://aquacarpatica.com/",
+      "source_label_or_analysis_date": "Official Analysis 2023",
+      "source_quality": "official_label",
+      "verification_notes": "duplicate_risk: The 'Still' version of Aqua Carpatica has completely different, much lower mineralization (Ca 50, Mg 16). Ensure values are applied only to the Naturally Sparkling variant.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "Enormous bicarbonate buffer capacity with incredibly low sodium (5.3mg/L). Ideal for adding natural buffer and hardness without sodium-induced flavor taint. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:10 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Evian",
+      "aliases": [
+        "Evian Natural Mineral Water"
+      ],
+      "country": "France",
+      "source_region": "Évian-les-Bains",
+      "water_type": "still",
+      "ions": {
+        "calcium": 80,
+        "magnesium": 26,
+        "sodium": 6.5,
+        "potassium": 1,
+        "bicarbonate": 360,
+        "chloride": 10,
+        "sulfate": 14
+      },
+      "metadata": {
+        "tds": 345,
+        "ph": 7.2,
+        "silica": 15
+      },
+      "source_url": "https://www.evian.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Widely available globally, highly consistent profile.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "The benchmark 3:1 Calcium to Magnesium bicarbonate water. Serves as a perfect classic base water that can be slightly diluted with RO for medium-dark roasts or used straight for traditional espresso.",
+      "recommended_starting_dilution": "50% to 100%",
+      "confidence": "high"
+    },
+    {
+      "name": "Volvic",
+      "aliases": [],
+      "country": "France",
+      "source_region": "Puy de Dôme",
+      "water_type": "still",
+      "ions": {
+        "calcium": 12,
+        "magnesium": 8,
+        "sodium": 12,
+        "potassium": 6,
+        "bicarbonate": 74,
+        "chloride": 15,
+        "sulfate": 9
+      },
+      "metadata": {
+        "tds": 130,
+        "ph": 7,
+        "silica": 32
+      },
+      "source_url": "https://www.volvic.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Classic soft water with a notable silica content.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Provides a clean, low-TDS canvas with naturally high silica which contributes to enhanced mouthfeel. Excellent base for building custom profiles with salt additions.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Mountain Valley Spring Water",
+      "aliases": [
+        "Mountain Valley"
+      ],
+      "country": "USA",
+      "source_region": "Hot Springs, Arkansas",
+      "water_type": "still",
+      "ions": {
+        "calcium": 67,
+        "magnesium": 7.1,
+        "sodium": 3.2,
+        "potassium": 1.2,
+        "bicarbonate": 220,
+        "chloride": 2.2,
+        "sulfate": 6.7
+      },
+      "metadata": {
+        "tds": 220,
+        "ph": 7.8
+      },
+      "source_url": "https://www.mountainvalleyspring.com/",
+      "source_label_or_analysis_date": "Official Water Quality Report 2022",
+      "source_quality": "official_analysis",
+      "verification_notes": "One of the highest quality US domestic spring waters for coffee.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Excellent calcium bicarbonate dominant source with negligible chlorides and sulfates. Great base for adding targeted magnesium or sulfate salts.",
+      "recommended_starting_dilution": "straight or 1:1 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Hildon",
+      "aliases": [
+        "Hildon Natural Mineral Water"
+      ],
+      "country": "UK",
+      "source_region": "Hampshire",
+      "water_type": "still",
+      "ions": {
+        "calcium": 97,
+        "magnesium": 1.7,
+        "sodium": 7.7,
+        "potassium": 1.4,
+        "bicarbonate": 330,
+        "chloride": 16,
+        "sulfate": 4
+      },
+      "metadata": {
+        "tds": 312,
+        "ph": 7.3
+      },
+      "source_url": "https://www.hildon.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "duplicate_risk: Hildon produces a gently sparkling version; ensure you are using the still version or degassing appropriately.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "Offers incredibly high calcium with near-zero magnesium. Perfect for exploring pure calcium-driven extractions or balancing with magnesium chloride.",
+      "recommended_starting_dilution": "50% with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Vittel",
+      "aliases": [
+        "Vittel Bonne Source"
+      ],
+      "country": "France",
+      "source_region": "Vosges",
+      "water_type": "still",
+      "ions": {
+        "calcium": 240,
+        "magnesium": 42,
+        "sodium": 5.2,
+        "potassium": 2,
+        "bicarbonate": 384,
+        "chloride": 11,
+        "sulfate": 400
+      },
+      "metadata": {
+        "tds": 1084,
+        "ph": 7.6
+      },
+      "source_url": "https://www.vittel.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Profile may shift slightly depending on exact well within the source, but sulfate and calcium remain consistently high.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "Provides a robust, balanced 1:1 ratio of calcium bicarbonate to calcium sulfate. Excellent for pushing extraction and acidity simultaneously.",
+      "recommended_starting_dilution": "25%",
+      "confidence": "high"
+    },
+    {
+      "name": "San Pellegrino",
+      "aliases": [
+        "S.Pellegrino"
+      ],
+      "country": "Italy",
+      "source_region": "Bergamo",
+      "water_type": "carbonated",
+      "ions": {
+        "calcium": 164,
+        "magnesium": 49.5,
+        "sodium": 31,
+        "potassium": 2.2,
+        "bicarbonate": 243,
+        "chloride": 49,
+        "sulfate": 402
+      },
+      "metadata": {
+        "tds": 854,
+        "ph": 5.5
+      },
+      "source_url": "https://www.sanpellegrino.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Artificially carbonated with naturally sourced CO2. Moderately high chloride.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "A globally accessible high-sulfate, high-hardness blending component. Useful when you need to introduce aggressive sulfate and calcium structures. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:5 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Acqua Panna",
+      "aliases": [
+        "Panna"
+      ],
+      "country": "Italy",
+      "source_region": "Tuscany",
+      "water_type": "still",
+      "ions": {
+        "calcium": 32,
+        "magnesium": 6.2,
+        "sodium": 6.4,
+        "potassium": 0.8,
+        "bicarbonate": 106,
+        "chloride": 7.1,
+        "sulfate": 22
+      },
+      "metadata": {
+        "tds": 141,
+        "ph": 8,
+        "silica": 7.1
+      },
+      "source_url": "https://www.acquapanna.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Classic soft water standard.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "A near-perfectly balanced soft water out of the bottle for filter coffee, minimizing the need for manual RO blending.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Solan de Cabras",
+      "aliases": [],
+      "country": "Spain",
+      "source_region": "Cuenca",
+      "water_type": "still",
+      "ions": {
+        "calcium": 60,
+        "magnesium": 26.7,
+        "sodium": 4.8,
+        "potassium": 1,
+        "bicarbonate": 284,
+        "chloride": 8.3,
+        "sulfate": 21.3
+      },
+      "metadata": {
+        "tds": 260,
+        "ph": 7.5
+      },
+      "source_url": "https://solandecabras.es/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "Excellent Spanish mineral water often found in blue glass/plastic bottles.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Hits the sweet spot of a 2:1 Calcium to Magnesium ratio with a solid bicarbonate buffer and negligible sodium/chloride.",
+      "recommended_starting_dilution": "straight or 50% with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Zaros",
+      "aliases": [
+        "Zaro's Natural Mineral Water"
+      ],
+      "country": "Greece",
+      "source_region": "Crete",
+      "water_type": "still",
+      "ions": {
+        "calcium": 45,
+        "magnesium": 16,
+        "sodium": 2,
+        "potassium": 1,
+        "bicarbonate": 160,
+        "chloride": 4,
+        "sulfate": 10
+      },
+      "metadata": {
+        "tds": 150,
+        "ph": 7.9
+      },
+      "source_url": "https://zaroswater.gr/",
+      "source_label_or_analysis_date": "Official Label 2021",
+      "source_quality": "official_label",
+      "verification_notes": "Award-winning water for low sodium content.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Offers a highly desirable soft profile with practically zero sodium or chloride. Ready to brew for light roasts immediately.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Wattwiller",
+      "aliases": [
+        "Source de Wattwiller"
+      ],
+      "country": "France",
+      "source_region": "Alsace",
+      "water_type": "still",
+      "ions": {
+        "calcium": 35,
+        "magnesium": 11,
+        "sodium": 0,
+        "potassium": 0.5,
+        "bicarbonate": 135,
+        "chloride": 4,
+        "sulfate": 24
+      },
+      "metadata": {
+        "tds": 155,
+        "ph": 7.5
+      },
+      "source_url": "https://www.wattwiller.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "Famously markets itself as having zero sodium.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "One of the only mainstream waters to report literal 0mg/L sodium, paired with a perfect gentle Ca/Mg bicarbonate profile.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Orezza",
+      "aliases": [
+        "Orezza Corsica"
+      ],
+      "country": "France",
+      "source_region": "Corsica",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 185,
+        "magnesium": 16.5,
+        "sodium": 6.9,
+        "potassium": 1.5,
+        "bicarbonate": 710,
+        "chloride": 10,
+        "sulfate": 14
+      },
+      "metadata": {
+        "tds": 983,
+        "ph": 5.5
+      },
+      "source_url": "https://www.orezza.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "Highly effervescent, iron is naturally removed prior to bottling.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "An extreme calcium bicarbonate source without the heavy magnesium or sodium often found in high-bicarbonate waters. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:10 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Donat Mg",
+      "aliases": [
+        "Donat"
+      ],
+      "country": "Slovenia",
+      "source_region": "Rogaška Slatina",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 380,
+        "magnesium": 1000,
+        "sodium": 1500,
+        "bicarbonate": 7800,
+        "chloride": 66,
+        "sulfate": 2100
+      },
+      "metadata": {
+        "tds": 13000,
+        "ph": 6
+      },
+      "source_url": "https://www.donat.com/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Extremely high mineralization. Used primarily for health and digestion.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "Acts as a potent liquid mineral concentrate. Even a few milliliters in RO water will drastically spike magnesium, sulfate, and bicarbonate. Must be measured like a chemical solution. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:50 or drops per cup",
+      "confidence": "high"
+    },
+    {
+      "name": "Borsec",
+      "aliases": [
+        "Borsec Natural Mineral Water"
+      ],
+      "country": "Romania",
+      "source_region": "Carpathian Mountains",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 325,
+        "magnesium": 113,
+        "sodium": 72,
+        "bicarbonate": 1600,
+        "chloride": 25,
+        "sulfate": 18
+      },
+      "metadata": {
+        "tds": 2200,
+        "ph": 6.2
+      },
+      "source_url": "https://borsec.ro/",
+      "source_label_or_analysis_date": "Official Label 2021",
+      "source_quality": "official_label",
+      "verification_notes": "duplicate_risk: Ensure naturally carbonated variant is used.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "Massive natural buffer capacity via calcium and magnesium bicarbonate. Low sulfate makes it unique among high-TDS waters. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:15 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Fiji",
+      "aliases": [
+        "Fiji Water",
+        "Fiji Artesian Water"
+      ],
+      "country": "Fiji",
+      "source_region": "Viti Levu",
+      "water_type": "still",
+      "ions": {
+        "calcium": 18,
+        "magnesium": 15,
+        "sodium": 18,
+        "potassium": 4.9,
+        "bicarbonate": 153,
+        "chloride": 9,
+        "sulfate": 2
+      },
+      "metadata": {
+        "tds": 222,
+        "ph": 7.7,
+        "silica": 93
+      },
+      "source_url": "https://www.fijiwater.com/",
+      "source_label_or_analysis_date": "Official Water Quality Report 2023",
+      "source_quality": "official_analysis",
+      "verification_notes": "Famous for its unusually high silica content.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "The high silica content (93mg/L) contributes significant texture and mouthfeel to coffee, while the low overall hardness provides a gentle base for light roasts.",
+      "recommended_starting_dilution": "straight or 1:1 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Spa Reine",
+      "aliases": [
+        "Spa",
+        "Source Reine"
+      ],
+      "country": "Belgium",
+      "source_region": "Ardennes",
+      "water_type": "still",
+      "ions": {
+        "calcium": 5,
+        "magnesium": 2,
+        "sodium": 3,
+        "potassium": 0.5,
+        "bicarbonate": 15,
+        "chloride": 5,
+        "sulfate": 4
+      },
+      "metadata": {
+        "tds": 38,
+        "ph": 6
+      },
+      "source_url": "https://www.spa.be/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "One of the lowest TDS natural waters commercially available in Europe.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "Acts as a commercial alternative to RO or distilled water for blending. Perfect when you are traveling and need a near-zero TDS base to add your salts to.",
+      "recommended_starting_dilution": "straight (as a blank canvas)",
+      "confidence": "high"
+    },
+    {
+      "name": "Gerolsteiner",
+      "aliases": [
+        "Gerolsteiner Sprudel"
+      ],
+      "country": "Germany",
+      "source_region": "Volcanic Eifel",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 348,
+        "magnesium": 108,
+        "sodium": 118,
+        "potassium": 11,
+        "bicarbonate": 1816,
+        "chloride": 40,
+        "sulfate": 38
+      },
+      "metadata": {
+        "tds": 2529,
+        "ph": 5.9
+      },
+      "source_url": "https://www.gerolsteiner.de/",
+      "source_label_or_analysis_date": "Official Label 2023",
+      "source_quality": "official_label",
+      "verification_notes": "Classic German high-mineral water.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "A dense, balanced source of calcium and magnesium bicarbonate. Needs severe dilution but acts as an excellent, naturally occurring mineral concentrate. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:15 with RO",
+      "confidence": "high"
+    },
+    {
+      "name": "Highland Spring",
+      "aliases": [],
+      "country": "UK",
+      "source_region": "Ochil Hills, Scotland",
+      "water_type": "still",
+      "ions": {
+        "calcium": 40.5,
+        "magnesium": 10.1,
+        "sodium": 5.6,
+        "potassium": 0.7,
+        "bicarbonate": 150,
+        "chloride": 6.1,
+        "sulfate": 5.3
+      },
+      "metadata": {
+        "tds": 170,
+        "ph": 7.8
+      },
+      "source_url": "https://highlandspring.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "UK supermarket staple.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Clean, soft, perfectly balanced Ca/Mg base with very low sulfates and chlorides. An ideal brewing water right out of the bottle.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Devin Spring",
+      "aliases": [
+        "Devin Izvorna"
+      ],
+      "country": "Bulgaria",
+      "source_region": "Rhodope Mountains",
+      "water_type": "still",
+      "ions": {
+        "calcium": 5.7,
+        "magnesium": 1.6,
+        "sodium": 5.5,
+        "potassium": 0.5,
+        "bicarbonate": 31,
+        "chloride": 2.7,
+        "sulfate": 2.3
+      },
+      "metadata": {
+        "tds": 43,
+        "ph": 7.8
+      },
+      "source_url": "https://www.devin-bg.com/",
+      "source_label_or_analysis_date": "Official Label 2021",
+      "source_quality": "official_label",
+      "verification_notes": "duplicate_risk: Do NOT confuse with Devin Mineral, which has high sodium and fluoride.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "Another ultra-low TDS option similar to Spa Reine, ideal as an RO alternative for custom salt building in Eastern Europe.",
+      "recommended_starting_dilution": "straight (as a blank canvas)",
+      "confidence": "high"
+    },
+    {
+      "name": "Antipodes",
+      "aliases": [
+        "Antipodes Water"
+      ],
+      "country": "New Zealand",
+      "source_region": "Whakatane",
+      "water_type": "still",
+      "ions": {
+        "calcium": 3,
+        "magnesium": 2,
+        "sodium": 11,
+        "potassium": 2,
+        "bicarbonate": 35,
+        "chloride": 9,
+        "sulfate": 4
+      },
+      "metadata": {
+        "tds": 130,
+        "ph": 7,
+        "silica": 75
+      },
+      "source_url": "https://antipodes.co.nz/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "Premium high-silica water.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "Provides a very soft base with high silica content for enhanced mouthfeel without the higher buffer found in Fiji.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    },
+    {
+      "name": "Mg Mivela",
+      "aliases": [
+        "Mivela"
+      ],
+      "country": "Serbia",
+      "source_region": "Veluće",
+      "water_type": "naturally_carbonated",
+      "ions": {
+        "calcium": 22,
+        "magnesium": 343,
+        "sodium": 120,
+        "bicarbonate": 2000,
+        "chloride": 12,
+        "sulfate": 20
+      },
+      "metadata": {
+        "tds": 2500,
+        "ph": 6.1
+      },
+      "source_url": "https://mgmivela.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "Rare profile favoring Mg drastically over Ca.",
+      "coffee_use": "blend-only",
+      "why_it_is_useful": "A phenomenal source of high magnesium bicarbonate. Sodium is present, so it should be used in calculated dilutions. WARNING: Carbonated, must be completely degassed before use.",
+      "recommended_starting_dilution": "1:15 with RO",
+      "confidence": "medium"
+    },
+    {
+      "name": "Voss",
+      "aliases": [
+        "Voss Artesian Still"
+      ],
+      "country": "Norway",
+      "source_region": "Iveland",
+      "water_type": "still",
+      "ions": {
+        "calcium": 5,
+        "magnesium": 1,
+        "sodium": 6,
+        "bicarbonate": 20,
+        "chloride": 12,
+        "sulfate": 5
+      },
+      "metadata": {
+        "tds": 44,
+        "ph": 5.5
+      },
+      "source_url": "https://vosswater.com/",
+      "source_label_or_analysis_date": "Official Water Quality Report 2022",
+      "source_quality": "official_analysis",
+      "verification_notes": "One of the purest globally available artesian waters.",
+      "coffee_use": "specialty",
+      "why_it_is_useful": "An ultra-clean, very low TDS canvas for adding salts when RO water is unavailable.",
+      "recommended_starting_dilution": "straight (as a blank canvas)",
+      "confidence": "high"
+    },
+    {
+      "name": "Lanjaron",
+      "aliases": [
+        "Lanjarón"
+      ],
+      "country": "Spain",
+      "source_region": "Sierra Nevada",
+      "water_type": "still",
+      "ions": {
+        "calcium": 13.9,
+        "magnesium": 3.9,
+        "sodium": 6.9,
+        "bicarbonate": 108,
+        "chloride": 13,
+        "sulfate": 13
+      },
+      "metadata": {
+        "tds": 164,
+        "ph": 7.3
+      },
+      "source_url": "https://www.lanjaron.com/",
+      "source_label_or_analysis_date": "Official Label 2022",
+      "source_quality": "official_label",
+      "verification_notes": "A very common and highly consistent Spanish water.",
+      "coffee_use": "good-base",
+      "why_it_is_useful": "A pristine soft water base perfectly tailored for filter coffee without needing any dilution.",
+      "recommended_starting_dilution": "straight",
+      "confidence": "high"
+    }
+  ]
+}

@@ -18,6 +18,22 @@ export interface SharedWater {
  */
 export const SHARED_WATERS: SharedWater[] = [
   {
+    id: 48,
+    name: "Gerolsteiner",
+    ions: { sodium: 118, potassium: 11, calcium: 348, magnesium: 108, chloride: 40, sulfate: 38, bicarbonate: 1816 },
+    metadata: { tds: 2500 },
+    shared: "yes",
+    createdAt: "2026-08-25T00:00:00.000Z",
+  },
+  {
+    id: 47,
+    name: "Acqua Panna",
+    ions: { sodium: 6.4, potassium: 0.8, calcium: 32, magnesium: 6.2, chloride: 7.1, sulfate: 22, bicarbonate: 106 },
+    metadata: { tds: 140, ph: 8.0 },
+    shared: "yes",
+    createdAt: "2026-08-25T00:00:00.000Z",
+  },
+  {
     id: 46,
     name: "Magnesia",
     ions: { magnesium: 172, calcium: 35.7, sodium: 5.2, sulfate: 10.2, bicarbonate: 950 },
