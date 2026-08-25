@@ -1,21 +1,24 @@
 import { useState } from "react";
 
 const waters = [
-  { name: "Donat Mg", country: "Slovenia", type: "Specialty · carbonated", mg: 1000, na: 1500, hco3: 7800, ca: 380, so4: 2100, use: "extreme Mg + buffer" },
-  { name: "Vichy Catalan", country: "Spain", type: "Blend-only · carbonated", mg: 6, na: 1097, hco3: 2081, ca: 14, so4: 50, use: "high sodium + chloride" },
-  { name: "Courmayeur", country: "Italy", type: "Specialty · still", mg: 53, na: 1.2, hco3: 151, ca: 576, so4: 1420, use: "calcium + sulfate" },
-  { name: "Contrex", country: "France", type: "Specialty · still", mg: 74, na: 9.4, hco3: 372, ca: 468, so4: 1121, use: "calcium + sulfate" },
-  { name: "Gerolsteiner", country: "Germany", type: "Blend-only · carbonated", mg: 108, na: 118, hco3: 1816, ca: 348, so4: 38, use: "high Mg + buffer" },
-  { name: "Magnesia", country: "Czechia", type: "Specialty · carbonated", mg: 170, na: 6.1, hco3: 970, ca: 37.4, so4: 11, use: "high magnesium" },
-  { name: "Evian", country: "France", type: "Good base · still", mg: 26, na: 6.5, hco3: 360, ca: 80, so4: 14, use: "balanced base" },
-  { name: "Acqua Panna", country: "Italy", type: "Good base · still", mg: 6.2, na: 6.4, hco3: 106, ca: 32, so4: 22, use: "light mineral base" },
+  { name: "Donat Mg", country: "Slovenia", type: "Specialty · carbonated", mg: 1000, na: 1500, k: 0, hco3: 7800, ca: 380, cl: 66, so4: 2100, use: "extreme Mg + buffer" },
+  { name: "Vichy Catalan", country: "Spain", type: "Blend-only · carbonated", mg: 6, na: 1097, k: 51, hco3: 2081, ca: 14, cl: 584, so4: 50, use: "high sodium + chloride" },
+  { name: "Courmayeur", country: "Italy", type: "Specialty · still", mg: 53, na: 1.2, k: 0, hco3: 151, ca: 576, cl: 0.5, so4: 1420, use: "calcium + sulfate" },
+  { name: "Contrex", country: "France", type: "Specialty · still", mg: 74, na: 9.4, k: 2.8, hco3: 372, ca: 468, cl: 7.6, so4: 1121, use: "calcium + sulfate" },
+  { name: "Gerolsteiner", country: "Germany", type: "Blend-only · carbonated", mg: 108, na: 118, k: 11, hco3: 1816, ca: 348, cl: 40, so4: 38, use: "high Mg + buffer" },
+  { name: "Magnesia", country: "Czechia", type: "Specialty · carbonated", mg: 170, na: 6.1, k: 0, hco3: 970, ca: 37.4, cl: 2.1, so4: 11, use: "high magnesium" },
+  { name: "Evian", country: "France", type: "Good base · still", mg: 26, na: 6.5, k: 1, hco3: 360, ca: 80, cl: 10, so4: 14, use: "balanced base" },
+  { name: "Acqua Panna", country: "Italy", type: "Good base · still", mg: 6.2, na: 6.4, k: 0.8, hco3: 106, ca: 32, cl: 7.1, so4: 22, use: "light mineral base" },
 ];
 
 const minerals = [
+  ["ca", "Calcium", "blue"],
   ["mg", "Magnesium", "cyan"],
   ["na", "Sodium", "orange"],
+  ["k", "Potassium", "amber"],
   ["hco3", "Bicarbonate", "violet"],
-  ["ca", "Calcium", "blue"],
+  ["cl", "Chloride", "rose"],
+  ["so4", "Sulfate", "indigo"],
 ] as const;
 
 export function MineralFingerprint() {
@@ -43,7 +46,7 @@ export function MineralFingerprint() {
               <div className="flex justify-between"><div><h2 className="text-sm font-semibold">{water.name}</h2><p className="mt-1 text-[10px]">{water.country} · {water.type}</p></div><span className="text-xl text-cyan-300">↗</span></div>
               <div className="my-4 flex items-center gap-4"><div className="flex h-16 w-16 flex-col items-center justify-center rounded-full border-2 border-cyan-300 bg-cyan-950/70"><b className="text-lg">{water[focus as keyof typeof water]}</b><small className="text-[8px] text-slate-400">mg/L</small></div><div><strong className="block text-xs text-cyan-100">{minerals.find(([key]) => key === focus)?.[1]}</strong><span className="mt-1 block text-[10px] text-amber-200">{water.use}</span><em className="mt-1 block text-[9px] text-slate-500 not-italic">{Number(water[focus as keyof typeof water]) > max(focus) * 0.3 ? "strong contributor" : "light touch"}</em></div></div>
               <div className="space-y-2 border-t border-slate-700 pt-3">{minerals.map(([key, label, color]) => <div key={key}><div className="flex justify-between text-[9px] text-slate-400"><span>{label}</span><b className="text-slate-200">{water[key as keyof typeof water]}</b></div><div className="mt-1 h-1 rounded-full bg-slate-700"><div className={`h-full rounded-full bg-${color}-300`} style={{ width: `${Math.max(3, Number(water[key as keyof typeof water]) / max(key) * 100)}%` }} /></div></div>)}</div>
-              <div className="mt-3 flex gap-4 border-t border-slate-700 pt-3 text-[9px] text-slate-400"><span>SO₄ <b className="text-slate-200">{water.so4}</b></span><span className="ml-auto text-emerald-300">{water.use}</span></div>
+              <div className="mt-3 flex gap-4 border-t border-slate-700 pt-3 text-[9px] text-slate-400"><span>All values in mg/L</span><span className="ml-auto text-emerald-300">{water.use}</span></div>
             </article>
           ))}
         </div>
