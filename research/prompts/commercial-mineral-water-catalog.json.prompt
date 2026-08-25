@@ -1,0 +1,67 @@
+You are researching commercial natural mineral waters for a coffee-water formulation tool called Watermancer.
+
+Goal:
+Find commercially available waters that are useful as source-water components alongside these salts:
+MgSO4, MgCl2, Mg citrate, CaCl2, Ca lactate, Ca citrate, NaHCO3, NaCl, KHCO3, KCl, and magnesium glycinate.
+
+The salts create coupled ions, so prioritize waters that provide useful ion combinations the salts cannot independently provide:
+- calcium without excessive chloride
+- magnesium without excessive sulfate or chloride
+- sulfate without excessive magnesium
+- bicarbonate without excessive sodium or potassium
+- low/minimal sodium and potassium
+- unusual but useful regional ion balances
+
+Search broadly across:
+- mainstream bottled mineral waters
+- European, Middle Eastern, Turkish, Spanish, Italian, French, German, and Balkan waters
+- obscure regional waters
+- unusually mineralized waters
+- waters with distinctive calcium, magnesium, sulfate, bicarbonate, chloride, or low-sodium patterns
+
+Do not recommend a water merely because it is famous. It must have a meaningful use case for coffee-water blending. Carbonated waters are allowed but must be marked carbonated and given a degassing warning. Do not include flavored or enhanced waters.
+
+Return ONLY valid JSON in this exact top-level shape:
+{
+  "research_scope": "...",
+  "candidates": [
+    {
+      "name": "Brand / source name",
+      "aliases": ["..."],
+      "country": "...",
+      "source_region": "...",
+      "water_type": "still | naturally_carbonated | carbonated",
+      "ions": {
+        "calcium": 0,
+        "magnesium": 0,
+        "sodium": 0,
+        "potassium": 0,
+        "bicarbonate": 0,
+        "chloride": 0,
+        "sulfate": 0
+      },
+      "metadata": {
+        "tds": 0,
+        "ph": 0,
+        "silica": 0
+      },
+      "source_url": "...",
+      "source_label_or_analysis_date": "...",
+      "source_quality": "official_label | official_analysis | reputable_database | secondary_source",
+      "verification_notes": "...",
+      "coffee_use": "good-base | blend-only | specialty | avoid",
+      "why_it_is_useful": "...",
+      "recommended_starting_dilution": "e.g. straight, 25%, 10%, or 1:4 with RO",
+      "confidence": "high | medium | low"
+    }
+  ]
+}
+
+Rules:
+1. All numeric concentrations must be mg/L. Use 0 only when the source explicitly reports zero; otherwise omit unavailable fields rather than inventing values.
+2. Do not invent a complete analysis from memory. If a candidate lacks explicit core ion data, either omit it or mark confidence low and explain the gap.
+3. Prefer primary manufacturer labels or official laboratory analyses. Include a direct URL for every candidate.
+4. Include at least 25 candidates if credible data exists, but do not pad the list with weak or duplicated entries.
+5. Include a "duplicate_risk" note in verification_notes when names vary by country, source, or bottle format.
+6. Treat very high sodium, bicarbonate, chloride, calcium, magnesium, or sulfate waters as specialty/blend-only rather than universally useful.
+7. The output must be directly usable as a reviewable seed file; do not include markdown fences or commentary outside the JSON.
