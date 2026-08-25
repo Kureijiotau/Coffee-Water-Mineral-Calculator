@@ -9056,7 +9056,7 @@ function App() {
       {/* ── Community waters modal ── */}
       {communityModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setCommunityModalOpen(false)}>
-          <div className="w-full max-w-2xl max-h-[80vh] bg-slate-800 rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-6xl max-h-[86vh] bg-slate-800 rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40 shrink-0">
               <h2 className="text-sm font-semibold text-slate-200">Community waters</h2>
@@ -9065,7 +9065,7 @@ function App() {
               </button>
             </div>
             {/* Body */}
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="min-w-0 flex-1 overflow-y-auto p-4">
               {communityLoading ? (
                 <p className="text-xs text-slate-500 italic text-center py-8">Loading community waters…</p>
               ) : communityWaters.length === 0 ? (
@@ -9106,9 +9106,9 @@ function App() {
                       {communitySortDescending ? '↓ High' : '↑ Low'}
                     </button>
                   </div>
-                  <div className="overflow-x-auto rounded-xl border border-slate-700/60 bg-slate-950/30">
-                    <div className="min-w-[940px]">
-                      <div className="grid grid-cols-[2fr_repeat(7,0.78fr)_0.95fr] items-center gap-3 bg-slate-900/80 px-4 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                  <div className="overflow-hidden rounded-xl border border-slate-700/60 bg-slate-950/30">
+                    <div>
+                      <div className="hidden grid-cols-[minmax(220px,2fr)_repeat(7,minmax(48px,0.78fr))_minmax(105px,0.95fr)] items-center gap-3 bg-slate-900/80 px-4 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                         <span>Water / focus</span>
                         {COMMUNITY_BROWSER_ION_IDS.map(id => (
                           <button
@@ -9140,8 +9140,8 @@ function App() {
                     const circleColor = COMMUNITY_BROWSER_ION_COLORS[strongestNoteIon];
                     const maxIon = (id: IonId) => Math.max(1, ...communityWaters.map(water => Number(water.ions[id] ?? 0)));
                     return (
-                      <div key={w.id} className="grid grid-cols-[2fr_repeat(7,0.78fr)_0.95fr] items-center gap-3 border-t border-slate-800 px-4 py-3 transition hover:bg-sky-950/20">
-                        <div className="flex min-w-0 items-center gap-3">
+                      <div key={w.id} className="grid grid-cols-2 items-center gap-x-4 gap-y-3 border-t border-slate-800 px-4 py-3 transition hover:bg-sky-950/20 sm:grid-cols-[minmax(220px,2fr)_repeat(7,minmax(48px,0.78fr))_minmax(105px,0.95fr)] sm:gap-3">
+                        <div className="col-span-2 flex min-w-0 items-center gap-3 sm:col-span-1">
                           <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border-2 bg-slate-950/70 leading-none" style={{ borderColor: circleColor, boxShadow: `0 0 16px ${circleColor}22` }}>
                             <b className="text-[11px] tabular-nums tracking-tight">{circleValue.toLocaleString(undefined, { maximumFractionDigits: 1 })}</b>
                             <small className="mt-1 text-[7px] leading-none text-slate-500">mg/L</small>
@@ -9189,7 +9189,7 @@ function App() {
                            });
                           }}
                           disabled={alreadyAdded}
-                          className={`text-xs font-medium rounded-lg px-3 py-1.5 transition ${
+                          className={`col-span-2 text-xs font-medium rounded-lg px-3 py-1.5 transition sm:col-span-1 ${
                             alreadyAdded
                               ? 'text-slate-500 bg-slate-700/30 cursor-default'
                               : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
