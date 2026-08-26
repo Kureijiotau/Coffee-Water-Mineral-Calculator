@@ -124,6 +124,7 @@ function ConcentrateBottleCard({
   group,
   strengthInput,
   volumeInput,
+  waterInputValue,
   waterLiters,
   displayedWaterVolume,
   volumeUnit,
@@ -133,6 +134,7 @@ function ConcentrateBottleCard({
   measuredMlInput,
   onStrengthChange,
   onVolumeChange,
+  onWaterVolumeChange,
   onToggleVolumeUnit,
   onDropperStyleChange,
   onCalibrationToggle,
@@ -142,6 +144,7 @@ function ConcentrateBottleCard({
   group: ConcentrateGroup;
   strengthInput: string;
   volumeInput: string;
+  waterInputValue: string;
   waterLiters: number;
   displayedWaterVolume: number;
   volumeUnit: VolumeUnit;
@@ -151,6 +154,7 @@ function ConcentrateBottleCard({
   measuredMlInput: string;
   onStrengthChange: (value: string) => void;
   onVolumeChange: (value: string) => void;
+  onWaterVolumeChange: (value: string) => void;
   onToggleVolumeUnit: () => void;
   onDropperStyleChange: (style: DropperStyle) => void;
   onCalibrationToggle: () => void;
@@ -372,7 +376,15 @@ function ConcentrateBottleCard({
               </button>
             </span>
             <span className="mt-1.5 flex items-center gap-2 rounded-lg border px-3 py-2">
-              <span className="text-lg font-semibold tabular-nums text-white">{compact(displayedWaterVolume, 2)}</span>
+              <input
+                type="number"
+                min={volumeUnit === 'gallons' ? '0.01' : '0.1'}
+                step={volumeUnit === 'gallons' ? '0.01' : '0.1'}
+                value={waterInputValue}
+                onChange={event => onWaterVolumeChange(event.target.value)}
+                aria-label={`${group.name} final water volume in ${volumeUnitLabel(volumeUnit)}`}
+                className="aio-input w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+              />
               <span className="text-xs font-semibold">{volumeUnitShortLabel(volumeUnit)}</span>
             </span>
           </label>
@@ -410,9 +422,16 @@ export function CondensedAio() {
   const [calibrationMode, setCalibrationMode] = useState<'assumed' | 'measured'>('assumed');
   const [measuredDropsInput, setMeasuredDropsInput] = useState('20');
   const [measuredMlInput, setMeasuredMlInput] = useState('1');
-  const [recipeMode, setRecipeMode] = useState('All-in-one');
+  const [recipeMode, setRecipeMode] = useState<RecipeMode>('All-in-one');
+  const [modeStrengthInputs, setModeStrengthInputs] = useState<Record<string, string>>({});
+  const [modeVolumeInputs, setModeVolumeInputs] = useState<Record<string, string>>({});
+  const [modeDropperStyles, setModeDropperStyles] = useState<Record<string, DropperStyle>>({});
+  const [modeCalibrationModes, setModeCalibrationModes] = useState<Record<string, 'assumed' | 'measured'>>({});
+  const [modeMeasuredDropsInputs, setModeMeasuredDropsInputs] = useState<Record<string, string>>({});
+  const [modeMeasuredMlInputs, setModeMeasuredMlInputs] = useState<Record<string, string>>({});
   const [safetyOpen, setSafetyOpen] = useState(false);
 
+  const modeGroups = useMemo(() => modeGroupsFor(recipeMode), [recipeMode]);
   const strength = Math.min(MAX_SAFE_STRENGTH, Math.max(1, number(strengthInput, MAX_SAFE_STRENGTH)));
   const stockVolumeMl = Math.max(1, number(stockVolumeInput, 100));
   const waterLiters = Math.max(0.01, volumeToLiters(waterLitersInput, volumeUnit));
@@ -454,6 +473,38 @@ export function CondensedAio() {
     setStrengthInput(String(next));
   };
 
+  const setModeStrength = (groupId: string, value: string) => {
+    const next = Math.min(MAX_SAFE_STRENGTH, Math.max(1, number(value, 1)));
+    setModeStrengthInputs(previous => ({ ...previous, [groupId]: String(next) }));
+  };
+
+  const toggleVolumeUnit = () => {
+    const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
+    setWaterLitersInput(litersToVolumeValue(waterLiters, nextUnit));
+    setVolumeUnit(nextUnit);
+  };
+
+  const modeHeader = recipeMode === 'GH + KH'
+    ? {
+        badge: 'GH + KH',
+        description: 'compatible minerals stay in separate bottles',
+        heading: 'Two bottles. One balanced water.',
+        intro: 'Prepare each compatible stock, then add both to the finished water.',
+      }
+    : recipeMode === 'Separate salts'
+    ? {
+        badge: 'Separate salts',
+        description: 'one bottle per active salt',
+        heading: 'One bottle per salt.',
+        intro: 'Tune each stock independently, then dose every bottle into the finished water.',
+      }
+    : {
+        badge: 'All-in-one',
+        description: 'recipe proportions stay locked',
+        heading: 'One bottle. One answer.',
+        intro: 'Set the stock strength once, then dose the finished water in drops.',
+      };
+
   return (
     <main className="aio-shell aio-grid min-h-screen p-3 text-slate-100 sm:p-5">
       <div className="mx-auto max-w-5xl">
@@ -463,22 +514,22 @@ export function CondensedAio() {
               <FlaskConical className="h-4 w-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">
-              <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-fuchsia-200/65">Concentrate / AIO</div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-fuchsia-200/65">Concentrate / {recipeMode}</div>
               <h1 className="truncate text-base font-semibold text-white sm:text-lg">Balanced pourover recipe</h1>
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-400/[0.08] px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200">
             <CircleCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            1 bottle
+            {modeGroups.length} {modeGroups.length === 1 ? 'bottle' : 'bottles'}
           </div>
         </header>
 
         <div className="mb-4 flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/45 p-1 shadow-xl">
-          {[
+          {([
             ['GH + KH', 'Separate compatible groups'],
             ['All-in-one', 'Every active salt shares one bottle'],
             ['Separate salts', 'One bottle per active salt'],
-          ].map(([label, description]) => (
+          ] as Array<[RecipeMode, string]>).map(([label, description]) => (
             <button
               key={label}
               type="button"
@@ -501,12 +552,12 @@ export function CondensedAio() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200">All-in-one</span>
-                  <span className="text-[10px] text-slate-500">recipe proportions stay locked</span>
+                  <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200">{modeHeader.badge}</span>
+                  <span className="text-[10px] text-slate-500">{modeHeader.description}</span>
                 </div>
-                <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">One bottle. One answer.</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">{modeHeader.heading}</h2>
                 <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
-                  Set the stock strength once, then dose the finished water in drops.
+                  {modeHeader.intro}
                 </p>
               </div>
               <div className="min-w-[150px] rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] px-3 py-2.5 text-right">
@@ -519,6 +570,7 @@ export function CondensedAio() {
             </div>
           </div>
 
+          {recipeMode === 'All-in-one' ? (
           <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[1.05fr_0.95fr]">
             <section className="aio-card aio-prepare-card rounded-xl p-4">
               <div className="mb-3 flex items-start justify-between gap-3">
@@ -701,11 +753,7 @@ export function CondensedAio() {
                    <span>Final water ({volumeUnitShortLabel(volumeUnit)})</span>
                    <button
                      type="button"
-                     onClick={() => {
-                       const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
-                       setWaterLitersInput(litersToVolumeValue(waterLiters, nextUnit));
-                       setVolumeUnit(nextUnit);
-                     }}
+                      onClick={toggleVolumeUnit}
                      className="aio-volume-toggle"
                      aria-label={`Switch volume units to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
                      title={`Switch to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
@@ -728,6 +776,58 @@ export function CondensedAio() {
               </label>
             </section>
           </div>
+          ) : (
+            <div className="grid gap-3 p-3 sm:p-4">
+              <div className="aio-mode-summary rounded-xl border border-slate-700/60 bg-slate-950/25 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-400/10 text-cyan-200">
+                      <Layers3 className="h-3.5 w-3.5" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <div className="text-xs font-semibold text-slate-100">
+                        {recipeMode === 'GH + KH' ? 'Compatible stock bottles' : 'Independent salt bottles'}
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-slate-500">
+                        {modeGroups.length} bottles · each dose uses the same final-water amount
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-semibold tabular-nums text-cyan-100/75">
+                    {compact(displayedWaterVolume, 2)} {volumeUnitShortLabel(volumeUnit)} final water
+                  </div>
+                </div>
+              </div>
+
+              {modeGroups.map(group => (
+                <ConcentrateBottleCard
+                  key={group.id}
+                  group={group}
+                  strengthInput={modeStrengthInputs[group.id] ?? String(MAX_SAFE_STRENGTH)}
+                  volumeInput={modeVolumeInputs[group.id] ?? '100'}
+                  waterInputValue={waterLitersInput}
+                  waterLiters={waterLiters}
+                  displayedWaterVolume={displayedWaterVolume}
+                  volumeUnit={volumeUnit}
+                  dropperStyle={modeDropperStyles[group.id] ?? 'straight'}
+                  calibrationMode={modeCalibrationModes[group.id] ?? 'assumed'}
+                  measuredDropsInput={modeMeasuredDropsInputs[group.id] ?? '20'}
+                  measuredMlInput={modeMeasuredMlInputs[group.id] ?? '1'}
+                  onStrengthChange={value => setModeStrength(group.id, value)}
+                  onVolumeChange={value => setModeVolumeInputs(previous => ({ ...previous, [group.id]: value }))}
+                  onWaterVolumeChange={setWaterLitersInput}
+                  onToggleVolumeUnit={toggleVolumeUnit}
+                  onDropperStyleChange={style => setModeDropperStyles(previous => ({ ...previous, [group.id]: style }))}
+                  onCalibrationToggle={() => setModeCalibrationModes(previous => ({
+                    ...previous,
+                    [group.id]: previous[group.id] === 'measured' ? 'assumed' : 'measured',
+                  }))}
+                  onMeasuredDropsChange={value => setModeMeasuredDropsInputs(previous => ({ ...previous, [group.id]: value }))}
+                  onMeasuredMlChange={value => setModeMeasuredMlInputs(previous => ({ ...previous, [group.id]: value }))}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="aio-recipe-panel aio-glass mt-3 overflow-hidden rounded-xl">
