@@ -9,7 +9,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -10060,7 +10060,7 @@ function DropperReferenceCard({
   );
 }
 
-function RecipeConcentrateBuilder({
+function LegacyRecipeConcentrateBuilder({
   handoff,
   volumeUnit,
   dropsPerMl,
@@ -10894,6 +10894,782 @@ function RecipeConcentrateBuilder({
         </div>
       </section>
     </>
+  );
+}
+
+type RecipeBottleGroup = {
+  id: string;
+  name: string;
+  saltIds: string[];
+  color: StockGroup['color'] | 'cyan';
+};
+
+function recipeConcentrateNumber(value: number, digits = 2): string {
+  if (!Number.isFinite(value)) return '—';
+  return value.toFixed(digits).replace(/\.?0+$/, '');
+}
+
+function RecipeConcentrateBottleCard({
+  group,
+  handoff,
+  strengthInput,
+  volumeInput,
+  finalVolumeInput,
+  finalLiters,
+  volumeUnit,
+  dropperStyle,
+  straightDropsPerMl,
+  measuredDropsPerMlInput,
+  onStrengthChange,
+  onVolumeChange,
+  onFinalVolumeChange,
+  onToggleVolumeUnit,
+  onDropperStyleChange,
+  onMeasuredDropsPerMlChange,
+}: {
+  group: RecipeBottleGroup;
+  handoff: ConcentrateRecipeHandoff;
+  strengthInput: string;
+  volumeInput: string;
+  finalVolumeInput: string;
+  finalLiters: number;
+  volumeUnit: VolumeUnit;
+  dropperStyle: LotusDropperStyle;
+  straightDropsPerMl: number;
+  measuredDropsPerMlInput: string;
+  onStrengthChange: (value: string) => void;
+  onVolumeChange: (value: string) => void;
+  onFinalVolumeChange: (value: string) => void;
+  onToggleVolumeUnit: () => void;
+  onDropperStyleChange: (style: LotusDropperStyle) => void;
+  onMeasuredDropsPerMlChange: (value: string) => void;
+}) {
+  const saltTargets = Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, num(handoff.salts[saltId]?.target)]),
+  );
+  const formIdxBySaltId = Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, handoff.salts[saltId]?.formIdx ?? 0]),
+  );
+  const strength = Math.max(0, Number(strengthInput) || 0);
+  const stockVolumeMl = Math.max(0, Number(volumeInput) || 0);
+  const maxSafeStrength = findStrongestSafeConcentrateStrength(
+    saltTargets,
+    undefined,
+    formIdxBySaltId,
+  );
+  const warnings = strength > 0
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    : [];
+  const assumedDropsPerMl = lotusDropsPerMl(dropperStyle, straightDropsPerMl);
+  const measuredDropsPerMl = Number(measuredDropsPerMlInput);
+  const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
+  const activeDropsPerMl = hasMeasuredDropsPerMl ? measuredDropsPerMl : assumedDropsPerMl;
+  const safeFinalLiters = Math.max(0, finalLiters);
+  const doseMl = strength > 0 ? 1000 / strength * safeFinalLiters : 0;
+  const doseDrops = doseMl * activeDropsPerMl;
+  const stockRows = group.saltIds.map(saltId => {
+    const salt = SALTS.find(item => item.id === saltId);
+    const entry = handoff.salts[saltId];
+    if (!salt || !entry) return null;
+    const form = salt.hydrationForms[entry.formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    if (!form) return null;
+    const target = num(entry.target);
+    const massMg = computeRecipeStockSaltMassMg(
+      target,
+      stockVolumeMl,
+      strength,
+      form.molarMass,
+      salt.anhydrousMass,
+    );
+    return { salt, form, target, massMg };
+  }).filter((row): row is {
+    salt: typeof SALTS[number];
+    form: typeof SALTS[number]['hydrationForms'][number];
+    target: number;
+    massMg: number;
+  } => row !== null);
+  const totalSaltMassG = stockRows.reduce((total, row) => total + row.massMg, 0) / 1000;
+  const waterToAddG = Math.max(0, stockVolumeMl - totalSaltMassG);
+  const saltMgPerMl = stockVolumeMl > 0
+    ? stockRows.reduce((total, row) => total + row.massMg, 0) / stockVolumeMl
+    : 0;
+  const saltMgPerDrop = activeDropsPerMl > 0 ? saltMgPerMl / activeDropsPerMl : 0;
+  const ppmPerDrop = safeFinalLiters > 0 ? saltMgPerDrop / safeFinalLiters : 0;
+  const tone: Record<RecipeBottleGroup['color'], {
+    border: string;
+    badge: string;
+    accent: string;
+    soft: string;
+  }> = {
+    sky: {
+      border: 'border-sky-400/25',
+      badge: 'border-sky-300/25 bg-sky-400/10 text-sky-200',
+      accent: 'text-sky-200',
+      soft: 'bg-sky-400/[0.08]',
+    },
+    violet: {
+      border: 'border-violet-400/25',
+      badge: 'border-violet-300/25 bg-violet-400/10 text-violet-200',
+      accent: 'text-violet-200',
+      soft: 'bg-violet-400/[0.08]',
+    },
+    amber: {
+      border: 'border-amber-400/25',
+      badge: 'border-amber-300/25 bg-amber-400/10 text-amber-200',
+      accent: 'text-amber-200',
+      soft: 'bg-amber-400/[0.08]',
+    },
+    cyan: {
+      border: 'border-cyan-400/25',
+      badge: 'border-cyan-300/25 bg-cyan-400/10 text-cyan-200',
+      accent: 'text-cyan-200',
+      soft: 'bg-cyan-400/[0.08]',
+    },
+  };
+  const colors = tone[group.color];
+  const helper = group.id === 'hardness'
+    ? 'Calcium, magnesium, and chloride support.'
+    : group.id === 'alkalinity'
+      ? 'Bicarbonate buffer for the finished water.'
+      : group.id === 'citrate'
+        ? 'Keep citrate minerals in their own stock.'
+        : group.id === 'all-in-one'
+          ? 'Every active salt shares one bottle.'
+          : 'One bottle for this salt.';
+  const cardName = group.name.replace(/ Stock$/, ' Concentrate');
+  const unitLabel = volumeUnitShortLabel(volumeUnit);
+  const finalVolumeLabel = volumeUnitLabel(volumeUnit);
+  const calibratedLabel = hasMeasuredDropsPerMl
+    ? `${recipeConcentrateNumber(activeDropsPerMl, 1)} measured drops/mL`
+    : `${recipeConcentrateNumber(assumedDropsPerMl, 1)} ${dropperStyle} drops/mL assumption`;
+
+  return (
+    <article className={`recipe-concentrate-bottle aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
+            <Beaker className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <div className={`text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>{cardName}</div>
+            <div className="mt-0.5 text-[10px] text-slate-500">{helper}</div>
+          </div>
+        </div>
+        <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold ${colors.badge}`}>one bottle</span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+        <section>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <label className="block">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <input
+                  value={strengthInput}
+                  onChange={event => onStrengthChange(event.target.value)}
+                  type="number"
+                  min="1"
+                  max={maxSafeStrength}
+                  step="1"
+                  aria-label={`${cardName} stock strength`}
+                  className="recipe-concentrate-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                />
+                <span className="text-lg text-slate-500">×</span>
+              </div>
+              <div className="mt-1 text-[9px] text-slate-600">recipe target multiplier</div>
+            </label>
+            <label className="block">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <input
+                  value={volumeInput}
+                  onChange={event => onVolumeChange(event.target.value)}
+                  type="number"
+                  min="1"
+                  step="10"
+                  aria-label={`${cardName} bottle volume in milliliters`}
+                  className="recipe-concentrate-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                />
+                <span className="text-lg text-slate-500">mL</span>
+              </div>
+              <div className="mt-1 text-[9px] text-slate-600">how much to make</div>
+            </label>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
+            <span>safe ceiling ×{maxSafeStrength}</span>
+            <button
+              type="button"
+              onClick={() => onStrengthChange(String(maxSafeStrength))}
+              className="font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
+            >
+              Apply maximum
+            </button>
+          </div>
+          <input
+            className="recipe-concentrate-range mt-3 h-1.5 w-full cursor-pointer"
+            type="range"
+            min="1"
+            max={Math.max(1, maxSafeStrength)}
+            value={Math.min(Math.max(1, strength || 1), Math.max(1, maxSafeStrength))}
+            onChange={event => onStrengthChange(event.target.value)}
+            aria-label={`Adjust ${cardName} strength`}
+          />
+          <div className="mt-2 flex justify-between text-[9px] tabular-nums text-slate-600">
+            <span>×1</span>
+            <span>lower strength = more drops</span>
+            <span>×{maxSafeStrength}</span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className={`rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(totalSaltMassG, 2)} g</div>
+              <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
+            </div>
+            <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{recipeConcentrateNumber(waterToAddG, 1)} g</div>
+              <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
+            </div>
+          </div>
+
+          <div className="recipe-concentrate-dropper mt-4 rounded-lg p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Ruler className="h-3.5 w-3.5 text-amber-200/75" aria-hidden="true" />
+                <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-amber-100/70">Dropper setup</span>
+              </div>
+              <span className="text-right text-[9px] text-slate-500">{calibratedLabel}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/40 p-1" role="group" aria-label={`${cardName} dropper style`}>
+              {(['straight', 'round'] as LotusDropperStyle[]).map(style => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => onDropperStyleChange(style)}
+                  aria-pressed={dropperStyle === style}
+                  data-active={dropperStyle === style}
+                  className="recipe-concentrate-dropper-segment rounded-md px-2 py-1.5 text-[10px] font-semibold capitalize transition"
+                >
+                  {style} tip · {recipeConcentrateNumber(lotusDropsPerMl(style, straightDropsPerMl), 1)}/mL
+                </button>
+              ))}
+            </div>
+            <label className="mt-2 block rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
+              <span className="flex items-center justify-between gap-2 text-[9px] text-slate-500">
+                <span>Measured calibration</span>
+                <span>optional</span>
+              </span>
+              <span className="mt-1 flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  value={measuredDropsPerMlInput}
+                  onChange={event => onMeasuredDropsPerMlChange(event.target.value)}
+                  placeholder={`${recipeConcentrateNumber(assumedDropsPerMl, 1)} assumed`}
+                  aria-label={`${cardName} measured drops per milliliter`}
+                  className="recipe-concentrate-input w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
+                />
+                <span className="text-[10px] text-slate-500">drops/mL</span>
+              </span>
+            </label>
+            <div className="mt-2 flex items-center gap-2 text-[9px] leading-relaxed text-slate-500">
+              <Info className="h-3.5 w-3.5 shrink-0 text-amber-200/70" aria-hidden="true" />
+              Calibration changes drop size only, not recipe chemistry.
+            </div>
+          </div>
+        </section>
+
+        <section className="recipe-concentrate-dose rounded-xl border p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className={`flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                Dose the final water
+              </div>
+              <div className="mt-3 flex flex-wrap items-baseline gap-2">
+                <strong className="text-5xl font-semibold tracking-[-0.05em] text-white">{Math.round(doseDrops)}</strong>
+                <span className="text-sm font-medium">drops / {recipeConcentrateNumber(doseMl, 2)} mL</span>
+              </div>
+              <div className="mt-1 text-[11px]">for {recipeConcentrateNumber(finalLiters > 0 ? Number(finalVolumeInput) : 0, 2)} {unitLabel} final water</div>
+            </div>
+            <div className={`recipe-concentrate-dose-metric rounded-lg border px-2.5 py-2 text-right ${colors.border} ${colors.soft}`}>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
+              <div className="text-[9px]">physical salt ppm</div>
+            </div>
+          </div>
+          <label className="mt-4 block">
+            <span className={`flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.16em] ${colors.accent}`}>
+              <span>Final water ({unitLabel})</span>
+              <button
+                type="button"
+                onClick={onToggleVolumeUnit}
+                className="recipe-concentrate-volume-toggle"
+                aria-label={`Switch volume units to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
+              >
+                {finalVolumeLabel}
+              </button>
+            </span>
+            <span className={`mt-1.5 flex items-center gap-2 rounded-lg border px-3 py-2 ${colors.border} bg-slate-950/30`}>
+              <input
+                type="number"
+                min={volumeUnit === 'gallons' ? '0.01' : '0.1'}
+                step={volumeUnit === 'gallons' ? '0.01' : '0.1'}
+                value={finalVolumeInput}
+                onChange={event => onFinalVolumeChange(event.target.value)}
+                aria-label={`Final water volume in ${finalVolumeLabel}`}
+                className="recipe-concentrate-input w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+              />
+              <span className="text-xs font-semibold">{unitLabel}</span>
+            </span>
+          </label>
+        </section>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {stockRows.map(row => (
+          <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2">
+                <span className={`recipe-concentrate-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.accent}`} aria-hidden="true" />
+                <div className="min-w-0">
+                  <div className="truncate text-[11px] font-semibold text-slate-100">{row.salt.name}</div>
+                  <div className="mt-0.5 truncate text-[9px] text-slate-500">{row.form.label} · {row.salt.formula}</div>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className={`text-[10px] font-semibold tabular-nums ${colors.accent}`}>{recipeConcentrateNumber(row.target, 1)} ppm/L</div>
+                <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{recipeConcentrateNumber(row.massMg, 1)} mg</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {warnings.length > 0 && (
+        <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
+          warnings.some(warning => warning.severity === 'error')
+            ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200'
+            : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
+        }`}>
+          <div className="font-semibold">
+            {warnings.some(warning => warning.severity === 'error') ? 'Check strength' : 'Mixing note'}
+          </div>
+          {warnings.map(warning => <p key={`${warning.severity}-${warning.message}`} className="mt-1">{warning.message}</p>)}
+        </div>
+      )}
+    </article>
+  );
+}
+
+function RecipeConcentrateBuilder({
+  handoff,
+  volumeUnit,
+  dropsPerMl,
+  dropperStyle,
+  onDropperStyleChange,
+  straightDropsPerMl,
+  restoredPlan,
+  onToggleVolumeUnit,
+  onClear,
+  onPlanChange,
+}: {
+  handoff: ConcentrateRecipeHandoff;
+  volumeUnit: VolumeUnit;
+  dropsPerMl: number;
+  dropperStyle: LotusDropperStyle;
+  onDropperStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMl: number;
+  restoredPlan: ConcentratePlanSnapshot | null;
+  onToggleVolumeUnit: () => void;
+  onClear: () => void;
+  onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+}) {
+  const [strengthInput, setStrengthInput] = useState('500');
+  const [stockStrategy, setStockStrategy] = useState<ConcentrateStrategy>('gh-kh');
+  const [stockStrengthInputs, setStockStrengthInputs] = useState<Record<string, string>>({
+    hardness: '500',
+    alkalinity: '500',
+    citrate: '500',
+    'all-in-one': '500',
+  });
+  const [stockVolumeInputs, setStockVolumeInputs] = useState<Record<string, string>>({
+    hardness: '100',
+    alkalinity: '100',
+    citrate: '100',
+    'all-in-one': '100',
+  });
+  const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
+  const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
+
+  const saltTargets = Object.fromEntries(
+    Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
+  );
+  const formIdxBySaltId = Object.fromEntries(
+    Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, entry.formIdx]),
+  );
+  const compatibleStockGroups = splitIntoStockGroups(saltTargets);
+  const activeSaltIds = Object.entries(saltTargets)
+    .filter(([, target]) => target > 0)
+    .map(([saltId]) => saltId);
+  const individualStockGroups: RecipeBottleGroup[] = compatibleStockGroups.flatMap(group =>
+    group.saltIds.map(saltId => {
+      const salt = SALTS.find(item => item.id === saltId);
+      const individualColor: Record<string, RecipeBottleGroup['color']> = {
+        mgso4: 'cyan',
+        mgcl2: 'sky',
+        cacl2: 'violet',
+        nahco3: 'amber',
+        khco3: 'violet',
+        nacl: 'cyan',
+        kcl: 'sky',
+        mgcit: 'amber',
+        cacit: 'violet',
+        calact: 'amber',
+        mggly: 'sky',
+      };
+      return {
+        ...group,
+        id: `salt:${saltId}`,
+        name: `${salt?.name ?? 'Salt'} Stock`,
+        saltIds: [saltId],
+        color: individualColor[saltId] ?? group.color,
+      };
+    }),
+  );
+  const allInOneStockGroups: RecipeBottleGroup[] = activeSaltIds.length > 0
+    ? [{
+        id: 'all-in-one',
+        name: 'All-in-one Stock',
+        saltIds: activeSaltIds,
+        color: 'violet',
+      }]
+    : [];
+  const stockGroups: RecipeBottleGroup[] = stockStrategy === 'all-in-one'
+    ? allInOneStockGroups
+    : stockStrategy === 'individual'
+      ? individualStockGroups
+      : compatibleStockGroups;
+  const groupTargetsFor = (group: { saltIds: string[] }) => Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
+  );
+  const groupFormsFor = (group: { saltIds: string[] }) => Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
+  );
+  const groupMaxSafeStrengthFor = (group: { saltIds: string[] }) =>
+    findStrongestSafeConcentrateStrength(groupTargetsFor(group), undefined, groupFormsFor(group));
+  const maxSafeStrengthByStrategy = {
+    'gh-kh': compatibleStockGroups.length > 0
+      ? Math.min(...compatibleStockGroups.map(groupMaxSafeStrengthFor))
+      : null,
+    'all-in-one': allInOneStockGroups.length > 0
+      ? groupMaxSafeStrengthFor(allInOneStockGroups[0])
+      : null,
+    individual: individualStockGroups.length > 0
+      ? Math.min(...individualStockGroups.map(groupMaxSafeStrengthFor))
+      : null,
+  };
+  const strength = Math.max(0, Number(strengthInput) || 0);
+  const maxSafeStrength = maxSafeStrengthByStrategy[stockStrategy];
+  const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
+  const measuredDropsPerMl = Number(measuredDropsPerMlInput);
+  const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
+  const activeDropsPerMl = hasMeasuredDropsPerMl
+    ? measuredDropsPerMl
+    : lotusDropsPerMl(dropperStyle, straightDropsPerMl);
+  const stockStrategyDetails = stockStrategy === 'all-in-one'
+    ? { label: 'All-in-one', helper: 'Every active salt shares one bottle.' }
+    : stockStrategy === 'individual'
+      ? { label: 'Separate salts', helper: 'One bottle per active salt.' }
+      : { label: 'GH + KH', helper: 'Use separate bottles for compatible groups.' };
+  const planGroupSignature = stockGroups.map(group => `${group.id}:${group.saltIds.join(',')}`).join('|');
+  const planVolumeSignature = Object.entries(stockVolumeInputs).sort(([a], [b]) => a.localeCompare(b)).map(([id, value]) => `${id}:${value}`).join('|');
+  const planStrengthSignature = Object.entries(stockStrengthInputs).sort(([a], [b]) => a.localeCompare(b)).map(([id, value]) => `${id}:${value}`).join('|');
+  const planFormSignature = Object.entries(formIdxBySaltId).sort(([a], [b]) => a.localeCompare(b)).map(([id, value]) => `${id}:${value}`).join('|');
+  const dropEquivalents = computeRecipeConcentrateDropEquivalents({
+    saltTargets,
+    formIdxBySaltId,
+    strength: stockStrategy === 'all-in-one' && maxSafeStrength != null && strength <= maxSafeStrength ? strength : 0,
+    dropsPerMl: activeDropsPerMl,
+    finalLiters,
+  });
+  const allInOneWarnings = stockStrategy === 'all-in-one' && strength > 0
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    : [];
+  const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
+  const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
+  const doseMlPerReference = stockStrategy === 'all-in-one' && strength > 0
+    ? 1000 / strength * doseReferenceLiters
+    : 0;
+  const allInOneStrengthIsSafe = stockStrategy !== 'all-in-one'
+    || (maxSafeStrength != null && strength > 0 && strength <= maxSafeStrength);
+  const limitingConstraint = findConcentrateLimitingConstraint(saltTargets, formIdxBySaltId);
+
+  useEffect(() => {
+    const initialAllInOneStrength = allInOneStockGroups.length > 0
+      ? groupMaxSafeStrengthFor(allInOneStockGroups[0])
+      : 1;
+    const initialStockStrengths = Object.fromEntries(
+      compatibleStockGroups.map(group => [group.id, String(groupMaxSafeStrengthFor(group))]),
+    );
+    const restored = restoredPlan && restoredPlan.strategy ? restoredPlan : null;
+    setStrengthInput(restored ? String(restored.strength) : String(initialAllInOneStrength));
+    setStockStrategy(restored?.strategy ?? 'gh-kh');
+    setStockStrengthInputs(restored
+      ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.strength)]))
+      : {
+          hardness: initialStockStrengths.hardness ?? '1',
+          alkalinity: initialStockStrengths.alkalinity ?? '1',
+          citrate: initialStockStrengths.citrate ?? '1',
+          'all-in-one': String(initialAllInOneStrength),
+        });
+    setStockVolumeInputs(restored
+      ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.volumeMl)]))
+      : {
+          hardness: '100',
+          alkalinity: '100',
+          citrate: '100',
+          'all-in-one': '100',
+        });
+    setMeasuredDropsPerMlInput(
+      restored?.measuredDropsPerMl != null ? String(restored.measuredDropsPerMl) : '',
+    );
+    setFinalVolumeInput(
+      restored?.finalLiters && restored.finalLiters > 0
+        ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
+        : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
+    );
+  }, [handoff]);
+
+  useEffect(() => {
+    onPlanChange({
+      strategy: stockStrategy,
+      strategyLabel: stockStrategyDetails.label,
+      strength,
+      maxSafeStrength,
+      dropperStyle,
+      straightDropsPerMl,
+      measuredDropsPerMl: hasMeasuredDropsPerMl ? measuredDropsPerMl : null,
+      activeDropsPerMl,
+      finalLiters,
+      totalSaltMgPerMl: dropEquivalents.totalSaltMgPerMl,
+      totalSaltMgPerDrop: dropEquivalents.totalSaltMgPerDrop,
+      saltEquivalentPpmPerDrop: dropEquivalents.saltEquivalentPpmPerDrop,
+      dropsPerLiter: dropEquivalents.dropsPerLiter,
+      batchDrops: dropEquivalents.batchDrops,
+      groups: stockGroups.map(group => ({
+        id: group.id,
+        name: group.name.replace(/ Stock$/, ' Concentrate'),
+        volumeMl: Math.max(0, Number(stockVolumeInputs[group.id] ?? '100') || 0),
+        strength: stockStrategy === 'all-in-one' ? strength : Math.max(0, Number(stockStrengthInputs[group.id] ?? '0') || 0),
+        maxSafeStrength: groupMaxSafeStrengthFor(group),
+        saltIds: [...group.saltIds],
+      })),
+    });
+  }, [
+    activeDropsPerMl,
+    dropEquivalents.batchDrops,
+    dropEquivalents.dropsPerLiter,
+    dropEquivalents.saltEquivalentPpmPerDrop,
+    dropEquivalents.totalSaltMgPerDrop,
+    dropEquivalents.totalSaltMgPerMl,
+    finalLiters,
+    hasMeasuredDropsPerMl,
+    maxSafeStrength,
+    measuredDropsPerMl,
+    onPlanChange,
+    planFormSignature,
+    planGroupSignature,
+    planStrengthSignature,
+    planVolumeSignature,
+    stockStrategy,
+    stockStrategyDetails.label,
+    strength,
+    straightDropsPerMl,
+    dropperStyle,
+  ]);
+
+  const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
+  const modeHeader = stockStrategy === 'gh-kh'
+    ? { badge: 'GH + KH', description: 'compatible minerals stay in separate bottles', heading: 'Two bottles. One balanced water.', intro: 'Prepare each compatible stock, then add both to the finished water.' }
+    : stockStrategy === 'individual'
+      ? { badge: 'Separate salts', description: 'one bottle per active salt', heading: 'One bottle per salt.', intro: 'Tune each stock independently, then dose every bottle into the finished water.' }
+      : { badge: 'All-in-one', description: 'recipe proportions stay locked', heading: 'One bottle. One answer.', intro: 'Set the stock strength once, then dose the finished water in drops.' };
+
+  return (
+    <main className="recipe-concentrate-shell space-y-3">
+      <section className="recipe-concentrate-header rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-4 shadow-xl sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200">{modeHeader.badge}</span>
+              <span className="text-[10px] text-slate-500">{modeHeader.description}</span>
+            </div>
+            <h2 className="mt-2 truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">{handoff.name}</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">{modeHeader.heading} {modeHeader.intro}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClear}
+            className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+          >
+            Clear imported recipe
+          </button>
+        </div>
+      </section>
+
+      <div className="recipe-concentrate-tabs flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/45 p-1 shadow-xl" role="tablist" aria-label="Concentrate recipe mode">
+        {([
+          ['all-in-one', 'All-in-one', 'Every active salt shares one bottle'],
+          ['gh-kh', 'GH + KH', 'Separate compatible groups'],
+          ['individual', 'Separate salts', 'One bottle per active salt'],
+        ] as const).map(([value, label, description]) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={stockStrategy === value}
+            title={description}
+            onClick={() => {
+              setStockStrategy(value);
+              if (value === 'all-in-one' && maxSafeStrengthByStrategy['all-in-one'] != null) {
+                setStrengthInput(String(maxSafeStrengthByStrategy['all-in-one']));
+              }
+            }}
+            className={`flex-1 rounded-lg px-2 py-2 text-[10px] font-semibold transition sm:text-xs ${
+              stockStrategy === value
+                ? 'bg-fuchsia-400/15 text-fuchsia-100 ring-1 ring-fuchsia-300/25'
+                : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-300'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <section className="recipe-concentrate-panel overflow-hidden rounded-2xl border border-slate-700/60">
+        <div className="border-b border-slate-700/50 bg-gradient-to-r from-fuchsia-500/[0.12] via-transparent to-cyan-400/[0.08] px-4 py-4 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-fuchsia-200/65">Concentrate workflow</div>
+              <p className="mt-1 text-xs text-slate-400">{stockStrategyDetails.helper} Each card prepares one bottle and doses the same final-water amount.</p>
+            </div>
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] px-3 py-2 text-right">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/75">
+                {maxSafeStrength != null && strength > maxSafeStrength ? 'Above safe ceiling' : 'Modeled ceiling'}
+              </div>
+              <div className="mt-1 text-sm font-semibold tabular-nums text-emerald-100">Max ×{maxSafeStrength ?? 0}</div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3 p-3 sm:p-4">
+          {stockGroups.length > 0 ? stockGroups.map(group => (
+            <RecipeConcentrateBottleCard
+              key={group.id}
+              group={group}
+              handoff={handoff}
+              strengthInput={stockStrategy === 'all-in-one' ? strengthInput : stockStrengthInputs[group.id] ?? '1'}
+              volumeInput={stockVolumeInputs[group.id] ?? '100'}
+              finalVolumeInput={finalVolumeInput}
+              finalLiters={finalLiters}
+              volumeUnit={volumeUnit}
+              dropperStyle={dropperStyle}
+              straightDropsPerMl={straightDropsPerMl}
+              measuredDropsPerMlInput={measuredDropsPerMlInput}
+              onStrengthChange={value => stockStrategy === 'all-in-one'
+                ? setStrengthInput(value)
+                : setStockStrengthInputs(previous => ({ ...previous, [group.id]: value }))}
+              onVolumeChange={value => setStockVolumeInputs(previous => ({ ...previous, [group.id]: value }))}
+              onFinalVolumeChange={updateFinalVolume}
+              onToggleVolumeUnit={() => {
+                const liters = volumeToLiters(finalVolumeInput, volumeUnit);
+                setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
+                onToggleVolumeUnit();
+              }}
+              onDropperStyleChange={onDropperStyleChange}
+              onMeasuredDropsPerMlChange={setMeasuredDropsPerMlInput}
+            />
+          )) : (
+            <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-4 py-5 text-sm text-amber-100/80">
+              This recipe has no active salts to prepare.
+            </div>
+          )}
+        </div>
+      </section>
+
+      {stockStrategy === 'all-in-one' && (
+        <>
+          <section className="recipe-concentrate-blend rounded-2xl border border-cyan-400/20 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-400/10 text-cyan-200">
+                  <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+                <div>
+                  <div className="text-xs font-semibold text-slate-100">Recipe blend</div>
+                  <div className="mt-0.5 text-[10px] text-slate-500">{Object.keys(saltTargets).filter(id => saltTargets[id] > 0).length} active salts · ratios stay fixed</div>
+                </div>
+              </div>
+              <div className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-2.5 py-1 text-[9px] font-semibold tabular-nums text-cyan-100/75">
+                {dropEquivalents.valid ? recipeConcentrateNumber(dropEquivalents.totalSaltMgPerDrop, 2) : '—'} mg physical salt / drop
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {dropEquivalents.perSalt.map(row => (
+                <div key={row.saltId} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] font-semibold text-slate-100">{row.saltName}</span>
+                    <span className="text-[10px] font-semibold tabular-nums text-cyan-200">{recipeConcentrateNumber(row.saltMgPerDrop, 2)} mg/drop</span>
+                  </div>
+                  <div className="mt-1 text-[9px] text-slate-500">{row.formLabel} · {recipeConcentrateNumber(row.targetPpm, 1)} ppm target</div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[10px] leading-relaxed text-slate-500">Physical salt mass includes the selected hydration form. Salt-equivalent ppm remains the recipe basis and is not a TDS-meter reading.</p>
+          </section>
+
+          <details className="recipe-concentrate-safety rounded-xl border border-amber-300/20 bg-amber-400/[0.06]">
+            <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+              <span className="flex items-center gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-amber-200" aria-hidden="true" />
+                <span>
+                  <span className="block text-xs font-semibold text-amber-100">
+                    {allInOneStrengthIsSafe ? `Why ×${maxSafeStrength ?? 0}?` : 'Strength is above the modeled chemical ceiling'}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] text-amber-100/55">Modeled ceiling · not a laboratory guarantee</span>
+                </span>
+              </span>
+              <ChevronDown className="h-4 w-4 text-amber-100/50" aria-hidden="true" />
+            </summary>
+            <div className="border-t border-amber-200/15 px-4 pb-3 pt-2 text-[10px] leading-relaxed text-amber-100/65">
+              {limitingConstraint.kind === 'chemical'
+                ? <>Limiting constraint: <strong className="text-amber-100">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. {limitingConstraint.message}</>
+                : limitingConstraint.message}
+              {allInOneWarnings.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {allInOneWarnings.map(warning => <p key={`${warning.severity}-${warning.message}`}>{warning.message}</p>)}
+                </div>
+              )}
+            </div>
+          </details>
+        </>
+      )}
+
+      <section className="rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] px-4 py-3 shadow-xl sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm font-semibold text-emerald-100">
+          <span className="flex items-center gap-2">
+            <Info className="h-4 w-4 shrink-0 text-emerald-300" />
+            {stockStrategy === 'all-in-one'
+              ? `${doseMlPerReference.toFixed(2)} mL → ${doseReferenceLabel}`
+              : `${stockGroups.length} bottle doses → ${doseReferenceLabel}`}
+          </span>
+          <span className="text-[10px] font-normal text-emerald-100/60">{hasMeasuredDropsPerMl ? `${recipeConcentrateNumber(activeDropsPerMl, 1)} measured drops/mL` : 'dropper assumption'} · final water is shared</span>
+        </div>
+      </section>
+    </main>
   );
 }
 
