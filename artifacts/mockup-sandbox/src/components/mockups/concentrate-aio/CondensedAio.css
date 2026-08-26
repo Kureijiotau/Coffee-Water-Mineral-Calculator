@@ -74,6 +74,30 @@
   color: rgb(255 237 213);
 }
 
+.aio-volume-toggle {
+  border: 1px solid rgb(110 231 183 / 0.25);
+  border-radius: 0.4rem;
+  background: rgb(52 211 153 / 0.08);
+  padding: 0.25rem 0.5rem;
+  color: rgb(167 243 208 / 0.78);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.aio-volume-toggle:hover {
+  border-color: rgb(110 231 183 / 0.5);
+  background: rgb(52 211 153 / 0.15);
+  color: rgb(209 250 229);
+}
+
+.aio-volume-toggle:focus-visible {
+  outline: 2px solid rgb(110 231 183 / 0.7);
+  outline-offset: 2px;
+}
+
 .aio-recipe-panel {
   border-color: rgb(34 211 238 / 0.16);
 }
@@ -128,7 +152,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .aio-dropper-segment,
-  .aio-calibration-toggle {
+  .aio-calibration-toggle,
+  .aio-volume-toggle {
     transition: none;
   }
 }

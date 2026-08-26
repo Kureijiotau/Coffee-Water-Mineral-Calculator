@@ -15,6 +15,7 @@ import './_group.css';
 import './CondensedAio.css';
 
 type DropperStyle = 'straight' | 'round';
+type VolumeUnit = 'liters' | 'gallons';
 
 const recipeSalts = [
   { name: 'Magnesium sulfate', formula: 'MgSO₄', form: 'Epsom salt · heptahydrate', target: 9.2, color: 'cyan' },
@@ -24,6 +25,7 @@ const recipeSalts = [
 ];
 
 const MAX_SAFE_STRENGTH = 500;
+const US_GALLON_IN_LITERS = 3.785411784;
 
 function number(value: string, fallback: number) {
   const parsed = Number(value);
@@ -34,10 +36,30 @@ function compact(value: number, digits = 1) {
   return value.toFixed(digits).replace(/\.0+$/, '');
 }
 
+function volumeToLiters(value: string, unit: VolumeUnit) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return unit === 'gallons' ? parsed * US_GALLON_IN_LITERS : parsed;
+}
+
+function litersToVolumeValue(liters: number, unit: VolumeUnit) {
+  const value = unit === 'gallons' ? liters / US_GALLON_IN_LITERS : liters;
+  return value.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function volumeUnitLabel(unit: VolumeUnit) {
+  return unit === 'gallons' ? 'gallons' : 'liters';
+}
+
+function volumeUnitShortLabel(unit: VolumeUnit) {
+  return unit === 'gallons' ? 'gal' : 'L';
+}
+
 export function CondensedAio() {
   const [strengthInput, setStrengthInput] = useState(String(MAX_SAFE_STRENGTH));
   const [stockVolumeInput, setStockVolumeInput] = useState('100');
   const [waterLitersInput, setWaterLitersInput] = useState('1');
+  const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [dropperStyle, setDropperStyle] = useState<DropperStyle>('straight');
   const [calibrationMode, setCalibrationMode] = useState<'assumed' | 'measured'>('assumed');
   const [measuredDropsInput, setMeasuredDropsInput] = useState('20');
@@ -47,7 +69,8 @@ export function CondensedAio() {
 
   const strength = Math.min(MAX_SAFE_STRENGTH, Math.max(1, number(strengthInput, MAX_SAFE_STRENGTH)));
   const stockVolumeMl = Math.max(1, number(stockVolumeInput, 100));
-  const waterLiters = Math.max(0.01, number(waterLitersInput, 1));
+  const waterLiters = Math.max(0.01, volumeToLiters(waterLitersInput, volumeUnit));
+  const displayedWaterVolume = waterLiters / (volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1);
   const assumedDropsPerMl = dropperStyle === 'straight' ? 20 : 11.2;
   const measuredDropsPerMl = Math.max(
     0.1,
@@ -309,16 +332,16 @@ export function CondensedAio() {
             <section className="aio-pulse rounded-xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/[0.15] via-cyan-400/[0.08] to-slate-950/20 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/80">
+                     <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/80">
                     <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                     Dose the final water
                   </div>
                   <div className="mt-3 flex items-baseline gap-2">
                     <strong className="text-5xl font-semibold tracking-[-0.05em] text-white">{Math.round(batchDrops)}</strong>
-                    <span className="text-sm font-medium text-emerald-100/75">drops</span>
+                       <span className="text-sm font-medium text-emerald-100/75">drops / {compact(stockDoseMl, 2)} mL</span>
                   </div>
                   <div className="mt-1 text-[11px] text-emerald-100/65">
-                    for {compact(waterLiters, 2)} L · {compact(stockDoseMl, 2)} mL stock
+                       for {compact(displayedWaterVolume, 2)} {volumeUnitShortLabel(volumeUnit)} final water
                   </div>
                 </div>
                 <div className="rounded-lg border border-emerald-200/20 bg-emerald-300/10 px-2.5 py-2 text-right">
@@ -328,18 +351,33 @@ export function CondensedAio() {
                 </div>
               </div>
               <label className="mt-4 block">
-                <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-100/60">Final water volume</span>
+                 <span className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-100/60">
+                   <span>Final water ({volumeUnitShortLabel(volumeUnit)})</span>
+                   <button
+                     type="button"
+                     onClick={() => {
+                       const nextUnit = volumeUnit === 'liters' ? 'gallons' : 'liters';
+                       setWaterLitersInput(litersToVolumeValue(waterLiters, nextUnit));
+                       setVolumeUnit(nextUnit);
+                     }}
+                     className="aio-volume-toggle"
+                     aria-label={`Switch volume units to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
+                     title={`Switch to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
+                   >
+                     {volumeUnitLabel(volumeUnit)}
+                   </button>
+                 </span>
                 <span className="mt-1.5 flex items-center gap-2 rounded-lg border border-emerald-200/20 bg-slate-950/30 px-3 py-2">
                   <input
                     type="number"
-                    min="0.01"
-                    step="0.1"
+                     min={volumeUnit === 'gallons' ? '0.01' : '0.1'}
+                     step={volumeUnit === 'gallons' ? '0.01' : '0.1'}
                     value={waterLitersInput}
                     onChange={event => setWaterLitersInput(event.target.value)}
-                    aria-label="Final water volume in liters"
+                     aria-label={`Final water volume in ${volumeUnitLabel(volumeUnit)}`}
                     className="aio-input w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
                   />
-                  <span className="text-xs font-semibold text-emerald-100/60">L</span>
+                   <span className="text-xs font-semibold text-emerald-100/60">{volumeUnitShortLabel(volumeUnit)}</span>
                 </span>
               </label>
             </section>
