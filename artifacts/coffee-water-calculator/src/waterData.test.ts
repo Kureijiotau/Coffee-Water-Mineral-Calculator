@@ -14,6 +14,7 @@ import {
   computeSupplementalIonTotals,
   checkConcentrate,
   findStrongestSafeConcentrateStrength,
+  findConcentrateLimitingConstraint,
   computeIonMmolPerL,
   computeIonMeqPerL,
   ION_CHEMISTRY,
@@ -125,6 +126,23 @@ describe('findStrongestSafeConcentrateStrength', () => {
   it('returns the practical ceiling when the recipe has no modeled chemical limit', () => {
     expect(findStrongestSafeConcentrateStrength({ nacl: 1 })).toBe(500);
     expect(checkConcentrate(500, { nacl: 1 }).every(warning => warning.severity === 'info')).toBe(true);
+  });
+
+  it('uses only hard chemical errors for the ceiling', () => {
+    const targets = { nahco3: 100, mgso4: 100 };
+    expect(findStrongestSafeConcentrateStrength(targets)).toBe(500);
+    const limit = findConcentrateLimitingConstraint(targets);
+    expect(limit.kind).toBe('model-bound');
+    expect(checkConcentrate(500, targets).some(warning => warning.severity === 'warning')).toBe(true);
+  });
+
+  it('can apply a selected hydration form to solubility checks', () => {
+    const citrate = SALTS.find(salt => salt.id === 'cacit')!;
+    const hydratedForm = citrate.hydrationForms.findIndex(form => form.molarMass > citrate.anhydrousMass);
+    expect(hydratedForm).toBeGreaterThanOrEqual(0);
+    const anhydrousLimit = findStrongestSafeConcentrateStrength({ cacit: 100 }, 500, { cacit: 0 });
+    const hydratedLimit = findStrongestSafeConcentrateStrength({ cacit: 100 }, 500, { cacit: hydratedForm });
+    expect(hydratedLimit).toBeLessThanOrEqual(anhydrousLimit);
   });
 
   it('caps a recipe at the first safe integer below a solubility limit', () => {

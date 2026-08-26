@@ -14,7 +14,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, splitIntoStockGroups,
+  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -121,6 +121,16 @@ type ConcentratePlanSnapshot = {
   strategyLabel: string;
   strength: number;
   maxSafeStrength: number | null;
+  dropperStyle: LotusDropperStyle;
+  straightDropsPerMl: number;
+  measuredDropsPerMl: number | null;
+  activeDropsPerMl: number;
+  finalLiters: number;
+  totalSaltMgPerMl: number;
+  totalSaltMgPerDrop: number;
+  saltEquivalentPpmPerDrop: number;
+  dropsPerLiter: number;
+  batchDrops: number;
   groups: Array<{
     id: string;
     name: string;
@@ -156,6 +166,120 @@ export function computeRecipeStockSaltMassMg(
     return 0;
   }
   return computeSaltMg(targetPpm, stockVolumeMl / 1000, hydrationMass, anhydrousMass) * strength;
+}
+
+export type RecipeConcentrateSaltDropContribution = {
+  saltId: string;
+  saltName: string;
+  targetPpm: number;
+  formLabel: string;
+  saltMgPerMl: number;
+  saltMgPerDrop: number;
+  ionPpmPerDrop: Partial<Record<IonId, number>>;
+};
+
+export type RecipeConcentrateDropEquivalents = {
+  valid: boolean;
+  totalSaltMgPerMl: number;
+  totalSaltEquivalentMgPerMl: number;
+  totalSaltMgPerDrop: number;
+  saltEquivalentPpmPerDrop: number;
+  dropsPerLiter: number;
+  batchDrops: number;
+  ionPpmPerDrop: Partial<Record<IonId, number>>;
+  perSalt: RecipeConcentrateSaltDropContribution[];
+};
+
+/**
+ * Convert a recipe's canonical salt targets into physical drop equivalents.
+ * Salt mass includes the selected hydration form; ion mass remains based on
+ * the canonical anhydrous-equivalent target so recipe proportions are kept.
+ */
+export function computeRecipeConcentrateDropEquivalents({
+  saltTargets,
+  formIdxBySaltId = {},
+  strength,
+  dropsPerMl,
+  finalLiters,
+}: {
+  saltTargets: Record<string, number>;
+  formIdxBySaltId?: Record<string, number>;
+  strength: number;
+  dropsPerMl: number;
+  finalLiters: number;
+}): RecipeConcentrateDropEquivalents {
+  const validInputs = Number.isFinite(strength) && strength > 0
+    && Number.isFinite(dropsPerMl) && dropsPerMl > 0
+    && Number.isFinite(finalLiters) && finalLiters > 0;
+  const activeSalts = SALTS.flatMap(salt => {
+    const target = Number(saltTargets[salt.id] ?? 0);
+    if (!Number.isFinite(target) || target <= 0) return [];
+    const requestedFormIdx = formIdxBySaltId[salt.id];
+    const formIdx = Number.isInteger(requestedFormIdx)
+      ? requestedFormIdx
+      : salt.defaultFormIdx ?? 0;
+    const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
+    if (!form) return [];
+    return [{ salt, target, form }];
+  });
+  if (!validInputs || activeSalts.length === 0) {
+    return {
+      valid: false,
+      totalSaltMgPerMl: 0,
+      totalSaltEquivalentMgPerMl: 0,
+      totalSaltMgPerDrop: 0,
+      saltEquivalentPpmPerDrop: 0,
+      dropsPerLiter: 0,
+      batchDrops: 0,
+      ionPpmPerDrop: {},
+      perSalt: [],
+    };
+  }
+
+  const perSalt = activeSalts.map(({ salt, target, form }) => {
+    const saltMgPerMl = target * strength * form.molarMass / salt.anhydrousMass / 1000;
+    const saltMgPerDrop = saltMgPerMl / dropsPerMl;
+    const ionPpmPerDrop = Object.fromEntries(
+      salt.ions.map(contribution => [
+        contribution.ionId,
+        target * strength * contribution.fraction / 1000 / dropsPerMl / finalLiters,
+      ]),
+    ) as Partial<Record<IonId, number>>;
+    return {
+      saltId: salt.id,
+      saltName: salt.name,
+      targetPpm: target,
+      formLabel: form.label,
+      saltMgPerMl,
+      saltMgPerDrop,
+      ionPpmPerDrop,
+    };
+  });
+  const totalSaltMgPerMl = perSalt.reduce((total, row) => total + row.saltMgPerMl, 0);
+  const totalSaltEquivalentMgPerMl = activeSalts.reduce(
+    (total, { target }) => total + target * strength / 1000,
+    0,
+  );
+  const totalSaltMgPerDrop = totalSaltMgPerMl / dropsPerMl;
+  const saltEquivalentMgPerDrop = totalSaltEquivalentMgPerMl / dropsPerMl;
+  const ionPpmPerDrop = Object.fromEntries(
+    IONS.map(ion => [
+      ion.id,
+      perSalt.reduce((total, row) => total + (row.ionPpmPerDrop[ion.id] ?? 0), 0),
+    ]),
+  ) as Partial<Record<IonId, number>>;
+
+  return {
+    valid: true,
+    totalSaltMgPerMl,
+    totalSaltEquivalentMgPerMl,
+    totalSaltMgPerDrop,
+    saltEquivalentPpmPerDrop: saltEquivalentMgPerDrop / finalLiters,
+    dropsPerLiter: 1000 / strength * dropsPerMl,
+    batchDrops: 1000 / strength * dropsPerMl * finalLiters,
+    ionPpmPerDrop,
+    perSalt,
+  };
 }
 
 export function mergeRecipeStepTargets(
@@ -5801,6 +5925,10 @@ function App() {
       salts,
       finalLiters: L > 0 ? L : 1,
     });
+    setConcentrateSnapshot(previous => ({
+      ...previous,
+      recipeConcentratePlan: null,
+    }));
     setAppTab('concentrate');
   };
 
@@ -6588,6 +6716,7 @@ function App() {
             recipeHandoff={concentrateRecipeHandoff}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
             dropsPerMl={brewerDropsPerMl}
+            restoredRecipePlan={concentrateSnapshot.recipeConcentratePlan as ConcentratePlanSnapshot | null}
             restoreSnapshot={pendingConcentrateRestore}
             onRestoreSnapshotConsumed={() => setPendingConcentrateRestore(null)}
             onSnapshotChange={setConcentrateSnapshot}
@@ -9233,6 +9362,7 @@ function ConcentrateWorkspace({
   recipeHandoff,
   onClearRecipeHandoff,
   dropsPerMl,
+  restoredRecipePlan,
   restoreSnapshot,
   onRestoreSnapshotConsumed,
   onSnapshotChange,
@@ -9242,6 +9372,7 @@ function ConcentrateWorkspace({
   recipeHandoff: ConcentrateRecipeHandoff | null;
   onClearRecipeHandoff: () => void;
   dropsPerMl: number;
+  restoredRecipePlan: ConcentratePlanSnapshot | null;
   restoreSnapshot: WaterPlanConcentrateSnapshot | null;
   onRestoreSnapshotConsumed: () => void;
   onSnapshotChange: (snapshot: WaterPlanConcentrateSnapshot) => void;
@@ -9416,6 +9547,7 @@ function ConcentrateWorkspace({
           dropperStyle={dropperStyle}
           onDropperStyleChange={setDropperStyle}
           straightDropsPerMl={straightBaselineDropsPerMl}
+           restoredPlan={restoredRecipePlan}
           onToggleVolumeUnit={onToggleVolumeUnit}
           onClear={onClearRecipeHandoff}
           onPlanChange={setRecipeConcentratePlan}
@@ -9935,6 +10067,7 @@ function RecipeConcentrateBuilder({
   dropperStyle,
   onDropperStyleChange,
   straightDropsPerMl,
+  restoredPlan,
   onToggleVolumeUnit,
   onClear,
   onPlanChange,
@@ -9945,6 +10078,7 @@ function RecipeConcentrateBuilder({
   dropperStyle: LotusDropperStyle;
   onDropperStyleChange: (style: LotusDropperStyle) => void;
   straightDropsPerMl: number;
+  restoredPlan: ConcentratePlanSnapshot | null;
   onToggleVolumeUnit: () => void;
   onClear: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
@@ -9963,36 +10097,15 @@ function RecipeConcentrateBuilder({
     citrate: '100',
     'all-in-one': '100',
   });
-
-  useEffect(() => {
-    const initialAllInOneStrength = allInOneStockGroups.length > 0
-      ? findStrongestSafeConcentrateStrength(groupTargetsFor(allInOneStockGroups[0]))
-      : 1;
-    const initialStockStrengths = Object.fromEntries(
-      compatibleStockGroups.map(group => [
-        group.id,
-        String(findStrongestSafeConcentrateStrength(groupTargetsFor(group))),
-      ]),
-    );
-    setStrengthInput(String(initialAllInOneStrength));
-    setStockStrategy('gh-kh');
-    setStockStrengthInputs({
-      hardness: initialStockStrengths.hardness ?? '1',
-      alkalinity: initialStockStrengths.alkalinity ?? '1',
-      citrate: initialStockStrengths.citrate ?? '1',
-      'all-in-one': String(initialAllInOneStrength),
-    });
-    setStockVolumeInputs({
-      hardness: '100',
-      alkalinity: '100',
-      citrate: '100',
-      'all-in-one': '100',
-    });
-  }, [handoff]);
+  const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
+  const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
 
   const strength = Math.max(0, Number(strengthInput) || 0);
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
+  );
+  const formIdxBySaltId = Object.fromEntries(
+    Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, entry.formIdx]),
   );
   const compatibleStockGroups = splitIntoStockGroups(saltTargets);
   const activeSaltIds = Object.entries(saltTargets)
@@ -10025,9 +10138,16 @@ function RecipeConcentrateBuilder({
   const groupTargetsFor = (group: { saltIds: string[] }) => Object.fromEntries(
     group.saltIds.map(saltId => [saltId, saltTargets[saltId] ?? 0]),
   );
+  const groupFormsFor = (group: { saltIds: string[] }) => Object.fromEntries(
+    group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
+  );
   const maxSafeStrengthFor = (groups: Array<{ saltIds: string[] }>) =>
     groups.length > 0
-      ? Math.min(...groups.map(group => findStrongestSafeConcentrateStrength(groupTargetsFor(group))))
+      ? Math.min(...groups.map(group => findStrongestSafeConcentrateStrength(
+        groupTargetsFor(group),
+        undefined,
+        groupFormsFor(group),
+      )))
       : null;
   const maxSafeStrengthByStrategy = {
     'gh-kh': maxSafeStrengthFor(compatibleStockGroups),
@@ -10039,7 +10159,30 @@ function RecipeConcentrateBuilder({
     ? strength
     : Math.max(0, Number(stockStrengthInputs[group.id] ?? '500') || 0);
   const groupMaxSafeStrengthFor = (group: { saltIds: string[] }) =>
-    findStrongestSafeConcentrateStrength(groupTargetsFor(group));
+    findStrongestSafeConcentrateStrength(groupTargetsFor(group), undefined, groupFormsFor(group));
+  const limitingConstraint = findConcentrateLimitingConstraint(
+    saltTargets,
+    formIdxBySaltId,
+  );
+  const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
+  const measuredDropsPerMl = Number(measuredDropsPerMlInput);
+  const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
+  const assumedDropsPerMl = lotusDropsPerMl(dropperStyle, straightDropsPerMl);
+  const activeDropsPerMl = hasMeasuredDropsPerMl ? measuredDropsPerMl : assumedDropsPerMl;
+  const allInOneStrengthIsSafe = (
+    stockStrategy !== 'all-in-one'
+    || (strength > 0 && strength <= (maxSafeStrengthByStrategy['all-in-one'] ?? 0))
+  );
+  const dropEquivalents = computeRecipeConcentrateDropEquivalents({
+    saltTargets,
+    formIdxBySaltId,
+    strength: allInOneStrengthIsSafe && stockStrategy === 'all-in-one' ? strength : 0,
+    dropsPerMl: activeDropsPerMl,
+    finalLiters,
+  });
+  const allInOneWarnings = stockStrategy === 'all-in-one' && strength > 0
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    : [];
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
@@ -10069,6 +10212,59 @@ function RecipeConcentrateBuilder({
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([groupId, groupStrength]) => `${groupId}:${groupStrength}`)
     .join('|');
+  const planFormSignature = Object.entries(formIdxBySaltId)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([saltId, formIndex]) => `${saltId}:${formIndex}`)
+    .join('|');
+
+  useEffect(() => {
+    const initialAllInOneStrength = allInOneStockGroups.length > 0
+      ? findStrongestSafeConcentrateStrength(
+        groupTargetsFor(allInOneStockGroups[0]),
+        undefined,
+        groupFormsFor(allInOneStockGroups[0]),
+      )
+      : 1;
+    const initialStockStrengths = Object.fromEntries(
+      compatibleStockGroups.map(group => [
+        group.id,
+        String(findStrongestSafeConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+        )),
+      ]),
+    );
+    const restored = restoredPlan && restoredPlan.strategy
+      ? restoredPlan
+      : null;
+    setStrengthInput(restored ? String(restored.strength) : String(initialAllInOneStrength));
+    setStockStrategy(restored?.strategy ?? 'gh-kh');
+    setStockStrengthInputs(restored
+      ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.strength)]))
+      : {
+          hardness: initialStockStrengths.hardness ?? '1',
+          alkalinity: initialStockStrengths.alkalinity ?? '1',
+          citrate: initialStockStrengths.citrate ?? '1',
+          'all-in-one': String(initialAllInOneStrength),
+        });
+    setStockVolumeInputs(restored
+      ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.volumeMl)]))
+      : {
+          hardness: '100',
+          alkalinity: '100',
+          citrate: '100',
+          'all-in-one': '100',
+        });
+    setMeasuredDropsPerMlInput(
+      restored?.measuredDropsPerMl != null ? String(restored.measuredDropsPerMl) : '',
+    );
+    setFinalVolumeInput(
+      restored?.finalLiters && restored.finalLiters > 0
+        ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
+        : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
+    );
+  }, [handoff]);
 
   useEffect(() => {
     onPlanChange({
@@ -10076,6 +10272,16 @@ function RecipeConcentrateBuilder({
       strategyLabel: stockStrategyDetails.label,
       strength,
       maxSafeStrength,
+        dropperStyle,
+        straightDropsPerMl,
+        measuredDropsPerMl: hasMeasuredDropsPerMl ? measuredDropsPerMl : null,
+        activeDropsPerMl,
+        finalLiters,
+        totalSaltMgPerMl: dropEquivalents.totalSaltMgPerMl,
+        totalSaltMgPerDrop: dropEquivalents.totalSaltMgPerDrop,
+        saltEquivalentPpmPerDrop: dropEquivalents.saltEquivalentPpmPerDrop,
+        dropsPerLiter: dropEquivalents.dropsPerLiter,
+        batchDrops: dropEquivalents.batchDrops,
       groups: stockGroups.map(group => ({
         id: group.id,
         name: group.name.replace(/ Stock$/, ' Concentrate'),
@@ -10087,13 +10293,25 @@ function RecipeConcentrateBuilder({
     });
   }, [
     maxSafeStrength,
+    activeDropsPerMl,
+    dropperStyle,
+    finalLiters,
+    hasMeasuredDropsPerMl,
+    measuredDropsPerMl,
     onPlanChange,
     planGroupSignature,
     planVolumeSignature,
     planStrengthSignature,
+    planFormSignature,
+    dropEquivalents.batchDrops,
+    dropEquivalents.dropsPerLiter,
+    dropEquivalents.saltEquivalentPpmPerDrop,
+    dropEquivalents.totalSaltMgPerDrop,
+    dropEquivalents.totalSaltMgPerMl,
     stockStrategy,
     stockStrategyDetails.label,
     strength,
+    straightDropsPerMl,
   ]);
 
   const groupTone: Record<StockGroup['color'], {
@@ -10173,7 +10391,12 @@ function RecipeConcentrateBuilder({
             <button
               key={option.value}
               type="button"
-              onClick={() => setStockStrategy(option.value)}
+              onClick={() => {
+                setStockStrategy(option.value);
+                if (option.value === 'all-in-one' && maxSafeStrengthByStrategy['all-in-one'] != null) {
+                  setStrengthInput(String(maxSafeStrengthByStrategy['all-in-one']));
+                }
+              }}
               aria-pressed={stockStrategy === option.value}
               className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:border-slate-500/80 ${
                 stockStrategy === option.value
@@ -10370,8 +10593,191 @@ function RecipeConcentrateBuilder({
         referenceStyle={dropperStyle}
         onStyleChange={onDropperStyleChange}
         straightDropsPerMl={straightDropsPerMl}
-        authoritativeDropsPerMl={dropsPerMl}
+        authoritativeDropsPerMl={activeDropsPerMl}
       />
+
+      {stockStrategy === 'all-in-one' && (
+        <>
+          <section className="rounded-2xl border border-cyan-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-cyan-100">
+                  <Droplet className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  Finished-bottle drop equivalents
+                </div>
+                <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-slate-400">
+                  These numbers describe one finished all-in-one bottle. Straight and rounded rates are
+                  assumptions until you measure this bottle; the measured value below overrides the assumption.
+                </p>
+              </div>
+              <span className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200">
+                {hasMeasuredDropsPerMl ? 'Measured rate' : 'Modeled rate'}
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span>Measured finished-bottle rate</span>
+                  <span className="normal-case tracking-normal">optional</span>
+                </span>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={measuredDropsPerMlInput}
+                    onChange={event => setMeasuredDropsPerMlInput(event.target.value)}
+                    placeholder={`${assumedDropsPerMl.toFixed(1)} assumed`}
+                    className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                    aria-label="Measured finished bottle drops per milliliter"
+                  />
+                  <span className="text-sm text-slate-400">drops/mL</span>
+                </div>
+              </label>
+              <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <span>Selected final water volume</span>
+                  <VolumeUnitToggle
+                    unit={volumeUnit}
+                    onToggle={() => {
+                      const liters = volumeToLiters(finalVolumeInput, volumeUnit);
+                      setFinalVolumeInput(String(volumeUnit === 'liters'
+                        ? liters / US_GALLON_IN_LITERS
+                        : liters));
+                      onToggleVolumeUnit();
+                    }}
+                  />
+                </span>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0.001"
+                    step="0.1"
+                    value={finalVolumeInput}
+                    onChange={event => setFinalVolumeInput(event.target.value)}
+                    className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                    aria-label={`Selected final water volume in ${volumeUnitLabel(volumeUnit)}`}
+                  />
+                  <span className="text-sm text-slate-400">{volumeUnitShortLabel(volumeUnit)}</span>
+                </div>
+              </label>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <SummaryMetric
+                label="Total salt per drop"
+                value={dropEquivalents.valid ? `${dropEquivalents.totalSaltMgPerDrop.toFixed(2)} mg` : '—'}
+                detail="physical salt mass"
+                tone="sky"
+              />
+              <SummaryMetric
+                label="Salt-equivalent per drop"
+                value={dropEquivalents.valid ? `${dropEquivalents.saltEquivalentPpmPerDrop.toFixed(2)} ppm` : '—'}
+                detail={`in ${finalLiters > 0 ? finalLiters.toFixed(3) : '—'} L`}
+                tone="fuchsia"
+              />
+              <SummaryMetric
+                label="Drops per liter"
+                value={dropEquivalents.valid ? dropEquivalents.dropsPerLiter.toFixed(1) : '—'}
+                detail="same finished bottle"
+                tone="sky"
+              />
+              <SummaryMetric
+                label="Batch drops"
+                value={dropEquivalents.valid ? dropEquivalents.batchDrops.toFixed(1) : '—'}
+                detail={`${finalLiters > 0 ? finalLiters.toFixed(3) : '—'} L final water`}
+                tone="sky"
+              />
+            </div>
+            {!dropEquivalents.valid && (
+              <p className="mt-3 rounded-xl border border-rose-400/30 bg-rose-500/[0.08] px-3 py-2 text-[11px] text-rose-200">
+                Enter a positive strength, finished-bottle drop rate, final volume, and at least one active salt
+                before drop equivalents can be calculated.
+              </p>
+            )}
+          </section>
+
+          <section className={`rounded-2xl border p-4 shadow-xl sm:p-6 ${
+            allInOneStrengthIsSafe
+              ? 'border-emerald-400/25 bg-slate-800/70'
+              : 'border-rose-400/35 bg-rose-950/20'
+          }`}>
+            <div className="flex items-start gap-2.5">
+              <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${
+                allInOneStrengthIsSafe
+                  ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
+                  : 'border-rose-300/30 bg-rose-400/10 text-rose-200'
+              }`}>
+                {allInOneStrengthIsSafe ? <Check className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+              </span>
+              <div className="min-w-0">
+                <h3 className={`text-sm font-semibold ${allInOneStrengthIsSafe ? 'text-emerald-100' : 'text-rose-100'}`}>
+                  {allInOneStrengthIsSafe ? 'All-in-one safety boundary' : 'Strength is above the modeled chemical ceiling'}
+                </h3>
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                  {limitingConstraint.kind === 'chemical'
+                    ? <>Limiting constraint: <strong className="text-slate-200">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. {limitingConstraint.message}</>
+                    : limitingConstraint.message}
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.06] px-3 py-2.5 text-[11px] text-emerald-100/80">
+                <div className="font-semibold text-emerald-200">Hard chemical limit</div>
+                <p className="mt-1">The maximum above is based only on modeled precipitation or solubility errors. It is approximate, not a laboratory guarantee.</p>
+              </div>
+              <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-2.5 text-[11px] text-amber-100/80">
+                <div className="font-semibold text-amber-200">Practical handling notes</div>
+                <p className="mt-1">Mixing time, clarity, TDS, and drop measurement can still be reasons to use separate stocks; they do not silently lower this chemical ceiling.</p>
+              </div>
+            </div>
+            {allInOneWarnings.length > 0 && (
+              <div className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-2.5 text-[11px] text-amber-100/80">
+                <div className="font-semibold text-amber-200">At the entered strength</div>
+                {allInOneWarnings.map(warning => (
+                  <p key={`${warning.severity}-${warning.message}`} className="mt-1">
+                    <span className="font-semibold">{warning.severity === 'error' ? 'Chemical limit' : 'Handling note'}:</span> {warning.message}
+                  </p>
+                ))}
+              </div>
+            )}
+            {limitingConstraint.maxSafeStrength < 10 && (
+              <p className="mt-3 text-[11px] font-semibold text-amber-200">
+                This ceiling is low enough that separate stocks are recommended for easier measuring and mixing.
+              </p>
+            )}
+          </section>
+
+          {dropEquivalents.valid && (
+            <section className="rounded-2xl border border-violet-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+              <div className="flex items-center gap-2 text-sm font-semibold text-violet-100">
+                <Layers className="h-4 w-4 text-violet-300" />
+                Per-salt and ion contributions
+              </div>
+              <div className="mt-3 space-y-2">
+                {dropEquivalents.perSalt.map(row => (
+                  <div key={row.saltId} className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <div>
+                        <span className="text-xs font-semibold text-slate-100">{row.saltName}</span>
+                        <span className="ml-2 text-[10px] text-slate-500">{row.formLabel}</span>
+                      </div>
+                      <span className="text-xs font-semibold tabular-nums text-violet-200">{row.saltMgPerDrop.toFixed(2)} mg/drop</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                      {Object.entries(row.ionPpmPerDrop).map(([ionId, value]) => (
+                        <span key={ionId}>{COMPARISON_ION_LABELS[ionId as IonId] ?? ionId}: {Number(value).toFixed(3)} ppm/drop</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+                Salt-equivalent ppm is the recipe salt basis. It is not summed-ion ppm and should not be treated as a TDS-meter reading.
+              </p>
+            </section>
+          )}
+        </>
+      )}
       <section className="space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>

@@ -636,6 +636,13 @@ export interface ConcentrateWarning {
   maxSafeStrength?: number;
 }
 
+export interface ConcentrateLimitingConstraint {
+  kind: 'chemical' | 'model-bound';
+  maxSafeStrength: number;
+  saltNames: string[];
+  message: string;
+}
+
 /**
  * Check a concentrate recipe for precipitation/solubility risks.
  * @param strength - concentration multiplier (e.g. 50 = ×50)
@@ -645,10 +652,11 @@ export interface ConcentrateWarning {
 export function checkConcentrate(
   strength: number,
   saltTargetsBySaltId: Record<string, number>,
+  formIdxBySaltId: Record<string, number> = {},
 ): ConcentrateWarning[] {
   const warnings: ConcentrateWarning[] = [];
 
-  if (strength <= 1) return warnings;
+  if (!Number.isFinite(strength) || strength <= 1) return warnings;
   if (Object.keys(saltTargetsBySaltId).length === 0) return warnings;
 
   // ── 1. Per-salt solubility check ─────────────────────────
@@ -658,14 +666,22 @@ export function checkConcentrate(
     const limit = SALT_SOLUBILITY_G_PER_100ML[salt.id];
     if (limit == null) continue;
 
-    // Anhydrous-equivalent mass of salt per liter of stock (mg/L)
-    const perLiterMg = target * strength; // ppm × strength → mg/L in stock
+    const selectedFormIdx = formIdxBySaltId[salt.id];
+    const selectedForm = Number.isInteger(selectedFormIdx)
+      ? salt.hydrationForms[selectedFormIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0]
+      : undefined;
+    const hydrationFactor = selectedForm
+      ? selectedForm.molarMass / salt.anhydrousMass
+      : 1;
+    // Physical hydrated-salt mass per liter of stock (mg/L). When no form
+    // map is supplied, preserve the legacy anhydrous-equivalent behavior.
+    const perLiterMg = target * strength * hydrationFactor; // ppm × strength → mg/L in stock
     // Convert to g/100mL  (1 mg/L = 0.0001 g/100mL)
     const gPer100mL = perLiterMg / 10_000;
 
     if (gPer100mL > limit) {
       // Compute max safe strength from this salt alone
-      const maxForSalt = Math.floor((limit * 10_000) / target);
+      const maxForSalt = Math.floor((limit * 10_000) / (target * hydrationFactor));
       warnings.push({
         severity: 'error',
         saltNames: [salt.name],
@@ -862,6 +878,7 @@ export const ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH = 500;
 export function findStrongestSafeConcentrateStrength(
   saltTargetsBySaltId: Record<string, number>,
   maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
+  formIdxBySaltId: Record<string, number> = {},
 ): number {
   const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
     target => Number.isFinite(target) && target > 0,
@@ -870,7 +887,8 @@ export function findStrongestSafeConcentrateStrength(
   if (!hasActiveTarget || upperBound <= 1) return 1;
 
   const isSafe = (strength: number) =>
-    checkConcentrate(strength, saltTargetsBySaltId).every(warning => warning.severity === 'info');
+    checkConcentrate(strength, saltTargetsBySaltId, formIdxBySaltId)
+      .every(warning => warning.severity !== 'error');
 
   if (isSafe(upperBound)) return upperBound;
 
@@ -885,6 +903,48 @@ export function findStrongestSafeConcentrateStrength(
     }
   }
   return low;
+}
+
+/**
+ * Explain what limits an all-in-one stock. A result at the documented search
+ * bound is intentionally called model-bound rather than "unlimited".
+ */
+export function findConcentrateLimitingConstraint(
+  saltTargetsBySaltId: Record<string, number>,
+  formIdxBySaltId: Record<string, number> = {},
+  maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
+): ConcentrateLimitingConstraint {
+  const upperBound = Math.max(1, Math.floor(maxStrength));
+  const maxSafeStrength = findStrongestSafeConcentrateStrength(
+    saltTargetsBySaltId,
+    upperBound,
+    formIdxBySaltId,
+  );
+  const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
+    target => Number.isFinite(target) && target > 0,
+  );
+
+  if (!hasActiveTarget || maxSafeStrength >= upperBound) {
+    return {
+      kind: 'model-bound',
+      maxSafeStrength,
+      saltNames: [],
+      message: `No modeled chemical limit was reached before the current model ceiling of ×${upperBound}.`,
+    };
+  }
+
+  const limitingWarning = checkConcentrate(
+    maxSafeStrength + 1,
+    saltTargetsBySaltId,
+    formIdxBySaltId,
+  ).find(warning => warning.severity === 'error');
+  return {
+    kind: 'chemical',
+    maxSafeStrength,
+    saltNames: limitingWarning?.saltNames ?? [],
+    message: limitingWarning?.message
+      ?? `A modeled chemical limit sets the maximum safe strength at ×${maxSafeStrength}.`,
+  };
 }
 
 // ── Stock splitting ──────────────────────────────────────
