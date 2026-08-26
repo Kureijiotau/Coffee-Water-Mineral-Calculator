@@ -26,4 +26,9 @@ export const COMMERCIAL_WATERS: SharedWater[] = [
   { id: 67, name: "Mg Mivela", ions: { calcium: 22, magnesium: 343, sodium: 120, bicarbonate: 2000, chloride: 12, sulfate: 20 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 68, name: "Voss", ions: { calcium: 5, magnesium: 1, sodium: 6, bicarbonate: 20, chloride: 12, sulfate: 5 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 69, name: "Lanjaron", ions: { calcium: 13.9, magnesium: 3.9, sodium: 6.9, bicarbonate: 108, chloride: 13, sulfate: 13 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
+  { id: 70, name: "Aquafina", ions: { sodium: 3, sulfate: 86, chloride: 1.3, magnesium: 20, bicarbonate: 1.3 }, shared: "yes", createdAt: "2026-08-24T11:53:23.156Z" },
+  { id: 71, name: "Arwa", ions: { sodium: 2, sulfate: 63.2, chloride: 0.5, magnesium: 16.8, potassium: 8, bicarbonate: 15 }, shared: "yes", createdAt: "2026-08-24T11:51:26.697Z" },
+  { id: 72, name: "Sama", ions: { sodium: 16.8, calcium: 20.3, sulfate: 15.9, chloride: 20.7, magnesium: 16.1, potassium: 1.6 }, shared: "yes", createdAt: "2026-08-24T11:48:54.143Z" },
+  { id: 73, name: "Nawa", ions: { sodium: 33, calcium: 52, sulfate: 24, chloride: 54, magnesium: 24, potassium: 1.2, bicarbonate: 223 }, shared: "yes", createdAt: "2026-08-24T11:46:59.136Z" },
+  { id: 74, name: "Donat", ions: { sodium: 1700, calcium: 380, sulfate: 2100, chloride: 75, magnesium: 1000, bicarbonate: 7800 }, shared: "yes", createdAt: "2026-08-10T15:26:45.513Z" },
 ];
