@@ -10,7 +10,6 @@ import {
   Ruler,
   Scale,
   Sparkles,
-  WandSparkles,
 } from 'lucide-react';
 import './_group.css';
 
@@ -36,6 +35,7 @@ function compact(value: number, digits = 1) {
 
 export function CondensedAio() {
   const [strengthInput, setStrengthInput] = useState(String(MAX_SAFE_STRENGTH));
+  const [stockVolumeInput, setStockVolumeInput] = useState('100');
   const [waterLitersInput, setWaterLitersInput] = useState('1');
   const [dropperStyle, setDropperStyle] = useState<DropperStyle>('straight');
   const [calibrationMode, setCalibrationMode] = useState<'assumed' | 'measured'>('assumed');
@@ -46,6 +46,7 @@ export function CondensedAio() {
   const [safetyOpen, setSafetyOpen] = useState(false);
 
   const strength = Math.min(MAX_SAFE_STRENGTH, Math.max(1, number(strengthInput, MAX_SAFE_STRENGTH)));
+  const stockVolumeMl = Math.max(1, number(stockVolumeInput, 100));
   const waterLiters = Math.max(0.01, number(waterLitersInput, 1));
   const assumedDropsPerMl = dropperStyle === 'straight' ? 20 : 11.2;
   const measuredDropsPerMl = Math.max(
@@ -55,6 +56,8 @@ export function CondensedAio() {
   const dropsPerMl = calibrationMode === 'measured' ? measuredDropsPerMl : assumedDropsPerMl;
   const totalRecipeTarget = recipeSalts.reduce((sum, salt) => sum + salt.target, 0);
   const stockSaltMgPerMl = totalRecipeTarget * strength / 1000;
+  const stockSaltMassG = stockSaltMgPerMl * stockVolumeMl / 1000;
+  const stockWaterMassG = Math.max(0, stockVolumeMl - stockSaltMassG);
   const saltMgPerDrop = stockSaltMgPerMl / dropsPerMl;
   const dropsPerLiter = 1000 / strength * dropsPerMl;
   const batchDrops = dropsPerLiter * waterLiters;
@@ -148,7 +151,7 @@ export function CondensedAio() {
 
           <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[1.05fr_0.95fr]">
             <section className="aio-card rounded-xl p-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
                   <div className="mt-1 flex items-baseline gap-2">
@@ -160,21 +163,38 @@ export function CondensedAio() {
                       max={MAX_SAFE_STRENGTH}
                       step="1"
                       aria-label="All-in-one stock strength"
-                      className="aio-input w-28 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                      className="aio-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
                     />
                     <span className="text-lg text-slate-500">×</span>
                   </div>
+                  <div className="mt-1 text-[9px] text-slate-600">recipe target multiplier</div>
                 </div>
-                <div className="text-right text-[10px] text-slate-500">
-                  <div>safe ceiling</div>
-                  <button
-                    type="button"
-                    onClick={() => setStrengthInput(String(MAX_SAFE_STRENGTH))}
-                    className="mt-1 font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
-                  >
-                    Apply ×{MAX_SAFE_STRENGTH}
-                  </button>
-                </div>
+                <label className="block">
+                  <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <input
+                      value={stockVolumeInput}
+                      onChange={event => setStockVolumeInput(event.target.value)}
+                      type="number"
+                      min="1"
+                      step="10"
+                      aria-label="All-in-one bottle volume in milliliters"
+                      className="aio-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                    />
+                    <span className="text-lg text-slate-500">mL</span>
+                  </div>
+                  <div className="mt-1 text-[9px] text-slate-600">how much to make</div>
+                </label>
+              </div>
+              <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
+                <span>safe ceiling ×{MAX_SAFE_STRENGTH}</span>
+                <button
+                  type="button"
+                  onClick={() => setStrengthInput(String(MAX_SAFE_STRENGTH))}
+                  className="font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
+                >
+                  Apply maximum
+                </button>
               </div>
               <input
                 className="aio-range mt-3 h-1.5 w-full cursor-pointer"
@@ -192,12 +212,14 @@ export function CondensedAio() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <div className="rounded-lg border border-fuchsia-300/15 bg-fuchsia-400/[0.07] px-3 py-2.5">
-                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200/65">Salt / mL</div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{compact(stockSaltMgPerMl, 2)} mg</div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200/65">Salt to weigh</div>
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-fuchsia-100">{compact(stockSaltMassG, 2)} g</div>
+                  <div className="mt-0.5 text-[9px] text-fuchsia-100/45">for this bottle</div>
                 </div>
                 <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
-                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Total recipe salt</div>
-                  <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{compact(totalRecipeTarget, 1)} ppm/L</div>
+                  <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
+                  <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{compact(stockWaterMassG, 1)} g</div>
+                  <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
                 </div>
               </div>
             </section>
