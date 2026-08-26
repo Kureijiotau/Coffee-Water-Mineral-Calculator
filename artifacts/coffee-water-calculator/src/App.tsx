@@ -9363,6 +9363,124 @@ function App() {
   );
 }
 
+function DiySingleSaltConcentrateBuilder({
+  volumeUnit,
+  onToggleVolumeUnit,
+  dropsPerMl,
+  dropperStyle,
+  onDropperStyleChange,
+  straightDropsPerMl,
+  diySaltTargets,
+  diySaltForms,
+  diyFinalLiters,
+  onPlanChange,
+}: {
+  volumeUnit: VolumeUnit;
+  onToggleVolumeUnit: () => void;
+  dropsPerMl: number;
+  dropperStyle: LotusDropperStyle;
+  onDropperStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMl: number;
+  diySaltTargets: Record<string, number>;
+  diySaltForms: Record<string, number>;
+  diyFinalLiters: number;
+  onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+}) {
+  const activeSaltIds = useMemo(
+    () => SALTS
+      .filter(salt => (diySaltTargets[salt.id] ?? 0) > 0)
+      .map(salt => salt.id),
+    [diySaltTargets],
+  );
+  const [saltId, setSaltId] = useState(() => activeSaltIds[0] ?? 'mgso4');
+  const selectedSalt = SALTS.find(salt => salt.id === saltId) ?? SALTS[0];
+  const safeFormIdx = Math.min(
+    Math.max(0, diySaltForms[saltId] ?? selectedSalt.defaultFormIdx ?? 0),
+    Math.max(0, selectedSalt.hydrationForms.length - 1),
+  );
+  const targetFromCalculator = Number(diySaltTargets[saltId] ?? 0);
+  const target = targetFromCalculator > 0 ? targetFromCalculator : 40;
+  const handoff = useMemo<ConcentrateRecipeHandoff>(() => ({
+    name: 'DIY single-salt concentrate',
+    salts: {
+      [saltId]: {
+        target: String(target),
+        formIdx: safeFormIdx,
+      },
+    },
+    finalLiters: diyFinalLiters > 0 ? diyFinalLiters : 1,
+  }), [diyFinalLiters, safeFormIdx, saltId, target]);
+
+  useEffect(() => {
+    if (activeSaltIds.length > 0 && !activeSaltIds.includes(saltId)) {
+      setSaltId(activeSaltIds[0]);
+    }
+  }, [activeSaltIds, saltId]);
+
+  return (
+    <div className="space-y-3">
+      <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-4 shadow-xl sm:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
+              <FlaskConical className="h-4 w-4 text-fuchsia-300" aria-hidden="true" />
+              DIY single-salt concentrate
+            </div>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
+              Use the same bottle-card workflow as recipe concentrates, with one selected mineral per bottle.
+              The target below follows the current Calculator setup when that salt is active.
+            </p>
+          </div>
+          <span className="rounded-full border border-fuchsia-300/25 bg-fuchsia-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-fuchsia-200">
+            One bottle
+          </span>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mineral</span>
+            <select
+              value={saltId}
+              onChange={event => setSaltId(event.target.value)}
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              aria-label="DIY concentrate mineral"
+            >
+              {SALTS.map(salt => (
+                <option key={salt.id} value={salt.id}>{salt.name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hydration form</span>
+            <div className="mt-1 text-sm font-semibold text-slate-100">
+              {selectedSalt.hydrationForms[safeFormIdx]?.label ?? 'Default form'}
+            </div>
+            <span className="mt-1 block text-[9px] text-slate-600">Uses the form selected in Calculator</span>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.06] px-3 py-2 text-[10px]">
+          <span className="text-slate-400">Calculator target</span>
+          <strong className="tabular-nums text-cyan-100">
+            {targetFromCalculator > 0 ? `${recipeConcentrateNumber(targetFromCalculator, 1)} ppm/L` : 'No active target · using 40 ppm/L starter'}
+          </strong>
+        </div>
+      </section>
+      <RecipeConcentrateBuilder
+        handoff={handoff}
+        volumeUnit={volumeUnit}
+        dropsPerMl={dropsPerMl}
+        dropperStyle={dropperStyle}
+        onDropperStyleChange={onDropperStyleChange}
+        straightDropsPerMl={straightDropsPerMl}
+        restoredPlan={null}
+        onToggleVolumeUnit={onToggleVolumeUnit}
+        onClear={() => undefined}
+        onPlanChange={onPlanChange}
+        singleSaltOnly
+      />
+    </div>
+  );
+}
+
 function ConcentrateWorkspace({
   volumeUnit,
   onToggleVolumeUnit,
@@ -9502,6 +9620,77 @@ function ConcentrateWorkspace({
     targetSaltMass,
     totalStockMassInput,
   ]);
+
+  if (!recipeHandoff && concentrateMode === 'builder') {
+    return (
+      <div className="concentrate-workspace space-y-4">
+        <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-2">
+              <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
+                <div className="mt-0.5 text-xs text-slate-500">Prepare one DIY mineral concentrate using the same bottle-card workflow as recipe concentrates.</div>
+              </div>
+            </div>
+            <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+              <button
+                type="button"
+                role="tab"
+                aria-selected
+                onClick={() => setConcentrateMode('builder')}
+                className="rounded-lg border border-fuchsia-400/40 bg-fuchsia-500/15 px-2.5 py-1.5 text-xs font-semibold text-fuchsia-200 shadow-sm"
+              >
+                Stock builder
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={false}
+                onClick={() => setConcentrateMode('lotus')}
+                className="rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-semibold text-slate-400 transition hover:bg-slate-700/50 hover:text-slate-200"
+              >
+                DIY Lotus Drops
+              </button>
+            </div>
+          </div>
+        </div>
+        <DiySingleSaltConcentrateBuilder
+          volumeUnit={volumeUnit}
+          onToggleVolumeUnit={onToggleVolumeUnit}
+          dropsPerMl={dropsPerMl}
+          dropperStyle={dropperStyle}
+          onDropperStyleChange={setDropperStyle}
+          straightDropsPerMl={straightBaselineDropsPerMl}
+          diySaltTargets={diySaltTargets}
+          diySaltForms={diySaltForms}
+          diyFinalLiters={diyFinalLiters}
+          onPlanChange={setRecipeConcentratePlan}
+        />
+        <button
+          type="button"
+          onClick={() => setShowConcentrateSteps(true)}
+          className="recipe-steps-fab fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border border-fuchsia-300/45 bg-fuchsia-600/90 px-4 py-3 text-sm font-semibold text-white shadow-2xl shadow-fuchsia-950/40 backdrop-blur transition hover:-translate-y-0.5 hover:bg-fuchsia-500 active:translate-y-0"
+          aria-label="Open concentrate recipe steps"
+          title="Open concentrate preparation and dosing steps"
+        >
+          <ListChecks className="h-4 w-4" aria-hidden="true" />
+          <span>Recipe steps</span>
+        </button>
+        {showConcentrateSteps && (
+          <ConcentrateRecipeStepsModal
+            recipeHandoff={null}
+            plan={recipeConcentratePlan}
+            volumeUnit={volumeUnit}
+            dropsPerMl={dropsPerMl}
+            dropperStyle={dropperStyle}
+            dropperReferenceDropsPerMl={dropperReferenceDropsPerMl}
+            onClose={() => setShowConcentrateSteps(false)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="concentrate-workspace space-y-4">
@@ -10966,11 +11155,6 @@ function RecipeConcentrateBottleCard({
   );
   const strength = Math.max(0, Number(strengthInput) || 0);
   const stockVolumeMl = Math.max(0, Number(volumeInput) || 0);
-  const maxSafeStrength = findStrongestSafeConcentrateStrength(
-    saltTargets,
-    undefined,
-    formIdxBySaltId,
-  );
   const warnings = strength > 0
     ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
     : [];
@@ -10978,6 +11162,16 @@ function RecipeConcentrateBottleCard({
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
   const activeDropsPerMl = hasMeasuredDropsPerMl ? measuredDropsPerMl : assumedDropsPerMl;
+  const maxSafeStrength = findStrongestSafeConcentrateStrength(
+    saltTargets,
+    undefined,
+    formIdxBySaltId,
+    {
+      minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
+      minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
+      dropsPerMl: activeDropsPerMl,
+    },
+  );
   const safeFinalLiters = Math.max(0, finalLiters);
   const doseMl = strength > 0 ? 1000 / strength * safeFinalLiters : 0;
   const doseDrops = doseMl * activeDropsPerMl;
@@ -11290,6 +11484,7 @@ function RecipeConcentrateBuilder({
   onToggleVolumeUnit,
   onClear,
   onPlanChange,
+  singleSaltOnly = false,
 }: {
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
@@ -11301,9 +11496,12 @@ function RecipeConcentrateBuilder({
   onToggleVolumeUnit: () => void;
   onClear: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+  singleSaltOnly?: boolean;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
-  const [stockStrategy, setStockStrategy] = useState<ConcentrateStrategy>('gh-kh');
+  const [stockStrategy, setStockStrategy] = useState<ConcentrateStrategy>(
+    singleSaltOnly ? 'all-in-one' : 'gh-kh',
+  );
   const [stockStrengthInputs, setStockStrengthInputs] = useState<Record<string, string>>({
     hardness: '500',
     alkalinity: '500',
@@ -11445,9 +11643,10 @@ function RecipeConcentrateBuilder({
       compatibleStockGroups.map(group => [group.id, String(groupMaxSafeStrengthFor(group))]),
     );
     const restored = restoredPlan && restoredPlan.strategy ? restoredPlan : null;
-    setStrengthInput(restored ? String(restored.strength) : String(initialAllInOneStrength));
-    setStockStrategy(restored?.strategy ?? 'gh-kh');
+    setStrengthInput(restored && !singleSaltOnly ? String(restored.strength) : String(initialAllInOneStrength));
+    setStockStrategy(singleSaltOnly ? 'all-in-one' : restored?.strategy ?? 'gh-kh');
     setStockStrengthInputs(restored
+      && !singleSaltOnly
       ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.strength)]))
       : {
           hardness: initialStockStrengths.hardness ?? '1',
@@ -11456,6 +11655,7 @@ function RecipeConcentrateBuilder({
           'all-in-one': String(initialAllInOneStrength),
         });
     setStockVolumeInputs(restored
+      && !singleSaltOnly
       ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.volumeMl)]))
       : {
           hardness: '100',
@@ -11471,7 +11671,7 @@ function RecipeConcentrateBuilder({
         ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
         : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
     );
-  }, [handoff]);
+  }, [handoff, singleSaltOnly]);
 
   useEffect(() => {
     onPlanChange({
@@ -11537,20 +11737,26 @@ function RecipeConcentrateBuilder({
               <span className="rounded-full border border-fuchsia-300/30 bg-fuchsia-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-fuchsia-200">{modeHeader.badge}</span>
               <span className="text-[10px] text-slate-500">{modeHeader.description}</span>
             </div>
-            <h2 className="mt-2 truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">{handoff.name}</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">{modeHeader.heading} {modeHeader.intro}</p>
+             <h2 className="mt-2 truncate text-xl font-semibold tracking-tight text-white sm:text-2xl">{singleSaltOnly ? 'DIY single-salt concentrate' : handoff.name}</h2>
+             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
+               {singleSaltOnly
+                 ? 'Prepare one selected mineral in a calibrated bottle, then dose it into your finished water.'
+                 : `${modeHeader.heading} ${modeHeader.intro}`}
+             </p>
           </div>
-          <button
-            type="button"
-            onClick={onClear}
-            className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
-          >
-            Clear imported recipe
-          </button>
+           {!singleSaltOnly && (
+             <button
+               type="button"
+               onClick={onClear}
+               className="rounded-lg border border-slate-600/70 bg-slate-900/40 px-3 py-1.5 text-xs font-semibold text-slate-300 transition hover:border-slate-500 hover:bg-slate-800 hover:text-white"
+             >
+               Clear imported recipe
+             </button>
+           )}
         </div>
       </section>
 
-      <div className="recipe-concentrate-tabs flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/45 p-1 shadow-xl" role="tablist" aria-label="Concentrate recipe mode">
+       {!singleSaltOnly && <div className="recipe-concentrate-tabs flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/45 p-1 shadow-xl" role="tablist" aria-label="Concentrate recipe mode">
         {([
           ['all-in-one', 'All-in-one', 'Every active salt shares one bottle'],
           ['gh-kh', 'GH + KH', 'Separate compatible groups'],
@@ -11577,9 +11783,9 @@ function RecipeConcentrateBuilder({
             {label}
           </button>
         ))}
-      </div>
+       </div>}
 
-      <section className="recipe-concentrate-panel overflow-hidden rounded-2xl border border-slate-700/60">
+       <section className="recipe-concentrate-panel overflow-hidden rounded-2xl border border-slate-700/60">
         <div className="border-b border-slate-700/50 bg-gradient-to-r from-fuchsia-500/[0.12] via-transparent to-cyan-400/[0.08] px-4 py-4 sm:px-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -12393,7 +12599,7 @@ function WatermancerIonProfileCard({
              <X className="w-4 h-4" />
            </button>
          </div>
-       </div>
+        </div>
      )}
     </div>
   );

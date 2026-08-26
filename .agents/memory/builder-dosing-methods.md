@@ -3,7 +3,7 @@ name: Builder dosing methods
 description: The Builder presents dry-salt and dropper-stock workflows without changing the shared chemistry calculations.
 ---
 
-The Builder’s dosing method switcher is a UX layer: Dropper Stocks is the beginner default and the live recipe cockpit shows batch drop counts immediately. Its Mineral Pantry uses reusable fixed-strength 5% stocks in user-supported bottle sizes, with optional calcium; each stock is explicitly labeled as 50 mg of its named salt per mL. When calcium is unavailable, Epsom is increased to preserve GH while accepting a more magnesium-forward balance. Dry Salt Direct remains the advanced fallback. “Make this water” reveals only a choice, pantry prep, or dosing stage.
+The Builder’s dosing method switcher is a UX layer: Dropper Stocks is the beginner default and the live recipe cockpit shows batch drop counts immediately. The default Concentrate workspace uses the same unified bottle-card presentation as recipe handoffs for DIY single-salt prep; DIY Lotus Drops keeps its separate presentation and math. Its Mineral Pantry uses reusable fixed-strength 5% stocks in user-supported bottle sizes, with optional calcium; each stock is explicitly labeled as 50 mg of its named salt per mL. When calcium is unavailable, Epsom is increased to preserve GH while accepting a more magnesium-forward balance. Dry Salt Direct remains the advanced fallback. “Make this water” reveals only a choice, pantry prep, or dosing stage.
 
 **Why:** Beginners need a friendly path from exact salt calculations to repeatable drop dosing, but the established ion, hydration, source-water, and correction engine must remain authoritative.
 
