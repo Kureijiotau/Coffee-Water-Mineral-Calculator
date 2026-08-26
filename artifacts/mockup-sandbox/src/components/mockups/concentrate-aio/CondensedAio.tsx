@@ -16,8 +16,26 @@ import './CondensedAio.css';
 
 type DropperStyle = 'straight' | 'round';
 type VolumeUnit = 'liters' | 'gallons';
+type RecipeMode = 'GH + KH' | 'All-in-one' | 'Separate salts';
+type SaltColor = 'cyan' | 'violet' | 'amber' | 'sky';
 
-const recipeSalts = [
+type RecipeSalt = {
+  name: string;
+  formula: string;
+  form: string;
+  target: number;
+  color: SaltColor;
+};
+
+type ConcentrateGroup = {
+  id: string;
+  name: string;
+  helper: string;
+  color: SaltColor;
+  salts: RecipeSalt[];
+};
+
+const recipeSalts: RecipeSalt[] = [
   { name: 'Magnesium sulfate', formula: 'MgSO₄', form: 'Epsom salt · heptahydrate', target: 9.2, color: 'cyan' },
   { name: 'Calcium chloride', formula: 'CaCl₂', form: 'Dihydrate', target: 6.8, color: 'violet' },
   { name: 'Sodium bicarbonate', formula: 'NaHCO₃', form: 'Anhydrous', target: 20, color: 'amber' },
@@ -53,6 +71,334 @@ function volumeUnitLabel(unit: VolumeUnit) {
 
 function volumeUnitShortLabel(unit: VolumeUnit) {
   return unit === 'gallons' ? 'gal' : 'L';
+}
+
+function modeGroupsFor(mode: RecipeMode): ConcentrateGroup[] {
+  if (mode === 'GH + KH') {
+    return [
+      {
+        id: 'hardness',
+        name: 'Hardness stock',
+        helper: 'Calcium, magnesium, and chloride support.',
+        color: 'sky',
+        salts: recipeSalts.filter(salt => salt.name !== 'Sodium bicarbonate'),
+      },
+      {
+        id: 'alkalinity',
+        name: 'Alkalinity stock',
+        helper: 'Bicarbonate buffer for the finished water.',
+        color: 'violet',
+        salts: recipeSalts.filter(salt => salt.name === 'Sodium bicarbonate'),
+      },
+    ];
+  }
+
+  if (mode === 'Separate salts') {
+    return recipeSalts.map(salt => ({
+      id: `salt-${salt.name.toLowerCase().replaceAll(' ', '-')}`,
+      name: `${salt.name} stock`,
+      helper: `${salt.form} · one bottle for this salt.`,
+      color: salt.color,
+      salts: [salt],
+    }));
+  }
+
+  return [{
+    id: 'all-in-one',
+    name: 'All-in-one stock',
+    helper: 'Every active salt shares one bottle.',
+    color: 'violet',
+    salts: recipeSalts,
+  }];
+}
+
+function groupTone(group: ConcentrateGroup) {
+  return `aio-tone-${group.color}`;
+}
+
+function groupMaxSafeStrength(_group: ConcentrateGroup) {
+  return MAX_SAFE_STRENGTH;
+}
+
+function ConcentrateBottleCard({
+  group,
+  strengthInput,
+  volumeInput,
+  waterLiters,
+  displayedWaterVolume,
+  volumeUnit,
+  dropperStyle,
+  calibrationMode,
+  measuredDropsInput,
+  measuredMlInput,
+  onStrengthChange,
+  onVolumeChange,
+  onToggleVolumeUnit,
+  onDropperStyleChange,
+  onCalibrationToggle,
+  onMeasuredDropsChange,
+  onMeasuredMlChange,
+}: {
+  group: ConcentrateGroup;
+  strengthInput: string;
+  volumeInput: string;
+  waterLiters: number;
+  displayedWaterVolume: number;
+  volumeUnit: VolumeUnit;
+  dropperStyle: DropperStyle;
+  calibrationMode: 'assumed' | 'measured';
+  measuredDropsInput: string;
+  measuredMlInput: string;
+  onStrengthChange: (value: string) => void;
+  onVolumeChange: (value: string) => void;
+  onToggleVolumeUnit: () => void;
+  onDropperStyleChange: (style: DropperStyle) => void;
+  onCalibrationToggle: () => void;
+  onMeasuredDropsChange: (value: string) => void;
+  onMeasuredMlChange: (value: string) => void;
+}) {
+  const maxSafeStrength = groupMaxSafeStrength(group);
+  const strength = Math.min(maxSafeStrength, Math.max(1, number(strengthInput, maxSafeStrength)));
+  const stockVolumeMl = Math.max(1, number(volumeInput, 100));
+  const assumedDropsPerMl = dropperStyle === 'straight' ? 20 : 11.2;
+  const measuredDropsPerMl = Math.max(
+    0.1,
+    number(measuredDropsInput, assumedDropsPerMl) / Math.max(0.01, number(measuredMlInput, 1)),
+  );
+  const dropsPerMl = calibrationMode === 'measured' ? measuredDropsPerMl : assumedDropsPerMl;
+  const totalTarget = group.salts.reduce((sum, salt) => sum + salt.target, 0);
+  const stockSaltMgPerMl = totalTarget * strength / 1000;
+  const stockSaltMassG = stockSaltMgPerMl * stockVolumeMl / 1000;
+  const stockWaterMassG = Math.max(0, stockVolumeMl - stockSaltMassG);
+  const saltMgPerDrop = stockSaltMgPerMl / dropsPerMl;
+  const batchDrops = 1000 / strength * dropsPerMl * waterLiters;
+  const stockDoseMl = 1000 / strength * waterLiters;
+  const calibrationLabel = calibrationMode === 'measured'
+    ? `${compact(dropsPerMl, 1)} measured drops/mL`
+    : `${compact(assumedDropsPerMl, 1)} ${dropperStyle} drops/mL assumption`;
+  const tone = groupTone(group);
+
+  return (
+    <article className={`aio-bottle-card aio-card rounded-xl p-3 sm:p-4 ${tone}`}>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="aio-bottle-icon flex h-8 w-8 items-center justify-center rounded-lg border">
+            <Beaker className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div>
+            <div className="aio-bottle-heading text-[9px] font-bold uppercase tracking-[0.18em]">{group.name}</div>
+            <div className="mt-0.5 text-[10px] text-slate-500">{group.helper}</div>
+          </div>
+        </div>
+        <span className="aio-bottle-badge rounded-full border px-2 py-1 text-[9px] font-semibold">one bottle</span>
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+        <section>
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <label className="block">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <input
+                  value={strengthInput}
+                  onChange={event => onStrengthChange(event.target.value)}
+                  type="number"
+                  min="1"
+                  max={maxSafeStrength}
+                  step="1"
+                  aria-label={`${group.name} stock strength`}
+                  className="aio-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                />
+                <span className="text-lg text-slate-500">×</span>
+              </div>
+              <div className="mt-1 text-[9px] text-slate-600">recipe target multiplier</div>
+            </label>
+            <label className="block">
+              <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <input
+                  value={volumeInput}
+                  onChange={event => onVolumeChange(event.target.value)}
+                  type="number"
+                  min="1"
+                  step="10"
+                  aria-label={`${group.name} bottle volume in milliliters`}
+                  className="aio-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
+                />
+                <span className="text-lg text-slate-500">mL</span>
+              </div>
+              <div className="mt-1 text-[9px] text-slate-600">how much to make</div>
+            </label>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
+            <span>safe ceiling ×{maxSafeStrength}</span>
+            <button
+              type="button"
+              onClick={() => onStrengthChange(String(maxSafeStrength))}
+              className="font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
+            >
+              Apply maximum
+            </button>
+          </div>
+          <input
+            className="aio-range mt-3 h-1.5 w-full cursor-pointer"
+            type="range"
+            min="1"
+            max={maxSafeStrength}
+            value={strength}
+            onChange={event => onStrengthChange(event.target.value)}
+            aria-label={`Adjust ${group.name} strength`}
+          />
+          <div className="mt-2 flex justify-between text-[9px] tabular-nums text-slate-600">
+            <span>×1</span>
+            <span>lower strength = more drops</span>
+            <span>×{maxSafeStrength}</span>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="aio-bottle-metric-primary rounded-lg border px-3 py-2.5">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{compact(stockSaltMassG, 2)} g</div>
+              <div className="mt-0.5 text-[9px]">for this bottle</div>
+            </div>
+            <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{compact(stockWaterMassG, 1)} g</div>
+              <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
+            </div>
+          </div>
+
+          <div className="aio-dropper-panel mt-4 rounded-lg p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Ruler className="h-3.5 w-3.5 text-amber-200/75" aria-hidden="true" />
+                <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-amber-100/70">Dropper setup</span>
+              </div>
+              <span className="text-[9px] text-slate-500">{calibrationLabel}</span>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/40 p-1">
+              {(['straight', 'round'] as DropperStyle[]).map(style => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => onDropperStyleChange(style)}
+                  aria-pressed={dropperStyle === style}
+                  data-active={dropperStyle === style}
+                  className="aio-dropper-segment rounded-md px-2 py-1.5 text-[10px] font-semibold capitalize transition"
+                >
+                  {style} tip · {style === 'straight' ? '20' : '11.2'}/mL
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-3 text-[10px]">
+              <span className="text-slate-500">Use measured calibration</span>
+              <button
+                type="button"
+                onClick={onCalibrationToggle}
+                aria-pressed={calibrationMode === 'measured'}
+                data-active={calibrationMode === 'measured'}
+                className="aio-calibration-toggle rounded-full px-2 py-1 font-semibold transition"
+              >
+                {calibrationMode === 'measured' ? 'On' : 'Optional'}
+              </button>
+            </div>
+            {calibrationMode === 'measured' && (
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
+                  <span className="block text-[9px] text-slate-500">Drops counted</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={measuredDropsInput}
+                    onChange={event => onMeasuredDropsChange(event.target.value)}
+                    className="aio-input mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
+                    aria-label={`${group.name} measured drops counted`}
+                  />
+                </label>
+                <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
+                  <span className="block text-[9px] text-slate-500">Measured volume</span>
+                  <span className="mt-1 flex items-center gap-1">
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={measuredMlInput}
+                      onChange={event => onMeasuredMlChange(event.target.value)}
+                      className="aio-input w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
+                      aria-label={`${group.name} measured calibration volume in milliliters`}
+                    />
+                    <span className="text-[10px] text-slate-500">mL</span>
+                  </span>
+                </label>
+              </div>
+            )}
+            <div className="mt-2 flex items-center gap-2 text-[9px] leading-relaxed text-slate-500">
+              <Info className="h-3.5 w-3.5 shrink-0 text-amber-200/70" aria-hidden="true" />
+              Calibration changes drop size only, not recipe chemistry.
+            </div>
+          </div>
+        </section>
+
+        <section className="aio-bottle-dose rounded-xl border p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em]">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                Dose the final water
+              </div>
+              <div className="mt-3 flex items-baseline gap-2">
+                <strong className="text-5xl font-semibold tracking-[-0.05em] text-white">{Math.round(batchDrops)}</strong>
+                <span className="text-sm font-medium">drops / {compact(stockDoseMl, 2)} mL</span>
+              </div>
+              <div className="mt-1 text-[11px]">for {compact(displayedWaterVolume, 2)} {volumeUnitShortLabel(volumeUnit)} final water</div>
+            </div>
+            <div className="aio-bottle-dose-metric rounded-lg border px-2.5 py-2 text-right">
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{compact(saltMgPerDrop / waterLiters, 2)}</div>
+              <div className="text-[9px]">salt ppm</div>
+            </div>
+          </div>
+          <label className="mt-4 block">
+            <span className="flex items-center justify-between gap-2 text-[9px] font-bold uppercase tracking-[0.16em]">
+              <span>Final water ({volumeUnitShortLabel(volumeUnit)})</span>
+              <button
+                type="button"
+                onClick={onToggleVolumeUnit}
+                className="aio-volume-toggle"
+                aria-label={`Switch volume units to ${volumeUnit === 'liters' ? 'gallons' : 'liters'}`}
+              >
+                {volumeUnitLabel(volumeUnit)}
+              </button>
+            </span>
+            <span className="mt-1.5 flex items-center gap-2 rounded-lg border px-3 py-2">
+              <span className="text-lg font-semibold tabular-nums text-white">{compact(displayedWaterVolume, 2)}</span>
+              <span className="text-xs font-semibold">{volumeUnitShortLabel(volumeUnit)}</span>
+            </span>
+          </label>
+        </section>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {group.salts.map(salt => (
+          <div key={salt.name} className={`aio-salt-row aio-salt-${salt.color} rounded-lg px-3 py-2.5`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2">
+                <span className="aio-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
+                <div className="min-w-0">
+                  <div className="truncate text-[11px] font-semibold text-slate-100">{salt.name}</div>
+                  <div className="mt-0.5 truncate text-[9px] text-slate-500">{salt.form} · {salt.formula}</div>
+                </div>
+              </div>
+              <div className="shrink-0 text-right">
+                <div className="aio-salt-accent text-[10px] font-semibold tabular-nums">{compact(salt.target, 1)} ppm/L</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
 }
 
 export function CondensedAio() {
