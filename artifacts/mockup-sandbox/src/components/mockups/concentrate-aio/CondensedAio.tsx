@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import './_group.css';
+import './CondensedAio.css';
 
 type DropperStyle = 'straight' | 'round';
 
@@ -41,8 +42,7 @@ export function CondensedAio() {
   const [calibrationMode, setCalibrationMode] = useState<'assumed' | 'measured'>('assumed');
   const [measuredDropsInput, setMeasuredDropsInput] = useState('20');
   const [measuredMlInput, setMeasuredMlInput] = useState('1');
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [calibrationOpen, setCalibrationOpen] = useState(false);
+  const [recipeMode, setRecipeMode] = useState('All-in-one');
   const [safetyOpen, setSafetyOpen] = useState(false);
 
   const strength = Math.min(MAX_SAFE_STRENGTH, Math.max(1, number(strengthInput, MAX_SAFE_STRENGTH)));
@@ -113,10 +113,11 @@ export function CondensedAio() {
             <button
               key={label}
               type="button"
-              aria-pressed={label === 'All-in-one'}
+               onClick={() => setRecipeMode(label)}
+               aria-pressed={label === recipeMode}
               title={description}
               className={`flex-1 rounded-lg px-2 py-2 text-[10px] font-semibold transition sm:text-xs ${
-                label === 'All-in-one'
+                 label === recipeMode
                   ? 'bg-fuchsia-400/15 text-fuchsia-100 ring-1 ring-fuchsia-300/25'
                   : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-300'
               }`}
@@ -150,7 +151,19 @@ export function CondensedAio() {
           </div>
 
           <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[1.05fr_0.95fr]">
-            <section className="aio-card rounded-xl p-4">
+            <section className="aio-card aio-prepare-card rounded-xl p-4">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="aio-prepare-icon flex h-8 w-8 items-center justify-center rounded-lg border">
+                    <Beaker className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div>
+                    <div className="aio-prepare-heading text-[9px] font-bold uppercase tracking-[0.18em]">Prepare concentrate</div>
+                    <div className="mt-0.5 text-[10px] text-slate-500">Weigh the blend, then fill this bottle.</div>
+                  </div>
+                </div>
+                <span className="rounded-full border border-amber-200/15 bg-amber-300/[0.07] px-2 py-1 text-[9px] font-semibold text-amber-100/65">bottle recipe</span>
+              </div>
               <div className="grid grid-cols-2 gap-2 sm:gap-3">
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
@@ -222,6 +235,75 @@ export function CondensedAio() {
                   <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
                 </div>
               </div>
+              <div className="aio-dropper-panel mt-4 rounded-lg p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Ruler className="h-3.5 w-3.5 text-amber-200/75" aria-hidden="true" />
+                    <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-amber-100/70">Dropper setup</span>
+                  </div>
+                  <span className="text-[9px] text-slate-500">{calibrationLabel}</span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/40 p-1">
+                  {(['straight', 'round'] as DropperStyle[]).map(style => (
+                    <button
+                      key={style}
+                      type="button"
+                      onClick={() => setDropperStyle(style)}
+                      aria-pressed={dropperStyle === style}
+                      data-active={dropperStyle === style}
+                      className="aio-dropper-segment rounded-md px-2 py-1.5 text-[10px] font-semibold capitalize transition"
+                    >
+                      {style} tip · {style === 'straight' ? '20' : '11.2'}/mL
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-3 text-[10px]">
+                  <span className="text-slate-500">Use measured calibration</span>
+                  <button
+                    type="button"
+                    onClick={() => setCalibrationMode(mode => mode === 'assumed' ? 'measured' : 'assumed')}
+                    aria-pressed={calibrationMode === 'measured'}
+                    data-active={calibrationMode === 'measured'}
+                    className="aio-calibration-toggle rounded-full px-2 py-1 font-semibold transition"
+                  >
+                    {calibrationMode === 'measured' ? 'On' : 'Optional'}
+                  </button>
+                </div>
+                {calibrationMode === 'measured' && (
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
+                      <span className="block text-[9px] text-slate-500">Drops counted</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={measuredDropsInput}
+                        onChange={event => setMeasuredDropsInput(event.target.value)}
+                        className="aio-input mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
+                        aria-label="Measured drops counted"
+                      />
+                    </label>
+                    <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
+                      <span className="block text-[9px] text-slate-500">Measured volume</span>
+                      <span className="mt-1 flex items-center gap-1">
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={measuredMlInput}
+                          onChange={event => setMeasuredMlInput(event.target.value)}
+                          className="aio-input w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
+                          aria-label="Measured calibration volume in milliliters"
+                        />
+                        <span className="text-[10px] text-slate-500">mL</span>
+                      </span>
+                    </label>
+                  </div>
+                )}
+                <div className="mt-2 flex items-center gap-2 text-[9px] leading-relaxed text-slate-500">
+                  <Info className="h-3.5 w-3.5 shrink-0 text-amber-200/70" aria-hidden="true" />
+                  Calibration changes drop size only, not recipe chemistry.
+                </div>
+              </div>
             </section>
 
             <section className="aio-pulse rounded-xl border border-emerald-300/30 bg-gradient-to-br from-emerald-400/[0.15] via-cyan-400/[0.08] to-slate-950/20 p-4">
@@ -264,125 +346,41 @@ export function CondensedAio() {
           </div>
         </section>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-          <details open={detailsOpen} onToggle={event => setDetailsOpen(event.currentTarget.open)} className="aio-details aio-glass rounded-xl">
-            <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
-              <span className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-400/10 text-cyan-200">
-                  <Layers3 className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <span>
-                  <span className="block text-xs font-semibold text-slate-100">Recipe blend</span>
-                  <span className="mt-0.5 block text-[10px] text-slate-500">{recipeSalts.length} salts · ratios stay fixed</span>
-                </span>
+        <section className="aio-recipe-panel aio-glass mt-3 overflow-hidden rounded-xl">
+          <div className="aio-recipe-header flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/20 bg-cyan-400/10 text-cyan-200">
+                <Layers3 className="h-3.5 w-3.5" aria-hidden="true" />
               </span>
-              <ChevronDown className="aio-chevron h-4 w-4 text-slate-500 transition-transform" aria-hidden="true" />
-            </summary>
-            {detailsOpen && (
-              <div className="border-t border-slate-700/50 px-4 pb-3 pt-2">
-                {saltRows.map(salt => (
-                  <div key={salt.name} className="flex items-center justify-between gap-3 border-b border-slate-800/80 py-2.5 last:border-0">
+              <div>
+                <div className="text-xs font-semibold text-slate-100">Recipe blend</div>
+                <div className="mt-0.5 text-[10px] text-slate-500">{recipeSalts.length} salts · ratios stay fixed</div>
+              </div>
+            </div>
+            <div className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-2.5 py-1 text-[9px] font-semibold tabular-nums text-cyan-100/75">
+              {compact(saltMgPerDrop, 2)} mg total salt / drop
+            </div>
+          </div>
+          <div className="grid gap-2 p-3 sm:grid-cols-2 sm:p-4">
+            {saltRows.map(salt => (
+              <div key={salt.name} className={`aio-salt-row aio-salt-${salt.color} rounded-lg px-3 py-2.5`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <span className="aio-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full" aria-hidden="true" />
                     <div className="min-w-0">
-                      <div className="truncate text-[11px] font-semibold text-slate-200">{salt.name}</div>
+                      <div className="truncate text-[11px] font-semibold text-slate-100">{salt.name}</div>
                       <div className="mt-0.5 truncate text-[9px] text-slate-500">{salt.form} · {salt.formula}</div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-[10px] font-semibold tabular-nums text-cyan-100">{compact(salt.target, 1)} ppm/L</div>
-                      <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{compact(salt.mgPerDrop, 2)} mg/drop</div>
-                    </div>
                   </div>
-                ))}
-                <div className="mt-2 flex items-center justify-between rounded-lg border border-cyan-300/15 bg-cyan-400/[0.06] px-3 py-2 text-[10px]">
-                  <span className="text-slate-500">Total dry salt per drop</span>
-                  <strong className="tabular-nums text-cyan-100">{compact(saltMgPerDrop, 2)} mg</strong>
+                  <div className="shrink-0 text-right">
+                    <div className="aio-salt-accent text-[10px] font-semibold tabular-nums">{compact(salt.target, 1)} ppm/L</div>
+                    <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{compact(salt.mgPerDrop, 2)} mg/drop</div>
+                  </div>
                 </div>
               </div>
-            )}
-          </details>
-
-          <details open={calibrationOpen} onToggle={event => setCalibrationOpen(event.currentTarget.open)} className="aio-details aio-glass rounded-xl">
-            <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
-              <span className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-violet-300/20 bg-violet-400/10 text-violet-200">
-                  <Ruler className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-                <span>
-                  <span className="block text-xs font-semibold text-slate-100">Dropper calibration</span>
-                  <span className="mt-0.5 block text-[10px] text-slate-500">{calibrationLabel}</span>
-                </span>
-              </span>
-              <ChevronDown className="aio-chevron h-4 w-4 text-slate-500 transition-transform" aria-hidden="true" />
-            </summary>
-            {calibrationOpen && (
-              <div className="border-t border-slate-700/50 px-4 pb-3 pt-3">
-                <div className="grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/40 p-1">
-                  {(['straight', 'round'] as DropperStyle[]).map(style => (
-                    <button
-                      key={style}
-                      type="button"
-                      onClick={() => setDropperStyle(style)}
-                      aria-pressed={dropperStyle === style}
-                      className={`rounded-md px-2 py-1.5 text-[10px] font-semibold capitalize transition ${
-                        dropperStyle === style ? 'bg-violet-400/15 text-violet-100 ring-1 ring-violet-300/25' : 'text-slate-500 hover:text-slate-300'
-                      }`}
-                    >
-                      {style} tip
-                    </button>
-                  ))}
-                </div>
-                <div className="mt-3 flex items-center justify-between gap-3 text-[10px]">
-                  <span className="text-slate-500">Use measured calibration</span>
-                  <button
-                    type="button"
-                    onClick={() => setCalibrationMode(mode => mode === 'assumed' ? 'measured' : 'assumed')}
-                    aria-pressed={calibrationMode === 'measured'}
-                    className={`rounded-full border px-2 py-1 font-semibold transition ${
-                      calibrationMode === 'measured'
-                        ? 'border-violet-300/35 bg-violet-400/15 text-violet-100'
-                        : 'border-slate-700 bg-slate-900 text-slate-500'
-                    }`}
-                  >
-                    {calibrationMode === 'measured' ? 'On' : 'Optional'}
-                  </button>
-                </div>
-                {calibrationMode === 'measured' && (
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
-                      <span className="block text-[9px] text-slate-500">Drops counted</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={measuredDropsInput}
-                        onChange={event => setMeasuredDropsInput(event.target.value)}
-                        className="aio-input mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
-                        aria-label="Measured drops counted"
-                      />
-                    </label>
-                    <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-2.5 py-2">
-                      <span className="block text-[9px] text-slate-500">Measured volume</span>
-                      <span className="mt-1 flex items-center gap-1">
-                        <input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={measuredMlInput}
-                          onChange={event => setMeasuredMlInput(event.target.value)}
-                          className="aio-input w-full bg-transparent text-sm font-semibold tabular-nums text-white outline-none"
-                          aria-label="Measured calibration volume in milliliters"
-                        />
-                        <span className="text-[10px] text-slate-500">mL</span>
-                      </span>
-                    </label>
-                  </div>
-                )}
-                <div className="mt-2 flex items-center gap-2 text-[9px] leading-relaxed text-slate-500">
-                  <Info className="h-3.5 w-3.5 shrink-0 text-violet-300/70" aria-hidden="true" />
-                  Default assumes the selected tip style. Calibration only changes drop size, not recipe chemistry.
-                </div>
-              </div>
-            )}
-          </details>
-        </div>
+            ))}
+          </div>
+        </section>
 
         <details open={safetyOpen} onToggle={event => setSafetyOpen(event.currentTarget.open)} className="aio-details mt-3 rounded-xl border border-amber-300/20 bg-amber-400/[0.06]">
           <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">

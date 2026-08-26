@@ -1,0 +1,134 @@
+.aio-prepare-card {
+  border-color: rgb(251 191 36 / 0.24);
+  background:
+    radial-gradient(circle at 0% 0%, rgb(251 146 60 / 0.14), transparent 15rem),
+    linear-gradient(145deg, rgb(56 35 42 / 0.72), rgb(18 20 31 / 0.66));
+  box-shadow: 0 18px 38px -30px rgb(251 146 60 / 0.42), 0 0 0 1px rgb(255 255 255 / 0.025) inset;
+}
+
+.aio-prepare-heading {
+  color: rgb(253 215 170 / 0.86);
+}
+
+.aio-prepare-icon {
+  border-color: rgb(251 191 36 / 0.28);
+  background: rgb(251 146 60 / 0.12);
+  color: rgb(253 186 116);
+}
+
+.aio-prepare-card .aio-input:focus {
+  color: rgb(255 237 213);
+}
+
+.aio-prepare-card .aio-range {
+  accent-color: #fb923c;
+}
+
+.aio-prepare-card .aio-range::-webkit-slider-runnable-track {
+  background: linear-gradient(90deg, #fb923c, #facc15);
+}
+
+.aio-prepare-card .aio-range::-webkit-slider-thumb {
+  border-color: #ffedd5;
+  background: #fb923c;
+}
+
+.aio-prepare-card .aio-range::-moz-range-track {
+  background: linear-gradient(90deg, #fb923c, #facc15);
+}
+
+.aio-prepare-card .aio-range::-moz-range-progress {
+  background: #fb923c;
+}
+
+.aio-dropper-panel {
+  border: 1px solid rgb(251 191 36 / 0.18);
+  background: rgb(12 17 28 / 0.48);
+}
+
+.aio-dropper-segment {
+  border: 1px solid transparent;
+  color: rgb(148 163 184 / 0.72);
+}
+
+.aio-dropper-segment:hover {
+  color: rgb(254 215 170);
+}
+
+.aio-dropper-segment[data-active="true"] {
+  border-color: rgb(251 191 36 / 0.28);
+  background: rgb(251 146 60 / 0.14);
+  color: rgb(255 237 213);
+  box-shadow: 0 0 0 1px rgb(251 191 36 / 0.08) inset;
+}
+
+.aio-calibration-toggle {
+  border: 1px solid rgb(148 163 184 / 0.22);
+  background: rgb(15 23 42 / 0.76);
+  color: rgb(148 163 184 / 0.78);
+}
+
+.aio-calibration-toggle[data-active="true"] {
+  border-color: rgb(251 191 36 / 0.34);
+  background: rgb(251 146 60 / 0.14);
+  color: rgb(255 237 213);
+}
+
+.aio-recipe-panel {
+  border-color: rgb(34 211 238 / 0.16);
+}
+
+.aio-recipe-header {
+  border-bottom: 1px solid rgb(51 65 85 / 0.52);
+}
+
+.aio-salt-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(148 163 184 / 0.12);
+  background: linear-gradient(135deg, var(--salt-wash), rgb(7 13 25 / 0.5));
+}
+
+.aio-salt-row::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--salt-accent);
+  content: "";
+}
+
+.aio-salt-cyan {
+  --salt-accent: #67e8f9;
+  --salt-wash: rgb(34 211 238 / 0.1);
+}
+
+.aio-salt-violet {
+  --salt-accent: #c4b5fd;
+  --salt-wash: rgb(167 139 250 / 0.1);
+}
+
+.aio-salt-amber {
+  --salt-accent: #fbbf24;
+  --salt-wash: rgb(245 158 11 / 0.11);
+}
+
+.aio-salt-sky {
+  --salt-accent: #7dd3fc;
+  --salt-wash: rgb(56 189 248 / 0.1);
+}
+
+.aio-salt-dot {
+  background: var(--salt-accent);
+  box-shadow: 0 0 12px var(--salt-accent);
+}
+
+.aio-salt-accent {
+  color: var(--salt-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aio-dropper-segment,
+  .aio-calibration-toggle {
+    transition: none;
+  }
+}
