@@ -3,7 +3,7 @@ name: Builder dropper strength
 description: Builder dropper stocks use a conservative 500× strength with user-selected small bottle volume.
 ---
 
-The Builder’s optional dropper-stock guide uses 500× concentrate strength and assumes 20 drops/mL. This yields about 20 drops per active bottle for a 500 mL brew, while keeping dry salt masses modest in 60 mL or smaller bottles.
+The Builder’s optional dropper-stock guide uses 500× concentrate strength and assumes 20 drops/mL. The whole-drop guardrail is defined at a 100 mL minimum final-water dose; at 500 mL this yields about 20 drops per active bottle while keeping dry salt masses modest in 60 mL or smaller bottles.
 
 **Why:** A weaker stock is easier to dissolve and less sensitive to dropper variation; small bottles should make fewer batches, not require a stronger solution.
 

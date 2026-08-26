@@ -11368,7 +11368,7 @@ function RecipeConcentrateBuilder({
     ? measuredDropsPerMl
     : lotusDropsPerMl(dropperStyle, straightDropsPerMl);
   const dropDosingOptions = {
-    minimumFinalLiters: 0.5,
+    minimumFinalLiters: 0.1,
     minimumDrops: 1,
     dropsPerMl: activeDropsPerMl,
   };

@@ -126,24 +126,24 @@ describe('derived ion chemistry', () => {
 describe('findStrongestSafeConcentrateStrength', () => {
   it('calculates a dosing ceiling from a minimum whole-drop batch dose', () => {
     expect(findWholeDropDosingStrengthCeiling({
-      minimumFinalLiters: 0.5,
+      minimumFinalLiters: 0.1,
       dropsPerMl: 2,
       minimumDrops: 1,
-    })).toBe(1000);
+    })).toBe(200);
     expect(findStrongestSafeConcentrateStrength(
       { nacl: 1 },
       5000,
       {},
-      { minimumFinalLiters: 0.5, dropsPerMl: 2, minimumDrops: 1 },
-    )).toBe(1000);
+      { minimumFinalLiters: 0.1, dropsPerMl: 2, minimumDrops: 1 },
+    )).toBe(200);
   });
 
-  it('does not lower the documented ×500 ceiling for normal 500 mL drop dosing', () => {
+  it('does not lower the documented ×500 ceiling for normal 100 mL drop dosing', () => {
     expect(findStrongestSafeConcentrateStrength(
       { nacl: 1 },
       500,
       {},
-      { minimumFinalLiters: 0.5, dropsPerMl: 20, minimumDrops: 1 },
+      { minimumFinalLiters: 0.1, dropsPerMl: 20, minimumDrops: 1 },
     )).toBe(500);
   });
 
@@ -152,10 +152,10 @@ describe('findStrongestSafeConcentrateStrength', () => {
       { nacl: 1 },
       {},
       5000,
-      { minimumFinalLiters: 0.5, dropsPerMl: 2, minimumDrops: 1 },
+      { minimumFinalLiters: 0.1, dropsPerMl: 2, minimumDrops: 1 },
     );
     expect(limit.kind).toBe('dosing');
-    expect(limit.maxSafeStrength).toBe(1000);
+    expect(limit.maxSafeStrength).toBe(200);
   });
 
   it('returns the practical ceiling when the recipe has no modeled chemical limit', () => {

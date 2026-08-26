@@ -870,7 +870,7 @@ export function checkConcentrate(
 
 export const ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH = 500;
 
-export const CONCENTRATE_MINIMUM_DOSE_LITERS = 0.5;
+export const CONCENTRATE_MINIMUM_DOSE_LITERS = 0.1;
 export const CONCENTRATE_MINIMUM_WHOLE_DROPS = 1;
 
 export type ConcentrateDosingOptions = {
@@ -891,7 +891,7 @@ export type ConcentrateDosingOptions = {
  *   1000 / strength × finalLiters × dropsPerMl
  *
  * This is deliberately a separate constraint from solubility. It prevents an
- * otherwise safe stock from requiring a fractional drop for a 500 mL+ batch.
+ * otherwise safe stock from requiring a fractional drop for a 100 mL+ batch.
  */
 export function findWholeDropDosingStrengthCeiling(
   {
