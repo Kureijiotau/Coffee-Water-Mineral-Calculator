@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  background: #050913;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #050913;
+}
+
+.aio-shell {
+  min-height: 100vh;
+  color: #dbeafe;
+  background:
+    radial-gradient(circle at 12% -4%, rgb(217 70 239 / 0.16), transparent 26rem),
+    radial-gradient(circle at 98% 6%, rgb(34 211 238 / 0.12), transparent 23rem),
+    linear-gradient(145deg, #050913 0%, #0b1220 55%, #050913 100%);
+}
+
+.aio-grid {
+  background-image:
+    linear-gradient(rgb(148 163 184 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 0.02) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.aio-glass {
+  border: 1px solid rgb(148 163 184 / 0.14);
+  background: linear-gradient(145deg, rgb(30 41 59 / 0.88), rgb(9 15 28 / 0.76));
+  box-shadow: 0 22px 48px -34px rgb(2 6 23 / 0.95), 0 0 0 1px rgb(255 255 255 / 0.025) inset;
+}
+
+.aio-card {
+  border: 1px solid rgb(148 163 184 / 0.12);
+  background: rgb(6 12 24 / 0.48);
+}
+
+.aio-details > summary {
+  list-style: none;
+}
+
+.aio-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.aio-details[open] .aio-chevron {
+  transform: rotate(180deg);
+}
+
+.aio-range {
+  accent-color: #d946ef;
+}
+
+.aio-input::-webkit-inner-spin-button,
+.aio-input::-webkit-outer-spin-button {
+  opacity: 0.4;
+}
+
+.aio-pulse {
+  animation: aio-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes aio-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.14); }
+  50% { box-shadow: 0 0 0 8px rgb(52 211 153 / 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aio-pulse {
+    animation: none;
+  }
+}
