@@ -526,8 +526,8 @@ export function CondensedAio() {
 
         <div className="mb-4 flex items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/45 p-1 shadow-xl">
           {([
-            ['GH + KH', 'Separate compatible groups'],
             ['All-in-one', 'Every active salt shares one bottle'],
+            ['GH + KH', 'Separate compatible groups'],
             ['Separate salts', 'One bottle per active salt'],
           ] as Array<[RecipeMode, string]>).map(([label, description]) => (
             <button
