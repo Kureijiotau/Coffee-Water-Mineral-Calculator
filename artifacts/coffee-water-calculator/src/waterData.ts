@@ -637,7 +637,7 @@ export interface ConcentrateWarning {
 }
 
 export interface ConcentrateLimitingConstraint {
-  kind: 'chemical' | 'model-bound';
+  kind: 'chemical' | 'dosing' | 'model-bound';
   maxSafeStrength: number;
   saltNames: string[];
   message: string;
@@ -967,6 +967,11 @@ export function findConcentrateLimitingConstraint(
   const chemicalUpperBound = Math.max(1, Math.floor(maxStrength));
   const dosingUpperBound = findWholeDropDosingStrengthCeiling(dosingOptions);
   const upperBound = Math.min(chemicalUpperBound, dosingUpperBound);
+  const chemicalSafeStrength = findStrongestSafeConcentrateStrength(
+    saltTargetsBySaltId,
+    chemicalUpperBound,
+    formIdxBySaltId,
+  );
   const maxSafeStrength = findStrongestSafeConcentrateStrength(
     saltTargetsBySaltId,
     chemicalUpperBound,
@@ -977,23 +982,25 @@ export function findConcentrateLimitingConstraint(
     target => Number.isFinite(target) && target > 0,
   );
 
-  if (!hasActiveTarget || maxSafeStrength >= upperBound) {
+  if (
+    hasActiveTarget
+    && dosingUpperBound < chemicalUpperBound
+    && maxSafeStrength < chemicalSafeStrength
+  ) {
     return {
-      kind: dosingUpperBound < chemicalUpperBound ? 'model-bound' : 'model-bound',
+      kind: 'dosing',
       maxSafeStrength,
       saltNames: [],
-      message: dosingUpperBound < chemicalUpperBound
-        ? `Whole-drop dosing sets the current ceiling at ×${dosingUpperBound}: at least ${dosingOptions.minimumDrops ?? CONCENTRATE_MINIMUM_WHOLE_DROPS} drop is available for a ${((dosingOptions.minimumFinalLiters ?? CONCENTRATE_MINIMUM_DOSE_LITERS) * 1000).toFixed(0)} mL batch.`
-        : `No modeled chemical limit was reached before the current model ceiling of ×${upperBound}.`,
+      message: `Whole-drop dosing sets the current ceiling at ×${dosingUpperBound}: at least ${dosingOptions.minimumDrops ?? CONCENTRATE_MINIMUM_WHOLE_DROPS} drop is available for a ${((dosingOptions.minimumFinalLiters ?? CONCENTRATE_MINIMUM_DOSE_LITERS) * 1000).toFixed(0)} mL batch.`,
     };
   }
 
-  if (dosingUpperBound < chemicalUpperBound && maxSafeStrength >= dosingUpperBound) {
+  if (!hasActiveTarget || maxSafeStrength >= upperBound) {
     return {
       kind: 'model-bound',
       maxSafeStrength,
       saltNames: [],
-      message: `Whole-drop dosing sets the current ceiling at ×${dosingUpperBound}: at least ${dosingOptions.minimumDrops ?? CONCENTRATE_MINIMUM_WHOLE_DROPS} drop is available for a ${((dosingOptions.minimumFinalLiters ?? CONCENTRATE_MINIMUM_DOSE_LITERS) * 1000).toFixed(0)} mL batch.`,
+      message: `No modeled chemical limit was reached before the current model ceiling of ×${upperBound}.`,
     };
   }
 
