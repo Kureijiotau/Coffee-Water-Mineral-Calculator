@@ -870,20 +870,69 @@ export function checkConcentrate(
 
 export const ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH = 500;
 
+export const CONCENTRATE_MINIMUM_DOSE_LITERS = 0.5;
+export const CONCENTRATE_MINIMUM_WHOLE_DROPS = 1;
+
+export type ConcentrateDosingOptions = {
+  /** Minimum final-water volume for which a whole-drop dose must be possible. */
+  minimumFinalLiters?: number;
+  /** Active dropper calibration used to convert stock volume to drops. */
+  dropsPerMl?: number;
+  /** Minimum whole drops required at the minimum final-water volume. */
+  minimumDrops?: number;
+};
+
+/**
+ * Return the strongest multiplier that still allows a whole-drop dose at the
+ * minimum supported final-water volume.
+ *
+ * A recipe stock uses 1000 / strength mL per liter of final water, so the
+ * number of drops for a batch is:
+ *   1000 / strength × finalLiters × dropsPerMl
+ *
+ * This is deliberately a separate constraint from solubility. It prevents an
+ * otherwise safe stock from requiring a fractional drop for a 500 mL+ batch.
+ */
+export function findWholeDropDosingStrengthCeiling(
+  {
+    minimumFinalLiters = CONCENTRATE_MINIMUM_DOSE_LITERS,
+    dropsPerMl = 20,
+    minimumDrops = CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  }: ConcentrateDosingOptions = {},
+): number {
+  if (
+    !Number.isFinite(minimumFinalLiters)
+    || minimumFinalLiters <= 0
+    || !Number.isFinite(dropsPerMl)
+    || dropsPerMl <= 0
+    || !Number.isFinite(minimumDrops)
+    || minimumDrops <= 0
+  ) {
+    return 1;
+  }
+  return Math.max(
+    1,
+    Math.floor((1000 * minimumFinalLiters * dropsPerMl) / minimumDrops),
+  );
+}
+
 /**
  * Find the strongest single-stock multiplier that passes the concentrate
- * safety checks. Informational precision notes are allowed; chemical errors
- * and warnings disqualify a strength.
+ * safety checks and can be dosed in whole drops. Informational precision notes
+ * are allowed; chemical errors and warnings disqualify a strength.
  */
 export function findStrongestSafeConcentrateStrength(
   saltTargetsBySaltId: Record<string, number>,
   maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
   formIdxBySaltId: Record<string, number> = {},
+  dosingOptions: ConcentrateDosingOptions = {},
 ): number {
   const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
     target => Number.isFinite(target) && target > 0,
   );
-  const upperBound = Math.max(1, Math.floor(maxStrength));
+  const chemicalUpperBound = Math.max(1, Math.floor(maxStrength));
+  const dosingUpperBound = findWholeDropDosingStrengthCeiling(dosingOptions);
+  const upperBound = Math.min(chemicalUpperBound, dosingUpperBound);
   if (!hasActiveTarget || upperBound <= 1) return 1;
 
   const isSafe = (strength: number) =>
@@ -913,12 +962,16 @@ export function findConcentrateLimitingConstraint(
   saltTargetsBySaltId: Record<string, number>,
   formIdxBySaltId: Record<string, number> = {},
   maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
+  dosingOptions: ConcentrateDosingOptions = {},
 ): ConcentrateLimitingConstraint {
-  const upperBound = Math.max(1, Math.floor(maxStrength));
+  const chemicalUpperBound = Math.max(1, Math.floor(maxStrength));
+  const dosingUpperBound = findWholeDropDosingStrengthCeiling(dosingOptions);
+  const upperBound = Math.min(chemicalUpperBound, dosingUpperBound);
   const maxSafeStrength = findStrongestSafeConcentrateStrength(
     saltTargetsBySaltId,
-    upperBound,
+    chemicalUpperBound,
     formIdxBySaltId,
+    dosingOptions,
   );
   const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
     target => Number.isFinite(target) && target > 0,
@@ -926,10 +979,21 @@ export function findConcentrateLimitingConstraint(
 
   if (!hasActiveTarget || maxSafeStrength >= upperBound) {
     return {
+      kind: dosingUpperBound < chemicalUpperBound ? 'model-bound' : 'model-bound',
+      maxSafeStrength,
+      saltNames: [],
+      message: dosingUpperBound < chemicalUpperBound
+        ? `Whole-drop dosing sets the current ceiling at ×${dosingUpperBound}: at least ${dosingOptions.minimumDrops ?? CONCENTRATE_MINIMUM_WHOLE_DROPS} drop is available for a ${((dosingOptions.minimumFinalLiters ?? CONCENTRATE_MINIMUM_DOSE_LITERS) * 1000).toFixed(0)} mL batch.`
+        : `No modeled chemical limit was reached before the current model ceiling of ×${upperBound}.`,
+    };
+  }
+
+  if (dosingUpperBound < chemicalUpperBound && maxSafeStrength >= dosingUpperBound) {
+    return {
       kind: 'model-bound',
       maxSafeStrength,
       saltNames: [],
-      message: `No modeled chemical limit was reached before the current model ceiling of ×${upperBound}.`,
+      message: `Whole-drop dosing sets the current ceiling at ×${dosingUpperBound}: at least ${dosingOptions.minimumDrops ?? CONCENTRATE_MINIMUM_WHOLE_DROPS} drop is available for a ${((dosingOptions.minimumFinalLiters ?? CONCENTRATE_MINIMUM_DOSE_LITERS) * 1000).toFixed(0)} mL batch.`,
     };
   }
 
