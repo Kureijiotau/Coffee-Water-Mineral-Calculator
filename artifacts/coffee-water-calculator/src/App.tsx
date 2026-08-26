@@ -14,7 +14,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups,
+  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -3898,6 +3898,10 @@ function App() {
     }),
     [rows],
   );
+  const concentrateDiySaltForms = useMemo(
+    () => Object.fromEntries(SALTS.map((salt, index) => [salt.id, safeRows[index].formIdx])),
+    [safeRows],
+  );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
@@ -6716,6 +6720,9 @@ function App() {
             recipeHandoff={concentrateRecipeHandoff}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
             dropsPerMl={brewerDropsPerMl}
+            diySaltTargets={dosingSaltTargets}
+            diySaltForms={concentrateDiySaltForms}
+            diyFinalLiters={L > 0 ? L : 1}
             restoredRecipePlan={concentrateSnapshot.recipeConcentratePlan as ConcentratePlanSnapshot | null}
             restoreSnapshot={pendingConcentrateRestore}
             onRestoreSnapshotConsumed={() => setPendingConcentrateRestore(null)}
@@ -9362,6 +9369,9 @@ function ConcentrateWorkspace({
   recipeHandoff,
   onClearRecipeHandoff,
   dropsPerMl,
+  diySaltTargets,
+  diySaltForms,
+  diyFinalLiters,
   restoredRecipePlan,
   restoreSnapshot,
   onRestoreSnapshotConsumed,
@@ -9372,6 +9382,9 @@ function ConcentrateWorkspace({
   recipeHandoff: ConcentrateRecipeHandoff | null;
   onClearRecipeHandoff: () => void;
   dropsPerMl: number;
+  diySaltTargets: Record<string, number>;
+  diySaltForms: Record<string, number>;
+  diyFinalLiters: number;
   restoredRecipePlan: ConcentratePlanSnapshot | null;
   restoreSnapshot: WaterPlanConcentrateSnapshot | null;
   onRestoreSnapshotConsumed: () => void;
