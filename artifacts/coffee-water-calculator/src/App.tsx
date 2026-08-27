@@ -58,7 +58,6 @@ import {
 } from './watermancerProfiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
-import WorkframeProfileBuilder from './WorkframeProfileBuilder';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
@@ -95,6 +94,7 @@ const Week1Guide = lazy(() => import('./Week1Guide'));
 const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
 const TastePreferenceModal = lazy(() => import('./TastePreferenceModal'));
 const WaterIntentAssistant = lazy(() => import('./WaterIntentAssistant'));
+const WorkframeProfileBuilder = lazy(() => import('./WorkframeProfileBuilder'));
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
@@ -6727,16 +6727,6 @@ function App() {
               <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
               Concentrate
             </button>
-             <button
-               type="button"
-               role="tab"
-               aria-selected={appTab === 'workframe'}
-               onClick={() => setAppTab('workframe')}
-               className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'workframe' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-             >
-               <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
-               Workframe
-             </button>
           </div>
         </div>
       </div>
@@ -6775,7 +6765,9 @@ function App() {
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
           <div className="app-page-stack flex w-full max-w-6xl flex-col">
             {appHeader}
-            <WorkframeProfileBuilder onSendToWatermancer={handleWorkframeHandoff} />
+            <Suspense fallback={<div className="app-card rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-4 py-6 text-center text-xs text-cyan-100/75">Loading Workframe…</div>}>
+              <WorkframeProfileBuilder onSendToWatermancer={handleWorkframeHandoff} />
+            </Suspense>
           </div>
         </div>
       </div>
