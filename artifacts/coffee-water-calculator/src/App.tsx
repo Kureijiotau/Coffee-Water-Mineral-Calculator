@@ -58,6 +58,7 @@ import {
 } from './watermancerProfiles';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
+import WorkframeProfileBuilder from './WorkframeProfileBuilder';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
@@ -318,7 +319,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate';
+type AppTab = 'calculator' | 'guide' | 'concentrate' | 'workframe';
 type ConcentrateMode = 'builder' | 'lotus';
 
 const DEFAULT_WATER_PLAN_CONCENTRATE: WaterPlanConcentrateSnapshot = {
@@ -4365,6 +4366,30 @@ function App() {
     });
   };
 
+  const handleWorkframeHandoff = (name: string, targets: IonicTargetValues) => {
+    const profile = createWatermancerProfile(name, targets);
+
+    // Start the receiving workspace with a fresh automatic match while
+    // preserving the user's saved waters and salt inventory.
+    watermancerActionGenerationRef.current += 1;
+    watermancerActionBusyRef.current = false;
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerManualRoute(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerAppliedBestMatchRoute(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerActionMessage(null);
+    setWatermancerActionRunning(false);
+    setWatermancerBestMatchRunning(false);
+    setWatermancerTargetOverride(null);
+    setWatermancerImportedRecipeName(null);
+    handleNerdLevelChange('watermancer');
+    handleSaveWmProfile(profile);
+    setWatermancerTargetSource(`saved:${profile.id}`);
+    setAppTab('calculator');
+  };
+
   const handleApplyTasteInference = (inference: TasteInference) => {
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
@@ -6631,7 +6656,7 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : appTab === 'workframe' ? 'from-cyan-950 via-teal-950/80 to-indigo-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerMarkImage}
@@ -6702,6 +6727,16 @@ function App() {
               <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
               Concentrate
             </button>
+             <button
+               type="button"
+               role="tab"
+               aria-selected={appTab === 'workframe'}
+               onClick={() => setAppTab('workframe')}
+               className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'workframe' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+             >
+               <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+               Workframe
+             </button>
           </div>
         </div>
       </div>
@@ -6729,6 +6764,19 @@ function App() {
             onSnapshotChange={setConcentrateSnapshot}
           />
         </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (appTab === 'workframe') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-6xl flex-col">
+            {appHeader}
+            <WorkframeProfileBuilder onSendToWatermancer={handleWorkframeHandoff} />
+          </div>
         </div>
       </div>
     );
@@ -12080,6 +12128,11 @@ function WatermancerIonProfileCard({
       return profiles.find(
         profile => profile.id === currentDropdownValue.slice('profile:'.length),
       )?.name ?? 'selected Empirical Water profile';
+    }
+    if (currentDropdownValue.startsWith('saved:')) {
+      return wmProfiles.find(
+        profile => profile.id === currentDropdownValue.slice('saved:'.length),
+      )?.name ?? 'selected saved profile';
     }
     if (currentDropdownValue.startsWith('recipe:')) {
       return allRecipes.find(
