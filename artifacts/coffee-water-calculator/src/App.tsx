@@ -13972,6 +13972,7 @@ function MineralAnalysisLabel({
     ['GH', gh, 'ppm'],
     ['KH', kh, 'ppm'],
   ] as const;
+  const ghKhRatio = kh > 0 ? `${(gh / kh).toFixed(2)}:1` : '—';
 
   return (
     <aside
@@ -14049,7 +14050,12 @@ function MineralAnalysisLabel({
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-3 text-[9px] text-[#47737a]">
-          <span className="font-semibold uppercase tracking-[0.12em]">Estimated final TDS: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{tds.toFixed(0)}</span> ppm</span>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="font-semibold uppercase tracking-[0.12em]">Estimated final TDS: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{tds.toFixed(0)}</span> ppm</span>
+            <span className="font-semibold uppercase tracking-[0.12em]">
+              GH:KH ratio: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{ghKhRatio}</span>
+            </span>
+          </div>
           <span className="font-mono font-bold uppercase tracking-[0.12em]">mg/L = ppm</span>
         </div>
       </div>
