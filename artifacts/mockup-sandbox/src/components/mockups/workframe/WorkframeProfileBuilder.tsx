@@ -1,13 +1,16 @@
 import "./_group.css";
+import "./WorkframeProfileBuilder.css";
 import { useMemo, useState } from "react";
 import {
   Activity,
   ArrowRight,
   Beaker,
   Check,
+  CheckCircle2,
   ChevronRight,
   Copy,
   Droplets,
+  FileCheck2,
   FlaskConical,
   Gauge,
   Info,
@@ -16,6 +19,7 @@ import {
   Save,
   Share2,
   Target,
+  X,
 } from "lucide-react";
 
 type StageId = 1 | 2 | 3 | 4 | 5;
@@ -123,6 +127,10 @@ export function WorkframeProfileBuilder() {
   const [copied, setCopied] = useState(false);
   const [handoff, setHandoff] = useState(false);
   const [locked, setLocked] = useState(false);
+  const [finalized, setFinalized] = useState(false);
+  const [finalizeOpen, setFinalizeOpen] = useState(false);
+  const [profileName, setProfileName] = useState("House espresso / 01");
+  const [profileNameDraft, setProfileNameDraft] = useState("House espresso / 01");
 
   const values = useMemo(() => {
     const ghValue = Number(gh) || 0;
@@ -159,6 +167,11 @@ export function WorkframeProfileBuilder() {
     setBicarbonate("104");
     setSaved(false);
     setHandoff(false);
+    setFinalized(false);
+    setFinalizeOpen(false);
+    setLocked(false);
+    setProfileName("House espresso / 01");
+    setProfileNameDraft("House espresso / 01");
   };
 
   const copySummary = () => {
@@ -181,6 +194,24 @@ export function WorkframeProfileBuilder() {
   ];
 
   const statusCount = constraints.filter((constraint) => constraint.ok).length;
+  const finalIonProfile = [
+    { label: "Calcium", formula: "Ca²⁺", value: values.caValue, tone: "teal" },
+    { label: "Magnesium", formula: "Mg²⁺", value: values.mgValue, tone: "teal" },
+    { label: "Bicarbonate", formula: "HCO₃⁻", value: values.bicarbonateValue, tone: "amber" },
+    { label: "Sulfate", formula: "SO₄²⁻", value: sulfate, tone: "amber" },
+    { label: "Chloride", formula: "Cl⁻", value: chloride, tone: "amber" },
+    { label: "Potassium", formula: "K⁺", value: values.kValue, tone: "teal" },
+    { label: "Sodium", formula: "Na⁺", value: values.naValue, tone: "teal" },
+  ] as const;
+  const finalizeProfile = () => {
+    const nextName = profileNameDraft.trim() || "Untitled water profile";
+    setProfileName(nextName);
+    setProfileNameDraft(nextName);
+    setFinalized(true);
+    setSaved(true);
+    setLocked(true);
+    setFinalizeOpen(false);
+  };
 
   return (
     <div className="workframe-app">
@@ -244,7 +275,29 @@ export function WorkframeProfileBuilder() {
           </div>
 
           {activeTab === "watermancer" && (
-            <div className="wf-callout"><Info size={14} /><span><strong>Watermancer handoff preview.</strong> Your profile stays here while you reason through the constraints. Carry it over when the relationships are settled.</span></div>
+            finalized ? (
+              <section className="wf-handoff-review">
+                <div className="wf-handoff-review-heading">
+                  <div>
+                    <div className="wf-overline">Watermancer / staged profile</div>
+                    <h2 className="wf-display">{profileName}</h2>
+                  </div>
+                  <span className="wf-handoff-badge"><CheckCircle2 size={12} /> Ready to mix</span>
+                </div>
+                <p>Saved from Workframe with the relationships intact. Watermancer can now translate this profile into salts, water, and dose instructions.</p>
+                <div className="wf-handoff-ion-row">
+                  {finalIonProfile.slice(0, 4).map((ion) => (
+                    <span key={ion.label}><b>{ion.label}</b> {ion.value} ppm</span>
+                  ))}
+                </div>
+                <div className="wf-inline-actions">
+                  <button type="button" className="wf-primary-btn" onClick={() => setActiveTab("watermancer")}><Droplets size={13} /> Open Watermancer workspace</button>
+                  <button type="button" className="wf-ghost-btn" onClick={() => setFinalizeOpen(true)}>Rename profile</button>
+                </div>
+              </section>
+            ) : (
+              <div className="wf-callout"><Info size={14} /><span><strong>Watermancer handoff preview.</strong> Finalize and name the ion profile first. Then it will arrive here ready for salt translation.</span></div>
+            )
           )}
           {activeTab === "workframe" && (
             <div className="wf-callout"><Target size={14} /><span><strong>The order is the guardrail.</strong> Work top to bottom. Later stages can refine the profile, but never quietly rewrite an earlier anchor.</span></div>
@@ -326,7 +379,7 @@ export function WorkframeProfileBuilder() {
 
             <section className="wf-panel wf-profile-card">
               <div className="wf-panel-heading"><h3 className="wf-display">Profile summary</h3><span>{locked ? "LOCKED" : "DRAFT"}</span></div>
-              <h2 className="wf-profile-name wf-display">House espresso / 01</h2>
+              <h2 className="wf-profile-name wf-display">{profileName}</h2>
               <p className="wf-profile-subtitle">Balanced sweetness · articulate finish · 1 L final water</p>
               <div className="wf-profile-metrics">
                 <div className="wf-profile-metric"><label>GH</label><strong>{values.ghValue.toFixed(1)} <span>°dGH</span></strong></div>
@@ -336,16 +389,41 @@ export function WorkframeProfileBuilder() {
               </div>
               <div className="wf-profile-ratio"><span>GH : KH · K : Na</span><strong>{values.ghKh.toFixed(1)} : 1 · 1 : {values.kNa.toFixed(1)}</strong></div>
               <div className="wf-panel-actions">
-                <button type="button" className="wf-primary-btn" onClick={() => { setSaved(true); setLocked(true); }}><Save size={13} /> Save as draft</button>
+                <button type="button" className="wf-primary-btn" onClick={() => { setSaved(true); setLocked(true); }}><Save size={13} /> {finalized ? "Final profile saved" : "Save as draft"}</button>
                 <button type="button" className="wf-icon-btn" onClick={copySummary} aria-label="Copy profile summary">{copied ? <Check size={13} /> : <Copy size={13} />}</button>
               </div>
-              <div className="wf-save-state">{saved ? "Draft saved locally · ready for handoff" : copied ? "Summary copied to clipboard" : "Example values · no API connected"}</div>
+              <div className="wf-save-state">{finalized ? "Final ion profile locked · ready for Watermancer" : saved ? "Draft saved locally · ready for finalization" : copied ? "Summary copied to clipboard" : "Example values · no API connected"}</div>
+            </section>
+
+            <section className="wf-final-profile">
+              <div className="wf-panel-heading">
+                <h3 className="wf-display">Final ion profile</h3>
+                <span>{finalized ? "LOCKED" : "PREVIEW"}</span>
+              </div>
+              <p className="wf-final-profile-copy">Freeze the current relationships into a named profile before sending it to Watermancer.</p>
+              <div className="wf-ion-grid">
+                {finalIonProfile.map((ion) => (
+                  <div className={`wf-ion-chip is-${ion.tone}`} key={ion.label}>
+                    <span>{ion.label} <small>{ion.formula}</small></span>
+                    <strong>{ion.value} <em>ppm</em></strong>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="wf-primary-btn wf-finalize-btn" onClick={() => { setProfileNameDraft(profileName); setFinalizeOpen(true); }}>
+                <FileCheck2 size={13} /> {finalized ? "Review final profile" : "Make final ion profile"}
+              </button>
             </section>
 
             <section className="wf-handoff">
               <Share2 size={14} />
               <div><strong>Ready for Watermancer?</strong>Carry this relationship-first profile into the salt and dose workspace.
-                <button type="button" onClick={() => { setHandoff(true); setActiveTab("watermancer"); }}>{handoff ? "Handoff staged" : "Carry to Watermancer"} <ArrowRight size={11} /></button>
+                <button
+                  type="button"
+                  disabled={!finalized}
+                  onClick={() => { setHandoff(true); setActiveTab("watermancer"); }}
+                >
+                  {handoff ? "Handoff staged" : finalized ? "Send to Watermancer" : "Finalize profile first"} <ArrowRight size={11} />
+                </button>
               </div>
             </section>
 
@@ -354,6 +432,39 @@ export function WorkframeProfileBuilder() {
           </div>
         </aside>
       </div>
+      {finalizeOpen && (
+        <div className="wf-finalize-overlay" role="dialog" aria-modal="true" aria-labelledby="wf-finalize-title">
+          <div className="wf-finalize-dialog">
+            <div className="wf-finalize-dialog-heading">
+              <div>
+                <div className="wf-overline">Profile checkpoint</div>
+                <h2 id="wf-finalize-title" className="wf-display">Name the final ion profile</h2>
+                <p>Save this relationship-first profile so Watermancer can receive it as a named starting point.</p>
+              </div>
+              <button type="button" className="wf-icon-btn" onClick={() => setFinalizeOpen(false)} aria-label="Close final profile dialog"><X size={14} /></button>
+            </div>
+            <label className="wf-name-field">
+              <span>Saved profile name</span>
+              <input
+                autoFocus
+                value={profileNameDraft}
+                onChange={(event) => setProfileNameDraft(event.target.value)}
+                placeholder="e.g. Washed light roast"
+              />
+            </label>
+            <div className="wf-finalize-summary">
+              <div><span>GH : KH</span><strong>{values.ghKh.toFixed(2)} : 1</strong></div>
+              <div><span>Mg : Ca</span><strong>{values.mgCa.toFixed(2)} : 1</strong></div>
+              <div><span>K : Na</span><strong>1 : {values.kNa.toFixed(1)}</strong></div>
+              <div><span>Guardrails</span><strong>{statusCount}/5 clear</strong></div>
+            </div>
+            <div className="wf-finalize-actions">
+              <button type="button" className="wf-ghost-btn" onClick={() => setFinalizeOpen(false)}>Keep editing</button>
+              <button type="button" className="wf-primary-btn" onClick={finalizeProfile}><CheckCircle2 size={13} /> Save & stage for Watermancer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
