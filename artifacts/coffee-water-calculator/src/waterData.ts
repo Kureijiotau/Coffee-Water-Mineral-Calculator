@@ -460,6 +460,18 @@ export function computeIonTotals(
   return totals;
 }
 
+/**
+ * Return the total modeled mineral ppm added by one salt at its final-water
+ * target. This is intentionally independent of hydration form and concentrate
+ * strength: those affect the physical dose, while this value describes the
+ * finished water.
+ */
+export function computeSaltIonPpmTotal(saltId: string, targetPpm: number): number {
+  if (!Number.isFinite(targetPpm) || targetPpm <= 0) return 0;
+  const ionTotals = computeIonTotals({ [saltId]: targetPpm }, {}, 1);
+  return IONS.reduce((total, ion) => total + (ionTotals[ion.id] ?? 0), 0);
+}
+
 export function computeSupplementalIonTotals(
   saltTargets: Record<string, number>,
 ): Record<SupplementalIonId, number> {

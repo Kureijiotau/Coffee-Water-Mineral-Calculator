@@ -14,7 +14,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -14979,6 +14979,10 @@ function BrewerRecipeStepsModal({
                         ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
                         : salt.defaultFormIdx ?? 0;
                       const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+                       const saltContributionPpm = computeSaltIonPpmTotal(
+                         salt.id,
+                         stepSaltTargets[salt.id] ?? 0,
+                       );
                        const isAlkalinitySalt = salt.formula.includes('HCO₃') || salt.formula.includes('CO₃');
                        const saltStyle = allInOneConcentrate && isAlkalinitySalt
                          ? 'border-rose-300/60 bg-rose-500/[0.14] text-rose-50 ring-1 ring-rose-200/30'
@@ -15002,9 +15006,16 @@ function BrewerRecipeStepsModal({
                                  </div>
                                )}
                             </div>
-                              <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${saltValueStyle}`}>
-                                {amountLabel(salt, stepSaltTargets)}
-                              </span>
+                              <div className="shrink-0 text-right">
+                                <span className={`inline-block rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${saltValueStyle}`}>
+                                  {amountLabel(salt, stepSaltTargets)}
+                                </span>
+                                {saltContributionPpm > 0 && (
+                                  <div className="mt-1 text-[10px] font-medium tabular-nums text-cyan-200/80">
+                                    {saltContributionPpm.toFixed(1)} ppm total
+                                  </div>
+                                )}
+                              </div>
                           </div>
                         </div>
                       );

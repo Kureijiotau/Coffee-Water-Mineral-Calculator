@@ -3,6 +3,7 @@ import {
   computeSaltMg,
   computeSaltTargetPpm,
   computeIonTotals,
+  computeSaltIonPpmTotal,
   computeNaClTargetForSodiumGap,
   findIonOvershoots,
   findIonUnderdoses,
@@ -296,6 +297,21 @@ describe('computeIonTotals', () => {
       MAGNESIUM_GLYCINATE_LABEL.elementalMagnesiumMg
       + MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierMg,
     ).toBe(MAGNESIUM_GLYCINATE_LABEL.servingMassMg);
+  });
+});
+
+describe('computeSaltIonPpmTotal', () => {
+  it('sums all modeled ion contributions for one salt', () => {
+    const total = computeSaltIonPpmTotal('mgso4', 10);
+    const expected = 10 * ((24.305 + 96.06) / 120.365);
+
+    expect(total).toBeCloseTo(expected, 5);
+  });
+
+  it('returns zero for missing, zero, and invalid targets', () => {
+    expect(computeSaltIonPpmTotal('mgso4', 0)).toBe(0);
+    expect(computeSaltIonPpmTotal('missing-salt', 10)).toBe(0);
+    expect(computeSaltIonPpmTotal('mgso4', Number.NaN)).toBe(0);
   });
 });
 
