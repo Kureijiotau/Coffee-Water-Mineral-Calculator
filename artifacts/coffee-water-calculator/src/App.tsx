@@ -9,7 +9,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, FileInput, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -3605,7 +3605,7 @@ function WaterPlanManager({
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-700/70 px-2.5 text-[11px] font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
                 >
-                  <FileInput className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
                   Import plan
                 </button>
               </div>
@@ -12434,7 +12434,7 @@ function WatermancerIonProfileCard({
                  className="flex h-10 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 text-xs text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-500/20 hover:text-sky-100"
                  title="Import a shared .WATER or JSON ion recipe file"
                >
-                 <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                 <Import className="h-3.5 w-3.5" aria-hidden="true" />
                  <span className="hidden sm:inline">Import</span>
                </button>
                <input
