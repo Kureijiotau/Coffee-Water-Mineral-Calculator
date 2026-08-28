@@ -706,10 +706,29 @@ body {
   animation: meme-salt-row-flash 420ms ease-in-out 2;
 }
 
+@keyframes watermancer-ion-spotlight {
+  0%, 100% {
+    background-color: rgb(8 47 73 / 0.35);
+    box-shadow: inset 0 0 0 1px rgb(103 232 249 / 0.35), 0 0 0 rgb(34 211 238 / 0);
+  }
+  50% {
+    background-color: rgb(8 145 178 / 0.2);
+    box-shadow: inset 0 0 0 1px rgb(165 243 252 / 0.9), 0 0 22px -8px rgb(34 211 238 / 0.95);
+  }
+}
+
+.watermancer-ion-spotlight {
+  border-radius: 0.75rem;
+  margin: -0.35rem;
+  padding: 0.35rem;
+  animation: watermancer-ion-spotlight 900ms ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .brewer-make-water-attention,
   .brewer-make-water-checklist-flash,
-  .meme-salt-row-flash {
+  .meme-salt-row-flash,
+  .watermancer-ion-spotlight {
     animation: none !important;
   }
 }

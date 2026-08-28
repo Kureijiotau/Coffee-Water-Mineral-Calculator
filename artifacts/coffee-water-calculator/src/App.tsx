@@ -9,7 +9,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, PictureInPicture, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -3909,6 +3909,25 @@ function App() {
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
+  const [watermancerSpotlightIonIds, setWatermancerSpotlightIonIds] = useState<IonId[]>([]);
+  const watermancerSpotlightTimerRef = useRef<number | null>(null);
+  const spotlightWatermancerIons = useCallback((ionIds: IonId[]) => {
+    const nextIonIds = ACTIVE_ION_IDS.filter(id => ionIds.includes(id));
+    if (nextIonIds.length === 0) return;
+    if (watermancerSpotlightTimerRef.current !== null) {
+      window.clearTimeout(watermancerSpotlightTimerRef.current);
+    }
+    setWatermancerSpotlightIonIds(nextIonIds);
+    watermancerSpotlightTimerRef.current = window.setTimeout(() => {
+      setWatermancerSpotlightIonIds([]);
+      watermancerSpotlightTimerRef.current = null;
+    }, 3200);
+  }, []);
+  useEffect(() => () => {
+    if (watermancerSpotlightTimerRef.current !== null) {
+      window.clearTimeout(watermancerSpotlightTimerRef.current);
+    }
+  }, []);
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
@@ -3957,6 +3976,9 @@ function App() {
       }
       return [...prev, entry];
     });
+    spotlightWatermancerIons(
+      ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
+    );
     return entry;
   };
   const addReferenceWater = (water: typeof EMPIRICAL_WATERS[number]) => {
@@ -3994,6 +4016,9 @@ function App() {
       volumeMl: partial?.volumeMl ?? '0',
     };
     setAdditionWaters(prev => [...prev, entry]);
+    spotlightWatermancerIons(
+      ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
+    );
     return entry;
   };
   const updateAdditionWater = (id: string, patch: Partial<MineralWaterEntry>) => {
@@ -4128,8 +4153,6 @@ function App() {
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
    const [watermancerDoseInputDrafts, setWatermancerDoseInputDrafts] = useState<Record<string, string>>({});
    const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
-  const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
   const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
@@ -4293,7 +4316,6 @@ function App() {
       setWatermancerActionMessage(null);
       setWatermancerRecalculationNonce(0);
       setWatermancerDoseOverridesMg({});
-      setWatermancerResultSticky(false);
       setSodiumCorrectionOn(false);
       setFillWaterNudgeSeen(false);
     }
@@ -5328,6 +5350,9 @@ function App() {
         };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
+    spotlightWatermancerIons(
+      SALTS.find(salt => salt.id === saltId)?.ions.map(contribution => contribution.ionId) ?? [],
+    );
     setWatermancerDoseOverridesMg(current => ({
       ...current,
       [saltId]: Math.max(0, currentMg + deltaMg),
@@ -5698,7 +5723,6 @@ function App() {
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
-    setWatermancerResultSticky(false);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
@@ -5731,7 +5755,6 @@ function App() {
     setWatermancerActionMessage(null);
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
-    setWatermancerResultSticky(false);
     setSodiumCorrectionOn(false);
     setWaterComparisonOpen(false);
     setSelectedWaterComparisonKey('');
@@ -8416,10 +8439,7 @@ function App() {
               targetIons={watermancerIonTargets}
               targetLabel={watermancerTargetSourceLabel}
               activeProfile={activeProfile}
-               sticky={watermancerResultSticky}
-                dockPosition={watermancerResultDock}
-                onDockPositionChange={setWatermancerResultDock}
-               onToggleSticky={() => setWatermancerResultSticky(current => !current)}
+               spotlightIonIds={watermancerSpotlightIonIds}
             />
           </div>
         )}
@@ -8541,11 +8561,13 @@ function App() {
                         type="button"
                          onClick={() => {
                           enterWatermancerManualMode();
-                           setWatermancerUsedSaltIds(
-                             SALTS
-                               .filter(salt => showWatermancerMemeSalts || !MEME_SALT_IDS.has(salt.id))
-                               .map(salt => salt.id),
-                           );
+                            const enabledSalts = SALTS.filter(
+                              salt => showWatermancerMemeSalts || !MEME_SALT_IDS.has(salt.id),
+                            );
+                            setWatermancerUsedSaltIds(enabledSalts.map(salt => salt.id));
+                            spotlightWatermancerIons([
+                              ...new Set(enabledSalts.flatMap(salt => salt.ions.map(contribution => contribution.ionId))),
+                            ]);
                         }}
                         className="rounded border border-indigo-300/25 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-indigo-200 transition hover:border-indigo-200/50 hover:bg-indigo-500/20 hover:text-indigo-100"
                         aria-label="Use all salts"
@@ -8575,6 +8597,9 @@ function App() {
                          setWatermancerDoseInputDrafts(current => ({ ...current, [salt.id]: value }));
                          enterWatermancerManualMode();
                          const parsed = Number(value);
+                          spotlightWatermancerIons(
+                            salt.ions.map(contribution => contribution.ionId),
+                          );
                          setWatermancerDoseOverridesMg(current => ({
                            ...current,
                            [salt.id]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
@@ -8692,6 +8717,11 @@ function App() {
                             type="button"
                             onClick={() => {
                               enterWatermancerManualMode();
+                               if (!used) {
+                                 spotlightWatermancerIons(
+                                   salt.ions.map(contribution => contribution.ionId),
+                                 );
+                               }
                               setWatermancerUsedSaltIds(current => used
                                 ? current.filter(id => id !== salt.id)
                                 : [...current, salt.id]);
@@ -12728,78 +12758,152 @@ function WatermancerIonProfileCard({
   );
 }
 
+function WatermancerIonReadingRow({
+  id,
+  actualIons,
+  targetIons,
+  activeProfile,
+  highlighted = false,
+}: {
+  id: IonId;
+  actualIons: Partial<Record<IonId, number>>;
+  targetIons: Partial<Record<IonId, number>>;
+  activeProfile: WaterProfile;
+  highlighted?: boolean;
+}) {
+  const ion = ION_MAP[id];
+  const actual = actualIons[id] ?? 0;
+  const target = Math.max(targetIons[id] ?? 0, 0);
+  const tolerance = 0.05;
+  const overshoot = target > 0
+    ? actual > target + tolerance
+    : actual > tolerance;
+  const covered = target > 0 && actual >= target - tolerance;
+  const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+  const coveragePercent = target > 0 ? (actual / target) * 100 : null;
+  const coverageLabel = coveragePercent === null
+    ? '—'
+    : `${Math.round(coveragePercent).toLocaleString()}%`;
+  const profileRange = activeProfile.ranges[id];
+  const profileGreenMax = profileRange.greenMax;
+  const profileYellowPercent = profileGreenMax > 0
+    ? (profileRange.yellowMax / profileGreenMax) * 100
+    : 100;
+  const profilePercent = profileGreenMax > 0
+    ? (actual / profileGreenMax) * 100
+    : 0;
+  const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
+  const profileFillPercent = profileScalePercent > 0
+    ? Math.min((profilePercent / profileScalePercent) * 100, 100)
+    : 0;
+  const profileGreenMarkerPercent = profileScalePercent > 0
+    ? Math.min((100 / profileScalePercent) * 100, 100)
+    : 100;
+  const profileYellowMarkerPercent = profileScalePercent > 0
+    ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
+    : 100;
+  const barColor = overshoot
+    ? 'bg-rose-400'
+    : covered
+      ? 'bg-emerald-400'
+      : actual > 0
+        ? 'bg-cyan-400'
+        : 'bg-slate-700';
+  const valueColor = overshoot
+    ? 'text-rose-300'
+    : covered
+      ? 'text-emerald-300'
+      : actual > 0
+        ? 'text-cyan-300'
+        : 'text-slate-500';
+  const status = target <= 0
+    ? actual > tolerance ? 'above target' : 'no target set'
+    : overshoot
+      ? `${formatLiveIonPpm(actual - target)} ppm above target`
+      : covered
+        ? `${formatLiveIonPpm(actual)} ppm — target reached`
+        : `${formatLiveIonPpm(actual)} ppm of ${formatLiveIonPpm(target)} ppm covered`;
+
+  return (
+    <div
+      data-watermancer-ion-row={id}
+      className={`grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem] ${
+        highlighted ? 'watermancer-ion-spotlight' : ''
+      }`}
+    >
+      <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
+      <div className="min-w-0">
+        <div
+          className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
+          tabIndex={0}
+          role="img"
+          aria-label={coveragePercent === null
+            ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
+            : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
+          title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
+        >
+          <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+              style={{ width: `${percentage}%` }}
+            />
+            <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
+              covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
+            }`}>
+              {coverageLabel}
+            </span>
+          </div>
+          <div
+            className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
+            aria-hidden="true"
+          >
+            <div
+              className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
+              style={{ width: `${profileFillPercent}%` }}
+            />
+            <div
+              className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
+              style={{ left: `${profileGreenMarkerPercent}%` }}
+            />
+            <div
+              className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
+              style={{ left: `${profileYellowMarkerPercent}%` }}
+            />
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
+              {Math.round(profilePercent)}%
+            </span>
+          </div>
+        </div>
+        <div className={`mt-1 text-[10px] ${valueColor}`}>
+          {status}
+        </div>
+      </div>
+      <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
+        {formatLiveIonPpm(actual)}
+        <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
+      </span>
+    </div>
+  );
+}
+
 function WatermancerIonCoverageBars({
   actualIons,
   supplementalIons,
   targetIons,
   targetLabel,
   activeProfile,
-  sticky,
-  dockPosition,
-  onDockPositionChange,
-  onToggleSticky,
+  spotlightIonIds,
 }: {
   actualIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
   activeProfile: WaterProfile;
-  sticky: boolean;
-  dockPosition: 'center' | 'left' | 'right';
-  onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
-  onToggleSticky: () => void;
+  spotlightIonIds: IonId[];
 }) {
-  const [isScrolling, setIsScrolling] = useState(false);
-  const completeActualIons = completeIonTotals(actualIons);
-  const finalGh = computeGH(completeActualIons);
-  const finalKh = computeKH(completeActualIons);
-  const finalTds = Object.values(actualIons).reduce((total, ppm) => total + (ppm ?? 0), 0);
-  const finalGhKhRatio = finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh)
-    ? `${(finalGh / finalKh).toFixed(1)}:1`
-    : '—';
-  useEffect(() => {
-    if (!sticky) {
-      setIsScrolling(false);
-      return;
-    }
-    let scrollEndTimer: number | null = null;
-    const handleScroll = () => {
-      setIsScrolling(true);
-      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
-      scrollEndTimer = window.setTimeout(() => {
-        setIsScrolling(false);
-        scrollEndTimer = null;
-      }, 180);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
-    };
-  }, [sticky]);
-  const compact = sticky && isScrolling;
-  const stickyPositionClass = dockPosition === 'left'
-    ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
-    : dockPosition === 'right'
-      ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
-      : 'fixed inset-x-3 bottom-3 top-auto sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
-  const compactPositionClass = dockPosition === 'left'
-    ? 'fixed bottom-3 left-3 right-auto w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
-    : dockPosition === 'right'
-      ? 'fixed bottom-3 left-auto right-3 w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
-      : 'fixed bottom-3 left-1/2 right-auto w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2';
-  const positionClass = compact
-    ? compactPositionClass
-    : sticky
-      ? stickyPositionClass
-      : 'relative';
-  const stickyHeightClass = !compact && dockPosition === 'center'
-    ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
-    : '';
-
   return (
     <div
-      className={`${positionClass} ${stickyHeightClass} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md transition-[width,max-height] duration-200`}
+      className="app-card relative flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
     >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -12813,183 +12917,20 @@ function WatermancerIonCoverageBars({
             {targetLabel} ion targets
           </span>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {sticky && (
-            <div className="flex items-center gap-1" role="group" aria-label="Follow result dock position">
-              <button
-                type="button"
-                onClick={() => onDockPositionChange('left')}
-                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition ${
-                  dockPosition === 'left'
-                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
-                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
-                }`}
-                aria-pressed={dockPosition === 'left'}
-                aria-label="Dock result to the left side"
-                title="Dock result to the left side"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden md:inline">Left</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onDockPositionChange('center')}
-                className={`inline-flex h-8 items-center justify-center rounded-lg border px-2 text-[10px] font-semibold transition ${
-                  dockPosition === 'center'
-                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
-                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
-                }`}
-                aria-pressed={dockPosition === 'center'}
-                aria-label="Center result at the bottom"
-                title="Center result at the bottom"
-              >
-                Center
-              </button>
-              <button
-                type="button"
-                onClick={() => onDockPositionChange('right')}
-                className={`inline-flex h-8 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold transition ${
-                  dockPosition === 'right'
-                    ? 'border-cyan-300/55 bg-cyan-500/20 text-cyan-100'
-                    : 'border-cyan-300/20 bg-slate-950/30 text-slate-400 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
-                }`}
-                aria-pressed={dockPosition === 'right'}
-                aria-label="Dock result to the right side"
-                title="Dock result to the right side"
-              >
-                <span className="hidden md:inline">Right</span>
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={onToggleSticky}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
-              sticky
-                ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65 hover:bg-emerald-500/20'
-                : 'border-cyan-300/25 bg-slate-950/30 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-500/10'
-            }`}
-            aria-pressed={sticky}
-            aria-label={sticky ? 'Stop following the automatic match result' : 'Keep the automatic match result visible while scrolling'}
-            title={sticky ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
-          >
-            <PictureInPicture className="h-3.5 w-3.5" aria-hidden="true" />
-            <span className="hidden sm:inline">{sticky ? 'Following screen' : 'Follow screen'}</span>
-          </button>
-        </div>
+        <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">
+          Live
+        </span>
       </div>
-        <div className={`${compact ? 'hidden' : ''} app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
-       {ACTIVE_ION_IDS.map(id => {
-         const ion = ION_MAP[id];
-         const actual = actualIons[id] ?? 0;
-         const target = Math.max(targetIons[id] ?? 0, 0);
-         const tolerance = 0.05;
-         const overshoot = target > 0
-           ? actual > target + tolerance
-           : actual > tolerance;
-         const covered = target > 0 && actual >= target - tolerance;
-         const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
-         const coveragePercent = target > 0 ? (actual / target) * 100 : null;
-         const coverageLabel = coveragePercent === null
-           ? '—'
-           : `${Math.round(coveragePercent).toLocaleString()}%`;
-          const profileRange = activeProfile.ranges[id];
-          const profileGreenMax = profileRange.greenMax;
-          const profileYellowPercent = profileGreenMax > 0
-            ? (profileRange.yellowMax / profileGreenMax) * 100
-            : 100;
-          const profilePercent = profileGreenMax > 0
-            ? (actual / profileGreenMax) * 100
-            : 0;
-          const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
-          const profileFillPercent = profileScalePercent > 0
-            ? Math.min((profilePercent / profileScalePercent) * 100, 100)
-            : 0;
-          const profileGreenMarkerPercent = profileScalePercent > 0
-            ? Math.min((100 / profileScalePercent) * 100, 100)
-            : 100;
-          const profileYellowMarkerPercent = profileScalePercent > 0
-            ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
-            : 100;
-         const barColor = overshoot
-           ? 'bg-rose-400'
-           : covered
-             ? 'bg-emerald-400'
-             : actual > 0
-               ? 'bg-cyan-400'
-               : 'bg-slate-700';
-         const valueColor = overshoot
-           ? 'text-rose-300'
-           : covered
-             ? 'text-emerald-300'
-             : actual > 0
-               ? 'text-cyan-300'
-               : 'text-slate-500';
-         const status = target <= 0
-           ? actual > tolerance ? 'above target' : 'no target set'
-           : overshoot
-             ? `${formatLiveIonPpm(actual - target)} ppm above target`
-             : covered
-               ? `${formatLiveIonPpm(actual)} ppm — target reached`
-               : `${formatLiveIonPpm(actual)} ppm of ${formatLiveIonPpm(target)} ppm covered`;
-
-         return (
-           <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
-             <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
-             <div className="min-w-0">
-               <div
-                  className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
-                  tabIndex={0}
-                  role="img"
-                 aria-label={coveragePercent === null
-                    ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
-                    : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
-                  title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
-               >
-                  <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                    <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
-                      covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
-                    }`}>
-                      {coverageLabel}
-                    </span>
-                  </div>
-                  <div
-                    className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
-                    aria-hidden="true"
-                  >
-                    <div
-                      className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
-                                style={{ width: `${profileFillPercent}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
-                                style={{ left: `${profileGreenMarkerPercent}%` }}
-                    />
-                    <div
-                      className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
-                                style={{ left: `${profileYellowMarkerPercent}%` }}
-                    />
-                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
-                                {Math.round(profilePercent)}%
-                    </span>
-                  </div>
-               </div>
-               <div className={`mt-1 text-[10px] ${valueColor}`}>
-                 {status}
-               </div>
-             </div>
-             <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
-               {formatLiveIonPpm(actual)}
-               <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
-             </span>
-           </div>
-         );
-       })}
+        <div className="app-card-body min-h-0 flex-1 space-y-3">
+        {ACTIVE_ION_IDS.map(id => (
+          <WatermancerIonReadingRow
+            key={id}
+            id={id}
+            actualIons={actualIons}
+            targetIons={targetIons}
+            activeProfile={activeProfile}
+          />
+        ))}
        {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
          const supplemental = SUPPLEMENTAL_ION_MAP[id];
          const ppm = supplementalIons[id] ?? 0;
@@ -13022,33 +12963,32 @@ function WatermancerIonCoverageBars({
          );
        })}
       </div>
-      {sticky && (
-        <div
-          className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2"
-          aria-label="Final mixture summary"
-        >
-          <div className="min-w-0 px-1 text-center">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-indigo-200/70">GH</div>
-            <div className="mt-0.5 text-xs font-semibold tabular-nums text-indigo-200">{finalGh.toFixed(1)}</div>
-             <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
-          </div>
-          <div className="min-w-0 px-1 text-center">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-amber-200/70">KH</div>
-            <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">{finalKh.toFixed(1)}</div>
-             <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
-          </div>
-          <div className="min-w-0 px-1 text-center">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-200/70">GH:KH</div>
-            <div className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-200">{finalGhKhRatio}</div>
-            <div className="text-[9px] text-slate-500">ratio</div>
-          </div>
-          <div className="min-w-0 px-1 text-center">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">TDS</div>
-            <div className="mt-0.5 text-xs font-semibold tabular-nums text-cyan-200">{finalTds.toFixed(1)}</div>
-            <div className="text-[9px] text-slate-500">mg/L</div>
-          </div>
-        </div>
-      )}
+       {spotlightIonIds.length > 0 && (
+         <div
+           className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/50 backdrop-blur-md"
+           aria-label="Recently changed ion readings"
+           aria-live="polite"
+         >
+           <div className="mb-2 flex items-center justify-between gap-3 px-1">
+             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">
+               Updated readings
+             </span>
+             <span className="text-[10px] text-slate-500">Final mixture</span>
+           </div>
+           <div className="grid gap-2 sm:grid-cols-2">
+             {spotlightIonIds.map(id => (
+               <WatermancerIonReadingRow
+                 key={`spotlight-${id}`}
+                 id={id}
+                 actualIons={actualIons}
+                 targetIons={targetIons}
+                 activeProfile={activeProfile}
+                 highlighted
+               />
+             ))}
+           </div>
+         </div>
+       )}
     </div>
   );
 }

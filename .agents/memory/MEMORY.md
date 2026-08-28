@@ -16,7 +16,7 @@
 - [Mode workspace hierarchy](mode-workspace-hierarchy.md) — Alchemist starts collapsed around recipe preparation; Watermancer leads with ion targets and translates salt recipes
 - [Watermancer salt selection](watermancer-salt-inventory.md) — use a simple Used/Not used salt toggle and choose hydration form per salt
 - [Watermancer unified plan](watermancer-plan-model.md) — coordinate target, water, salt, strategy, priority, and overshoot decisions through one plan signature
-- [Watermancer result follow mode](watermancer-sticky-ui.md) — use viewport anchoring for reliable automatic-match result following
+- [Watermancer transient ion tray](watermancer-sticky-ui.md) — spotlight affected final-ion rows in a timed bottom tray instead of PiP/follow-screen mode
 - [Watermancer live volume result](watermancer-live-volume-card.md) — automatic-match ion results recalculate from edited visible water volumes
 - [Watermancer visible water baseline](watermancer-route-switch-baseline.md) — the automatic match treats visible water volumes as the user-controlled baseline
 - [Watermancer recalculation control](watermancer-recalculate-control.md) — advanced matching settings have an explicit full-plan apply action
