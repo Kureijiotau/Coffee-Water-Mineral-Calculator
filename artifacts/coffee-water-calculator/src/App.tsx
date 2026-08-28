@@ -7885,7 +7885,7 @@ function App() {
                     title="Browse community waters"
                   >
                     <Plus className="w-3 h-3" />
-                    Community
+                  Browse waters
                   </button>
                   <span className="text-slate-600 group-open:rotate-90 transition-transform ml-auto">▶</span>
                 </summary>
