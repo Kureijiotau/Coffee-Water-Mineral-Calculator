@@ -4065,7 +4065,7 @@ function App() {
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
   const watermancerWaterVolumeBaselineRef = useRef(
-    new Map<string, { volume: number; ionIds: IonId[] }>(),
+    new Map<string, { volume: number; ionValues: Record<IonId, number> }>(),
   );
   useEffect(() => {
     const entries = [...mineralWaters, ...additionWaters];
@@ -4074,22 +4074,39 @@ function App() {
         entry.id,
         {
           volume: Math.max(0, num(entry.volumeMl)),
-          ionIds: ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
+          ionValues: Object.fromEntries(
+            ACTIVE_ION_IDS.map(id => [id, num(entry.ions[id] ?? '')]),
+          ) as Record<IonId, number>,
         },
       ] as const),
     );
-    const increasedIonIds = new Set<IonId>();
+    const adjustedIonIds = new Set<IonId>();
     for (const [id, next] of nextBaseline) {
       const previous = watermancerWaterVolumeBaselineRef.current.get(id);
-      if (previous && next.volume > previous.volume) {
-        previous.ionIds.forEach(ionId => increasedIonIds.add(ionId));
-      } else if (!previous && next.volume > 0) {
-        next.ionIds.forEach(ionId => increasedIonIds.add(ionId));
+      if (previous) {
+        if (next.volume !== previous.volume) {
+          ACTIVE_ION_IDS.forEach(ionId => {
+            if (previous.ionValues[ionId] > 0 || next.ionValues[ionId] > 0) {
+              adjustedIonIds.add(ionId);
+            }
+          });
+        }
+        if (next.volume > 0) {
+          ACTIVE_ION_IDS.forEach(ionId => {
+            if (next.ionValues[ionId] !== previous.ionValues[ionId]) {
+              adjustedIonIds.add(ionId);
+            }
+          });
+        }
+      } else if (next.volume > 0) {
+        ACTIVE_ION_IDS.forEach(ionId => {
+          if (next.ionValues[ionId] > 0) adjustedIonIds.add(ionId);
+        });
       }
     }
     watermancerWaterVolumeBaselineRef.current = nextBaseline;
-    if (increasedIonIds.size > 0) {
-      spotlightWatermancerIons([...increasedIonIds]);
+    if (adjustedIonIds.size > 0) {
+      spotlightWatermancerIons([...adjustedIonIds]);
     }
   }, [additionWaters, mineralWaters, spotlightWatermancerIons]);
   useDebouncedPersistence(() => {
@@ -5425,7 +5442,7 @@ function App() {
         };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
-    if (deltaMg > 0) {
+    if (deltaMg !== 0) {
       spotlightWatermancerIons(
         SALTS.find(salt => salt.id === saltId)?.ions.map(contribution => contribution.ionId) ?? [],
       );
@@ -8679,7 +8696,7 @@ function App() {
                          enterWatermancerManualMode();
                          const parsed = Number(value);
                           const previous = Number(doseInputValue);
-                          if (Number.isFinite(parsed) && Number.isFinite(previous) && parsed > previous) {
+                           if (Number.isFinite(parsed) && Number.isFinite(previous) && parsed !== previous) {
                             spotlightWatermancerIons(
                               salt.ions.map(contribution => contribution.ionId),
                             );
