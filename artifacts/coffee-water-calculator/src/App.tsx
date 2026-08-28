@@ -12453,7 +12453,7 @@ function WatermancerIonProfileCard({
                    : 'text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45'
              }`}
              aria-live="polite"
-             title="Download the current Watermancer profile as a .WATER.png file"
+             title="Download the current profile"
            >
              <Download className="h-3.5 w-3.5" aria-hidden="true" />
              <span className="hidden sm:inline">
