@@ -7066,7 +7066,7 @@ function App() {
            {showAlchemist && <div className="app-card app-panel-surface order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
             <div className="app-section-header flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
-                <SaltSieveIcon />
+                <GiSaltShaker className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">
                   {showAlchemist ? 'Mineral Recipe' : 'Target Mineral Profile'}
                 </h2>
