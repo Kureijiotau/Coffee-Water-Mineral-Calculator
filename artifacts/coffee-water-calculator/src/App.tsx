@@ -12749,6 +12749,7 @@ function WatermancerIonCoverageBars({
   onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
   onToggleSticky: () => void;
 }) {
+  const [isScrolling, setIsScrolling] = useState(false);
   const completeActualIons = completeIonTotals(actualIons);
   const finalGh = computeGH(completeActualIons);
   const finalKh = computeKH(completeActualIons);
@@ -12756,25 +12757,56 @@ function WatermancerIonCoverageBars({
   const finalGhKhRatio = finalKh > 0 && finalGh >= 0 && Number.isFinite(finalGh / finalKh)
     ? `${(finalGh / finalKh).toFixed(1)}:1`
     : '—';
+  useEffect(() => {
+    if (!sticky) {
+      setIsScrolling(false);
+      return;
+    }
+    let scrollEndTimer: number | null = null;
+    const handleScroll = () => {
+      setIsScrolling(true);
+      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
+      scrollEndTimer = window.setTimeout(() => {
+        setIsScrolling(false);
+        scrollEndTimer = null;
+      }, 180);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
+    };
+  }, [sticky]);
+  const compact = sticky && isScrolling;
   const stickyPositionClass = dockPosition === 'left'
     ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
     : dockPosition === 'right'
       ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
       : 'fixed inset-x-3 bottom-3 top-auto sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
-  const stickyHeightClass = dockPosition === 'center'
+  const compactPositionClass = dockPosition === 'left'
+    ? 'fixed bottom-3 left-3 right-auto w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
+    : dockPosition === 'right'
+      ? 'fixed bottom-3 left-auto right-3 w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
+      : 'fixed bottom-3 left-1/2 right-auto w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2';
+  const positionClass = compact
+    ? compactPositionClass
+    : sticky
+      ? stickyPositionClass
+      : 'relative';
+  const stickyHeightClass = !compact && dockPosition === 'center'
     ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
     : '';
 
   return (
     <div
-      className={`${sticky ? `${stickyPositionClass} ${stickyHeightClass}` : 'relative'} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+      className={`${positionClass} ${stickyHeightClass} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md transition-[width,max-height] duration-200`}
     >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Current ion readings</h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-               Current ion readings
+               Final mineral contribution from the current waters and salt doses.
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
@@ -12847,7 +12879,7 @@ function WatermancerIonCoverageBars({
           </button>
         </div>
       </div>
-      <div className={`app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
+        <div className={`${compact ? 'hidden' : ''} app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
        {ACTIVE_ION_IDS.map(id => {
          const ion = ION_MAP[id];
          const actual = actualIons[id] ?? 0;
