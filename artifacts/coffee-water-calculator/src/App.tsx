@@ -7128,7 +7128,7 @@ function App() {
               <button
                 onClick={handleExportRecipe}
                  className="flex items-center gap-1.5 text-xs text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45 rounded-lg px-2.5 py-1.5 transition"
-                title="Export this recipe as a shareable file"
+                 title="Download the current profile"
               >
                  <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Share</span>
@@ -7147,7 +7147,7 @@ function App() {
               <button
                 onClick={() => importInputRef.current?.click()}
                  className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
-                title="Import a shared .WATER or JSON recipe file"
+                title="Import water profile"
               >
                  <Import className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Import</span>
