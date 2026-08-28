@@ -9,7 +9,7 @@ import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import hackermanGif from '@assets/hackerman_1787062754046.gif';
 import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, FileInput, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -3605,7 +3605,7 @@ function WaterPlanManager({
                   onClick={() => fileInputRef.current?.click()}
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-700/70 px-2.5 text-[11px] font-semibold text-slate-300 transition hover:bg-slate-800 hover:text-white"
                 >
-                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                  <FileInput className="h-3.5 w-3.5" aria-hidden="true" />
                   Import plan
                 </button>
               </div>
