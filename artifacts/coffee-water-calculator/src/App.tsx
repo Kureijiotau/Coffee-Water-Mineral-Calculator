@@ -56,6 +56,10 @@ import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles,
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
+import {
+  embedWaterRecipeJsonInPng,
+  extractWaterRecipeJsonFromPng,
+} from './waterRecipeImage';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
 import {
@@ -6014,26 +6018,46 @@ function App() {
         splitMls: { ...splitMls },
       }),
     });
-    const blob = new Blob([text], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'recipe';
-    a.download = `${slug}.WATER`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const fileName = `${slug}.WATER.png`;
+    const downloadFile = (file: File) => {
+      const url = URL.createObjectURL(file);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+    void (async () => {
+      try {
+        const response = await fetch(watermancerMarkImage);
+        if (!response.ok) throw new Error('Could not load the Watermancer image.');
+        const pngBytes = new Uint8Array(await response.arrayBuffer());
+        const packagedPng = embedWaterRecipeJsonInPng(pngBytes, text);
+        downloadFile(new File([packagedPng], fileName, { type: 'image/png' }));
+      } catch {
+        downloadFile(new File([text], `${slug}.WATER`, { type: 'application/json' }));
+        window.alert('The image preview could not be packaged, so a JSON .WATER file was exported instead.');
+      }
+    })();
   };
 
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const handleImportFile = async (file: File) => {
-    const text = await file.text();
+    const fileBytes = await file.arrayBuffer();
+    const text = extractWaterRecipeJsonFromPng(fileBytes)
+      ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
       if (!showWatermancer) {
         window.alert('Switch to Watermancer before importing an ion recipe.');
         return;
       }
-      const importedProfileName = file.name.replace(/\.[^/.]+$/, '').trim() || waterRecipe.name;
+      const importedProfileName = file.name
+        .replace(/(?:\.WATER)?\.png$/i, '')
+        .replace(/\.WATER$/i, '')
+        .replace(/\.json$/i, '')
+        .trim() || waterRecipe.name;
       const importedProfile = createWatermancerProfile(
         importedProfileName,
         waterRecipe.ions as IonicTargetValues,
@@ -6477,17 +6501,18 @@ function App() {
 
   const handleShareWatermancerPlan = async () => {
     const recipeName = watermancerTargetSourceLabel || 'Custom recipe';
-    const fileName = `${recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe'}.WATER`;
-    const file = new File([serializeWaterRecipeFile(recipeName, watermancerIonTargets)], fileName, { type: 'application/json' });
+    const slug = recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe';
+    const fileName = `${slug}.WATER.png`;
+    const json = serializeWaterRecipeFile(recipeName, watermancerIonTargets);
     const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
     };
-    const downloadRecipeFile = () => {
+    const downloadRecipeFile = (file: File) => {
       const url = URL.createObjectURL(file);
       const link = document.createElement('a');
       link.href = url;
-      link.download = fileName;
+      link.download = file.name;
       link.style.display = 'none';
       document.body.appendChild(link);
       link.click();
@@ -6496,6 +6521,10 @@ function App() {
     };
 
     try {
+      const response = await fetch(watermancerMarkImage);
+      if (!response.ok) throw new Error('Could not load the Watermancer image.');
+      const pngBytes = new Uint8Array(await response.arrayBuffer());
+      const file = new File([embedWaterRecipeJsonInPng(pngBytes, json)], fileName, { type: 'image/png' });
       if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: recipeName,
@@ -6505,13 +6534,14 @@ function App() {
         showShareStatus('shared');
         return;
       }
-      downloadRecipeFile();
+      downloadRecipeFile(file);
       showShareStatus('downloaded');
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') return;
       try {
-        downloadRecipeFile();
+        downloadRecipeFile(new File([json], `${slug}.WATER`, { type: 'application/json' }));
         showShareStatus('downloaded');
+        window.alert('The image preview could not be packaged, so a JSON .WATER file was exported instead.');
       } catch {
         showShareStatus('error');
       }
@@ -7125,7 +7155,7 @@ function App() {
               <button
                 onClick={() => importInputRef.current?.click()}
                  className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
-                title="Import a shared recipe file"
+                title="Import a shared .WATER or JSON recipe file"
               >
                 <Upload className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Import</span>
@@ -7141,7 +7171,7 @@ function App() {
               <input
                 ref={importInputRef}
                 type="file"
-                accept=".WATER,.water,.json,application/json"
+                accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
                 className="hidden"
                 onChange={e => {
                   const f = e.target.files?.[0];
@@ -12422,7 +12452,7 @@ function WatermancerIonProfileCard({
                <input
                  ref={importRecipeInputRef}
                  type="file"
-                 accept=".WATER,.water,.json,application/json"
+                 accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
                  className="hidden"
                  onChange={event => {
                    const file = event.target.files?.[0];
