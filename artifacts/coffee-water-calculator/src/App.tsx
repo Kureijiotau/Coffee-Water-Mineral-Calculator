@@ -6019,7 +6019,7 @@ function App() {
     const a = document.createElement('a');
     a.href = url;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'recipe';
-    a.download = `${slug}.coffeewater.json`;
+    a.download = `${slug}.WATER`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -6477,7 +6477,7 @@ function App() {
 
   const handleShareWatermancerPlan = async () => {
     const recipeName = watermancerTargetSourceLabel || 'Custom recipe';
-    const fileName = `${recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe'}.json`;
+    const fileName = `${recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe'}.WATER`;
     const file = new File([serializeWaterRecipeFile(recipeName, watermancerIonTargets)], fileName, { type: 'application/json' });
     const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
@@ -7141,7 +7141,7 @@ function App() {
               <input
                 ref={importInputRef}
                 type="file"
-                accept=".json,application/json"
+                accept=".WATER,.water,.json,application/json"
                 className="hidden"
                 onChange={e => {
                   const f = e.target.files?.[0];
@@ -12397,7 +12397,7 @@ function WatermancerIonProfileCard({
                        : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
                  }`}
                  aria-live="polite"
-                 title="Share or download the current recipe as a JSON file"
+                 title="Share or download the current recipe as a .WATER file containing JSON"
                >
                  <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
                  <span className="hidden sm:inline">
@@ -12414,7 +12414,7 @@ function WatermancerIonProfileCard({
                  type="button"
                  onClick={() => importRecipeInputRef.current?.click()}
                  className="flex h-10 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 text-xs text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-500/20 hover:text-sky-100"
-                 title="Import a shared ion recipe file"
+                 title="Import a shared .WATER or JSON ion recipe file"
                >
                  <Upload className="h-3.5 w-3.5" aria-hidden="true" />
                  <span className="hidden sm:inline">Import</span>
@@ -12422,7 +12422,7 @@ function WatermancerIonProfileCard({
                <input
                  ref={importRecipeInputRef}
                  type="file"
-                 accept=".json,application/json"
+                 accept=".WATER,.water,.json,application/json"
                  className="hidden"
                  onChange={event => {
                    const file = event.target.files?.[0];
