@@ -377,6 +377,8 @@ type OvershootSettings = {
 };
 const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-preferences';
 const WATERMANCER_TARGET_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-target-source';
+const WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-ion-feedback-enabled';
+const WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-follow-enabled';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
   label: string;
@@ -417,6 +419,17 @@ function loadWatermancerIonSourcePreferences(): Record<IonId, WatermancerIonSour
   } catch {
     return normalizeWatermancerIonSourcePreferences();
   }
+}
+
+function loadWatermancerBooleanPreference(key: string, fallback: boolean): boolean {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored === 'true') return true;
+    if (stored === 'false') return false;
+  } catch {
+    // Use the default when localStorage is unavailable.
+  }
+  return fallback;
 }
 
 function watermancerSourcePreferencePenalty(
@@ -3909,9 +3922,25 @@ function App() {
   );
   const [mineralWaters, setMineralWaters] = useState<MineralWaterEntry[]>([]);
   const [additionWaters, setAdditionWaters] = useState<MineralWaterEntry[]>([]);
+  const [watermancerFollowEnabled, setWatermancerFollowEnabled] = useState(
+    () => loadWatermancerBooleanPreference(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, false),
+  );
+  const [watermancerFeedbackEnabled, setWatermancerFeedbackEnabled] = useState(
+    () => watermancerFollowEnabled
+      ? false
+      : loadWatermancerBooleanPreference(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, true),
+  );
   const [watermancerSpotlightIonIds, setWatermancerSpotlightIonIds] = useState<IonId[]>([]);
   const watermancerSpotlightTimerRef = useRef<number | null>(null);
+  const clearWatermancerFeedback = useCallback(() => {
+    if (watermancerSpotlightTimerRef.current !== null) {
+      window.clearTimeout(watermancerSpotlightTimerRef.current);
+      watermancerSpotlightTimerRef.current = null;
+    }
+    setWatermancerSpotlightIonIds([]);
+  }, []);
   const spotlightWatermancerIons = useCallback((ionIds: IonId[]) => {
+    if (!watermancerFeedbackEnabled) return;
     const nextIonIds = ACTIVE_ION_IDS.filter(id => ionIds.includes(id));
     if (nextIonIds.length === 0) return;
     if (watermancerSpotlightTimerRef.current !== null) {
@@ -3922,12 +3951,29 @@ function App() {
       setWatermancerSpotlightIonIds([]);
       watermancerSpotlightTimerRef.current = null;
     }, 3200);
-  }, []);
+  }, [watermancerFeedbackEnabled]);
   useEffect(() => () => {
     if (watermancerSpotlightTimerRef.current !== null) {
       window.clearTimeout(watermancerSpotlightTimerRef.current);
     }
   }, []);
+  const toggleWatermancerFeedback = () => {
+    const next = !watermancerFeedbackEnabled;
+    setWatermancerFeedbackEnabled(next);
+    if (next) {
+      setWatermancerFollowEnabled(false);
+    } else {
+      clearWatermancerFeedback();
+    }
+  };
+  const toggleWatermancerFollow = () => {
+    const next = !watermancerFollowEnabled;
+    setWatermancerFollowEnabled(next);
+    if (next) {
+      setWatermancerFeedbackEnabled(false);
+      clearWatermancerFeedback();
+    }
+  };
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
@@ -4036,6 +4082,10 @@ function App() {
   useDebouncedPersistence(() => {
     localStorage.setItem(DROPPER_CALIBRATION_STORAGE_KEY, String(brewerDropsPerMl));
   }, [brewerDropsPerMl]);
+  useDebouncedPersistence(() => {
+    localStorage.setItem(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, String(watermancerFeedbackEnabled));
+    localStorage.setItem(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, String(watermancerFollowEnabled));
+  }, [watermancerFeedbackEnabled, watermancerFollowEnabled]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -8445,6 +8495,10 @@ function App() {
               targetLabel={watermancerTargetSourceLabel}
               activeProfile={activeProfile}
                spotlightIonIds={watermancerSpotlightIonIds}
+               feedbackEnabled={watermancerFeedbackEnabled}
+               followEnabled={watermancerFollowEnabled}
+               onToggleFeedback={toggleWatermancerFeedback}
+               onToggleFollow={toggleWatermancerFollow}
             />
           </div>
         )}
@@ -12916,6 +12970,10 @@ function WatermancerIonCoverageBars({
   targetLabel,
   activeProfile,
   spotlightIonIds,
+  feedbackEnabled,
+  followEnabled,
+  onToggleFeedback,
+  onToggleFollow,
 }: {
   actualIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
@@ -12923,11 +12981,15 @@ function WatermancerIonCoverageBars({
   targetLabel: string;
   activeProfile: WaterProfile;
   spotlightIonIds: IonId[];
+  feedbackEnabled: boolean;
+  followEnabled: boolean;
+  onToggleFeedback: () => void;
+  onToggleFollow: () => void;
 }) {
   return (
     <>
       <div
-        className="app-card relative flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
+        className={`${followEnabled ? 'sticky top-4 z-30' : 'relative'} app-card flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
       >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -12941,9 +13003,42 @@ function WatermancerIonCoverageBars({
             {targetLabel} ion targets
           </span>
         </div>
-        <span className="shrink-0 rounded-full border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">
-          Live
-        </span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onToggleFeedback}
+            disabled={followEnabled}
+            aria-pressed={feedbackEnabled}
+            aria-label={feedbackEnabled ? 'Disable updated ion feedback' : 'Enable updated ion feedback'}
+            title={followEnabled ? 'Turn off Follow screen to enable updated ion feedback' : 'Show a temporary tray after ion-increasing dose edits'}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              feedbackEnabled
+                ? 'border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:border-cyan-200/65 hover:bg-cyan-500/25'
+                : 'border-slate-700/70 bg-slate-950/30 text-slate-500 hover:border-cyan-300/40 hover:bg-cyan-500/10 hover:text-cyan-200'
+            } disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="hidden sm:inline">Feedback {feedbackEnabled ? 'on' : 'off'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleFollow}
+            aria-pressed={followEnabled}
+            aria-label={followEnabled ? 'Stop following the ion readings card while scrolling' : 'Keep the ion readings card visible while scrolling'}
+            title={followEnabled ? 'Stop following while scrolling' : 'Keep visible while scrolling'}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              followEnabled
+                ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:border-emerald-300/65 hover:bg-emerald-500/20'
+                : 'border-cyan-300/25 bg-slate-950/30 text-cyan-100 hover:border-cyan-300/55 hover:bg-cyan-500/10'
+            }`}
+          >
+            {followEnabled ? <PinOff className="h-3.5 w-3.5" aria-hidden="true" /> : <Pin className="h-3.5 w-3.5" aria-hidden="true" />}
+            <span className="hidden sm:inline">{followEnabled ? 'Following' : 'Follow'}</span>
+          </button>
+          <span className="rounded-full border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">
+            Live
+          </span>
+        </div>
       </div>
         <div className="app-card-body min-h-0 flex-1 space-y-3">
         {ACTIVE_ION_IDS.map(id => (
@@ -12988,7 +13083,7 @@ function WatermancerIonCoverageBars({
        })}
       </div>
       </div>
-      {spotlightIonIds.length > 0 && createPortal(
+      {feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
         <div
           className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-2.5 shadow-2xl shadow-slate-950/50 backdrop-blur-md sm:p-3"
           aria-label="Recently changed ion readings"
