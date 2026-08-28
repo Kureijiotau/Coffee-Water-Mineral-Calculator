@@ -13001,7 +13001,7 @@ function WatermancerIonCoverageBars({
       </div>
       {spotlightIonIds.length > 0 && createPortal(
         <div
-          className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-2.5 shadow-2xl shadow-slate-950/50 backdrop-blur-md sm:p-3"
+          className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-2.5 shadow-2xl shadow-slate-950/50 backdrop-blur-md sm:p-3"
           aria-label="Recently changed ion readings"
           aria-live="polite"
         >

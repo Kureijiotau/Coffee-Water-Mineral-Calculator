@@ -719,7 +719,6 @@ body {
 
 .watermancer-ion-spotlight {
   border-radius: 0.75rem;
-  margin: -0.35rem;
   padding: 0.35rem;
   animation: watermancer-ion-spotlight 900ms ease-in-out infinite;
 }
