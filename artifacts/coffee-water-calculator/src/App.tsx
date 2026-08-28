@@ -12400,7 +12400,7 @@ function WatermancerIonProfileCard({
              groups={targetSourcePickerGroups}
              onChange={handleDropdownChange}
            />
-           <div className="flex min-w-[16.5rem] items-center gap-2 sm:min-w-[22rem]">
+           <div className="flex min-w-[16.5rem] items-center justify-end gap-2 sm:min-w-[22rem]">
              {!isEditingAny ? (
                <button
                  type="button"
@@ -12479,7 +12479,7 @@ function WatermancerIonProfileCard({
              type="button"
              onClick={() => importRecipeInputRef.current?.click()}
               className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
-             title="Import a shared .WATER or JSON ion recipe file"
+             title="Import water profile"
            >
              <Import className="h-3.5 w-3.5" aria-hidden="true" />
              <span className="hidden sm:inline">Import</span>
