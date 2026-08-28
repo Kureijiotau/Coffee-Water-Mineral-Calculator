@@ -7053,6 +7053,8 @@ function App() {
               onTargetSourceChange={handleWatermancerTargetSourceChange}
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
+               hasSaltRecipeTargets={hasSaltRecipeTargets}
+               onSendRecipeToConcentrate={handleSendRecipeToConcentrate}
                onShareRecipe={handleShareWatermancerPlan}
                shareStatus={watermancerShareStatus}
                onImportRecipeFile={handleImportFile}
@@ -12094,6 +12096,8 @@ function WatermancerIonProfileCard({
   onTargetSourceChange,
   onTargetOverrideChange,
   onSaveWmProfile,
+  hasSaltRecipeTargets,
+  onSendRecipeToConcentrate,
   onShareRecipe,
   shareStatus,
   onImportRecipeFile,
@@ -12115,6 +12119,8 @@ function WatermancerIonProfileCard({
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
+  hasSaltRecipeTargets: boolean;
+  onSendRecipeToConcentrate: () => void;
   onShareRecipe: () => void;
   shareStatus: 'idle' | 'downloaded' | 'shared' | 'error';
   onImportRecipeFile: (file: File) => void;
@@ -12376,118 +12382,126 @@ function WatermancerIonProfileCard({
           <Gauge className="w-4 h-4 text-indigo-300" />
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-           <div className="flex h-10 items-center gap-1">
-             {selectedTargetSourceUrl && (
-               <a
-                 href={selectedTargetSourceUrl}
-                 target="_blank"
-                 rel="noreferrer"
-                 aria-label={`Open source page for ${selectedTargetSourceName}`}
-                 title={`Open source page for ${selectedTargetSourceName}`}
-                  className="flex h-4 w-4 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[9px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
-               >
-                 ?
-               </a>
-             )}
-              <div className="flex items-center gap-1">
-              <MineralRecipePicker
-                value={currentDropdownValue}
-                groups={targetSourcePickerGroups}
-                onChange={handleDropdownChange}
-              />
-             </div>
-              <button
-                type="button"
-                onClick={onReset}
-                 className="flex h-10 items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-2.5 text-xs text-amber-200 transition hover:border-amber-300/45 hover:bg-amber-500/20 hover:text-amber-100"
-                title="Reset all inputs to defaults"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Reset</span>
-              </button>
-               <button
-                 type="button"
-                 onClick={onShareRecipe}
-                  className={`flex h-10 items-center gap-1.5 rounded-lg border px-2.5 text-xs transition ${
-                   shareStatus === 'error'
-                     ? 'border-rose-400/40 bg-rose-500/10 text-rose-200'
-                     : shareStatus !== 'idle'
-                       ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                       : 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200 hover:border-cyan-300/60 hover:bg-cyan-500/20'
-                 }`}
-                 aria-live="polite"
-                 title="Share or download the current recipe as a .WATER file containing JSON"
-               >
-                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                 <span className="hidden sm:inline">
-                   {shareStatus === 'downloaded'
-                      ? 'Profile downloaded'
-                      : shareStatus === 'error'
-                        ? 'Download failed'
-                        : 'Download profile'}
-                 </span>
-               </button>
-               <button
-                 type="button"
-                 onClick={() => importRecipeInputRef.current?.click()}
-                 className="flex h-10 items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-500/10 px-2.5 text-xs text-sky-200 transition hover:border-sky-300/60 hover:bg-sky-500/20 hover:text-sky-100"
-                 title="Import a shared .WATER or JSON ion recipe file"
-               >
-                 <Import className="h-3.5 w-3.5" aria-hidden="true" />
-                 <span className="hidden sm:inline">Import</span>
-               </button>
-               <input
-                 ref={importRecipeInputRef}
-                 type="file"
-                 accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
-                 className="hidden"
-                 onChange={event => {
-                   const file = event.target.files?.[0];
-                   if (file) onImportRecipeFile(file);
-                   event.target.value = '';
-                 }}
-               />
-           </div>
+         <div className="flex flex-wrap items-center justify-end gap-2">
+           {selectedTargetSourceUrl && (
+             <a
+               href={selectedTargetSourceUrl}
+               target="_blank"
+               rel="noreferrer"
+               aria-label={`Open source page for ${selectedTargetSourceName}`}
+               title={`Open source page for ${selectedTargetSourceName}`}
+               className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[10px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+             >
+               ?
+             </a>
+           )}
+           <MineralRecipePicker
+             value={currentDropdownValue}
+             groups={targetSourcePickerGroups}
+             onChange={handleDropdownChange}
+           />
            {!isEditingAny ? (
-            <button
-              type="button"
-              onClick={startEditing}
-               className="flex h-10 items-center gap-1.5 rounded-lg bg-sky-600 px-2.5 text-[11px] text-white transition hover:bg-sky-500"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add new
-            </button>
-          ) : (
-             <div className="flex flex-wrap items-center gap-2">
+             <button
+               type="button"
+               onClick={startEditing}
+               className="flex items-center gap-1.5 text-xs text-violet-200 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/25 hover:border-violet-300/45 rounded-lg px-2.5 py-1.5 transition"
+               title="Create a new saved Watermancer profile"
+             >
+               <Plus className="h-3.5 w-3.5" />
+               <span className="hidden sm:inline">Add new</span>
+             </button>
+           ) : (
+             <>
                <button
                  type="button"
-                  onClick={() => setNamingMode('new')}
-                 className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
+                 onClick={() => setNamingMode('new')}
+                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
                >
-                 <Save className="w-3.5 h-3.5" />
-                  Save as new
+                 <Save className="h-3.5 w-3.5" />
+                 <span className="hidden sm:inline">Save as new</span>
                </button>
-                {canOverwrite && (
-                  <button
-                    type="button"
-                    onClick={handleOverwrite}
+               {canOverwrite && (
+                 <button
+                   type="button"
+                   onClick={handleOverwrite}
                     className="flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
-                  >
-                    <Save className="w-3.5 h-3.5" />
-                    Overwrite selected
-                  </button>
-                )}
+                 >
+                   <Save className="h-3.5 w-3.5" />
+                   <span className="hidden sm:inline">Overwrite selected</span>
+                 </button>
+               )}
                <button
                  type="button"
                  onClick={cancelEditing}
-                 className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
                >
-                 <X className="w-3.5 h-3.5" />
-                 Cancel
+                 <X className="h-3.5 w-3.5" />
+                 <span className="hidden sm:inline">Cancel</span>
                </button>
-             </div>
-          )}
+             </>
+           )}
+           <button
+             type="button"
+             onClick={onShareRecipe}
+             className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
+               shareStatus === 'error'
+                 ? 'text-rose-200 bg-rose-500/10 border border-rose-400/40 hover:border-rose-300/60 hover:bg-rose-500/20'
+                 : shareStatus !== 'idle'
+                   ? 'text-emerald-200 bg-emerald-500/10 border border-emerald-400/40'
+                   : 'text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45'
+             }`}
+             aria-live="polite"
+             title="Download the current Watermancer profile as a .WATER.png file"
+           >
+             <Download className="h-3.5 w-3.5" aria-hidden="true" />
+             <span className="hidden sm:inline">
+               {shareStatus === 'downloaded'
+                 ? 'Profile downloaded'
+                 : shareStatus === 'error'
+                   ? 'Download failed'
+                   : 'Download profile'}
+             </span>
+           </button>
+           {hasSaltRecipeTargets && (
+             <button
+               type="button"
+               onClick={onSendRecipeToConcentrate}
+                className="flex items-center gap-1.5 rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs text-fuchsia-200 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-500/20 hover:text-fuchsia-100"
+               title="Open this recipe in the Concentrate workspace"
+             >
+               <FlaskConical className="h-3.5 w-3.5" />
+               <span className="hidden sm:inline">Use in Concentrate</span>
+             </button>
+           )}
+           <button
+             type="button"
+             onClick={() => importRecipeInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
+             title="Import a shared .WATER or JSON ion recipe file"
+           >
+             <Import className="h-3.5 w-3.5" aria-hidden="true" />
+             <span className="hidden sm:inline">Import</span>
+           </button>
+           <button
+             type="button"
+             onClick={onReset}
+              className="flex items-center gap-1.5 text-xs text-amber-200 hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 hover:border-amber-300/45 rounded-lg px-2.5 py-1.5 transition"
+             title="Reset all inputs to defaults"
+           >
+             <RotateCcw className="h-3.5 w-3.5" />
+             <span className="hidden sm:inline">Reset</span>
+           </button>
+           <input
+             ref={importRecipeInputRef}
+             type="file"
+             accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
+             className="hidden"
+             onChange={event => {
+               const file = event.target.files?.[0];
+               if (file) onImportRecipeFile(file);
+               event.target.value = '';
+             }}
+           />
         </div>
       </div>
       <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
