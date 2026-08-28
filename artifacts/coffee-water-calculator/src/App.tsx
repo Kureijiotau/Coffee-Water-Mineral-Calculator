@@ -4393,6 +4393,14 @@ function App() {
       return [...prev, profile];
     });
   };
+  const handleDeleteWmProfile = (id: string) => {
+    if (!wmProfiles.some(profile => profile.id === id)) return;
+    setWmProfiles(prev => prev.filter(profile => profile.id !== id));
+    if (watermancerTargetSource === `saved:${id}`) {
+      setWatermancerTargetSource('safe-profile');
+      setWatermancerTargetOverride(null);
+    }
+  };
 
   const handleWorkframeHandoff = (name: string, targets: IonicTargetValues) => {
     const profile = createWatermancerProfile(name, targets);
@@ -7076,6 +7084,7 @@ function App() {
               onTargetSourceChange={handleWatermancerTargetSourceChange}
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
+              onDeleteWmProfile={handleDeleteWmProfile}
                hasSaltRecipeTargets={hasSaltRecipeTargets}
                onSendRecipeToConcentrate={handleSendRecipeToConcentrate}
                onShareRecipe={handleShareWatermancerPlan}
@@ -12125,6 +12134,7 @@ function WatermancerIonProfileCard({
   onTargetSourceChange,
   onTargetOverrideChange,
   onSaveWmProfile,
+  onDeleteWmProfile,
   hasSaltRecipeTargets,
   onSendRecipeToConcentrate,
   onShareRecipe,
@@ -12148,6 +12158,7 @@ function WatermancerIonProfileCard({
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
+  onDeleteWmProfile: (id: string) => void;
   hasSaltRecipeTargets: boolean;
   onSendRecipeToConcentrate: () => void;
   onShareRecipe: () => void;
@@ -12308,6 +12319,13 @@ function WatermancerIonProfileCard({
   const selectedSavedProfile = currentDropdownValue.startsWith('saved:')
     ? wmProfiles.find(profile => profile.id === currentDropdownValue.slice('saved:'.length))
     : undefined;
+
+  const handleDeleteSelectedProfile = () => {
+    if (!selectedSavedProfile) return;
+    if (!window.confirm(`Delete saved profile “${selectedSavedProfile.name}”?`)) return;
+    onDeleteWmProfile(selectedSavedProfile.id);
+    finishEditing();
+  };
 
   const handleOverwrite = () => {
     if (!selectedSavedProfile) return;
@@ -12471,6 +12489,18 @@ function WatermancerIonProfileCard({
                </>
              )}
            </div>
+            {selectedSavedProfile && (
+              <button
+                type="button"
+                onClick={handleDeleteSelectedProfile}
+                className="flex items-center gap-1.5 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+                aria-label={`Delete saved profile ${selectedSavedProfile.name}`}
+                title="Delete this saved profile"
+              >
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+            )}
            <button
              type="button"
              onClick={onShareRecipe}
@@ -12802,6 +12832,10 @@ function WatermancerIonReadingRow({
   const profileYellowMarkerPercent = profileScalePercent > 0
     ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
     : 100;
+  const rowGridClass = highlighted
+    ? 'grid-cols-[6rem_minmax(0,1fr)_9rem] sm:grid-cols-[7rem_minmax(0,1fr)_10rem]'
+    : 'grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]';
+  const barHeightClass = highlighted ? 'h-3' : 'h-4';
   const barColor = overshoot
     ? 'bg-rose-400'
     : covered
@@ -12827,11 +12861,11 @@ function WatermancerIonReadingRow({
   return (
     <div
       data-watermancer-ion-row={id}
-      className={`grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem] ${
+      className={`grid ${rowGridClass} items-center gap-x-3 gap-y-1 ${
         highlighted ? 'watermancer-ion-spotlight' : ''
       }`}
     >
-      <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
+      <span className="truncate text-xs font-medium text-slate-300" title={ion.name}>{ion.name}</span>
       <div className="min-w-0">
         <div
           className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
@@ -12842,7 +12876,7 @@ function WatermancerIonReadingRow({
             : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
           title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
         >
-          <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
+          <div className={`relative ${barHeightClass} overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden`}>
             <div
               className={`h-full rounded-full transition-all duration-300 ${barColor}`}
               style={{ width: `${percentage}%` }}
@@ -12854,7 +12888,7 @@ function WatermancerIonReadingRow({
             </span>
           </div>
           <div
-            className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
+            className={`relative hidden ${barHeightClass} overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block`}
             aria-hidden="true"
           >
             <div
@@ -12874,11 +12908,11 @@ function WatermancerIonReadingRow({
             </span>
           </div>
         </div>
-        <div className={`mt-1 text-[10px] ${valueColor}`}>
+        <div className={`mt-1 truncate text-[10px] ${valueColor}`}>
           {status}
         </div>
       </div>
-      <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
+      <span className={`whitespace-nowrap text-right ${highlighted ? 'text-sm' : 'text-xs'} font-semibold tabular-nums ${valueColor}`}>
         {formatLiveIonPpm(actual)}
         <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
       </span>
@@ -12967,7 +13001,7 @@ function WatermancerIonCoverageBars({
       </div>
       {spotlightIonIds.length > 0 && createPortal(
         <div
-          className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/50 backdrop-blur-md"
+          className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-6xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-2.5 shadow-2xl shadow-slate-950/50 backdrop-blur-md sm:p-3"
           aria-label="Recently changed ion readings"
           aria-live="polite"
         >
@@ -12977,7 +13011,7 @@ function WatermancerIonCoverageBars({
             </span>
             <span className="text-[10px] text-slate-500">Final mixture</span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-1.5">
             {spotlightIonIds.map(id => (
               <WatermancerIonReadingRow
                 key={`spotlight-${id}`}
