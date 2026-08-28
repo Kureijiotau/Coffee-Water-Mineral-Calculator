@@ -12382,7 +12382,7 @@ function WatermancerIonProfileCard({
           <Gauge className="w-4 h-4 text-indigo-300" />
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
-         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
+         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
            {selectedTargetSourceUrl && (
              <a
                href={selectedTargetSourceUrl}
@@ -12400,7 +12400,7 @@ function WatermancerIonProfileCard({
              groups={targetSourcePickerGroups}
              onChange={handleDropdownChange}
            />
-           <div className="flex min-w-[16.5rem] items-center justify-end gap-2 sm:min-w-[22rem]">
+           <div className="flex items-center gap-2">
              {!isEditingAny ? (
                <button
                  type="button"
