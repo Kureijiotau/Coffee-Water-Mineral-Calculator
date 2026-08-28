@@ -3976,9 +3976,6 @@ function App() {
       }
       return [...prev, entry];
     });
-    spotlightWatermancerIons(
-      ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
-    );
     return entry;
   };
   const addReferenceWater = (water: typeof EMPIRICAL_WATERS[number]) => {
@@ -4016,9 +4013,6 @@ function App() {
       volumeMl: partial?.volumeMl ?? '0',
     };
     setAdditionWaters(prev => [...prev, entry]);
-    spotlightWatermancerIons(
-      ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
-    );
     return entry;
   };
   const updateAdditionWater = (id: string, patch: Partial<MineralWaterEntry>) => {
@@ -5358,9 +5352,11 @@ function App() {
         };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
-    spotlightWatermancerIons(
-      SALTS.find(salt => salt.id === saltId)?.ions.map(contribution => contribution.ionId) ?? [],
-    );
+    if (deltaMg > 0) {
+      spotlightWatermancerIons(
+        SALTS.find(salt => salt.id === saltId)?.ions.map(contribution => contribution.ionId) ?? [],
+      );
+    }
     setWatermancerDoseOverridesMg(current => ({
       ...current,
       [saltId]: Math.max(0, currentMg + deltaMg),
@@ -8574,9 +8570,6 @@ function App() {
                               salt => showWatermancerMemeSalts || !MEME_SALT_IDS.has(salt.id),
                             );
                             setWatermancerUsedSaltIds(enabledSalts.map(salt => salt.id));
-                            spotlightWatermancerIons([
-                              ...new Set(enabledSalts.flatMap(salt => salt.ions.map(contribution => contribution.ionId))),
-                            ]);
                         }}
                         className="rounded border border-indigo-300/25 bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-indigo-200 transition hover:border-indigo-200/50 hover:bg-indigo-500/20 hover:text-indigo-100"
                         aria-label="Use all salts"
@@ -8606,9 +8599,12 @@ function App() {
                          setWatermancerDoseInputDrafts(current => ({ ...current, [salt.id]: value }));
                          enterWatermancerManualMode();
                          const parsed = Number(value);
-                          spotlightWatermancerIons(
-                            salt.ions.map(contribution => contribution.ionId),
-                          );
+                          const previous = Number(doseInputValue);
+                          if (Number.isFinite(parsed) && Number.isFinite(previous) && parsed > previous) {
+                            spotlightWatermancerIons(
+                              salt.ions.map(contribution => contribution.ionId),
+                            );
+                          }
                          setWatermancerDoseOverridesMg(current => ({
                            ...current,
                            [salt.id]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
@@ -8726,11 +8722,6 @@ function App() {
                             type="button"
                             onClick={() => {
                               enterWatermancerManualMode();
-                               if (!used) {
-                                 spotlightWatermancerIons(
-                                   salt.ions.map(contribution => contribution.ionId),
-                                 );
-                               }
                               setWatermancerUsedSaltIds(current => used
                                 ? current.filter(id => id !== salt.id)
                                 : [...current, salt.id]);
