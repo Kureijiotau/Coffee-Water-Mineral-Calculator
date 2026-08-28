@@ -10903,7 +10903,6 @@ function LegacyRecipeConcentrateBuilder({
         straightDropsPerMl={straightDropsPerMl}
         authoritativeDropsPerMl={activeDropsPerMl}
       />
-
       {stockStrategy === 'all-in-one' && (
         <>
           <section className="rounded-2xl border border-cyan-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6">
@@ -12773,9 +12772,7 @@ function WatermancerIonCoverageBars({
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">
-               Closest match result
-            </h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Current ion readings</h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
                Current ion readings
             </p>
@@ -12850,176 +12847,176 @@ function WatermancerIonCoverageBars({
           </button>
         </div>
       </div>
-       <div className={`app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
-        {ACTIVE_ION_IDS.map(id => {
-          const ion = ION_MAP[id];
-          const actual = actualIons[id] ?? 0;
-          const target = Math.max(targetIons[id] ?? 0, 0);
-          const tolerance = 0.05;
-          const overshoot = target > 0
-            ? actual > target + tolerance
-            : actual > tolerance;
-          const covered = target > 0 && actual >= target - tolerance;
-          const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
-          const coveragePercent = target > 0 ? (actual / target) * 100 : null;
-          const coverageLabel = coveragePercent === null
-            ? '—'
-            : `${Math.round(coveragePercent).toLocaleString()}%`;
-           const profileRange = activeProfile.ranges[id];
-           const profileGreenMax = profileRange.greenMax;
-           const profileYellowPercent = profileGreenMax > 0
-             ? (profileRange.yellowMax / profileGreenMax) * 100
-             : 100;
-           const profilePercent = profileGreenMax > 0
-             ? (actual / profileGreenMax) * 100
-             : 0;
-           const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
-           const profileFillPercent = profileScalePercent > 0
-             ? Math.min((profilePercent / profileScalePercent) * 100, 100)
-             : 0;
-           const profileGreenMarkerPercent = profileScalePercent > 0
-             ? Math.min((100 / profileScalePercent) * 100, 100)
-             : 100;
-           const profileYellowMarkerPercent = profileScalePercent > 0
-             ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
-             : 100;
-          const barColor = overshoot
-            ? 'bg-rose-400'
-            : covered
-              ? 'bg-emerald-400'
-              : actual > 0
-                ? 'bg-cyan-400'
-                : 'bg-slate-700';
-          const valueColor = overshoot
-            ? 'text-rose-300'
-            : covered
-              ? 'text-emerald-300'
-              : actual > 0
-                ? 'text-cyan-300'
-                : 'text-slate-500';
-          const status = target <= 0
-            ? actual > tolerance ? 'above target' : 'no target set'
-            : overshoot
-              ? `${formatLiveIonPpm(actual - target)} ppm above target`
-              : covered
-                ? `${formatLiveIonPpm(actual)} ppm — target reached`
-                : `${formatLiveIonPpm(actual)} ppm of ${formatLiveIonPpm(target)} ppm covered`;
+      <div className={`app-card-body min-h-0 flex-1 space-y-3 ${sticky ? 'max-h-[calc(42vh-4rem)] overflow-y-auto overscroll-auto sm:max-h-[min(calc(56vh-4rem),30rem)]' : ''}`}>
+       {ACTIVE_ION_IDS.map(id => {
+         const ion = ION_MAP[id];
+         const actual = actualIons[id] ?? 0;
+         const target = Math.max(targetIons[id] ?? 0, 0);
+         const tolerance = 0.05;
+         const overshoot = target > 0
+           ? actual > target + tolerance
+           : actual > tolerance;
+         const covered = target > 0 && actual >= target - tolerance;
+         const percentage = target > 0 ? Math.min((actual / target) * 100, 100) : 0;
+         const coveragePercent = target > 0 ? (actual / target) * 100 : null;
+         const coverageLabel = coveragePercent === null
+           ? '—'
+           : `${Math.round(coveragePercent).toLocaleString()}%`;
+          const profileRange = activeProfile.ranges[id];
+          const profileGreenMax = profileRange.greenMax;
+          const profileYellowPercent = profileGreenMax > 0
+            ? (profileRange.yellowMax / profileGreenMax) * 100
+            : 100;
+          const profilePercent = profileGreenMax > 0
+            ? (actual / profileGreenMax) * 100
+            : 0;
+          const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
+          const profileFillPercent = profileScalePercent > 0
+            ? Math.min((profilePercent / profileScalePercent) * 100, 100)
+            : 0;
+          const profileGreenMarkerPercent = profileScalePercent > 0
+            ? Math.min((100 / profileScalePercent) * 100, 100)
+            : 100;
+          const profileYellowMarkerPercent = profileScalePercent > 0
+            ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
+            : 100;
+         const barColor = overshoot
+           ? 'bg-rose-400'
+           : covered
+             ? 'bg-emerald-400'
+             : actual > 0
+               ? 'bg-cyan-400'
+               : 'bg-slate-700';
+         const valueColor = overshoot
+           ? 'text-rose-300'
+           : covered
+             ? 'text-emerald-300'
+             : actual > 0
+               ? 'text-cyan-300'
+               : 'text-slate-500';
+         const status = target <= 0
+           ? actual > tolerance ? 'above target' : 'no target set'
+           : overshoot
+             ? `${formatLiveIonPpm(actual - target)} ppm above target`
+             : covered
+               ? `${formatLiveIonPpm(actual)} ppm — target reached`
+               : `${formatLiveIonPpm(actual)} ppm of ${formatLiveIonPpm(target)} ppm covered`;
 
-          return (
-            <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
-              <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
-              <div className="min-w-0">
-                <div
-                   className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
-                   tabIndex={0}
-                   role="img"
-                  aria-label={coveragePercent === null
-                     ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
-                     : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
-                   title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
-                >
-                   <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
-                     <div
-                       className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-                       style={{ width: `${percentage}%` }}
-                     />
-                     <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
-                       covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
-                     }`}>
-                       {coverageLabel}
-                     </span>
-                   </div>
-                   <div
-                     className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
-                     aria-hidden="true"
-                   >
-                     <div
-                       className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
-                                 style={{ width: `${profileFillPercent}%` }}
-                     />
-                     <div
-                       className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
-                                 style={{ left: `${profileGreenMarkerPercent}%` }}
-                     />
-                     <div
-                       className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
-                                 style={{ left: `${profileYellowMarkerPercent}%` }}
-                     />
-                     <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
-                                 {Math.round(profilePercent)}%
-                     </span>
-                   </div>
-                </div>
-                <div className={`mt-1 text-[10px] ${valueColor}`}>
-                  {status}
-                </div>
-              </div>
-              <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
-                {formatLiveIonPpm(actual)}
-                <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
-              </span>
-            </div>
-          );
-        })}
-        {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
-          const supplemental = SUPPLEMENTAL_ION_MAP[id];
-          const ppm = supplementalIons[id] ?? 0;
-          if (ppm <= 0) return null;
-          return (
-            <div key={`supplemental-${id}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
-              <span className="truncate text-xs text-violet-200" title={supplemental.name}>{supplemental.name}</span>
-              <div className="min-w-0">
-                <div
-                  className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
-                  aria-label={`${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm, display only`}
-                >
+         return (
+           <div key={id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
+             <span className="truncate text-xs text-slate-300" title={ion.name}>{ion.name}</span>
+             <div className="min-w-0">
+               <div
+                  className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
+                  tabIndex={0}
+                  role="img"
+                 aria-label={coveragePercent === null
+                    ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
+                    : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
+                  title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
+               >
+                  <div className="relative h-4 overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                    <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
+                      covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
+                    }`}>
+                      {coverageLabel}
+                    </span>
+                  </div>
                   <div
-                    className="h-full rounded-full bg-violet-400/80 transition-all duration-300"
-                    style={{ width: '100%' }}
-                  />
-                  <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-slate-950/80">
-                    display only
-                  </span>
-                </div>
-                <div className="mt-1 text-[10px] text-violet-200">
-                  {formatLiveIonPpm(ppm)} ppm · no target set
-                </div>
-              </div>
-              <span className="text-right text-xs font-semibold tabular-nums text-violet-200">
-                {formatLiveIonPpm(ppm)}
-                <span className="font-normal text-slate-500"> ppm</span>
-              </span>
-            </div>
-          );
-        })}
-       </div>
-       {sticky && (
-         <div
-           className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2"
-           aria-label="Final mixture summary"
-         >
-           <div className="min-w-0 px-1 text-center">
-             <div className="text-[9px] font-semibold uppercase tracking-wider text-indigo-200/70">GH</div>
-             <div className="mt-0.5 text-xs font-semibold tabular-nums text-indigo-200">{finalGh.toFixed(1)}</div>
-              <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
+                    className="relative hidden h-4 overflow-hidden rounded-full bg-slate-700/70 ring-1 ring-indigo-300/20 group-hover/profile-result-bar:block group-focus/profile-result-bar:block"
+                    aria-hidden="true"
+                  >
+                    <div
+                      className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
+                                style={{ width: `${profileFillPercent}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
+                                style={{ left: `${profileGreenMarkerPercent}%` }}
+                    />
+                    <div
+                      className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
+                                style={{ left: `${profileYellowMarkerPercent}%` }}
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
+                                {Math.round(profilePercent)}%
+                    </span>
+                  </div>
+               </div>
+               <div className={`mt-1 text-[10px] ${valueColor}`}>
+                 {status}
+               </div>
+             </div>
+             <span className={`text-right text-xs font-semibold tabular-nums ${valueColor}`}>
+               {formatLiveIonPpm(actual)}
+               <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
+             </span>
            </div>
-           <div className="min-w-0 px-1 text-center">
-             <div className="text-[9px] font-semibold uppercase tracking-wider text-amber-200/70">KH</div>
-             <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">{finalKh.toFixed(1)}</div>
-              <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
+         );
+       })}
+       {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
+         const supplemental = SUPPLEMENTAL_ION_MAP[id];
+         const ppm = supplementalIons[id] ?? 0;
+         if (ppm <= 0) return null;
+         return (
+           <div key={`supplemental-${id}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
+             <span className="truncate text-xs text-violet-200" title={supplemental.name}>{supplemental.name}</span>
+             <div className="min-w-0">
+               <div
+                 className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
+                 aria-label={`${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm, display only`}
+               >
+                 <div
+                   className="h-full rounded-full bg-violet-400/80 transition-all duration-300"
+                   style={{ width: '100%' }}
+                 />
+                 <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-slate-950/80">
+                   display only
+                 </span>
+               </div>
+               <div className="mt-1 text-[10px] text-violet-200">
+                 {formatLiveIonPpm(ppm)} ppm · no target set
+               </div>
+             </div>
+             <span className="text-right text-xs font-semibold tabular-nums text-violet-200">
+               {formatLiveIonPpm(ppm)}
+               <span className="font-normal text-slate-500"> ppm</span>
+             </span>
            </div>
-           <div className="min-w-0 px-1 text-center">
-             <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-200/70">GH:KH</div>
-             <div className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-200">{finalGhKhRatio}</div>
-             <div className="text-[9px] text-slate-500">ratio</div>
-           </div>
-           <div className="min-w-0 px-1 text-center">
-             <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">TDS</div>
-             <div className="mt-0.5 text-xs font-semibold tabular-nums text-cyan-200">{finalTds.toFixed(1)}</div>
-             <div className="text-[9px] text-slate-500">mg/L</div>
-           </div>
-         </div>
-       )}
+         );
+       })}
+      </div>
+      {sticky && (
+        <div
+          className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2"
+          aria-label="Final mixture summary"
+        >
+          <div className="min-w-0 px-1 text-center">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-indigo-200/70">GH</div>
+            <div className="mt-0.5 text-xs font-semibold tabular-nums text-indigo-200">{finalGh.toFixed(1)}</div>
+             <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
+          </div>
+          <div className="min-w-0 px-1 text-center">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-amber-200/70">KH</div>
+            <div className="mt-0.5 text-xs font-semibold tabular-nums text-amber-200">{finalKh.toFixed(1)}</div>
+             <div className="text-[9px] text-slate-500">ppm as CaCO₃</div>
+          </div>
+          <div className="min-w-0 px-1 text-center">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-emerald-200/70">GH:KH</div>
+            <div className="mt-0.5 text-xs font-semibold tabular-nums text-emerald-200">{finalGhKhRatio}</div>
+            <div className="text-[9px] text-slate-500">ratio</div>
+          </div>
+          <div className="min-w-0 px-1 text-center">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">TDS</div>
+            <div className="mt-0.5 text-xs font-semibold tabular-nums text-cyan-200">{finalTds.toFixed(1)}</div>
+            <div className="text-[9px] text-slate-500">mg/L</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
