@@ -55,6 +55,7 @@
 - [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison
 - [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [WATER recipe files](water-recipe-files.md) — use image-backed `.WATER.png` recipe exports while keeping embedded payloads standard JSON and legacy JSON imports valid
+- [Watermancer direct downloads](watermancer-direct-downloads.md) — profile export actions should download directly instead of opening the native Web Share sheet
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts

@@ -6525,19 +6525,9 @@ function App() {
       if (!response.ok) throw new Error('Could not load the Watermancer image.');
       const pngBytes = new Uint8Array(await response.arrayBuffer());
       const file = new File([embedWaterRecipeJsonInPng(pngBytes, json)], fileName, { type: 'image/png' });
-      if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          title: recipeName,
-          text: 'Coffee water recipe file',
-          files: [file],
-        });
-        showShareStatus('shared');
-        return;
-      }
       downloadRecipeFile(file);
       showShareStatus('downloaded');
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') return;
+    } catch {
       try {
         downloadRecipeFile(new File([json], `${slug}.WATER`, { type: 'application/json' }));
         showShareStatus('downloaded');
@@ -12429,15 +12419,13 @@ function WatermancerIonProfileCard({
                  aria-live="polite"
                  title="Share or download the current recipe as a .WATER file containing JSON"
                >
-                 <Share2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
                  <span className="hidden sm:inline">
                    {shareStatus === 'downloaded'
-                     ? 'Recipe downloaded'
-                     : shareStatus === 'shared'
-                       ? 'Shared'
-                       : shareStatus === 'error'
-                         ? 'Share failed'
-                         : 'Share recipe'}
+                      ? 'Profile downloaded'
+                      : shareStatus === 'error'
+                        ? 'Download failed'
+                        : 'Download profile'}
                  </span>
                </button>
                <button
