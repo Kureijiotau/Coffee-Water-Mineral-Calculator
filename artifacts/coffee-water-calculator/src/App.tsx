@@ -379,6 +379,7 @@ const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-
 const WATERMANCER_TARGET_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-target-source';
 const WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-ion-feedback-enabled';
 const WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-follow-enabled';
+const WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY = 'coffee-water-watermancer-feedback-before-follow';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
   label: string;
@@ -3931,6 +3932,11 @@ function App() {
       ? false
       : loadWatermancerBooleanPreference(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, true),
   );
+  const watermancerFeedbackBeforeFollowRef = useRef<boolean | null>(
+    watermancerFollowEnabled
+      ? loadWatermancerBooleanPreference(WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY, false)
+      : null,
+  );
   const [watermancerSpotlightIonIds, setWatermancerSpotlightIonIds] = useState<IonId[]>([]);
   const watermancerSpotlightTimerRef = useRef<number | null>(null);
   const clearWatermancerFeedback = useCallback(() => {
@@ -3959,6 +3965,7 @@ function App() {
     }
   }, []);
   const toggleWatermancerFeedback = () => {
+    if (watermancerFollowEnabled) return;
     const next = !watermancerFeedbackEnabled;
     setWatermancerFeedbackEnabled(next);
     if (!next) {
@@ -3968,6 +3975,17 @@ function App() {
   const toggleWatermancerFollow = () => {
     const next = !watermancerFollowEnabled;
     setWatermancerFollowEnabled(next);
+    if (next) {
+      watermancerFeedbackBeforeFollowRef.current = watermancerFeedbackEnabled;
+      setWatermancerFeedbackEnabled(false);
+      clearWatermancerFeedback();
+    } else {
+      const previousFeedbackEnabled = watermancerFeedbackBeforeFollowRef.current;
+      watermancerFeedbackBeforeFollowRef.current = null;
+      if (previousFeedbackEnabled !== null) {
+        setWatermancerFeedbackEnabled(previousFeedbackEnabled);
+      }
+    }
   };
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
@@ -4125,6 +4143,14 @@ function App() {
   useDebouncedPersistence(() => {
     localStorage.setItem(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, String(watermancerFeedbackEnabled));
     localStorage.setItem(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, String(watermancerFollowEnabled));
+    if (watermancerFollowEnabled && watermancerFeedbackBeforeFollowRef.current !== null) {
+      localStorage.setItem(
+        WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY,
+        String(watermancerFeedbackBeforeFollowRef.current),
+      );
+    } else {
+      localStorage.removeItem(WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY);
+    }
   }, [watermancerFeedbackEnabled, watermancerFollowEnabled]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
@@ -13100,9 +13126,12 @@ function WatermancerIonCoverageBars({
           <button
             type="button"
             onClick={onToggleFeedback}
+            disabled={followEnabled}
             aria-pressed={feedbackEnabled}
             aria-label={feedbackEnabled ? 'Disable updated ion feedback' : 'Enable updated ion feedback'}
-            title="Show a temporary tray after ion-increasing dose edits"
+            title={followEnabled
+              ? 'Follow screen temporarily turns feedback off'
+              : 'Show a temporary tray after ion adjustments'}
             className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
               feedbackEnabled
                 ? 'border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:border-cyan-200/65 hover:bg-cyan-500/25'
