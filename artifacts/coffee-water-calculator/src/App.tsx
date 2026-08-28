@@ -4122,6 +4122,8 @@ function App() {
   const watermancerActionBusyRef = useRef(false);
   const watermancerActionGenerationRef = useRef(0);
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
+   const [watermancerDoseInputDrafts, setWatermancerDoseInputDrafts] = useState<Record<string, string>>({});
+   const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [watermancerResultSticky, setWatermancerResultSticky] = useState(false);
   const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
@@ -8539,6 +8541,29 @@ function App() {
                        const activeMg = activePpm > 0
                          ? computeSaltMg(activePpm, L, option.form.molarMass, salt.anhydrousMass)
                         : 0;
+                       const doseInputValue = Object.prototype.hasOwnProperty.call(watermancerDoseInputDrafts, salt.id)
+                         ? watermancerDoseInputDrafts[salt.id]
+                         : (used ? activeMg.toFixed(1) : '0.0');
+                       const updateDoseInput = (
+                         value: string,
+                         selectionStart: number | null,
+                         selectionEnd: number | null,
+                       ) => {
+                         setWatermancerDoseInputDrafts(current => ({ ...current, [salt.id]: value }));
+                         enterWatermancerManualMode();
+                         const parsed = Number(value);
+                         setWatermancerDoseOverridesMg(current => ({
+                           ...current,
+                           [salt.id]: Number.isFinite(parsed) ? Math.max(0, parsed) : 0,
+                         }));
+                         if (selectionStart !== null && selectionEnd !== null) {
+                           window.requestAnimationFrame(() => {
+                             const input = watermancerDoseInputRefs.current[salt.id];
+                             if (!input || input.value !== value) return;
+                             input.setSelectionRange(selectionStart, selectionEnd);
+                           });
+                         }
+                       };
                       return (
                              <div
                                key={`${salt.id}-${MEME_SALT_IDS.has(salt.id) ? watermancerMemeSaltFlashNonce : 0}`}
@@ -8594,17 +8619,34 @@ function App() {
                             </HoldStepperButton>
                             <div className="watermancer-salt-table__dose-value">
                               <input
-                                type="number"
+                                ref={input => { watermancerDoseInputRefs.current[salt.id] = input; }}
+                                type="text"
+                                inputMode="decimal"
                                 min="0"
-                                step="1"
-                                value={used ? activeMg.toFixed(1) : '0.0'}
-                                onChange={event => {
-                                  enterWatermancerManualMode();
-                                  const value = Math.max(0, Number(event.target.value) || 0);
-                                  setWatermancerDoseOverridesMg(current => ({ ...current, [salt.id]: value }));
+                                step="0.1"
+                                value={doseInputValue}
+                                onFocus={() => setWatermancerDoseInputDrafts(current => ({
+                                  ...current,
+                                  [salt.id]: doseInputValue,
+                                }))}
+                                onBlur={() => setWatermancerDoseInputDrafts(current => {
+                                  const next = { ...current };
+                                  delete next[salt.id];
+                                  return next;
+                                })}
+                                onChange={event => updateDoseInput(
+                                  event.target.value,
+                                  event.target.selectionStart,
+                                  event.target.selectionEnd,
+                                )}
+                                onKeyDown={event => {
+                                  if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E') {
+                                    event.preventDefault();
+                                  }
                                 }}
                                 disabled={!used}
-                                 className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                                placeholder="0"
+                                className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label={`${salt.name} dose in milligrams`}
                               />
                               <span className={`watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider ${doseIsAdjusted ? 'text-amber-300' : 'text-slate-600'}`}>
