@@ -12777,7 +12777,7 @@ function WatermancerIonCoverageBars({
                Closest match result
             </h2>
             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-               Final mineral contribution from the current waters and salt doses.
+               Current ion readings
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
