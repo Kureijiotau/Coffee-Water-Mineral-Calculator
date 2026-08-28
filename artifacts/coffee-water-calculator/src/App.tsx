@@ -12793,13 +12793,13 @@ function WatermancerIonReadingRow({
   actualIons,
   targetIons,
   activeProfile,
-  highlighted = false,
+  compact = false,
 }: {
   id: IonId;
   actualIons: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   activeProfile: WaterProfile;
-  highlighted?: boolean;
+  compact?: boolean;
 }) {
   const ion = ION_MAP[id];
   const actual = actualIons[id] ?? 0;
@@ -12832,10 +12832,10 @@ function WatermancerIonReadingRow({
   const profileYellowMarkerPercent = profileScalePercent > 0
     ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
     : 100;
-  const rowGridClass = highlighted
+  const rowGridClass = compact
     ? 'grid-cols-[6rem_minmax(0,1fr)_9rem] sm:grid-cols-[7rem_minmax(0,1fr)_10rem]'
     : 'grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]';
-  const barHeightClass = highlighted ? 'h-3' : 'h-4';
+  const barHeightClass = compact ? 'h-3' : 'h-4';
   const barColor = overshoot
     ? 'bg-rose-400'
     : covered
@@ -12861,9 +12861,7 @@ function WatermancerIonReadingRow({
   return (
     <div
       data-watermancer-ion-row={id}
-      className={`grid ${rowGridClass} items-center gap-x-3 gap-y-1 ${
-        highlighted ? 'watermancer-ion-spotlight' : ''
-      }`}
+      className={`grid ${rowGridClass} items-center gap-x-3 gap-y-1`}
     >
       <span className="truncate text-xs font-medium text-slate-300" title={ion.name}>{ion.name}</span>
       <div className="min-w-0">
@@ -12912,7 +12910,7 @@ function WatermancerIonReadingRow({
           {status}
         </div>
       </div>
-      <span className={`whitespace-nowrap text-right ${highlighted ? 'text-sm' : 'text-xs'} font-semibold tabular-nums ${valueColor}`}>
+      <span className={`whitespace-nowrap text-right ${compact ? 'text-sm' : 'text-xs'} font-semibold tabular-nums ${valueColor}`}>
         {formatLiveIonPpm(actual)}
         <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
       </span>
@@ -13019,7 +13017,7 @@ function WatermancerIonCoverageBars({
                 actualIons={actualIons}
                 targetIons={targetIons}
                 activeProfile={activeProfile}
-                highlighted
+                compact
               />
             ))}
           </div>
