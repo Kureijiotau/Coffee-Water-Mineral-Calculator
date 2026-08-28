@@ -12382,7 +12382,7 @@ function WatermancerIonProfileCard({
           <Gauge className="w-4 h-4 text-indigo-300" />
           <h2 className="text-sm font-semibold uppercase tracking-wider">1. Set your target water</h2>
         </div>
-         <div className="flex flex-wrap items-center justify-end gap-2">
+         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
            {selectedTargetSourceUrl && (
              <a
                href={selectedTargetSourceUrl}
@@ -12400,46 +12400,48 @@ function WatermancerIonProfileCard({
              groups={targetSourcePickerGroups}
              onChange={handleDropdownChange}
            />
-           {!isEditingAny ? (
-             <button
-               type="button"
-               onClick={startEditing}
-               className="flex items-center gap-1.5 text-xs text-violet-200 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/25 hover:border-violet-300/45 rounded-lg px-2.5 py-1.5 transition"
-               title="Create a new saved Watermancer profile"
-             >
-               <Plus className="h-3.5 w-3.5" />
-               <span className="hidden sm:inline">Add new</span>
-             </button>
-           ) : (
-             <>
+           <div className="flex min-w-[16.5rem] items-center gap-2 sm:min-w-[22rem]">
+             {!isEditingAny ? (
                <button
                  type="button"
-                 onClick={() => setNamingMode('new')}
-                  className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
+                 onClick={startEditing}
+                 className="flex items-center gap-1.5 text-xs text-violet-200 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/25 hover:border-violet-300/45 rounded-lg px-2.5 py-1.5 transition"
+                 title="Edit this Watermancer profile before saving"
                >
                  <Save className="h-3.5 w-3.5" />
-                 <span className="hidden sm:inline">Save as new</span>
+                 <span className="hidden sm:inline">Save</span>
                </button>
-               {canOverwrite && (
+             ) : (
+               <>
                  <button
                    type="button"
-                   onClick={handleOverwrite}
-                    className="flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                   onClick={() => setNamingMode('new')}
+                   className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
                  >
                    <Save className="h-3.5 w-3.5" />
-                   <span className="hidden sm:inline">Overwrite selected</span>
+                   <span className="hidden sm:inline">Save as new</span>
                  </button>
-               )}
-               <button
-                 type="button"
-                 onClick={cancelEditing}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
-               >
-                 <X className="h-3.5 w-3.5" />
-                 <span className="hidden sm:inline">Cancel</span>
-               </button>
-             </>
-           )}
+                 {canOverwrite && (
+                   <button
+                     type="button"
+                     onClick={handleOverwrite}
+                     className="flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                   >
+                     <Save className="h-3.5 w-3.5" />
+                     <span className="hidden sm:inline">Overwrite selected</span>
+                   </button>
+                 )}
+                 <button
+                   type="button"
+                   onClick={cancelEditing}
+                   className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+                 >
+                   <X className="h-3.5 w-3.5" />
+                   <span className="hidden sm:inline">Cancel</span>
+                 </button>
+               </>
+             )}
+           </div>
            <button
              type="button"
              onClick={onShareRecipe}
@@ -12459,7 +12461,7 @@ function WatermancerIonProfileCard({
                  ? 'Profile downloaded'
                  : shareStatus === 'error'
                    ? 'Download failed'
-                   : 'Download profile'}
+                   : 'Share'}
              </span>
            </button>
            {hasSaltRecipeTargets && (
