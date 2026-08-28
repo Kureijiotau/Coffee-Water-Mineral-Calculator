@@ -3925,6 +3925,7 @@ function App() {
   const [watermancerFollowEnabled, setWatermancerFollowEnabled] = useState(
     () => loadWatermancerBooleanPreference(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, false),
   );
+  const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
   const [watermancerFeedbackEnabled, setWatermancerFeedbackEnabled] = useState(
     () => watermancerFollowEnabled
       ? false
@@ -3960,19 +3961,13 @@ function App() {
   const toggleWatermancerFeedback = () => {
     const next = !watermancerFeedbackEnabled;
     setWatermancerFeedbackEnabled(next);
-    if (next) {
-      setWatermancerFollowEnabled(false);
-    } else {
+    if (!next) {
       clearWatermancerFeedback();
     }
   };
   const toggleWatermancerFollow = () => {
     const next = !watermancerFollowEnabled;
     setWatermancerFollowEnabled(next);
-    if (next) {
-      setWatermancerFeedbackEnabled(false);
-      clearWatermancerFeedback();
-    }
   };
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
@@ -8497,6 +8492,8 @@ function App() {
                spotlightIonIds={watermancerSpotlightIonIds}
                feedbackEnabled={watermancerFeedbackEnabled}
                followEnabled={watermancerFollowEnabled}
+               dockPosition={watermancerResultDock}
+               onDockPositionChange={setWatermancerResultDock}
                onToggleFeedback={toggleWatermancerFeedback}
                onToggleFollow={toggleWatermancerFollow}
             />
@@ -12972,6 +12969,8 @@ function WatermancerIonCoverageBars({
   spotlightIonIds,
   feedbackEnabled,
   followEnabled,
+  dockPosition,
+  onDockPositionChange,
   onToggleFeedback,
   onToggleFollow,
 }: {
@@ -12983,13 +12982,62 @@ function WatermancerIonCoverageBars({
   spotlightIonIds: IonId[];
   feedbackEnabled: boolean;
   followEnabled: boolean;
+  dockPosition: 'center' | 'left' | 'right';
+  onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
   onToggleFeedback: () => void;
   onToggleFollow: () => void;
 }) {
+  const [isScrolling, setIsScrolling] = useState(false);
+  const completeActualIons = completeIonTotals(actualIons);
+  const finalGh = computeGH(completeActualIons);
+  const finalKh = computeKH(completeActualIons);
+  const finalTds = Object.values(actualIons).reduce((total, ppm) => total + (ppm ?? 0), 0);
+  const finalGhKhRatio = finalKh > 0 && Number.isFinite(finalGh / finalKh)
+    ? `${(finalGh / finalKh).toFixed(1)}:1`
+    : '—';
+  useEffect(() => {
+    if (!followEnabled) {
+      setIsScrolling(false);
+      return;
+    }
+    let scrollEndTimer: number | null = null;
+    const handleScroll = () => {
+      setIsScrolling(true);
+      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
+      scrollEndTimer = window.setTimeout(() => {
+        setIsScrolling(false);
+        scrollEndTimer = null;
+      }, 180);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
+    };
+  }, [followEnabled]);
+  const compact = followEnabled && isScrolling;
+  const followPositionClass = dockPosition === 'left'
+    ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
+    : dockPosition === 'right'
+      ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
+      : 'fixed inset-x-3 bottom-3 top-auto sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
+  const compactPositionClass = dockPosition === 'left'
+    ? 'fixed bottom-3 left-3 right-auto w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
+    : dockPosition === 'right'
+      ? 'fixed bottom-3 left-auto right-3 w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
+      : 'fixed bottom-3 left-1/2 right-auto w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2';
+  const positionClass = compact
+    ? compactPositionClass
+    : followEnabled
+      ? followPositionClass
+      : 'relative';
+  const followHeightClass = followEnabled && !compact && dockPosition === 'center'
+    ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
+    : '';
   return (
     <>
       <div
-        className={`${followEnabled ? 'sticky top-4 z-30' : 'relative'} app-card flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md`}
+        className={`${positionClass} ${followHeightClass} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md transition-[width,max-height] duration-200`}
       >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -13007,10 +13055,9 @@ function WatermancerIonCoverageBars({
           <button
             type="button"
             onClick={onToggleFeedback}
-            disabled={followEnabled}
             aria-pressed={feedbackEnabled}
             aria-label={feedbackEnabled ? 'Disable updated ion feedback' : 'Enable updated ion feedback'}
-            title={followEnabled ? 'Turn off Follow screen to enable updated ion feedback' : 'Show a temporary tray after ion-increasing dose edits'}
+            title="Show a temporary tray after ion-increasing dose edits"
             className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
               feedbackEnabled
                 ? 'border-cyan-300/40 bg-cyan-500/15 text-cyan-100 hover:border-cyan-200/65 hover:bg-cyan-500/25'
@@ -13035,12 +13082,35 @@ function WatermancerIonCoverageBars({
             {followEnabled ? <PinOff className="h-3.5 w-3.5" aria-hidden="true" /> : <Pin className="h-3.5 w-3.5" aria-hidden="true" />}
             <span className="hidden sm:inline">{followEnabled ? 'Following' : 'Follow'}</span>
           </button>
+          {followEnabled && (
+            <div className="flex items-center gap-1 rounded-lg border border-cyan-300/15 bg-slate-950/25 p-0.5" role="group" aria-label="Follow screen position">
+              {([
+                ['left', 'Left'],
+                ['center', 'Center'],
+                ['right', 'Right'],
+              ] as const).map(([position, label]) => (
+                <button
+                  key={position}
+                  type="button"
+                  onClick={() => onDockPositionChange(position)}
+                  aria-pressed={dockPosition === position}
+                  className={`rounded-md px-1.5 py-1 text-[9px] font-semibold transition ${
+                    dockPosition === position
+                      ? 'bg-cyan-500/20 text-cyan-100'
+                      : 'text-slate-500 hover:bg-cyan-500/10 hover:text-cyan-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
           <span className="rounded-full border border-cyan-300/20 bg-cyan-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-cyan-200/70">
             Live
           </span>
         </div>
       </div>
-        <div className="app-card-body min-h-0 flex-1 space-y-3">
+         <div className={`${compact ? 'hidden' : ''} app-card-body min-h-0 flex-1 space-y-3 ${followEnabled && !compact ? 'overflow-y-auto overscroll-contain' : ''}`}>
         {ACTIVE_ION_IDS.map(id => (
           <WatermancerIonReadingRow
             key={id}
@@ -13082,6 +13152,22 @@ function WatermancerIonCoverageBars({
          );
        })}
       </div>
+      {compact && (
+        <div className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2" aria-label="Final mixture summary">
+          {[
+            ['GH', finalGh.toFixed(1), 'ppm as CaCO₃', 'text-indigo-200/70', 'text-indigo-200'],
+            ['KH', finalKh.toFixed(1), 'ppm as CaCO₃', 'text-amber-200/70', 'text-amber-200'],
+            ['GH:KH', finalGhKhRatio, 'ratio', 'text-emerald-200/70', 'text-emerald-200'],
+            ['TDS', finalTds.toFixed(1), 'mg/L', 'text-cyan-200/70', 'text-cyan-200'],
+          ].map(([label, value, unit, labelClass, valueClass]) => (
+            <div key={label} className="min-w-0 px-1 text-center">
+              <div className={`text-[9px] font-semibold uppercase tracking-wider ${labelClass}`}>{label}</div>
+              <div className={`mt-0.5 text-xs font-semibold tabular-nums ${valueClass}`}>{value}</div>
+              <div className="text-[9px] text-slate-500">{unit}</div>
+            </div>
+          ))}
+        </div>
+      )}
       </div>
       {feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
         <div

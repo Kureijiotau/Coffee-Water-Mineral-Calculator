@@ -31,7 +31,7 @@ body {
 .app-shell {
   position: relative;
   isolation: isolate;
-  overflow: clip;
+  overflow: hidden;
   background:
     radial-gradient(circle at 8% -8%, rgb(14 165 233 / 0.2), transparent 32rem),
     radial-gradient(circle at 92% 0%, rgb(99 102 241 / 0.18), transparent 30rem),
