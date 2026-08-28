@@ -12902,9 +12902,10 @@ function WatermancerIonCoverageBars({
   spotlightIonIds: IonId[];
 }) {
   return (
-    <div
-      className="app-card relative flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
-    >
+    <>
+      <div
+        className="app-card relative flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md"
+      >
       <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
@@ -12963,33 +12964,35 @@ function WatermancerIonCoverageBars({
          );
        })}
       </div>
-       {spotlightIonIds.length > 0 && (
-         <div
-           className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/50 backdrop-blur-md"
-           aria-label="Recently changed ion readings"
-           aria-live="polite"
-         >
-           <div className="mb-2 flex items-center justify-between gap-3 px-1">
-             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">
-               Updated readings
-             </span>
-             <span className="text-[10px] text-slate-500">Final mixture</span>
-           </div>
-           <div className="grid gap-2 sm:grid-cols-2">
-             {spotlightIonIds.map(id => (
-               <WatermancerIonReadingRow
-                 key={`spotlight-${id}`}
-                 id={id}
-                 actualIons={actualIons}
-                 targetIons={targetIons}
-                 activeProfile={activeProfile}
-                 highlighted
-               />
-             ))}
-           </div>
-         </div>
-       )}
-    </div>
+      </div>
+      {spotlightIonIds.length > 0 && createPortal(
+        <div
+          className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-1.5rem)] max-w-3xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-3 shadow-2xl shadow-slate-950/50 backdrop-blur-md"
+          aria-label="Recently changed ion readings"
+          aria-live="polite"
+        >
+          <div className="mb-2 flex items-center justify-between gap-3 px-1">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">
+              Updated readings
+            </span>
+            <span className="text-[10px] text-slate-500">Final mixture</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {spotlightIonIds.map(id => (
+              <WatermancerIonReadingRow
+                key={`spotlight-${id}`}
+                id={id}
+                actualIons={actualIons}
+                targetIons={targetIons}
+                activeProfile={activeProfile}
+                highlighted
+              />
+            ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
