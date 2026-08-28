@@ -7023,6 +7023,7 @@ function App() {
               profiles={profiles}
               activeProfileId={activeProfileId}
               wmProfiles={wmProfiles}
+               currentFinalIons={watermancerCurrentFinalIons}
               allRecipes={allRecipes}
               externalRecipes={ROBERT_ASAMI_RECIPES}
               lotusRecipes={LOTUS_RECIPES}
@@ -12058,6 +12059,7 @@ function CalibrationInput({
 
 function WatermancerIonProfileCard({
   ions,
+  currentFinalIons,
   supplementalIons,
   targetIons,
   profiles,
@@ -12078,6 +12080,7 @@ function WatermancerIonProfileCard({
   onReset,
 }: {
   ions: Partial<Record<IonId, number>>;
+  currentFinalIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
   profiles: WaterProfile[];
@@ -12195,7 +12198,7 @@ function WatermancerIonProfileCard({
   const startEditing = () => {
     setDraftTargets(
       Object.fromEntries(
-        ACTIVE_ION_IDS.map(id => [id, String(targetIons[id] ?? 0)]),
+        ACTIVE_ION_IDS.map(id => [id, String(currentFinalIons[id] ?? 0)]),
       ) as Partial<Record<IonId, string>>,
     );
     setEditing(true);

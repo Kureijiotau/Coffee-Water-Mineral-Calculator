@@ -53,6 +53,7 @@
 - [Gemini water assistant constraints](gemini-water-assistant-constraints.md) — keep the planner direct-key, one-shot, structured, rate-limited, and tolerant of Gemini model/latency changes
 - [Gemini recipe image reading](gemini-recipe-image-reading.md) — send recipe screenshots to a dedicated multimodal prompt, not the bottled-water label extractor
 - [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison
+- [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
