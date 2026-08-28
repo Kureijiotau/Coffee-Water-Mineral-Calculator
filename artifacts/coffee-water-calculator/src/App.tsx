@@ -4064,6 +4064,34 @@ function App() {
     enterWatermancerManualMode();
     setAdditionWaters(prev => prev.filter(e => e.id !== id));
   };
+  const watermancerWaterVolumeBaselineRef = useRef(
+    new Map<string, { volume: number; ionIds: IonId[] }>(),
+  );
+  useEffect(() => {
+    const entries = [...mineralWaters, ...additionWaters];
+    const nextBaseline = new Map(
+      entries.map(entry => [
+        entry.id,
+        {
+          volume: Math.max(0, num(entry.volumeMl)),
+          ionIds: ACTIVE_ION_IDS.filter(id => num(entry.ions[id] ?? '') > 0),
+        },
+      ] as const),
+    );
+    const increasedIonIds = new Set<IonId>();
+    for (const [id, next] of nextBaseline) {
+      const previous = watermancerWaterVolumeBaselineRef.current.get(id);
+      if (previous && next.volume > previous.volume) {
+        previous.ionIds.forEach(ionId => increasedIonIds.add(ionId));
+      } else if (!previous && next.volume > 0) {
+        next.ionIds.forEach(ionId => increasedIonIds.add(ionId));
+      }
+    }
+    watermancerWaterVolumeBaselineRef.current = nextBaseline;
+    if (increasedIonIds.size > 0) {
+      spotlightWatermancerIons([...increasedIonIds]);
+    }
+  }, [additionWaters, mineralWaters, spotlightWatermancerIons]);
   useDebouncedPersistence(() => {
     localStorage.setItem(AUTO_FILL_SETTINGS_STORAGE_KEY, JSON.stringify({
       preset: autoFillPriorityPreset,
