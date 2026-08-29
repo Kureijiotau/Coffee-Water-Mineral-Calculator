@@ -4310,6 +4310,7 @@ function App() {
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
   const [activeProfileId, setActiveProfileId] = useState<string>(AIKI_DEFAULT_PROFILE.id);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
+  const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
@@ -5932,6 +5933,9 @@ function App() {
   ];
   const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
   const hasSaltRecipeTargets = Object.values(saltTargets).some(target => target > 0);
+  useEffect(() => {
+    if (!hasSaltRecipeTargets) setRecipeStepsPromptDismissed(false);
+  }, [hasSaltRecipeTargets]);
   const selectedSourceRecipe = selectedExternalRecipe ?? (
     activeRecipe?.sourceUrl ? activeRecipe : undefined
   );
@@ -9093,19 +9097,31 @@ function App() {
       {(showAlchemist || showWatermancer) && (
         <button
           type="button"
-          onClick={() => setShowBrewerSteps('dry')}
+          onClick={() => {
+            setRecipeStepsPromptDismissed(true);
+            setShowBrewerSteps('dry');
+          }}
           className={`fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur transition hover:-translate-y-0.5 active:translate-y-0 ${
-            showAlchemist
-              ? 'border-emerald-300/45 bg-emerald-500/90 text-white shadow-emerald-950/40 hover:bg-emerald-400'
-              : showWatermancer
-                ? 'border-cyan-300/45 bg-indigo-600/90 text-white shadow-indigo-950/40 hover:bg-indigo-500'
-                : 'border-sky-300/45 bg-sky-600/90 text-white shadow-sky-950/40 hover:bg-sky-500'
+            showAlchemist && hasSaltRecipeTargets && !recipeStepsPromptDismissed
+              ? 'max-w-[calc(100vw-2rem)] border-emerald-200/70 bg-emerald-400 text-slate-950 shadow-emerald-950/60 ring-2 ring-emerald-200/25 ring-offset-2 ring-offset-slate-950 hover:bg-emerald-300'
+              : showAlchemist
+                ? 'border-emerald-300/45 bg-emerald-500/90 text-white shadow-emerald-950/40 hover:bg-emerald-400'
+                : showWatermancer
+                  ? 'border-cyan-300/45 bg-indigo-600/90 text-white shadow-indigo-950/40 hover:bg-indigo-500'
+                  : 'border-sky-300/45 bg-sky-600/90 text-white shadow-sky-950/40 hover:bg-sky-500'
           }`}
-          aria-label="Open recipe steps"
-          title="Open the current recipe steps"
+          aria-label={showAlchemist && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open recipe steps'}
+          title={showAlchemist && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open the current recipe steps'}
         >
-          <ListChecks className="h-4 w-4" />
-          <span>Recipe steps</span>
+          <ListChecks className="h-4 w-4 shrink-0" />
+          {showAlchemist && hasSaltRecipeTargets && !recipeStepsPromptDismissed ? (
+            <span className="min-w-0 text-left">
+              <span className="block truncate">Get recipe card</span>
+              <span className="mt-0.5 block text-[10px] font-medium text-slate-800/75">Exact steps · Save as image</span>
+            </span>
+          ) : (
+            <span>Recipe steps</span>
+          )}
         </button>
       )}
       {/* Reset confirmation */}
@@ -14961,7 +14977,7 @@ function BrewerRecipeStepsModal({
               title="Download this recipe card as an image"
             >
               <Download className="h-3.5 w-3.5" />
-              {isSavingImage ? 'Saving…' : 'Save recipe'}
+              {isSavingImage ? 'Saving…' : 'Save Recipe'}
             </button>
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
               <X className="h-4 w-4" />
