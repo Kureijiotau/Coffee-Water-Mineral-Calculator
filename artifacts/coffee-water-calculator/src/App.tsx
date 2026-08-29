@@ -7678,7 +7678,7 @@ function App() {
           {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
           <SharedSectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
-            title={showWatermancer ? '2. Add waters — Mineral water base' : 'Mineral Water Base'}
+            title={showWatermancer ? '2. Add waters — Mineral water base' : 'Craft with mineral water as a base.'}
             after={<div className="flex items-center gap-2">
               {showAlchemist && (
                 <button
