@@ -3995,6 +3995,29 @@ function App() {
   const [targetInputDrafts, setTargetInputDrafts] = useState<Record<string, string>>({});
   const [directDoseInputDrafts, setDirectDoseInputDrafts] = useState<Record<string, string>>({});
   const directDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [hydrationFormEditor, setHydrationFormEditor] = useState<{ saltId: string; formIdx: number } | null>(null);
+  const hydrationFormEditorRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!hydrationFormEditor) return;
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        hydrationFormEditorRef.current
+        && event.target instanceof Node
+        && !hydrationFormEditorRef.current.contains(event.target)
+      ) {
+        setHydrationFormEditor(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setHydrationFormEditor(null);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hydrationFormEditor]);
   const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [memeSaltFlashNonce, setMemeSaltFlashNonce] = useState(0);
   // Keep calculations/rendering safe across hot reloads and older in-memory
@@ -6193,6 +6216,12 @@ function App() {
       ? patch
       : { ...patch, target: normalizeSaltTarget(patch.target) };
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...safePatch } : r)));
+  };
+  const applyHydrationFormEditor = () => {
+    if (!hydrationFormEditor) return;
+    const rowIndex = SALTS.findIndex(salt => salt.id === hydrationFormEditor.saltId);
+    if (rowIndex >= 0) updateRow(rowIndex, { formIdx: hydrationFormEditor.formIdx });
+    setHydrationFormEditor(null);
   };
 
   // Export recipe card
