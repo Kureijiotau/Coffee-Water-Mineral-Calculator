@@ -1,10 +1,10 @@
 ---
 name: Recipe image export
-description: The stable approach for exporting the recipe modal without changing its visual styling
+description: The stable approach for exporting a deterministic recipe share card without capturing modal layout
 ---
 
-Use html-to-image's browser-native toJpeg renderer directly on the live recipe-card element. Do not use html2canvas or a manually mounted/off-screen clone for the recipe card.
+Export the recipe as a dedicated, content-only SVG share card with a fixed width and content-driven height, then rasterize that SVG in the browser at a high pixel ratio. Keep the interactive recipe modal separate.
 
-**Why:** html2canvas and manually constructed SVG captures repeatedly produced distorted text, borders, or layout. The user prefers literal preview fidelity over a separately cleaned-up card. Revoking a blob URL immediately after clicking the download can also make downloads unreliable.
+**Why:** The modal is optimized for interaction and scrolling, so DOM screenshot approaches vary with viewport and scroll state and can capture controls that do not belong in a share image.
 
-**How to apply:** Call toJpeg on the current modal viewport with cache busting and a 2× pixel ratio, keep the close and Save Recipe controls in the image, and download the returned data URL.
+**How to apply:** Build a serializable recipe view model first, wrap every variable-length label before laying out SVG panels, rasterize to PNG/JPG with a canvas, and always reset the saving state in a finally block. Keep editable WATER/JSON exports independent.
