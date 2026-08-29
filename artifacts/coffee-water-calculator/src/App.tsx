@@ -6135,11 +6135,7 @@ function App() {
       window.alert('Enter at least one salt target before exporting a recipe.');
       return;
     }
-    let name = activeRecipe?.name;
-    if (!name) {
-      name = window.prompt('Name this recipe for sharing:')?.trim() || '';
-      if (!name) return;
-    }
+    const name = activeRecipe?.name?.trim() || 'Alchemist water recipe';
     const text = serializeRecipeFile({
       name,
       salts,
