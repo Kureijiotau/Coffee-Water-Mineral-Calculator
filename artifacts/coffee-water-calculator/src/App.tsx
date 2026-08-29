@@ -14197,10 +14197,21 @@ function MineralAnalysisLabel({
 
         <div className="grid grid-cols-3 gap-2 border-b border-[#0d6170]/35 py-3 text-center">
           {summary.map(([label, value, unit]) => (
-            <div key={label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2 py-2">
-              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">{label}</div>
-              <div className="mt-0.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{value.toFixed(0)}</div>
-              <div className="text-[8px] uppercase tracking-wider text-[#47737a]">{unit}</div>
+            <div
+              key={label}
+              className={`rounded-lg border px-2 py-2 ${
+                label === 'TDS'
+                  ? 'border-[#0d6170] bg-[#0d6170] shadow-[0_8px_20px_-12px_rgba(13,97,112,0.95)]'
+                  : 'border-[#0d6170]/20 bg-white/40'
+              }`}
+            >
+              <div className={`text-[9px] font-bold uppercase tracking-[0.16em] ${label === 'TDS' ? 'text-[#d9f4ec]' : 'text-[#47737a]'}`}>
+                {label === 'TDS' ? 'Approx. TDS' : label}
+              </div>
+              <div className={`mt-0.5 font-mono text-base font-bold tabular-nums ${label === 'TDS' ? 'text-white' : 'text-[#0d6170]'}`}>
+                {value.toFixed(0)}
+              </div>
+              <div className={`text-[8px] uppercase tracking-wider ${label === 'TDS' ? 'text-[#b7e1d8]' : 'text-[#47737a]'}`}>{unit}</div>
             </div>
           ))}
         </div>
@@ -14967,18 +14978,8 @@ function BrewerRecipeStepsModal({
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5">
+          <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5">
           <div className="flex shrink-0 items-center gap-1.5" data-export-ignore>
-            <button
-              type="button"
-              onClick={handleSaveImage}
-              disabled={isSavingImage}
-              className="flex items-center gap-1.5 rounded-lg border border-sky-300/25 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-100 transition hover:border-sky-300/45 hover:bg-sky-400/20 disabled:cursor-wait disabled:opacity-60"
-              title="Download this recipe card as an image"
-            >
-              <Download className="h-3.5 w-3.5" />
-              {isSavingImage ? 'Saving…' : 'Save Recipe'}
-            </button>
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
               <X className="h-4 w-4" />
             </button>
@@ -14998,7 +14999,7 @@ function BrewerRecipeStepsModal({
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Prepare the water</div>
                 {remainingWaterMl > 0 ? (
-                  <div className={`mt-3 flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[0]}`}>
+                  <div className={`mt-3 flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${waterStepStyles[0]}`}>
                     <div className="min-w-0">
                       <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">RO / distilled water</div>
                       <div className="mt-0.5 text-xs font-semibold sm:text-sm">Add purified water</div>
@@ -15018,7 +15019,7 @@ function BrewerRecipeStepsModal({
                     return (
                     <div
                       key={`step-base-${water.id}`}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[styleIndex]}`}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${waterStepStyles[styleIndex]}`}
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
@@ -15035,7 +15036,7 @@ function BrewerRecipeStepsModal({
                     return (
                     <div
                       key={`step-addition-${water.id}`}
-                      className={`flex items-center justify-between gap-3 rounded-lg border px-2.5 py-2 ${waterStepStyles[styleIndex]}`}
+                      className={`flex items-center justify-between gap-2 rounded-lg border px-2 py-1.5 ${waterStepStyles[styleIndex]}`}
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
@@ -15097,8 +15098,8 @@ function BrewerRecipeStepsModal({
                          ? 'border-rose-200/40 bg-rose-400/20 text-rose-50'
                          : saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2.5 py-2 ${saltStyle}`} style={saltVisualStyle(salt)}>
-                          <div className="flex items-start justify-between gap-3">
+                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2 py-1.5 ${saltStyle}`} style={saltVisualStyle(salt)}>
+                          <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                                 <div
                                   className="text-xs font-semibold text-[color:var(--salt-primary)] sm:text-sm"
@@ -15153,7 +15154,7 @@ function BrewerRecipeStepsModal({
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Verify and brew</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                  Check for approximately {tdsTarget.toFixed(0)} ppm TDS. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
+                  Check for approximately <span className="inline-flex rounded-md border border-emerald-300/45 bg-emerald-400/20 px-1.5 py-0.5 font-mono font-bold tabular-nums text-emerald-100">{tdsTarget.toFixed(0)} ppm TDS</span>. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
                 </div>
               </div>
             </li>
@@ -15167,13 +15168,29 @@ function BrewerRecipeStepsModal({
             Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
           </p>
            </div>
-           <MineralAnalysisLabel
-             recipeName={recipeName}
-             finalIons={finalProfileIons}
-             tds={finalProfileTds}
-             gh={finalProfileGh}
-             kh={finalProfileKh}
-           />
+           <div className="min-w-0">
+             <MineralAnalysisLabel
+               recipeName={recipeName}
+               finalIons={finalProfileIons}
+               tds={finalProfileTds}
+               gh={finalProfileGh}
+               kh={finalProfileKh}
+             />
+             <div className="mt-3" data-export-ignore>
+               <button
+                 type="button"
+                 onClick={handleSaveImage}
+                 disabled={isSavingImage}
+                 className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-sky-200/70 bg-sky-400 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-sky-300 disabled:cursor-wait disabled:opacity-60"
+                 title="Download this recipe card as an image"
+               >
+                 <Download className="h-5 w-5" aria-hidden="true" />
+                 <span>{isSavingImage ? 'Saving…' : 'Save Recipe'}</span>
+               </button>
+               <p className="mt-1.5 text-center text-[10px] text-slate-500">
+                 Download this card as an image.
+               </p>
+             </div>
            {concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0 && (
              <aside
                className="relative mt-3 overflow-hidden rounded-[1.35rem] border border-[#7cc3c5] bg-[#e9f3ee] text-[#173f49] shadow-[0_24px_70px_-35px_rgba(0,0,0,0.9)]"
@@ -15225,6 +15242,7 @@ function BrewerRecipeStepsModal({
                </div>
              </aside>
            )}
+           </div>
            </div>
           </div>
         </div>
