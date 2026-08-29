@@ -8113,58 +8113,6 @@ function App() {
                </button>
              </div>
 
-            {/* Built-in reference waters */}
-            <div>
-              <details className="group">
-                <summary className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 cursor-pointer hover:text-slate-200 transition select-none">
-                  <Droplet className="w-3.5 h-3.5" />
-                  Reference waters
-                  <span className="text-slate-600 group-open:rotate-90 transition-transform ml-auto">▶</span>
-                </summary>
-                <div className="mt-2 grid grid-cols-1 gap-2">
-                  {EMPIRICAL_WATERS.map(water => {
-                    const alreadyAdded = mineralWaters.some(entry => entry.sourceLocalId === `reference:${water.id}`);
-                    return (
-                      <div
-                        key={water.id}
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2.5"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                            <span className="text-sm text-slate-200">{water.name}</span>
-                            <span className="text-[10px] text-slate-500">{water.hardnessAlkalinity} · TDS {water.metadata.tds} mg/L</span>
-                          </div>
-                          <p className="mt-0.5 text-[10px] text-slate-500">{water.description}</p>
-                          <a
-                            href={water.sourceUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-1 inline-block text-[10px] text-sky-400 hover:text-sky-300"
-                          >
-                            View published composition
-                          </a>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!alreadyAdded) addReferenceWater(water);
-                          }}
-                          disabled={alreadyAdded}
-                          className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
-                            alreadyAdded
-                              ? 'cursor-default bg-emerald-500/10 text-emerald-400'
-                              : 'border border-sky-500/30 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20'
-                          }`}
-                        >
-                          {alreadyAdded ? 'Added' : 'Add to base'}
-                        </button>
-                         </div>
-                     );
-                   })}
-                </div>
-              </details>
-            </div>
-
             {mineralWaters.length === 0 && (
               <p className="text-xs text-slate-500 italic flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5" />
