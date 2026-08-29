@@ -1,3 +1,4 @@
+- [Archived optional workspaces](archived-optional-workspaces.md) — preserve retired Brewer, assistant, scanner, and profile sources while keeping only Alchemist, Watermancer, Concentrate, and lazy Guide live
 - [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
 - [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
 - [Base water final mixture](base-water-final-mixture.md) — keep base salt recipe metrics separate from configured-water final mixture metrics

@@ -1,14 +1,11 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DependencyList, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
-import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import hackermanGif from '@assets/hackerman_1787062754046.gif';
-import hackermanLastFrame from '@assets/hackerman_1787062754046_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
@@ -21,7 +18,6 @@ import {
 import {
   loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
 } from '@/recipes';
-import type { WaterAssistantResult } from './WaterIntentAssistant';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
@@ -95,10 +91,6 @@ import {
 } from './watermancerWorkerClient';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
-const TasteProfileCard = lazy(() => import('./TasteProfileCard'));
-const TastePreferenceModal = lazy(() => import('./TastePreferenceModal'));
-const WaterIntentAssistant = lazy(() => import('./WaterIntentAssistant'));
-const WorkframeProfileBuilder = lazy(() => import('./WorkframeProfileBuilder'));
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
@@ -323,7 +315,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate' | 'workframe';
+type AppTab = 'calculator' | 'guide' | 'concentrate';
 type ConcentrateMode = 'builder' | 'lotus';
 
 const DEFAULT_WATER_PLAN_CONCENTRATE: WaterPlanConcentrateSnapshot = {
@@ -1257,7 +1249,6 @@ const normalizeSaltTarget = (value: string | number): string => {
 const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
-const WATER_ASSISTANT_ENABLED = false;
 
 const AUTO_FILL_MAX_ML = 2000;
 const DEFAULT_AUTO_FILL_DEVIATION_PPM = 1;
@@ -4242,18 +4233,18 @@ function App() {
   // Profile + settings state
   const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
   const [activeProfileId, setActiveProfileId] = useState<string>(AIKI_DEFAULT_PROFILE.id);
-  const [showTastePreference, setShowTastePreference] = useState(false);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
   const [plansOpen, setPlansOpen] = useState(false);
-  const [waterAssistantOpen, setWaterAssistantOpen] = useState(false);
   const [concentrateRecipeHandoff, setConcentrateRecipeHandoff] = useState<ConcentrateRecipeHandoff | null>(null);
   const [concentrateSnapshot, setConcentrateSnapshot] = useState<WaterPlanConcentrateSnapshot>(DEFAULT_WATER_PLAN_CONCENTRATE);
   const [pendingConcentrateRestore, setPendingConcentrateRestore] = useState<WaterPlanConcentrateSnapshot | null>(null);
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
-  const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => loadNerdLevel());
+  const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => (
+    loadNerdLevel() === 'watermancer' ? 'watermancer' : 'alchemist'
+  ));
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>(
     () => loadWatermancerTargetSource(),
   );
@@ -4400,6 +4391,7 @@ function App() {
       .sort((a, b) => a.distance - b.distance)[0];
   }, [communityWaters, selectedWaterComparisonSource]);
   const handleNerdLevelChange = (level: NerdLevel) => {
+    if (level === 'brewer') return;
     if (nerdLevel === 'watermancer' && level !== 'watermancer') {
       // Invalidate any deferred best-match callback before leaving the
       // Watermancer workspace so it cannot write results into another mode.
@@ -4419,38 +4411,6 @@ function App() {
       // their hidden state change Watermancer or Brewer salt amounts/labels.
       setConcentrateOn(false);
       setSplitMode(false);
-    }
-    if (level === 'brewer' && nerdLevel !== 'brewer') {
-      // Brewer is a lightweight flavor-first workspace. Do not carry the
-      // active Watermancer recipe and source-water graph into it: that keeps
-      // hidden calculations alive and makes the builder feel sluggish.
-      setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
-      setBrewerRecipeOverride(null);
-      setRows(defaultBrewerRows());
-      setMineralWaters([]);
-      setAdditionWaters([]);
-      setLiters('1');
-      setActiveRecipeId('custom');
-      setExternalRecipeId('custom');
-      setMagnesiumPreference('original');
-      setWatermancerTargetOverride(null);
-      setWatermancerTargetSource('safe-profile');
-      setWatermancerUsedSaltIds([]);
-      setAutoCraftPreset('closest-match');
-      setWatermancerSaltObjective('balanced');
-      setWatermancerBestMatchDeviationMode(null);
-      setWatermancerBestMatchPreview(null);
-      setWatermancerAppliedBestMatchRoute(null);
-      setWatermancerMatchMode('automatic');
-      setWatermancerManualRoute(null);
-      setWatermancerBestMatchMessage(null);
-      setWatermancerBestMatchRunning(false);
-      setWatermancerActionRunning(false);
-      setWatermancerActionMessage(null);
-      setWatermancerRecalculationNonce(0);
-      setWatermancerDoseOverridesMg({});
-      setSodiumCorrectionOn(false);
-      setFillWaterNudgeSeen(false);
     }
     setNerdLevel(level);
   };
@@ -4485,27 +4445,6 @@ function App() {
     setWatermancerImportedRecipeName(null);
   };
 
-  const applyWaterAssistantResult = (result: WaterAssistantResult) => {
-    if (result.workspace === 'watermancer') {
-      handleNerdLevelChange('watermancer');
-      handleWatermancerTargetOverrideChange(result.ionTargets as IonicTargetValues);
-      return;
-    }
-
-    handleNerdLevelChange('alchemist');
-    setActiveRecipeId('custom');
-    setExternalRecipeId('custom');
-    setBrewerRecipeOverride(null);
-    setWatermancerTargetOverride(null);
-    setWatermancerTargetSource('safe-profile');
-    setRows(SALTS.map(salt => ({
-      target: Number.isFinite(result.saltTargets?.[salt.id]) && Number(result.saltTargets[salt.id]) > 0
-        ? normalizeSaltTarget(result.saltTargets[salt.id])
-        : '',
-      formIdx: salt.defaultFormIdx ?? 0,
-    })));
-  };
-
   const handleSelectProfile = (id: string) => setActiveProfileId(id);
   const handleSaveProfile = (profile: WaterProfile) => {
     setProfiles(prev => {
@@ -4533,51 +4472,6 @@ function App() {
       setWatermancerTargetSource('safe-profile');
       setWatermancerTargetOverride(null);
     }
-  };
-
-  const handleWorkframeHandoff = (name: string, targets: IonicTargetValues) => {
-    const profile = createWatermancerProfile(name, targets);
-
-    // Start the receiving workspace with a fresh automatic match while
-    // preserving the user's saved waters and salt inventory.
-    watermancerActionGenerationRef.current += 1;
-    watermancerActionBusyRef.current = false;
-    watermancerMatchModeRef.current = 'automatic';
-    setWatermancerMatchMode('automatic');
-    setWatermancerManualRoute(null);
-    setWatermancerBestMatchPreview(null);
-    setWatermancerAppliedBestMatchRoute(null);
-    setWatermancerBestMatchMessage(null);
-    setWatermancerActionMessage(null);
-    setWatermancerActionRunning(false);
-    setWatermancerBestMatchRunning(false);
-    setWatermancerTargetOverride(null);
-    setWatermancerImportedRecipeName(null);
-    handleNerdLevelChange('watermancer');
-    handleSaveWmProfile(profile);
-    setWatermancerTargetSource(`saved:${profile.id}`);
-    setAppTab('calculator');
-  };
-
-  const handleApplyTasteInference = (inference: TasteInference) => {
-    setActiveRecipeId('custom');
-    setExternalRecipeId('custom');
-    setBrewerRecipeOverride({
-      id: inference.recipe.id,
-      targets: Object.fromEntries(
-        Object.entries(inference.recipe.salts).map(([id, entry]) => [id, num(entry.target)]),
-      ),
-      formIdx: Object.fromEntries(
-        Object.entries(inference.recipe.salts).map(([id, entry]) => [id, entry.formIdx]),
-      ),
-    });
-    setRows(SALTS.map(salt => {
-      const entry = inference.recipe.salts[salt.id];
-      return entry
-        ? { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx }
-        : { target: '', formIdx: salt.defaultFormIdx ?? 0 };
-    }));
-    setShowTastePreference(false);
   };
 
   const L = num(liters);
@@ -4627,7 +4521,6 @@ function App() {
     setBrewerFlavor(flavor);
     applyBrewerFlavor(flavor);
   }, [applyBrewerFlavor]);
-  const openTastePreference = useCallback(() => setShowTastePreference(true), []);
   const handleApplyWeek1Recipe = (recipe: Week1Recipe) => {
     setBrewerRecipeOverride(recipe);
     setActiveRecipeId('custom');
@@ -6052,7 +5945,7 @@ function App() {
     setActiveRecipeId(recipe.id);
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
     if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
-      setNerdLevel(requiredNerdLevel);
+      setNerdLevel(requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
@@ -6087,7 +5980,7 @@ function App() {
     setActiveRecipeId('custom');
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
     if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
-      setNerdLevel(requiredNerdLevel);
+      setNerdLevel(requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
@@ -6754,7 +6647,7 @@ function App() {
     setWatermancerManualRoute(null);
     watermancerMatchModeRef.current = 'automatic';
 
-    setNerdLevel(snapshot.nerdLevel);
+    setNerdLevel(snapshot.nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
     setLiters(snapshot.liters);
     setVolumeUnit(snapshot.volumeUnit);
     setRows(snapshot.rows.map(row => ({ target: row.target, formIdx: row.formIdx })));
@@ -6844,7 +6737,7 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : appTab === 'workframe' ? 'from-cyan-950 via-teal-950/80 to-indigo-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerMarkImage}
@@ -6881,19 +6774,6 @@ function App() {
             onDelete={handleDeleteWaterPlan}
             onImport={handleImportWaterPlan}
           />
-            {WATER_ASSISTANT_ENABLED && appTab === 'calculator' && (
-              <HackermanAssistantButton
-                onOpen={() => {
-                  setWaterAssistantOpen(true);
-                  window.setTimeout(() => {
-                    document.querySelector<HTMLElement>('[data-water-intent-assistant]')?.scrollIntoView({
-                      behavior: 'smooth',
-                      block: 'center',
-                    });
-                  }, 0);
-                }}
-              />
-            )}
             <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
@@ -6914,6 +6794,16 @@ function App() {
             >
               <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
               Concentrate
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={appTab === 'guide'}
+              onClick={() => setAppTab('guide')}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <ListChecks className="h-3.5 w-3.5" aria-hidden="true" />
+              Guide
             </button>
           </div>
         </div>
@@ -6942,21 +6832,6 @@ function App() {
             onSnapshotChange={setConcentrateSnapshot}
           />
         </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (appTab === 'workframe') {
-    return (
-      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
-        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
-          <div className="app-page-stack flex w-full max-w-6xl flex-col">
-            {appHeader}
-            <Suspense fallback={<div className="app-card rounded-2xl border border-cyan-300/20 bg-slate-900/70 px-4 py-6 text-center text-xs text-cyan-100/75">Loading Workframe…</div>}>
-              <WorkframeProfileBuilder onSendToWatermancer={handleWorkframeHandoff} />
-            </Suspense>
-          </div>
         </div>
       </div>
     );
@@ -7040,7 +6915,6 @@ function App() {
             </div>
             <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
               {([
-                ['brewer', 'Brewer', 'Flavor-first recipe'],
                 ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
                 ['watermancer', 'Watermancer', 'Source water & ions'],
               ] as const).map(([value, label, description]) => (
@@ -7054,18 +6928,10 @@ function App() {
                     nerdLevel === value
                       ? value === 'alchemist'
                         ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
-                        : value === 'watermancer'
-                          ? 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40 shadow-sm'
-                          : 'bg-sky-500/20 text-sky-200 border border-sky-400/40 shadow-sm'
+                      : 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40 shadow-sm'
                       : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                   }`}
                 >
-                  {value === 'brewer' && (
-                    <BrewerMark
-                      className={nerdLevel === value ? 'text-sky-200' : 'text-slate-500'}
-                      aria-hidden="true"
-                    />
-                  )}
                   {value === 'alchemist' && (
                     <AlchemistMark
                       className={nerdLevel === value ? 'text-emerald-200' : 'text-slate-500'}
@@ -7102,48 +6968,6 @@ function App() {
              </div>
            </div>
          </div>
-
-           {WATER_ASSISTANT_ENABLED && waterAssistantOpen && (
-             <div data-water-intent-assistant>
-                <Suspense fallback={<div className="app-card rounded-2xl border border-fuchsia-300/20 bg-slate-900/70 px-4 py-6 text-center text-xs text-fuchsia-100/75">Loading the water assistant…</div>}>
-                  <WaterIntentAssistant
-                    apiBase={API_BASE}
-                    open={waterAssistantOpen}
-                    onOpenChange={setWaterAssistantOpen}
-                    onApply={applyWaterAssistantResult}
-                  />
-                </Suspense>
-             </div>
-           )}
-
-          {nerdLevel === 'brewer' && (
-            <section className="relative overflow-hidden rounded-2xl border border-teal-300/25 bg-gradient-to-br from-teal-950/80 via-slate-900/80 to-indigo-950/70 px-5 py-5 shadow-xl shadow-teal-950/15 sm:px-6">
-              <div className="pointer-events-none absolute -right-16 -top-20 h-48 w-48 rounded-full bg-teal-300/10 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-20 left-1/3 h-40 w-40 rounded-full bg-indigo-400/10 blur-3xl" />
-              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-200/75">
-                    <FlaskConical className="h-4 w-4 text-teal-300" />
-                    New to water?
-                  </div>
-                  <h2 className="mt-2 text-xl font-semibold tracking-tight text-white sm:text-2xl">
-                    Hey, new to water? Start here <span aria-hidden="true">👉</span>
-                  </h2>
-                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-300">
-                    Robert Asami&apos;s one-week crash course turns mineral choices into seven small, easy-to-taste experiments.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                   onClick={() => setAppTab('guide')}
-                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-teal-200/35 bg-teal-300/15 px-4 py-3 text-sm font-semibold text-teal-100 transition hover:-translate-y-0.5 hover:border-teal-200/65 hover:bg-teal-300/25 hover:shadow-lg hover:shadow-teal-950/25 focus:outline-none focus:ring-2 focus:ring-teal-200/70 focus:ring-offset-2 focus:ring-offset-slate-900"
-                >
-                  Start the 7-day crash course
-                  <span aria-hidden="true">→</span>
-                </button>
-              </div>
-            </section>
-          )}
 
           {showWatermancer && (
             <div
@@ -7590,37 +7414,6 @@ function App() {
              </div>
             </>
            </div>}
-         {nerdLevel === 'brewer' && (
-           <>
-              <BrewerFlavorPanel
-               flavor={brewerFlavor}
-                suggestedIons={brewerActiveIons}
-               onChange={handleBrewerFlavorChange}
-                onOpenStartingRecipe={openTastePreference}
-             />
-             <BrewerSimpleRecipeCard
-               prepMethod={prepMethod}
-               onPrepMethodChange={method => {
-                 setPrepMethod(method);
-               }}
-                recipeHandoffToken={brewerRecipeHandoffToken}
-                 guideRecipe={brewerRecipeOverride}
-                saltTargets={brewerActiveSaltTargets}
-               recipeRows={rows}
-               liters={L}
-               volumeInput={liters}
-               volumeUnit={volumeUnit}
-               onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-               onVolumeChange={value => setLiters(value)}
-               concentrateOn={concentrateOn}
-               concentrateLiters={concL}
-               concentrateStrength={concentrateStrength}
-                dropsPerMl={brewerDropsPerMl}
-               onOpenSteps={method => setShowBrewerSteps(method)}
-             />
-           </>
-         )}
-
          {/* Water amount + Concentrate */}
               {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface order-2 relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
@@ -7886,35 +7679,6 @@ function App() {
             />
           </div>
         )}
-
-        {nerdLevel === 'brewer' && (
-          <div className="order-8">
-            <BrewerDropperCalibrationCard
-              dropsPerMl={brewerDropsPerMl}
-              onCalibrate={setBrewerDropsPerMl}
-              volumeUnit={volumeUnit}
-              onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-            />
-          </div>
-        )}
-
-        {/* Taste Profile */}
-        <div className="order-9">
-          <DeferredMount
-            fallback={<div className="h-28 rounded-2xl border border-slate-700/40 bg-slate-800/35" aria-hidden="true" />}
-          >
-            <Suspense fallback={<div className="h-28 rounded-2xl border border-slate-700/40 bg-slate-800/35" aria-hidden="true" />}>
-              <TasteProfileCard
-                ionTotals={nerdLevel === 'brewer' ? brewerModeIonTotals : ionTotals}
-                gh={nerdLevel === 'brewer' ? brewerModeGh : gh}
-                kh={nerdLevel === 'brewer' ? brewerModeKh : kh}
-                collapsed={showAlchemist || showWatermancer}
-                flavor={nerdLevel === 'brewer' ? brewerFlavor : undefined}
-                onFlavorChange={nerdLevel === 'brewer' ? handleBrewerFlavorChange : undefined}
-              />
-            </Suspense>
-          </DeferredMount>
-        </div>
 
         {/* Mineral Water Base */}
           {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
@@ -9332,7 +9096,7 @@ function App() {
             </div>
           )}
        </div>
-      {(showAlchemist || showWatermancer || nerdLevel === 'brewer') && (
+      {(showAlchemist || showWatermancer) && (
         <button
           type="button"
           onClick={() => setShowBrewerSteps('dry')}
@@ -9417,14 +9181,6 @@ function App() {
         </div>
        )}
         </div>
-        {showTastePreference && (
-        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 text-sm text-violet-100">Loading coffee preferences…</div>}>
-          <TastePreferenceModal
-            onClose={() => setShowTastePreference(false)}
-            onApply={handleApplyTasteInference}
-          />
-        </Suspense>
-      )}
       {showBrewerSteps && (
         <BrewerRecipeStepsModal
           recipeName={recipeStepsProfileName}
@@ -13360,38 +13116,6 @@ function MemeSaltToggle({ showMemeSalts, onToggle }: { showMemeSalts: boolean; o
         alt=""
         aria-hidden="true"
         className="h-5 w-auto max-w-full object-contain"
-      />
-    </button>
-  );
-}
-
-function HackermanAssistantButton({ onOpen }: { onOpen: () => void }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [previewRun, setPreviewRun] = useState(0);
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      onPointerEnter={event => {
-        if (event.pointerType === 'mouse') {
-          setIsPlaying(true);
-          setPreviewRun(run => run + 1);
-        }
-      }}
-      onPointerLeave={() => setIsPlaying(false)}
-      onFocus={() => setIsPlaying(true)}
-      onBlur={() => setIsPlaying(false)}
-      title="Try asking the AI for fun :)"
-      aria-label="Try asking the AI for fun"
-      className="app-header__ai-button group inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/15 bg-black/15 transition hover:border-fuchsia-200/55 hover:bg-fuchsia-300/10 focus:outline-none focus:ring-2 focus:ring-fuchsia-200/70 focus:ring-offset-2 focus:ring-offset-transparent sm:h-8 sm:w-8"
-    >
-      <img
-        key={isPlaying ? `hackerman-${previewRun}` : 'hackerman-last-frame'}
-        src={isPlaying ? hackermanGif : hackermanLastFrame}
-        alt=""
-        aria-hidden="true"
-        className="h-full w-full object-cover"
       />
     </button>
   );
