@@ -13075,7 +13075,7 @@ function WatermancerIonReadingRow({
     <div
       data-watermancer-ion-row={id}
       className={`grid ${rowGridClass} items-center gap-x-3 gap-y-1`}
-      style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+      style={ionVisualStyle(id)}
     >
       <span className="truncate text-xs font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
       <div className="min-w-0">
@@ -13124,7 +13124,7 @@ function WatermancerIonReadingRow({
           {status}
         </div>
       </div>
-      <span className={`whitespace-nowrap text-right ${compact ? 'text-sm' : 'text-xs'} font-semibold tabular-nums text-[color:var(--ion-fg)]`}>
+      <span className={`whitespace-nowrap text-right ${compact ? 'text-sm' : 'text-xs'} font-semibold tabular-nums text-slate-100`}>
         {formatLiveIonPpm(actual)}
         <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
       </span>
