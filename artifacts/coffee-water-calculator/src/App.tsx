@@ -12619,8 +12619,11 @@ function WatermancerIonProfileCard({
                } : undefined}
                 aria-label={!editing ? `Edit ${ion.name} target` : undefined}
             >
-              <div className="flex items-center justify-between mb-1">
-                 <span className="cursor-help text-sm font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold leading-tight text-[color:var(--ion-fg)]" title={ion.name}>{ion.name}</div>
+                  <div className="mt-0.5 text-[11px] font-medium leading-tight text-[color:var(--ion-fg)]/75">{ion.formula}</div>
+                </div>
                 <span className={`w-2.5 h-2.5 rounded-full ${aboveTarget ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               </div>
                <div className="flex items-baseline gap-2">
