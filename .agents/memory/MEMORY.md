@@ -72,3 +72,4 @@
 - [Commercial water research boundary](commercial-water-research.md) — keep Gemini candidates reviewable until core ions and provenance are independently verified
 - [Workframe profile handoff](workframe-profile-handoff.md) — finalize relationship-first controls as explicit named ion targets, then let Watermancer translate them
 - [Browser smoke harness](browser-smoke-cdp.md) — use explicit CDP interactively; align Playwright, browser builds, and Node for automated cross-browser checks
+- [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
