@@ -6945,7 +6945,7 @@ function App() {
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Detail level</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {nerdLevel === 'alchemist'
-                    ? 'Set salt PPM or mg doses, add mineral water, then send it to Concentrate for all-in-one, GH/KH, or single-salt batches.'
+                    ? 'Enter salt amounts in PPM or milligrams; the direct dose shows what to add for the selected final batch volume.'
                     : nerdLevel === 'watermancer'
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
                       : 'Choose how much detail to show for your water recipe.'}
@@ -7187,7 +7187,7 @@ function App() {
           </div>
             <>
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
-               <span>Build the recipe from 0-TDS water, then use the batch panel to prepare a safe concentrate.</span>
+               <span>Enter salt amounts in PPM or milligrams; Direct dose shows the amount to add for the selected final batch volume.</span>
                <button
                  type="button"
                  onClick={() => setShowAdvancedHydrationForms(value => !value)}
