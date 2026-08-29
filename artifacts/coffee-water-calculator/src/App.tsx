@@ -14880,23 +14880,7 @@ function BrewerRecipeStepsModal({
     };
     try {
       clone = source.cloneNode(true) as HTMLDivElement;
-      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
-        const sourceStyle = window.getComputedStyle(sourceNode);
-        const targetStyle = (targetNode as HTMLElement).style;
-        for (let index = 0; index < sourceStyle.length; index += 1) {
-          const property = sourceStyle.item(index);
-          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
-        }
-        const sourceChildren = Array.from(sourceNode.children);
-        const targetChildren = Array.from(targetNode.children);
-        sourceChildren.forEach((child, index) => {
-          const targetChild = targetChildren[index];
-          if (targetChild) copyComputedStyles(child, targetChild);
-        });
-      };
-
-      document.body.appendChild(clone);
-      copyComputedStyles(source, clone);
+      source.parentElement?.appendChild(clone) ?? document.body.appendChild(clone);
       clone.style.position = 'fixed';
       clone.style.left = '-100000px';
       clone.style.top = '0';
@@ -14972,7 +14956,7 @@ function BrewerRecipeStepsModal({
         role="dialog"
         aria-modal="true"
       >
-          <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5">
+        <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5" data-export-ignore>
           <div className="flex shrink-0 items-center gap-1.5" data-export-ignore>
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
               <X className="h-4 w-4" />
