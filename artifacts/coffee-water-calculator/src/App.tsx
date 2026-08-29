@@ -6917,7 +6917,8 @@ function App() {
             </button>
           </div>
         </div>
-                    </div>
+         </div>
+       </div>
   );
 
   if (appTab === 'concentrate') {
@@ -8161,9 +8162,9 @@ function App() {
                         >
                           {alreadyAdded ? 'Added' : 'Add to base'}
                         </button>
-                      </div>
-                    );
-                  })}
+                         </div>
+                     );
+                   })}
                 </div>
               </details>
             </div>
@@ -10188,7 +10189,7 @@ function ConcentrateWorkspace({
              <>Shake until clear, then label: <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</strong> · {strengthPercent || 0}% w/w · {totalStockMassG.toFixed(2)} g total.</>,
            ].map((step, index) => (
             <button
-              key={step}
+               key={`${salt.id}-preparation-${index}`}
               type="button"
               onClick={() => toggleStep(index)}
               className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${completedSteps[index] ? 'border-emerald-400/30 bg-emerald-500/10' : 'border-slate-700/60 bg-slate-950/25 hover:border-fuchsia-400/30'}`}
@@ -15539,8 +15540,8 @@ function BrewerRecipeStepsModal({
                        <Droplet className="h-3.5 w-3.5 shrink-0 text-[#0d6170]" aria-hidden="true" />
                        <span>≈ {dose.drops.toLocaleString()} drops</span>
                      </div>
-                    </div>
-                 })}
+                      </div>
+                  ))}
                  </div>
                  <div className="mt-3 border-t border-[#0d6170]/35 pt-3 text-[9px] leading-relaxed text-[#47737a]">
                    Drops use your calibrated setting of <span className="font-mono font-bold text-[#0d6170]">{dropsPerMl.toFixed(1)}</span> drops per mL.
