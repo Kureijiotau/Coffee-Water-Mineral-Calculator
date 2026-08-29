@@ -7478,13 +7478,9 @@ function App() {
                  className={`grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                  }`}
-                  style={saltVisualStyle(salt)}
                >
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
-                   <span
-                     className="text-sm font-semibold text-[color:var(--salt-primary)]"
-                     style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
-                   >
+                    <span className="text-sm font-semibold text-slate-100">
                      {salt.name}
                    </span>
                    <SaltIonBadges salt={salt} className="text-xs" />
@@ -8412,7 +8408,7 @@ function App() {
                      <div
                        key={id}
                        className="flex items-center gap-3"
-                       style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                        style={ionVisualStyle(id)}
                      >
                        <span className="w-20 shrink-0 text-xs font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
                       <div className="flex-1">
@@ -8451,7 +8447,7 @@ function App() {
                                </span>
                              </div>
                           </div>
-                           <span className="w-12 shrink-0 text-right text-xs font-medium tabular-nums text-[color:var(--ion-fg)]">
+                           <span className="w-12 shrink-0 text-right text-xs font-medium tabular-nums text-slate-100">
                             {covered.toFixed(1)}
                           </span>
                           <span className="text-xs text-slate-500 shrink-0">/ {target.toFixed(1)} ppm</span>
@@ -8786,7 +8782,6 @@ function App() {
                                 } ${
                                  MEME_SALT_IDS.has(salt.id) && watermancerMemeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                                }`}
-                                style={saltVisualStyle(salt)}
                              >
                             <div className="watermancer-salt-table__salt flex items-center gap-2 text-left sm:justify-start">
                               <span
@@ -8799,8 +8794,7 @@ function App() {
                               />
                               <div className="min-w-0">
                               <div
-                                className="watermancer-salt-table__salt-name text-xs font-semibold text-[color:var(--salt-primary)]"
-                                style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
+                                 className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-100"
                               >
                                 {salt.name}
                               </div>
