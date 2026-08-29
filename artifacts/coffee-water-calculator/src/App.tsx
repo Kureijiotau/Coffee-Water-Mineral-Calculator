@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type DependencyList, type ReactNode, type SVGProps } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DependencyList, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
 import type { TasteInference } from './tastePreference';
 import pepeImage from '@assets/ez_1785735003821.png';
@@ -3162,16 +3162,6 @@ const COMMUNITY_BROWSER_ION_IDS: IonId[] = [
   'magnesium', 'bicarbonate', 'sodium', 'calcium', 'sulfate', 'chloride', 'potassium',
 ];
 
-const COMMUNITY_BROWSER_ION_COLORS: Partial<Record<IonId, string>> = {
-  magnesium: '#64e4f1',
-  bicarbonate: '#c79bf6',
-  sodium: '#ffb85c',
-  calcium: '#76a9ff',
-  sulfate: '#9b8cff',
-  chloride: '#fb7185',
-  potassium: '#fbbf24',
-};
-
 const communityBrowserIonLabel = (id: IonId): string => ION_MAP[id]?.formula ?? id;
 
 function communityBrowserNote(water: CommunityWater): { text: string; ionIds: IonId[] } {
@@ -3203,20 +3193,23 @@ const COMPARISON_ION_IDS: IonId[] = [
   'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate',
 ];
 
-const COMPARISON_ION_LABELS: Record<IonId, string> = {
-  sodium: 'Na',
-  potassium: 'K',
-  magnesium: 'Mg',
-  calcium: 'Ca',
-  chloride: 'Cl',
-  sulfate: 'SO₄',
-  bicarbonate: 'HCO₃',
-  carbonate: 'CO₃',
-  citrates: 'Cit',
-  bicitrates: 'BiCit',
-  biphosphates: 'BiPO₄',
-  phosphates: 'PO₄',
-};
+const COMPARISON_ION_LABELS = Object.fromEntries(
+  IONS.map(ion => [ion.id, ion.formula]),
+) as Record<IonId, string>;
+
+type IonVisualStyle = CSSProperties & Record<`--ion-${string}`, string>;
+
+function ionVisualStyle(id: IonId): IonVisualStyle {
+  const color = ION_MAP[id].color;
+  return {
+    '--ion-fg': color.foreground,
+    '--ion-light-fg': color.lightForeground,
+    '--ion-soft': color.soft,
+    '--ion-border': color.border,
+    '--ion-bar': color.bar,
+    '--ion-shadow': color.shadow,
+  };
+}
 
 function numericIons(ions: Record<string, number | string | undefined>): Record<string, number> {
   return Object.fromEntries(
@@ -8197,10 +8190,10 @@ function App() {
                   />
                 </div>
                 {/* Ion inputs */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                  {ACTIVE_ION_IDS.map(id => (
-                    <div key={id}>
-                      <label className="block text-[10px] text-slate-500 mb-0.5">{ION_MAP[id].formula}</label>
+                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+                   {ACTIVE_ION_IDS.map(id => (
+                     <div key={id} style={ionVisualStyle(id)}>
+                       <label className="mb-0.5 block text-[10px] font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</label>
                       <input
                         type="number"
                         inputMode="decimal"
@@ -8367,7 +8360,6 @@ function App() {
                     overshoot ? 'overshoot' :
                     target > 0 && covered >= target - coverageTolerance ? 'full' :
                     covered > 0 ? 'partial' : 'none';
-                  const barColor = level === 'overshoot' ? 'bg-rose-500' : level === 'full' ? 'bg-emerald-500' : level === 'partial' ? 'bg-sky-400' : 'bg-slate-600';
                   const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-sky-300' : 'text-slate-500';
                   const label = level === 'overshoot'
                     ? `Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
@@ -8381,8 +8373,12 @@ function App() {
                        : `Needs ${target.toFixed(1)} ppm from salts — none from mineral water`
                      : noRecipeSelected ? 'No safe limit set' : 'No salt target set';
                   return (
-                    <div key={id} className="flex items-center gap-3">
-                      <span className="w-20 text-xs text-slate-400 shrink-0">{ion.name}</span>
+                     <div
+                       key={id}
+                       className="flex items-center gap-3"
+                       style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                     >
+                       <span className="w-20 shrink-0 text-xs font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                            <div
@@ -8393,7 +8389,10 @@ function App() {
                             title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
                            >
                             <div className="h-2 overflow-hidden rounded-full bg-slate-700/60 transition-opacity group-hover/profile-coverage-bar:hidden group-focus/profile-coverage-bar:hidden">
-                               <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                               <div
+                                 className="h-full rounded-full transition-all"
+                                 style={{ width: `${pct}%`, backgroundColor: 'var(--ion-bar)', boxShadow: '0 0 10px var(--ion-shadow)' }}
+                               />
                              </div>
                              <div
                                className="relative hidden h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-indigo-300/20 group-hover/profile-coverage-bar:block group-focus/profile-coverage-bar:block"
@@ -8416,7 +8415,7 @@ function App() {
                                </span>
                              </div>
                           </div>
-                          <span className={`text-xs font-medium tabular-nums ${textColor} w-12 text-right shrink-0`}>
+                           <span className="w-12 shrink-0 text-right text-xs font-medium tabular-nums text-[color:var(--ion-fg)]">
                             {covered.toFixed(1)}
                           </span>
                           <span className="text-xs text-slate-500 shrink-0">/ {target.toFixed(1)} ppm</span>
@@ -8455,14 +8454,18 @@ function App() {
                      const remaining = Math.max(target - covered, 0);
                      if (target <= 0) return null;
                      return (
-                       <div key={id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
-                         <span className="block text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
+                        <div
+                          key={id}
+                          className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2"
+                          style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                        >
+                          <span className="block text-[10px] font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span>
                          {covered >= target - 0.01 ? (
                            <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
                              <Check className="h-3.5 w-3.5" /> Covered
                            </span>
                          ) : (
-                           <span className="text-sm font-semibold tabular-nums text-amber-300">
+                            <span className="text-sm font-semibold tabular-nums text-[color:var(--ion-fg)]">
                              {remaining.toFixed(1)} ppm
                            </span>
                          )}
@@ -8986,13 +8989,13 @@ function App() {
                           <ul className="mt-2 space-y-2" aria-label="Watermancer ion conflicts">
                             {watermancerLiveResult.primaryPlan.diagnostics!.conflicts.map(conflict => (
                               <li
-                                key={conflict.id}
-                                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/10 bg-amber-950/10 px-2.5 py-2"
-                              >
+                                 key={conflict.id}
+                                 className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-300/10 bg-amber-950/10 px-2.5 py-2"
+                                 style={ionVisualStyle(conflict.id)}
+                               >
                                 <div className="min-w-0">
                                   <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-200">
-                                    <span>{ION_MAP[conflict.id].name}</span>
-                                    <span className="text-[10px] font-normal text-slate-500">{ION_MAP[conflict.id].formula}</span>
+                                     <span className="text-[color:var(--ion-fg)]" title={ION_MAP[conflict.id].name}>{ION_MAP[conflict.id].formula}</span>
                                     <span className={`rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider ${
                                       conflict.direction === 'deficit'
                                         ? 'bg-amber-400/10 text-amber-200'
@@ -9097,12 +9100,13 @@ function App() {
                           <div
                             key={id}
                             className="rounded-lg border border-slate-700/60 bg-slate-950/25 px-2.5 py-2"
+                            style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
                           >
                             <div className="mb-1.5 flex items-center justify-between gap-2">
                               <span className="text-[11px] font-semibold text-slate-200">
-                                Where should {ION_MAP[id].name} come from?
+                                Where should <span className="text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span> come from?
                               </span>
-                              <span className="shrink-0 text-[10px] text-slate-500">{ION_MAP[id].formula}</span>
+                              <span className="sr-only">{ION_MAP[id].name}</span>
                             </div>
                             <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
                               {WATERMANCER_ION_SOURCE_OPTIONS.map(option => {
@@ -9538,7 +9542,7 @@ function App() {
                     note.ionIds[0]);
                     const circleIon = communitySortIon === 'name' ? strongestNoteIon : communitySortIon;
                     const circleValue = Number(w.ions[circleIon] ?? 0);
-                    const circleColor = COMMUNITY_BROWSER_ION_COLORS[strongestNoteIon];
+                    const circleColor = ION_MAP[strongestNoteIon].color.bar;
                     const maxIon = (id: IonId) => Math.max(1, ...communityWaters.map(water => Number(water.ions[id] ?? 0)));
                     return (
                       <div key={w.id} className="grid grid-cols-2 items-center gap-x-4 gap-y-3 border-t border-slate-800 px-4 py-3 transition hover:bg-sky-950/20 sm:grid-cols-[minmax(220px,2fr)_repeat(7,minmax(48px,0.78fr))_minmax(105px,0.95fr)] sm:gap-3">
@@ -9549,7 +9553,7 @@ function App() {
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 text-[10px] font-semibold leading-tight" style={{ color: circleColor }}>
-                              <span className="flex shrink-0 gap-0.5">{note.ionIds.map(id => <i key={id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: COMMUNITY_BROWSER_ION_COLORS[id] }} />)}</span>
+                              <span className="flex shrink-0 gap-0.5">{note.ionIds.map(id => <i key={id} className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ION_MAP[id].color.bar }} />)}</span>
                               <span className="truncate">{note.text}</span>
                             </div>
                             <span className="mt-1 block truncate text-xs font-medium text-slate-200">{w.name || `Water #${w.id}`}</span>
@@ -9561,9 +9565,9 @@ function App() {
                           return (
                             <div key={id}>
                               <div className="mb-1 h-1 rounded-full bg-slate-800">
-                                <div className="h-full rounded-full" style={{ width: `${Math.max(value > 0 ? 4 : 0, value / maxIon(id) * 100)}%`, backgroundColor: COMMUNITY_BROWSER_ION_COLORS[id] }} />
+                                <div className="h-full rounded-full" style={{ width: `${Math.max(value > 0 ? 4 : 0, value / maxIon(id) * 100)}%`, backgroundColor: ION_MAP[id].color.bar }} />
                               </div>
-                              <span className="text-xs tabular-nums" style={{ color: COMMUNITY_BROWSER_ION_COLORS[id] }}>{value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+                              <span className="text-xs tabular-nums" style={{ color: ION_MAP[id].color.foreground }}>{value.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
                             </div>
                           );
                         })}
@@ -11223,8 +11227,12 @@ function LegacyRecipeConcentrateBuilder({
                       <span className="text-xs font-semibold tabular-nums text-violet-200">{row.saltMgPerDrop.toFixed(2)} mg/drop</span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
-                      {Object.entries(row.ionPpmPerDrop).map(([ionId, value]) => (
-                        <span key={ionId}>{COMPARISON_ION_LABELS[ionId as IonId] ?? ionId}: {Number(value).toFixed(3)} ppm/drop</span>
+                       {Object.entries(row.ionPpmPerDrop).map(([ionId, value]) => (
+                         <span key={ionId}>
+                           <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle(ionId as IonId)}>
+                             {COMPARISON_ION_LABELS[ionId as IonId] ?? ionId}
+                           </span>: {Number(value).toFixed(3)} ppm/drop
+                         </span>
                       ))}
                     </div>
                   </div>
@@ -12745,8 +12753,12 @@ function WatermancerIonProfileCard({
                             ? 'text-emerald-300'
                             : 'text-amber-300';
                         return (
-                          <div key={id} className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]">
-                            <span className="truncate font-medium text-slate-300">{ION_MAP[id].name}</span>
+                          <div
+                            key={id}
+                            className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]"
+                            style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                          >
+                            <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span>
                             <span className="text-right tabular-nums text-slate-400">{leftValue.toFixed(1)} ppm</span>
                             <span className="text-right tabular-nums text-slate-200">{rightValue.toFixed(1)} ppm</span>
                             <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
@@ -12781,9 +12793,10 @@ function WatermancerIonProfileCard({
           const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
 
           return (
-             <div
+              <div
               key={id}
-                className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!editing ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
+                 className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!editing ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
+                 style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
                 role={!editing ? 'button' : undefined}
                 tabIndex={!editing ? 0 : -1}
                 onClick={!editing ? () => startIonEditing(id) : undefined}
@@ -12796,11 +12809,11 @@ function WatermancerIonProfileCard({
                 aria-label={!editing ? `Edit ${ion.name} target` : undefined}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-slate-200 cursor-help">{ion.name}</span>
+                 <span className="cursor-help text-sm font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
                 <span className={`w-2.5 h-2.5 rounded-full ${aboveTarget ? 'bg-amber-400' : 'bg-emerald-400'}`} />
               </div>
-              <div className="flex items-baseline gap-2">
-                <span className={`text-lg font-bold ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'}`}>{ppm.toFixed(1)}</span>
+               <div className="flex items-baseline gap-2">
+                 <span className="text-lg font-bold text-[color:var(--ion-fg)]">{ppm.toFixed(1)}</span>
                 <span className="text-xs text-slate-400">ppm</span>
               </div>
                {cardEditing ? (
@@ -12949,13 +12962,6 @@ function WatermancerIonReadingRow({
     ? 'grid-cols-[6rem_minmax(0,1fr)_9rem] sm:grid-cols-[7rem_minmax(0,1fr)_10rem]'
     : 'grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]';
   const barHeightClass = compact ? 'h-3' : 'h-4';
-  const barColor = overshoot
-    ? 'bg-rose-400'
-    : covered
-      ? 'bg-emerald-400'
-      : actual > 0
-        ? 'bg-cyan-400'
-        : 'bg-slate-700';
   const valueColor = overshoot
     ? 'text-rose-300'
     : covered
@@ -12975,22 +12981,23 @@ function WatermancerIonReadingRow({
     <div
       data-watermancer-ion-row={id}
       className={`grid ${rowGridClass} items-center gap-x-3 gap-y-1`}
+      style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
     >
-      <span className="truncate text-xs font-medium text-slate-300" title={ion.name}>{ion.name}</span>
+      <span className="truncate text-xs font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
       <div className="min-w-0">
         <div
           className="group/profile-result-bar relative min-w-0 cursor-help outline-none"
           tabIndex={0}
           role="img"
           aria-label={coveragePercent === null
-            ? `${ion.name}: no target set; hover to compare with ${activeProfile.name} range`
-            : `${ion.name}: ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
+             ? `${ion.name} (${ion.formula}): no target set; hover to compare with ${activeProfile.name} range`
+             : `${ion.name} (${ion.formula}): ${coverageLabel} of target; hover to compare with ${activeProfile.name} range`}
           title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
         >
           <div className={`relative ${barHeightClass} overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden`}>
             <div
-              className={`h-full rounded-full transition-all duration-300 ${barColor}`}
-              style={{ width: `${percentage}%` }}
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${percentage}%`, backgroundColor: 'var(--ion-bar)', boxShadow: '0 0 10px var(--ion-shadow)' }}
             />
             <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
               covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
@@ -13003,8 +13010,8 @@ function WatermancerIonReadingRow({
             aria-hidden="true"
           >
             <div
-              className="relative h-full rounded-full bg-emerald-400 transition-all duration-300"
-              style={{ width: `${profileFillPercent}%` }}
+              className="relative h-full rounded-full transition-all duration-300"
+              style={{ width: `${profileFillPercent}%`, backgroundColor: 'var(--ion-bar)' }}
             />
             <div
               className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
@@ -13023,7 +13030,7 @@ function WatermancerIonReadingRow({
           {status}
         </div>
       </div>
-      <span className={`whitespace-nowrap text-right ${compact ? 'text-sm' : 'text-xs'} font-semibold tabular-nums ${valueColor}`}>
+      <span className={`whitespace-nowrap text-right ${compact ? 'text-sm' : 'text-xs'} font-semibold tabular-nums text-[color:var(--ion-fg)]`}>
         {formatLiveIonPpm(actual)}
         <span className="font-normal text-slate-500"> / {formatLiveIonPpm(target)}</span>
       </span>
@@ -14292,26 +14299,25 @@ const MINERAL_LABEL_ANION_IDS: IonId[] = ['bicarbonate', 'chloride', 'sulfate'];
 function MineralAnalysisIonRow({
   id,
   value,
-  accent,
 }: {
   id: IonId;
   value: number;
-  accent: 'teal' | 'ochre';
 }) {
   const ion = ION_MAP[id];
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[#0d6170]/15 py-2.5 last:border-b-0">
+    <div
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[#0d6170]/15 py-2.5 last:border-b-0"
+      style={{ ...ionVisualStyle(id), borderBottomColor: 'var(--ion-border)' }}
+    >
       <div className="min-w-0">
         <div className="flex min-w-0 items-baseline gap-2">
-          <span className="truncate text-[13px] font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
-          <span className="shrink-0 font-mono text-[10px] text-[#47737a]">{ion.formula}</span>
+          <span className="shrink-0 font-mono text-[13px] font-bold tracking-tight text-[color:var(--ion-light-fg)]" title={ion.name}>{ion.formula}</span>
+          <span className="truncate text-[11px] font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
         </div>
         <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#47737a]/80">final concentration</div>
       </div>
       <div className="text-right">
-        <div className={`font-mono text-lg font-bold leading-none tabular-nums ${
-          accent === 'ochre' ? 'text-[#8a5e1b]' : 'text-[#0d6170]'
-        }`}>
+        <div className="font-mono text-lg font-bold leading-none tabular-nums text-[color:var(--ion-light-fg)]">
           {value.toFixed(1)}
         </div>
         <div className="mt-1 text-[8px] font-bold uppercase tracking-[0.12em] text-[#47737a]">mg/L</div>
@@ -14390,7 +14396,7 @@ function MineralAnalysisLabel({
               <span className="h-px flex-1 bg-[#0d6170]/20" />
             </div>
             {MINERAL_LABEL_CATION_IDS.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="teal" />
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
             ))}
           </div>
           <div>
@@ -14399,7 +14405,7 @@ function MineralAnalysisLabel({
               <span className="h-px flex-1 bg-[#0d6170]/20" />
             </div>
             {MINERAL_LABEL_ANION_IDS.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
             ))}
           </div>
         </div>
@@ -14408,7 +14414,7 @@ function MineralAnalysisLabel({
           <div className="border-b border-[#0d6170]/35 py-3">
             <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Other modeled ions</div>
             {additionalIonIds.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} accent="ochre" />
+              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
             ))}
           </div>
         )}
@@ -16299,10 +16305,14 @@ function IonWatchDisclosure({
             const style = TRAFFIC_STYLES[level];
             const range = activeProfile.ranges[id];
             return (
-              <div key={id} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}>
+              <div
+                key={id}
+                className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}
+                style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+              >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <span className={`text-xs font-semibold ${style.text}`}>
-                    {ion.name} · {style.label}
+                    <span className="text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span> · {style.label}
                   </span>
                   <span className={`font-mono text-[11px] ${style.text}`}>
                     {ppm.toFixed(1)} ppm · preferred &lt;{range.greenMax}
@@ -16382,10 +16392,14 @@ function IonDeviationDisclosure({
             const over = delta > 0;
             const style = over ? TRAFFIC_STYLES.red : TRAFFIC_STYLES.yellow;
             return (
-              <div key={id} className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}>
+              <div
+                key={id}
+                className={`rounded-lg border ${style.border} ${style.bg} px-3 py-2.5`}
+                style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+              >
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <span className={`text-xs font-semibold ${style.text}`}>
-                    {ION_MAP[id].name} · {over ? 'Over target' : 'Under target'}
+                    <span className="text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span> · {over ? 'Over target' : 'Under target'}
                   </span>
                   <span className={`font-mono text-[11px] ${style.text}`}>
                     {over ? '+' : '−'}{Math.abs(delta).toFixed(1)} ppm

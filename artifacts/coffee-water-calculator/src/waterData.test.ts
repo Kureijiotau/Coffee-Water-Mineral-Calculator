@@ -124,6 +124,20 @@ describe('derived ion chemistry', () => {
   });
 });
 
+describe('shared sensory ion palette', () => {
+  it('gives every modeled ion a stable formula and distinct visual identity', () => {
+    const formulas = IONS.map(ion => ion.formula);
+    const foregroundColors = IONS.map(ion => ion.color.foreground);
+    const barColors = IONS.map(ion => ion.color.bar);
+
+    expect(new Set(formulas).size).toBe(IONS.length);
+    expect(new Set(foregroundColors).size).toBe(IONS.length);
+    expect(new Set(barColors).size).toBe(IONS.length);
+    expect(IONS.every(ion => ion.color.foreground.startsWith('#'))).toBe(true);
+    expect(IONS.every(ion => ion.color.lightForeground.startsWith('#'))).toBe(true);
+  });
+});
+
 describe('findStrongestSafeConcentrateStrength', () => {
   it('calculates a dosing ceiling from a minimum whole-drop batch dose', () => {
     expect(findWholeDropDosingStrengthCeiling({

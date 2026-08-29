@@ -32,24 +32,30 @@ Extend the existing shared ion metadata with presentation tokens for each modele
 - A softer surface/border color for row accents and chips.
 - A bar color for the ion’s contribution/coverage fill.
 
-The palette uses deliberately separated hues on the calculator’s dark navy surface:
+The palette is sensory-led rather than based on ion charge or anion/cation families. These are visual cues inspired by the existing Watermancer tooltip descriptors and common taste-color associations, not claims that an ion has a literal color or single flavor:
 
 | Ion | Formula | Hue |
 | --- | --- | --- |
-| Sodium | Na⁺ | amber |
-| Potassium | K⁺ | violet |
-| Magnesium | Mg²⁺ | cyan |
-| Calcium | Ca²⁺ | sky blue |
-| Chloride | Cl⁻ | blue |
-| Sulfate | SO₄²⁻ | orange |
-| Bicarbonate | HCO₃⁻ | teal |
-| Carbonate | CO₃²⁻ | lime |
-| Citrates | C₆H₅O₇³⁻ | pink |
-| Bicitrates | C₆H₆O₇²⁻ | fuchsia |
-| Biphosphates | H₂PO₄⁻ | indigo |
-| Phosphates | PO₄³⁻ | rose |
+| Sodium | Na⁺ | coral / raspberry — sweetness, smoothness, roundness |
+| Potassium | K⁺ | grape / violet — harshness, bitterness, metallic edge |
+| Magnesium | Mg²⁺ | citrus yellow — acidity, fruit, clarity |
+| Calcium | Ca²⁺ | amber / orange — body, weight, creamy roundness |
+| Chloride | Cl⁻ | mineral blue — density, texture, salty/brackish edge |
+| Sulfate | SO₄²⁻ | indigo — crispness, dryness, astringency |
+| Bicarbonate | HCO₃⁻ | mint / seafoam — buffering, softening, balance |
+| Carbonate | CO₃²⁻ | chartreuse — alkaline, soapy, flat |
+| Citrates | C₆H₅O₇³⁻ | lemon-lime — tart, lemony, sour |
+| Bicitrates | C₆H₆O₇²⁻ | soft pink-peach — gentle acidity, soft buffering |
+| Biphosphates | H₂PO₄⁻ | bright aqua — clean buffering, crispness |
+| Phosphates | PO₄³⁻ | cool silver-lilac — strong buffering, flat/metallic |
 
-The exact shade values should be tuned against the existing dark theme and checked for readable contrast. The mapping must be keyed by `IonId`, not by display text.
+The seven primary ions get the clearest taste associations; the less common modeled ions use intensity-safe neighboring hues. Exact shade values should be tuned against the existing dark theme and checked for readable contrast. The mapping must be keyed by `IonId`, not by display text.
+
+The research basis is:
+
+- Penn State’s summary of taste-color conditioning research notes yellow is commonly associated with sour drinks and red with sweet drinks: https://www.psu.edu/news/research/story/color-coded-matching-taste-color
+- A review in *Foods* summarizes common associations of salt with white/blue, sweetness with red/pink, sourness with green/yellow, and bitterness with brown-black/violet: https://pmc.ncbi.nlm.nih.gov/articles/PMC12524125/
+- A review in *Multisensory Research* documents that color and flavor/taste associations can influence expectations and perception, so the palette should guide scanning without being treated as a chemistry rule: https://pmc.ncbi.nlm.nih.gov/articles/PMC7037180/
 
 ### 2. Formula-first labels
 

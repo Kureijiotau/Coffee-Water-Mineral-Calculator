@@ -9,10 +9,26 @@ export interface IonInfo {
   id: IonId;
   name: string;
   formula: string;
+  color: IonColorTokens;
   greenMax: number;
   yellowMax: number;
   tasteNote: string;
   flagNotes: { green: string; yellow: string; red: string };
+}
+
+export interface IonColorTokens {
+  /** Bright token for the dark calculator surfaces. */
+  foreground: string;
+  /** Darker same-hue token for the light printable analysis label. */
+  lightForeground: string;
+  /** Low-opacity same-hue surface tint. */
+  soft: string;
+  /** Same-hue border/row accent. */
+  border: string;
+  /** Solid token used by ion contribution bars. */
+  bar: string;
+  /** Same-hue shadow/glow token. */
+  shadow: string;
 }
 
 export interface IonRanges {
@@ -68,7 +84,13 @@ export interface SaltInfo {
 
 export const IONS: IonInfo[] = [
   {
-    id: 'sodium', name: 'Sodium', formula: 'Na⁺', greenMax: 10, yellowMax: 20,
+    id: 'sodium', name: 'Sodium', formula: 'Na⁺',
+    color: {
+      foreground: '#fb7185', lightForeground: '#be123c',
+      soft: 'rgba(251, 113, 133, 0.12)', border: 'rgba(251, 113, 133, 0.42)',
+      bar: '#fb7185', shadow: 'rgba(251, 113, 133, 0.25)',
+    },
+    greenMax: 10, yellowMax: 20,
     tasteNote: 'Sodium tends to round out sharp bitterness and lift perceived sweetness, making the cup feel smoother. In moderate amounts it can add body, while higher amounts may taste salty, flat, or hide acidity. Its effect depends on the other minerals and how you brew.',
     flagNotes: {
       green: 'Balanced — adds a touch of sweetness and mouthfeel without overpowering other flavors.',
@@ -77,7 +99,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'potassium', name: 'Potassium', formula: 'K⁺', greenMax: 3, yellowMax: 5,
+    id: 'potassium', name: 'Potassium', formula: 'K⁺',
+    color: {
+      foreground: '#c084fc', lightForeground: '#7e22ce',
+      soft: 'rgba(192, 132, 252, 0.12)', border: 'rgba(192, 132, 252, 0.42)',
+      bar: '#c084fc', shadow: 'rgba(192, 132, 252, 0.25)',
+    },
+    greenMax: 3, yellowMax: 5,
     tasteNote: 'Coffee grounds already contribute plenty of potassium, so small amounts in the water usually have little effect on the final cup. Higher amounts may taste harsh, bitter, or metallic, and its specific brewing role is not well established.',
     flagNotes: {
       green: 'Balanced — subtle sweetness with no negative impact on flavor.',
@@ -86,7 +114,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'magnesium', name: 'Magnesium', formula: 'Mg²⁺', greenMax: 20, yellowMax: 40,
+    id: 'magnesium', name: 'Magnesium', formula: 'Mg²⁺',
+    color: {
+      foreground: '#fde047', lightForeground: '#a16207',
+      soft: 'rgba(253, 224, 71, 0.12)', border: 'rgba(253, 224, 71, 0.42)',
+      bar: '#fde047', shadow: 'rgba(253, 224, 71, 0.25)',
+    },
+    greenMax: 20, yellowMax: 40,
     tasteNote: 'Magnesium binds strongly to flavor compounds during brewing, helping bring out bright acidity, fruit notes, and clarity. It tends to extract more vigorously than calcium, while higher amounts may become dry, bitter, or astringent.',
     flagNotes: {
       green: 'Balanced — contributes to a clean, crisp cup with well-defined flavor clarity.',
@@ -95,7 +129,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'calcium', name: 'Calcium', formula: 'Ca²⁺', greenMax: 12, yellowMax: 25,
+    id: 'calcium', name: 'Calcium', formula: 'Ca²⁺',
+    color: {
+      foreground: '#fb923c', lightForeground: '#c2410c',
+      soft: 'rgba(251, 146, 60, 0.12)', border: 'rgba(251, 146, 60, 0.42)',
+      bar: '#fb923c', shadow: 'rgba(251, 146, 60, 0.25)',
+    },
+    greenMax: 12, yellowMax: 25,
     tasteNote: 'Calcium supports extraction while tending to add body, weight, and a creamier mouthfeel. It usually creates a rounder cup than magnesium, while higher amounts may feel heavy, chalky, or mute delicate acidity.',
     flagNotes: {
       green: 'Balanced — adds body and sweetness while supporting efficient extraction.',
@@ -104,7 +144,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'chloride', name: 'Chloride', formula: 'Cl⁻', greenMax: 25, yellowMax: 35,
+    id: 'chloride', name: 'Chloride', formula: 'Cl⁻',
+    color: {
+      foreground: '#60a5fa', lightForeground: '#1d4ed8',
+      soft: 'rgba(96, 165, 250, 0.12)', border: 'rgba(96, 165, 250, 0.42)',
+      bar: '#60a5fa', shadow: 'rgba(96, 165, 250, 0.25)',
+    },
+    greenMax: 25, yellowMax: 35,
     tasteNote: 'Chloride is difficult to judge separately from the mineral paired with it, but moderate amounts tend to increase mouthfeel density, sweetness, and texture. Higher amounts may make the cup feel dull, salty, or brackish.',
     flagNotes: {
       green: 'Balanced — neutral flavor impact; serves as an unobtrusive counter-ion.',
@@ -113,7 +159,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'sulfate', name: 'Sulfate', formula: 'SO₄²⁻', greenMax: 15, yellowMax: 25,
+    id: 'sulfate', name: 'Sulfate', formula: 'SO₄²⁻',
+    color: {
+      foreground: '#818cf8', lightForeground: '#4338ca',
+      soft: 'rgba(129, 140, 248, 0.12)', border: 'rgba(129, 140, 248, 0.42)',
+      bar: '#818cf8', shadow: 'rgba(129, 140, 248, 0.25)',
+    },
+    greenMax: 15, yellowMax: 25,
     tasteNote: 'Sulfate is difficult to judge separately from the mineral paired with it. It may add a crisper, drier edge and definition to acidity, but higher amounts can become harsh or astringent. Its isolated effect in coffee is not well established.',
     flagNotes: {
       green: 'Balanced — adds a clean, dry crispness without bitterness.',
@@ -122,7 +174,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'bicarbonate', name: 'Bicarbonate', formula: 'HCO₃⁻', greenMax: 20, yellowMax: 35,
+    id: 'bicarbonate', name: 'Bicarbonate', formula: 'HCO₃⁻',
+    color: {
+      foreground: '#5eead4', lightForeground: '#0f766e',
+      soft: 'rgba(94, 234, 212, 0.12)', border: 'rgba(94, 234, 212, 0.42)',
+      bar: '#5eead4', shadow: 'rgba(94, 234, 212, 0.25)',
+    },
+    greenMax: 20, yellowMax: 35,
     tasteNote: 'Bicarbonate is the main acidity buffer in brewing water. Moderate amounts can soften sharp sourness and balance the cup, while too much may mute desirable acidity and taste dull. Too little can leave acidity harsh or sour.',
     flagNotes: {
       green: 'Balanced — acidity is well-integrated; bright, fruity notes shine without tasting sour.',
@@ -131,7 +189,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'carbonate', name: 'Carbonate', formula: 'CO₃²⁻', greenMax: 5, yellowMax: 8,
+    id: 'carbonate', name: 'Carbonate', formula: 'CO₃²⁻',
+    color: {
+      foreground: '#a3e635', lightForeground: '#4d7c0f',
+      soft: 'rgba(163, 230, 53, 0.12)', border: 'rgba(163, 230, 53, 0.42)',
+      bar: '#a3e635', shadow: 'rgba(163, 230, 53, 0.25)',
+    },
+    greenMax: 5, yellowMax: 8,
     tasteNote: 'Raises pH strongly and buffers acidity aggressively; even small amounts can make the cup taste flat and soapy.',
     flagNotes: {
       green: 'Balanced — minimal acidity impact at these low levels.',
@@ -140,7 +204,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'citrates', name: 'Citrates', formula: 'C₆H₅O₇³⁻', greenMax: 5, yellowMax: 10,
+    id: 'citrates', name: 'Citrates', formula: 'C₆H₅O₇³⁻',
+    color: {
+      foreground: '#bef264', lightForeground: '#3f6212',
+      soft: 'rgba(190, 242, 100, 0.12)', border: 'rgba(190, 242, 100, 0.42)',
+      bar: '#bef264', shadow: 'rgba(190, 242, 100, 0.25)',
+    },
+    greenMax: 5, yellowMax: 10,
     tasteNote: 'Citrate is an added organic buffer that can change acidity and interact with hardness minerals; it is not simply “citrus flavor.” Its specific effect in coffee is not well established, so higher amounts may taste sharply sour or salty.',
     flagNotes: {
       green: 'Balanced — enhances citrusy, fruity brightness without overwhelming.',
@@ -149,7 +219,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'bicitrates', name: 'Bicitrates', formula: 'C₆H₆O₇²⁻', greenMax: 10, yellowMax: 20,
+    id: 'bicitrates', name: 'Bicitrates', formula: 'C₆H₆O₇²⁻',
+    color: {
+      foreground: '#f9a8d4', lightForeground: '#be185d',
+      soft: 'rgba(249, 168, 212, 0.12)', border: 'rgba(249, 168, 212, 0.42)',
+      bar: '#f9a8d4', shadow: 'rgba(249, 168, 212, 0.25)',
+    },
+    greenMax: 10, yellowMax: 20,
     tasteNote: 'A milder citrate form (one fewer charge) that contributes gentle acidity and light buffering; noticeable tartness appears sooner than you might expect given its weaker acidity.',
     flagNotes: {
       green: 'Balanced — gentle acidity and soft buffering add a subtle brightness without tartness.',
@@ -158,7 +234,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'biphosphates', name: 'Biphosphates', formula: 'H₂PO₄⁻', greenMax: 8, yellowMax: 15,
+    id: 'biphosphates', name: 'Biphosphates', formula: 'H₂PO₄⁻',
+    color: {
+      foreground: '#22d3ee', lightForeground: '#0e7490',
+      soft: 'rgba(34, 211, 238, 0.12)', border: 'rgba(34, 211, 238, 0.42)',
+      bar: '#22d3ee', shadow: 'rgba(34, 211, 238, 0.25)',
+    },
+    greenMax: 8, yellowMax: 15,
     tasteNote: 'Buffers acidity while keeping pH in a favorable range for extraction; can add a clean, crisp character.',
     flagNotes: {
       green: 'Balanced — clean buffering that supports crisp extraction.',
@@ -167,7 +249,13 @@ export const IONS: IonInfo[] = [
     },
   },
   {
-    id: 'phosphates', name: 'Phosphates', formula: 'PO₄³⁻', greenMax: 1, yellowMax: 5,
+    id: 'phosphates', name: 'Phosphates', formula: 'PO₄³⁻',
+    color: {
+      foreground: '#c4b5fd', lightForeground: '#6d28d9',
+      soft: 'rgba(196, 181, 253, 0.12)', border: 'rgba(196, 181, 253, 0.42)',
+      bar: '#c4b5fd', shadow: 'rgba(196, 181, 253, 0.25)',
+    },
+    greenMax: 1, yellowMax: 5,
     tasteNote: 'A strong pH buffer; even small amounts significantly raise pH and mute acidity, making the cup taste flat.',
     flagNotes: {
       green: 'Balanced — minimal buffering at these low levels.',
