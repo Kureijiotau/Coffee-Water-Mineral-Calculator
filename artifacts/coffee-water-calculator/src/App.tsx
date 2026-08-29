@@ -4379,34 +4379,6 @@ function App() {
     ? autoFillCustomPriority
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
   const effectiveAutoFillDeviationPpm = showAlchemist ? 0 : autoFillDeviationPpm;
-  const modeAccent = nerdLevel === 'alchemist'
-    ? 'from-emerald-600 to-teal-500'
-    : nerdLevel === 'watermancer'
-      ? 'from-indigo-600 to-cyan-500'
-      : 'from-sky-600 to-cyan-500';
-  const modeGuide = nerdLevel === 'alchemist'
-    ? {
-        eyebrow: 'Mineral recipe lab',
-        title: 'Design the recipe behind the cup',
-        description: 'Choose your salts, hydration forms, and mineral balance, then scale the recipe into a repeatable batch or concentrate.',
-        tags: ['Salt design', 'Dose control', 'Batch scaling'],
-        tone: 'border-emerald-400/25 bg-emerald-500/[0.06] text-emerald-200',
-      }
-    : nerdLevel === 'watermancer'
-      ? {
-          eyebrow: 'Ionic target studio',
-          title: 'Craft water around your ionic targets',
-          description: 'Set target ions for your finished water. The solver blends your selected mineral waters and salts to match.',
-          tags: ['Set ion targets', 'Mineral waters', 'Addition salts'],
-          tone: 'border-indigo-400/25 bg-indigo-500/[0.07] text-indigo-200',
-        }
-      : {
-          eyebrow: 'Flavor builder',
-          title: 'Choose a starting direction',
-          description: 'Shape the cup with a simple flavor-first recipe using RO / distilled 0 TDS water.',
-          tags: ['Flavor first', 'Concentrate drops', 'Simple dosing'],
-          tone: 'border-sky-400/25 bg-sky-500/[0.06] text-sky-200',
-        };
   const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => {
     const seenProfiles = new Set<string>();
     const sources: WaterComparisonSource[] = [];
@@ -6973,7 +6945,7 @@ function App() {
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Detail level</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {nerdLevel === 'alchemist'
-                    ? 'A focused salt and concentrate workspace built from 0-TDS water.'
+                    ? 'Set salt PPM or mg doses, add mineral water, then send it to Concentrate for all-in-one, GH/KH, or single-salt batches.'
                     : nerdLevel === 'watermancer'
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
                       : 'Choose how much detail to show for your water recipe.'}
@@ -7017,24 +6989,6 @@ function App() {
             </div>
           </div>
         </div>
-
-         {/* Mode guide */}
-          <div className={`mode-guide app-card rounded-2xl border px-4 py-3 shadow-md backdrop-blur-xl ${modeGuide.tone}`}>
-           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-             <div className="min-w-0">
-               <div className="text-[10px] font-semibold uppercase tracking-[0.18em] opacity-75">{modeGuide.eyebrow}</div>
-               <div className="mt-1 text-sm font-semibold text-slate-100">{modeGuide.title}</div>
-               <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">{modeGuide.description}</p>
-             </div>
-             <div className="flex shrink-0 flex-wrap gap-1.5">
-               {modeGuide.tags.map(tag => (
-                 <span key={tag} className="rounded-full border border-white/10 bg-slate-950/20 px-2.5 py-1 text-[10px] font-medium text-slate-300">
-                   {tag}
-                 </span>
-               ))}
-             </div>
-           </div>
-         </div>
 
           {showWatermancer && (
             <div
@@ -7121,7 +7075,7 @@ function App() {
           </div>
          )}
          {/* Mineral Table */}
-           {showAlchemist && <div className="app-card app-panel-surface order-1 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
+           {showAlchemist && <div className="app-card app-panel-surface order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
             <div className="app-section-header flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <GiSaltShaker className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -7285,7 +7239,22 @@ function App() {
          <>
           <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
-            <span>{publishedTargetLabel}</span>
+            <span>
+              {publishedTargetLabel === 'Salt target (ppm)' ? (
+                <>
+                  Salt target{' '}
+                  <span className="group/ppm relative inline-flex cursor-help border-b border-dotted border-slate-500/80 focus:outline-none focus:ring-1 focus:ring-cyan-300/70" tabIndex={0} aria-label="Salt target ppm explanation">
+                    (ppm)
+                    <span
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-64 rounded-lg border border-slate-600/70 bg-slate-950 px-3 py-2 text-left text-[10px] font-normal normal-case leading-relaxed tracking-normal text-slate-200 shadow-xl group-hover/ppm:block group-focus/ppm:block"
+                    >
+                      Salt target is milligrams per liter of the selected salt&apos;s anhydrous equivalent. GH/KH summaries are expressed as ppm as CaCO₃.
+                    </span>
+                  </span>
+                </>
+              ) : publishedTargetLabel}
+            </span>
              <span>Hydration form</span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
@@ -7482,12 +7451,12 @@ function App() {
             </>
            </div>}
          {/* Water amount + Concentrate */}
-              {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface order-2 relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+              {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface ${showAlchemist ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SharedSectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
-               title="2. Add waters — Batch volume"
+               title={showAlchemist ? '1. Batch volume' : '2. Add waters — Batch volume'}
              after={
                <div className="flex items-center gap-2">
                  {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
