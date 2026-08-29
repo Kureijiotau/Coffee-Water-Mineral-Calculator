@@ -3995,29 +3995,7 @@ function App() {
   const [targetInputDrafts, setTargetInputDrafts] = useState<Record<string, string>>({});
   const [directDoseInputDrafts, setDirectDoseInputDrafts] = useState<Record<string, string>>({});
   const directDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [hydrationFormEditor, setHydrationFormEditor] = useState<{ saltId: string; formIdx: number } | null>(null);
-  const hydrationFormEditorRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!hydrationFormEditor) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        hydrationFormEditorRef.current
-        && event.target instanceof Node
-        && !hydrationFormEditorRef.current.contains(event.target)
-      ) {
-        setHydrationFormEditor(null);
-      }
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setHydrationFormEditor(null);
-    };
-    document.addEventListener('pointerdown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [hydrationFormEditor]);
+  const [showAdvancedHydrationForms, setShowAdvancedHydrationForms] = useState(false);
   const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [memeSaltFlashNonce, setMemeSaltFlashNonce] = useState(0);
   // Keep calculations/rendering safe across hot reloads and older in-memory
@@ -6217,13 +6195,6 @@ function App() {
       : { ...patch, target: normalizeSaltTarget(patch.target) };
     setRows(prev => prev.map((r, idx) => (idx === i ? { ...r, ...safePatch } : r)));
   };
-  const applyHydrationFormEditor = () => {
-    if (!hydrationFormEditor) return;
-    const rowIndex = SALTS.findIndex(salt => salt.id === hydrationFormEditor.saltId);
-    if (rowIndex >= 0) updateRow(rowIndex, { formIdx: hydrationFormEditor.formIdx });
-    setHydrationFormEditor(null);
-  };
-
   // Export recipe card
   const [exportCopied, setExportCopied] = useState(false);
   const exportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -7215,8 +7186,17 @@ function App() {
             </div>
           </div>
             <>
-            <div className="border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
-               Build the recipe from 0-TDS water. Choose hydration forms, then use the batch panel to prepare a safe concentrate.
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
+               <span>Build the recipe from 0-TDS water, then use the batch panel to prepare a safe concentrate.</span>
+               <button
+                 type="button"
+                 onClick={() => setShowAdvancedHydrationForms(value => !value)}
+                 aria-expanded={showAdvancedHydrationForms}
+                 className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-slate-600/60 bg-slate-950/30 px-2 py-1 text-[10px] font-semibold text-slate-400 transition hover:border-emerald-300/40 hover:text-emerald-200 focus:outline-none focus:ring-2 focus:ring-emerald-300/60"
+               >
+                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showAdvancedHydrationForms ? 'rotate-180' : ''}`} aria-hidden="true" />
+                 Advanced: hydration forms
+               </button>
             </div>
            {selectedSourceRecipe && (
              <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
@@ -7266,7 +7246,7 @@ function App() {
              </div>
            )}
          <>
-          <div className="hidden sm:grid grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
+          <div className="hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
             <span>
               {publishedTargetLabel === 'Salt target (ppm)' ? (
@@ -7278,7 +7258,6 @@ function App() {
                 </>
               ) : publishedTargetLabel}
             </span>
-             <span>Hydration form</span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
            {SALTS.map((salt, i) => {
@@ -7358,15 +7337,35 @@ function App() {
              return (
                <div
                  key={`${salt.id}-${isMemeSalt ? memeSaltFlashNonce : 0}`}
-                 className={`grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
+                 className={`grid grid-cols-2 sm:grid-cols-[1.7fr_1fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                  }`}
                >
-                <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
+                <div className="col-span-2 sm:col-span-1 flex min-w-0 flex-col items-start gap-1">
                     <span className="text-sm font-semibold text-slate-100">
                      {salt.name}
                    </span>
                    <SaltIonBadges salt={salt} className="text-xs" />
+                   {showAdvancedHydrationForms ? (
+                     <label className="mt-1 flex max-w-full flex-col gap-1 text-[10px] uppercase tracking-wider text-slate-500">
+                       Hydration form
+                       <select
+                         id={`salt-form-${salt.id}`}
+                         aria-label={`${salt.name} hydration form`}
+                         value={row.formIdx}
+                         onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
+                         className="max-w-full rounded-lg border border-emerald-400/30 bg-slate-900/60 px-2.5 py-1.5 text-xs normal-case tracking-normal text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
+                       >
+                         {salt.hydrationForms.map((f, fi) => (
+                           <option key={fi} value={fi}>{f.label}</option>
+                         ))}
+                       </select>
+                     </label>
+                   ) : (
+                     <span className="max-w-full truncate text-[10px] text-slate-500" title="Selected hydration form">
+                       {form.label}
+                     </span>
+                   )}
                 </div>
                 <div>
                   <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
@@ -7393,24 +7392,6 @@ function App() {
                     placeholder="0"
                     className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                   />
-                </div>
-                <div>
-                  <label htmlFor={salt.hydrationForms.length > 1 ? `salt-form-${salt.id}` : undefined} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">Hydration form</label>
-                  {salt.hydrationForms.length > 1 ? (
-                    <select
-                      id={`salt-form-${salt.id}`}
-                       aria-label={`${salt.name} hydration form`}
-                      value={row.formIdx}
-                      onChange={e => updateRow(i, { formIdx: parseInt(e.target.value) })}
-                      className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                    >
-                      {salt.hydrationForms.map((f, fi) => (
-                        <option key={fi} value={fi}>{f.label}</option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="block px-0 sm:px-3 py-2 text-sm text-slate-500">{salt.hydrationForms[0].label}</span>
-                  )}
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
