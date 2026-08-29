@@ -14132,7 +14132,6 @@ function MineralAnalysisLabel({
 
   return (
     <aside
-      data-recipe-mineral-label
       className="relative overflow-hidden rounded-[1.35rem] border border-[#7cc3c5] bg-[#e9f3ee] text-[#173f49] shadow-[0_24px_70px_-35px_rgba(0,0,0,0.9)]"
       aria-label="Final mineral contribution"
     >
@@ -14880,48 +14879,9 @@ function BrewerRecipeStepsModal({
     try {
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(source, {
-        backgroundColor: '#1e293b',
         scale: 2,
         useCORS: true,
         logging: false,
-        onclone: (_clonedDocument, clonedElement) => {
-          const clone = clonedElement as HTMLDivElement;
-          const width = Math.ceil(source.getBoundingClientRect().width);
-          clone.style.width = `${width}px`;
-          clone.style.maxHeight = 'none';
-          clone.style.height = 'auto';
-          clone.style.overflow = 'visible';
-          clone.querySelectorAll<HTMLElement>('[data-recipe-steps-scroll]').forEach(element => {
-            element.style.height = 'auto';
-            element.style.maxHeight = 'none';
-            element.style.overflow = 'visible';
-            element.style.flex = 'none';
-          });
-          clone.querySelectorAll<HTMLElement>('[data-recipe-water-copy]').forEach(element => {
-            element.style.display = 'block';
-            element.style.height = 'auto';
-            element.style.lineHeight = '1.15';
-            element.style.overflow = 'visible';
-            element.style.textOverflow = 'clip';
-            element.style.whiteSpace = 'nowrap';
-          });
-          clone.querySelectorAll<HTMLElement>('[data-recipe-mineral-label]').forEach(label => {
-            label.style.overflow = 'visible';
-            label.querySelectorAll<HTMLElement>('*').forEach(element => {
-              const computed = window.getComputedStyle(element);
-              const fontSize = parseFloat(computed.fontSize);
-              element.style.overflow = 'visible';
-              element.style.textOverflow = 'clip';
-              if (Number.isFinite(fontSize) && fontSize > 0) {
-                element.style.lineHeight = `${Math.ceil(fontSize * 1.2)}px`;
-              }
-            });
-          });
-          clone.querySelectorAll<HTMLElement>('[data-recipe-salt-block]').forEach(element => {
-            element.style.boxShadow = element.style.boxShadow.replaceAll('3px', '1px');
-          });
-          clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
-        },
       });
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
       if (!jpg) throw new Error('Recipe card JPEG could not be exported.');
@@ -14947,20 +14907,19 @@ function BrewerRecipeStepsModal({
     >
       <div
         ref={recipeCardRef}
-        data-recipe-card-export
         className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5" data-export-ignore>
-          <div className="flex shrink-0 items-center gap-1.5" data-export-ignore>
+        <div className="flex shrink-0 justify-end border-b border-slate-700/50 bg-gradient-to-r from-sky-500/15 to-emerald-500/10 px-4 py-2.5 sm:px-5">
+          <div className="flex shrink-0 items-center gap-1.5">
             <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-700/60 hover:text-slate-100" aria-label="Close recipe steps">
               <X className="h-4 w-4" />
             </button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto" data-recipe-steps-scroll>
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="space-y-4 p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Step-by-step</div>
@@ -14998,7 +14957,7 @@ function BrewerRecipeStepsModal({
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Base water</div>
-                        <div data-recipe-water-copy className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed base water'}</div>
+                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed base water'}</div>
                       </div>
                       <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
@@ -15015,7 +14974,7 @@ function BrewerRecipeStepsModal({
                     >
                       <div className="min-w-0">
                         <div className="text-[9px] font-semibold uppercase tracking-[0.14em] opacity-70">Addition water</div>
-                        <div data-recipe-water-copy className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed addition water'}</div>
+                        <div className="mt-0.5 truncate text-xs font-semibold sm:text-sm">{water.name || 'Unnamed addition water'}</div>
                       </div>
                       <span className={`shrink-0 rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${waterStepValueStyles[styleIndex]}`}>
                         {formatWaterVolume(water.volume)}
@@ -15073,7 +15032,7 @@ function BrewerRecipeStepsModal({
                          ? 'border-rose-200/40 bg-rose-400/20 text-rose-50'
                          : saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                          <div key={`step-salt-${salt.id}`} data-recipe-salt-block className={`rounded-lg border px-2 py-1.5 ${saltStyle}`} style={saltVisualStyle(salt)}>
+                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2 py-1.5 ${saltStyle}`} style={saltVisualStyle(salt)}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                                 <div
@@ -15151,7 +15110,7 @@ function BrewerRecipeStepsModal({
                gh={finalProfileGh}
                kh={finalProfileKh}
              />
-             <div className="mt-3" data-export-ignore>
+             <div className="mt-3">
                <button
                  type="button"
                  onClick={handleSaveImage}
