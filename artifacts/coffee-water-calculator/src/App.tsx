@@ -14877,12 +14877,49 @@ function BrewerRecipeStepsModal({
       link.remove();
     };
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(source, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
+      const bounds = source.getBoundingClientRect();
+      const width = Math.max(1, Math.ceil(bounds.width));
+      const height = Math.max(1, Math.ceil(bounds.height));
+      const stylesheetText = Array.from(document.styleSheets).flatMap(sheet => {
+        try {
+          return Array.from(sheet.cssRules, rule => rule.cssText);
+        } catch {
+          return [];
+        }
+      }).join('\n').replace(/<\/style/gi, '<\\/style');
+      const clone = source.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'relative';
+      clone.style.inset = 'auto';
+      clone.style.width = `${width}px`;
+      clone.style.height = `${height}px`;
+      clone.style.maxWidth = 'none';
+      clone.style.maxHeight = `${height}px`;
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+          <foreignObject width="100%" height="100%">
+            <div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px">
+              <style>${stylesheetText}</style>
+              ${clone.outerHTML}
+            </div>
+          </foreignObject>
+        </svg>
+      `;
+      const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+      const image = new Image();
+      image.decoding = 'async';
+      image.src = svgUrl;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error('Recipe preview SVG could not be rendered.'));
       });
+      const canvas = document.createElement('canvas');
+      canvas.width = width * 2;
+      canvas.height = height * 2;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Recipe preview canvas could not be created.');
+      context.scale(2, 2);
+      context.drawImage(image, 0, 0, width, height);
+      URL.revokeObjectURL(svgUrl);
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
       if (!jpg) throw new Error('Recipe card JPEG could not be exported.');
 
