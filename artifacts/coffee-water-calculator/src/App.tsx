@@ -91,6 +91,78 @@ import {
 } from './watermancerWorkerClient';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
+const WATER_RECIPE_IMAGE_SIZE = 50;
+
+async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Promise<Uint8Array<ArrayBuffer>> {
+  const response = await fetch(sourceUrl);
+  if (!response.ok) throw new Error('Could not load the Watermancer image.');
+  const sourceBlob = await response.blob();
+  const sourceUrlObject = URL.createObjectURL(sourceBlob);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('Could not decode the Watermancer image.'));
+      element.src = sourceUrlObject;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = WATER_RECIPE_IMAGE_SIZE;
+    canvas.height = WATER_RECIPE_IMAGE_SIZE;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Could not create the profile image canvas.');
+
+    context.drawImage(image, 0, 0, WATER_RECIPE_IMAGE_SIZE, WATER_RECIPE_IMAGE_SIZE);
+
+    const words = title.trim().split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let currentLine = '';
+    context.font = '700 5px system-ui, sans-serif';
+    for (const word of words) {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (currentLine && context.measureText(candidate).width > WATER_RECIPE_IMAGE_SIZE - 6) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = candidate;
+      }
+      if (lines.length === 2) break;
+    }
+    if (lines.length < 2 && currentLine) lines.push(currentLine);
+    if (lines.length === 0) lines.push('Water recipe');
+    if (lines.length > 2) lines.length = 2;
+    const lastLine = lines[lines.length - 1] ?? '';
+    if (words.length > 0 && lines.length === 2 && !lastLine.endsWith('…')) {
+      const displayedWords = lines.join(' ').split(/\s+/).length;
+      if (displayedWords < words.length) {
+        let shortened = lastLine;
+        while (shortened.length > 1 && context.measureText(`${shortened}…`).width > WATER_RECIPE_IMAGE_SIZE - 6) {
+          shortened = shortened.slice(0, -1);
+        }
+        lines[lines.length - 1] = `${shortened}…`;
+      }
+    }
+
+    const bandHeight = Math.max(10, lines.length * 6 + 3);
+    context.fillStyle = 'rgba(2, 6, 23, 0.82)';
+    context.fillRect(0, 0, WATER_RECIPE_IMAGE_SIZE, bandHeight);
+    context.fillStyle = '#ffffff';
+    context.textAlign = 'center';
+    context.textBaseline = 'top';
+    lines.forEach((line, index) => {
+      context.fillText(line, WATER_RECIPE_IMAGE_SIZE / 2, 2 + index * 6);
+    });
+
+    const pngBlob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('Could not encode the profile image.'));
+      }, 'image/png');
+    });
+    return new Uint8Array(await pngBlob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(sourceUrlObject);
+  }
+}
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
@@ -6089,9 +6161,7 @@ function App() {
     };
     void (async () => {
       try {
-        const response = await fetch(watermancerMarkImage);
-        if (!response.ok) throw new Error('Could not load the Watermancer image.');
-        const pngBytes = new Uint8Array(await response.arrayBuffer());
+        const pngBytes = await createWaterRecipePreviewPng(watermancerMarkImage, name);
         const packagedPng = embedWaterRecipeJsonInPng(pngBytes, text);
         downloadFile(new File([packagedPng], fileName, { type: 'image/png' }));
       } catch {
@@ -6580,9 +6650,7 @@ function App() {
     };
 
     try {
-      const response = await fetch(watermancerMarkImage);
-      if (!response.ok) throw new Error('Could not load the Watermancer image.');
-      const pngBytes = new Uint8Array(await response.arrayBuffer());
+      const pngBytes = await createWaterRecipePreviewPng(watermancerMarkImage, recipeName);
       const file = new File([embedWaterRecipeJsonInPng(pngBytes, json)], fileName, { type: 'image/png' });
       downloadRecipeFile(file);
       showShareStatus('downloaded');
