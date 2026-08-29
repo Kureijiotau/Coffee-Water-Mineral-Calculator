@@ -7108,9 +7108,10 @@ function App() {
                   rel="noreferrer"
                   aria-label={`Open source page for ${selectedSourceRecipe.name}`}
                   title={`Open source page for ${selectedSourceRecipe.name}`}
-                  className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[10px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+                  className="inline-flex h-7 items-center gap-1 rounded-md border border-indigo-300/45 bg-indigo-500/15 px-2 text-[10px] font-semibold leading-none text-indigo-100 transition hover:border-indigo-200/80 hover:bg-indigo-500/30 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
                 >
-                  ?
+                  <span>Source</span>
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full border border-indigo-200/55 text-[10px] font-bold" aria-hidden="true">?</span>
                 </a>
               )}
               <MineralRecipePicker
