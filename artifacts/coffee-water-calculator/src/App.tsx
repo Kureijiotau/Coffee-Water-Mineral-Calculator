@@ -14917,6 +14917,9 @@ function BrewerRecipeStepsModal({
               }
             });
           });
+          clone.querySelectorAll<HTMLElement>('[data-recipe-salt-block]').forEach(element => {
+            element.style.boxShadow = element.style.boxShadow.replaceAll('3px', '1px');
+          });
           clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
         },
       });
@@ -15070,7 +15073,7 @@ function BrewerRecipeStepsModal({
                          ? 'border-rose-200/40 bg-rose-400/20 text-rose-50'
                          : saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2 py-1.5 ${saltStyle}`} style={saltVisualStyle(salt)}>
+                          <div key={`step-salt-${salt.id}`} data-recipe-salt-block className={`rounded-lg border px-2 py-1.5 ${saltStyle}`} style={saltVisualStyle(salt)}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                                 <div
