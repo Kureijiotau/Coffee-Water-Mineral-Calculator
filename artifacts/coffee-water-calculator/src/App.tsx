@@ -14199,19 +14199,13 @@ function MineralAnalysisLabel({
           {summary.map(([label, value, unit]) => (
             <div
               key={label}
-              className={`rounded-lg border px-2 py-2 ${
-                label === 'TDS'
-                  ? 'border-[#0d6170] bg-[#0d6170] shadow-[0_8px_20px_-12px_rgba(13,97,112,0.95)]'
-                  : 'border-[#0d6170]/20 bg-white/40'
-              }`}
+              className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2 py-2"
             >
-              <div className={`text-[9px] font-bold uppercase tracking-[0.16em] ${label === 'TDS' ? 'text-[#d9f4ec]' : 'text-[#47737a]'}`}>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">
                 {label === 'TDS' ? 'Approx. TDS' : label}
               </div>
-              <div className={`mt-0.5 font-mono text-base font-bold tabular-nums ${label === 'TDS' ? 'text-white' : 'text-[#0d6170]'}`}>
-                {value.toFixed(0)}
-              </div>
-              <div className={`text-[8px] uppercase tracking-wider ${label === 'TDS' ? 'text-[#b7e1d8]' : 'text-[#47737a]'}`}>{unit}</div>
+              <div className="mt-0.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{value.toFixed(0)}</div>
+              <div className="text-[8px] uppercase tracking-wider text-[#47737a]">{unit}</div>
             </div>
           ))}
         </div>
