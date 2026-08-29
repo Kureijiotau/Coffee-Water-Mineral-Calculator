@@ -55,6 +55,9 @@ import {
 import {
   embedWaterRecipeJsonInPng,
   extractWaterRecipeJsonFromPng,
+  buildRecipeShareCardSvg,
+  createRecipeShareCardModel,
+  rasterizeRecipeShareCard,
 } from './waterRecipeImage';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
@@ -14816,6 +14819,93 @@ function BrewerRecipeStepsModal({
   const concentrateDropsPerGallon = concentrateDropsPerLiter > 0
     ? Math.max(1, Math.round(concentrateDoseMlPerGallon * dropsPerMl))
     : 0;
+  const shareCardModel = createRecipeShareCardModel({
+    recipeName: recipeName !== 'Custom' ? recipeName : 'Mineral recipe',
+    batchLabel: `${formatVolumeValue(liters || 1, volumeUnit)} ${volumeUnitShortLabel(volumeUnit)} batch · ${concentrateOn ? 'Concentrate dosing' : 'Weighed salts'}`,
+    waterSteps: [
+      ...(remainingWaterMl > 0
+        ? [{ label: 'RO / distilled water', name: 'Add purified water', amount: formatWaterVolume(remainingWaterMl) }]
+        : [{ label: 'Prepared water', name: 'Prepare the selected water', amount: volumeLabel }]),
+      ...configuredBaseWaters.map(water => ({
+        label: 'Base water',
+        name: water.name || 'Unnamed base water',
+        amount: formatWaterVolume(water.volume),
+      })),
+      ...configuredAdditionWaters.map(water => ({
+        label: 'Addition water',
+        name: water.name || 'Unnamed addition water',
+        amount: formatWaterVolume(water.volume),
+      })),
+    ],
+    saltTitle: allInOneConcentrate ? '02 · Mix the all-in-one concentrate' : '02 · Add the minerals in order',
+    saltIntro: allInOneConcentrate
+      ? `Start with ${concentrateWaterVolume} for the concentrate. Add one salt at a time and stir until fully dissolved before adding the next.`
+      : 'Add one salt at a time. Stir until fully dissolved before adding the next.',
+    saltSteps: orderedRecipeSalts.map((salt, index) => {
+      const saltIndex = SALTS.findIndex(item => item.id === salt.id);
+      const formIndex = saltIndex >= 0
+        ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
+        : salt.defaultFormIdx ?? 0;
+      const form = salt.hydrationForms[formIndex] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+      const isAlkalinitySalt = salt.formula.includes('HCO₃') || salt.formula.includes('CO₃');
+      return {
+        name: `${index + 1}. ${nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}`,
+        formula: salt.formula,
+        form: nerdLevel === 'brewer' ? saltGroup(salt) : form.label,
+        amount: amountLabel(salt, stepSaltTargets),
+        contributionPpm: computeSaltIonPpmTotal(salt.id, stepSaltTargets[salt.id] ?? 0),
+        note: allInOneConcentrate && isAlkalinitySalt
+          ? 'Last · add only after the other salts are clear'
+          : undefined,
+      };
+    }),
+    mixingNote: useMixingVessel
+      ? `Reserve ${formatWaterVolume(mixingVesselMl)} of the prepared water for the salt concentrate. Dissolve the salts completely, then add the concentrate to the remaining water, rinse the vessel into the batch, and stir thoroughly.`
+      : undefined,
+    finalStep: 'Check that the water is clear and all minerals are fully dissolved. Proceed with your brew method and adjust extraction to taste.',
+    tdsTarget,
+    analysis: {
+      ions: [
+        ...(['calcium', 'magnesium', 'sodium', 'potassium'] as IonId[]).map(id => ({
+          id,
+          name: ION_MAP[id].name,
+          formula: ION_MAP[id].formula,
+          value: finalProfileIons[id] ?? 0,
+          category: 'Cations' as const,
+        })),
+        ...(['bicarbonate', 'chloride', 'sulfate'] as IonId[]).map(id => ({
+          id,
+          name: ION_MAP[id].name,
+          formula: ION_MAP[id].formula,
+          value: finalProfileIons[id] ?? 0,
+          category: 'Anions' as const,
+        })),
+        ...ACTIVE_ION_IDS
+          .filter(id => !['calcium', 'magnesium', 'sodium', 'potassium', 'bicarbonate', 'chloride', 'sulfate'].includes(id))
+          .filter(id => (finalProfileIons[id] ?? 0) > 0.05)
+          .map(id => ({
+            id,
+            name: ION_MAP[id].name,
+            formula: ION_MAP[id].formula,
+            value: finalProfileIons[id] ?? 0,
+            category: 'Other modeled ions' as const,
+          })),
+      ],
+      tds: finalProfileTds,
+      gh: finalProfileGh,
+      kh: finalProfileKh,
+    },
+    concentrateGuide: concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0
+      ? {
+        stockLabel: `Stock · ${formatWaterVolume(concentrateLiters * 1000)}`,
+        doses: [
+          { label: '1 L', milliliters: concentrateDoseMlPerLiter, drops: concentrateDropsPerLiter },
+          { label: '1 US gal', milliliters: concentrateDoseMlPerGallon, drops: concentrateDropsPerGallon },
+        ],
+        dropsPerMl,
+      }
+      : undefined,
+  });
   const waterStepStyles = [
     'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',
     'border-sky-300/35 bg-sky-400/[0.08] text-sky-100',
@@ -14848,7 +14938,6 @@ function BrewerRecipeStepsModal({
     'border-lime-300/30 bg-lime-400/15 text-lime-100',
     'border-orange-300/30 bg-orange-400/15 text-orange-100',
   ];
-  const recipeCardRef = useRef<HTMLDivElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [saveImageError, setSaveImageError] = useState(false);
 
@@ -14861,12 +14950,12 @@ function BrewerRecipeStepsModal({
   }, [onClose]);
 
   const handleSaveImage = async () => {
-    const source = recipeCardRef.current;
-    if (!source || isSavingImage) return;
+    if (isSavingImage) return;
 
     setIsSavingImage(true);
     setSaveImageError(false);
-    const downloadUrl = (url: string, filename: string) => {
+    const downloadBlob = (blob: Blob, filename: string) => {
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = filename;
@@ -14874,15 +14963,12 @@ function BrewerRecipeStepsModal({
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      const { toJpeg } = await import('html-to-image');
-      const dataUrl = await toJpeg(source, {
-        quality: 0.95,
-        pixelRatio: 2,
-        cacheBust: true,
-      });
-      downloadUrl(dataUrl, 'coffee-water-recipe-steps.jpg');
+      const rendered = buildRecipeShareCardSvg(shareCardModel);
+      const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
+      downloadBlob(blob, 'coffee-water-recipe.png');
     } catch {
       setSaveImageError(true);
     } finally {
@@ -14897,7 +14983,6 @@ function BrewerRecipeStepsModal({
       role="presentation"
     >
       <div
-        ref={recipeCardRef}
         className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
         role="dialog"
@@ -15086,7 +15171,7 @@ function BrewerRecipeStepsModal({
           </ol>
            {saveImageError && (
              <p className="rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-[10px] leading-relaxed text-amber-100" role="status">
-               This browser could not create the image. You can still use the recipe steps on screen.
+                Couldn’t create the share-card image in this browser. Try again, or use the recipe steps on screen.
              </p>
            )}
            <p className="border-t border-slate-700/50 pt-3 text-[10px] leading-relaxed text-slate-500">
@@ -15107,13 +15192,13 @@ function BrewerRecipeStepsModal({
                  onClick={handleSaveImage}
                  disabled={isSavingImage}
                  className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-sky-200/70 bg-sky-400 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-sky-300 disabled:cursor-wait disabled:opacity-60"
-                 title="Download this recipe card as an image"
+                  title="Download a clean share-card image of this recipe"
                >
                  <Download className="h-5 w-5" aria-hidden="true" />
-                 <span>{isSavingImage ? 'Saving…' : 'Save Recipe'}</span>
+                  <span>{isSavingImage ? 'Saving share card…' : 'Save Recipe Image'}</span>
                </button>
                <p className="mt-1.5 text-center text-[10px] text-slate-500">
-                 Download this card as an image.
+                  Download a clean PNG share card with the recipe steps and mineral analysis.
                </p>
              </div>
            {concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0 && (
