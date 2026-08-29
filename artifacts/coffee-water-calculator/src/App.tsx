@@ -7198,53 +7198,6 @@ function App() {
                  Advanced: hydration forms
                </button>
             </div>
-           {selectedSourceRecipe && (
-             <div className="border-b border-slate-700/40 bg-amber-500/5 px-4 sm:px-6 py-3">
-               <div className="flex flex-wrap items-start justify-between gap-3">
-                 <div className="min-w-0">
-                   <div className="flex flex-wrap items-center gap-2">
-                     <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">
-                       Source recipe
-                     </span>
-                     <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${
-                        selectedSourceRecipe.conversion === 'exact'
-                         ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
-                         : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                     }`}>
-                        {selectedSourceRecipe.conversion === 'exact' ? 'Direct conversion' : 'Approximation'}
-                     </span>
-                   </div>
-                   <p className="mt-1 text-xs text-slate-300">
-                      {selectedSourceRecipe.attribution} · {selectedSourceRecipe.method}
-                   </p>
-                   <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
-                      {selectedSourceRecipe.notes}
-                   </p>
-                   {selectedSourceRecipe.sourceAmounts && (
-                     <div className="mt-2 flex flex-wrap gap-1.5">
-                       {selectedSourceRecipe.sourceAmounts.map(sourceAmount => (
-                         <span
-                           key={`${sourceAmount.label}-${sourceAmount.amount}`}
-                           className="rounded-md border border-amber-300/15 bg-amber-300/[0.06] px-2 py-1 text-[10px] text-amber-100/80"
-                         >
-                           <span className="font-semibold text-amber-100">{sourceAmount.label}:</span>{' '}
-                           {sourceAmount.amount}
-                         </span>
-                       ))}
-                     </div>
-                   )}
-                 </div>
-                 <a
-                   href={selectedSourceRecipe.sourceUrl}
-                   target="_blank"
-                   rel="noreferrer"
-                   className="shrink-0 text-xs font-medium text-amber-300 underline decoration-amber-300/40 underline-offset-2 hover:text-amber-100"
-                 >
-                   View original source
-                 </a>
-               </div>
-             </div>
-           )}
          <>
           <div className="hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
             <span>Salt</span>
