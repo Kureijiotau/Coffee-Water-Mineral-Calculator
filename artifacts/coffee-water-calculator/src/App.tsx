@@ -6909,11 +6909,11 @@ function App() {
                     ? 'A focused salt and concentrate workspace built from 0-TDS water.'
                     : nerdLevel === 'watermancer'
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
-                      : 'Choose how much detail to show. Brewer mode keeps the focus on simple salt recipes.'}
+                      : 'Choose how much detail to show for your water recipe.'}
                 </div>
               </div>
             </div>
-            <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+            <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
               {([
                 ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
                 ['watermancer', 'Watermancer', 'Source water & ions'],
