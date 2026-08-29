@@ -14,7 +14,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -3209,6 +3209,36 @@ function ionVisualStyle(id: IonId): IonVisualStyle {
     '--ion-bar': color.bar,
     '--ion-shadow': color.shadow,
   };
+}
+
+function saltVisualStyle(salt: typeof SALTS[number]): CSSProperties {
+  const color = getSaltColorTokens(salt);
+  return {
+    borderColor: color.border,
+    backgroundImage: `linear-gradient(135deg, ${color.primarySoft}, ${color.secondarySoft})`,
+    boxShadow: `inset 3px 0 0 ${color.primary}, inset -3px 0 0 ${color.secondary}`,
+  };
+}
+
+function SaltIonBadges({
+  salt,
+  className = '',
+}: {
+  salt: typeof SALTS[number];
+  className?: string;
+}) {
+  return (
+    <span className={`inline-flex flex-wrap items-center gap-1 ${className}`} aria-label={`Ions in ${salt.name}`}>
+      {salt.ions.map(({ ionId }, index) => (
+        <span key={ionId} className="inline-flex items-center gap-1" title={ION_MAP[ionId].name}>
+          {index > 0 && <span className="text-slate-600">+</span>}
+          <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle(ionId)}>
+            {ION_MAP[ionId].formula}
+          </span>
+        </span>
+      ))}
+    </span>
+  );
 }
 
 function numericIons(ions: Record<string, number | string | undefined>): Record<string, number> {
@@ -6887,8 +6917,7 @@ function App() {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+                    </div>
   );
 
   if (appTab === 'concentrate') {
@@ -7448,10 +7477,16 @@ function App() {
                  className={`grid grid-cols-2 sm:grid-cols-[1.3fr_1fr_1.2fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                  }`}
+                  style={saltVisualStyle(salt)}
                >
                 <div className="col-span-2 sm:col-span-1 flex flex-row items-baseline gap-2 sm:flex-col sm:items-start sm:gap-0">
-                  <span className="text-sm font-medium text-slate-200">{salt.name}</span>
-                  <span className="text-xs text-slate-500">{salt.formula}</span>
+                   <span
+                     className="text-sm font-semibold text-[color:var(--salt-primary)]"
+                     style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
+                   >
+                     {salt.name}
+                   </span>
+                   <SaltIonBadges salt={salt} className="text-xs" />
                 </div>
                 <div>
                   <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
@@ -8750,6 +8785,7 @@ function App() {
                                 } ${
                                  MEME_SALT_IDS.has(salt.id) && watermancerMemeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                                }`}
+                                style={saltVisualStyle(salt)}
                              >
                             <div className="watermancer-salt-table__salt flex items-center gap-2 text-left sm:justify-start">
                               <span
@@ -8761,8 +8797,13 @@ function App() {
                                 aria-hidden="true"
                               />
                               <div className="min-w-0">
-                             <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-200">{salt.name}</div>
-                             <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px] text-slate-500">{salt.formula}</div>
+                              <div
+                                className="watermancer-salt-table__salt-name text-xs font-semibold text-[color:var(--salt-primary)]"
+                                style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
+                              >
+                                {salt.name}
+                              </div>
+                              <SaltIonBadges salt={salt} className="mt-0.5 text-[10px]" />
                               </div>
                           </div>
                            <label className="watermancer-salt-table__hydration flex items-center gap-2">
@@ -9238,9 +9279,15 @@ function App() {
                                 ? computeSaltMg(targetPpm, L, form.molarMass, salt.anhydrousMass)
                                 : 0;
                               return (
-                                <div key={salt.id} className="flex items-center justify-between gap-3 text-[11px]">
-                                  <span className="min-w-0 truncate text-slate-200">{salt.name}<span className="ml-1 text-[9px] text-slate-500">{form?.label ?? ''}</span></span>
-                                  <span className="shrink-0 font-semibold tabular-nums text-violet-100">{massMg.toFixed(1)} mg</span>
+                                <div key={salt.id} className="flex items-center justify-between gap-3 rounded-md px-1.5 py-1" style={saltVisualStyle(salt)}>
+                                  <span className="min-w-0">
+                                    <span className="block truncate text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</span>
+                                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
+                                      <span>{form?.label ?? ''} ·</span>
+                                      <SaltIonBadges salt={salt} />
+                                    </span>
+                                  </span>
+                                  <span className="shrink-0 font-semibold tabular-nums text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{massMg.toFixed(1)} mg</span>
                                 </div>
                               );
                             })
@@ -9256,8 +9303,8 @@ function App() {
                         {watermancerBestMatchPreview.route.deviations
                           .filter(deviation => deviation.target > 0 || deviation.actual > 0.05)
                           .map(deviation => (
-                            <div key={deviation.id} className="flex items-center justify-between gap-2 text-[10px]">
-                              <span className="truncate text-slate-400">{ION_MAP[deviation.id].name}</span>
+                            <div key={deviation.id} className="flex items-center justify-between gap-2 text-[10px]" style={ionVisualStyle(deviation.id)}>
+                              <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[deviation.id].name}>{ION_MAP[deviation.id].formula}</span>
                               <span className={`shrink-0 tabular-nums ${
                                 Math.abs(deviation.delta) <= 0.05 ? 'text-emerald-300' : deviation.delta > 0 ? 'text-amber-300' : 'text-rose-300'
                               }`}>
@@ -9526,7 +9573,8 @@ function App() {
                                 setCommunitySortDescending(true);
                               }
                             }}
-                            className={`text-left transition hover:text-sky-200 ${communitySortIon === id ? 'text-sky-300' : ''}`}
+                             className="text-left text-[color:var(--ion-fg)] transition hover:brightness-125"
+                             style={ionVisualStyle(id)}
                             aria-label={`Sort by ${ION_MAP[id].name}`}
                           >
                             {communityBrowserIonLabel(id)}
@@ -10034,7 +10082,7 @@ function ConcentrateWorkspace({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
+       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6" style={saltVisualStyle(salt)}>
         <StepHeading number="1" title="Choose the mineral" icon={<GiSaltShaker className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
@@ -10067,9 +10115,13 @@ function ConcentrateWorkspace({
             </select>
           </label>
         </div>
-        <p className="mt-3 text-[11px] text-slate-500">
-          Selected: {salt.formula} · {form.label} · {form.molarMass.toFixed(3)} g/mol
-        </p>
+         <p className="mt-3 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
+           <span>Selected:</span>
+           <span className="font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</span>
+           <span>·</span>
+           <SaltIonBadges salt={salt} />
+           <span>· {form.label} · {form.molarMass.toFixed(3)} g/mol</span>
+         </p>
       </section>
 
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
@@ -10129,12 +10181,12 @@ function ConcentrateWorkspace({
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-6">
         <StepHeading number="3" title="Preparation" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 space-y-2">
-          {[
-            `Weigh ${saltMassLabel} of ${salt.name} (${form.label}).`,
-            `Add ${waterMassG.toFixed(2)} g of distilled or RO water.`,
-            `Combine until the total concentrate weighs ${totalStockMassG.toFixed(2)} g.`,
-            `Shake until clear, then label: ${salt.name} · ${strengthPercent || 0}% w/w · ${totalStockMassG.toFixed(2)} g total.`,
-          ].map((step, index) => (
+           {[
+             <>Weigh <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{saltMassLabel} of {salt.name}</strong> ({form.label}).</>,
+             <>Add <strong>{waterMassG.toFixed(2)} g</strong> of distilled or RO water.</>,
+             <>Combine until the total concentrate weighs <strong>{totalStockMassG.toFixed(2)} g</strong>.</>,
+             <>Shake until clear, then label: <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</strong> · {strengthPercent || 0}% w/w · {totalStockMassG.toFixed(2)} g total.</>,
+           ].map((step, index) => (
             <button
               key={step}
               type="button"
@@ -10144,7 +10196,7 @@ function ConcentrateWorkspace({
               <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${completedSteps[index] ? 'border-emerald-300 bg-emerald-400 text-slate-950' : 'border-slate-600 text-transparent'}`}>
                 <Check className="h-3 w-3" />
               </span>
-              <span className={`text-xs ${completedSteps[index] ? 'text-emerald-100 line-through' : 'text-slate-300'}`}>{step}</span>
+               <span className={`text-xs ${completedSteps[index] ? 'text-emerald-100 line-through' : 'text-slate-300'}`}>{step}</span>
             </button>
           ))}
         </div>
@@ -10216,7 +10268,10 @@ function ConcentrateWorkspace({
           </label>
         </div>
         <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3">
-          <span className="text-xs text-slate-400">{finalDrops} drops × {mgPerDrop.toFixed(2)} mg/drop of {salt.name}</span>
+           <span className="text-xs text-slate-400">
+             {finalDrops} drops × {mgPerDrop.toFixed(2)} mg/drop of{' '}
+             <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</strong>
+           </span>
           <strong className="text-xl tabular-nums text-emerald-200">{resultingPpm.toFixed(2)} mg/L</strong>
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
@@ -10380,16 +10435,33 @@ function LotusDropsSection({
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {stockPlans.map(plan => {
+          const salt = SALTS.find(item => item.id === plan.saltId);
+          const saltColors = salt ? getSaltColorTokens(salt) : null;
           return (
-            <article key={plan.id} className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4">
+            <article
+              key={plan.id}
+              className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4"
+              style={salt ? saltVisualStyle(salt) : undefined}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-2.5">
-                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-rose-300/20 bg-rose-400/[0.08] text-rose-200">
+                  <span
+                    className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-[color:var(--salt-primary)]"
+                    style={saltColors ? {
+                      '--salt-primary': saltColors.primary,
+                      borderColor: saltColors.border,
+                      backgroundColor: saltColors.primarySoft,
+                    } as CSSProperties : undefined}
+                  >
                     <Droplet className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
-                    <div className="text-sm font-semibold text-slate-100">{plan.label} Dropper</div>
-                  <div className="mt-1 text-[11px] text-slate-500">{plan.saltName} · {plan.saltFormula} · {plan.hydrationForm}</div>
+                    <div className="text-sm font-semibold text-[color:var(--salt-primary)]" style={saltColors ? { '--salt-primary': saltColors.primary } as CSSProperties : undefined}>{plan.label} Dropper</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
+                      <span>{plan.saltName} ·</span>
+                      {salt ? <SaltIonBadges salt={salt} /> : <span>{plan.saltFormula}</span>}
+                      <span>· {plan.hydrationForm}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -11217,12 +11289,20 @@ function LegacyRecipeConcentrateBuilder({
                 Per-salt and ion contributions
               </div>
               <div className="mt-3 space-y-2">
-                {dropEquivalents.perSalt.map(row => (
-                  <div key={row.saltId} className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+                 {dropEquivalents.perSalt.map(row => {
+                   const salt = SALTS.find(item => item.id === row.saltId);
+                   return (
+                   <div key={row.saltId} className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5" style={salt ? saltVisualStyle(salt) : undefined}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <div>
-                        <span className="text-xs font-semibold text-slate-100">{row.saltName}</span>
-                        <span className="ml-2 text-[10px] text-slate-500">{row.formLabel}</span>
+                         <span
+                           className="text-xs font-semibold text-[color:var(--salt-primary)]"
+                           style={salt ? { '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties : undefined}
+                         >
+                           {row.saltName}
+                         </span>
+                         <span className="ml-2 text-[10px] text-slate-500">{row.formLabel}</span>
+                         {salt && <SaltIonBadges salt={salt} className="ml-2 text-[10px]" />}
                       </div>
                       <span className="text-xs font-semibold tabular-nums text-violet-200">{row.saltMgPerDrop.toFixed(2)} mg/drop</span>
                     </div>
@@ -11236,7 +11316,8 @@ function LegacyRecipeConcentrateBuilder({
                       ))}
                     </div>
                   </div>
-                ))}
+                   );
+                 })}
               </div>
               <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
                 Salt-equivalent ppm is the recipe salt basis. It is not summed-ion ppm and should not be treated as a TDS-meter reading.
@@ -11321,8 +11402,11 @@ function LegacyRecipeConcentrateBuilder({
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
                     {stockRows.map(row => (
-                      <tr key={row.salt.id} className="text-slate-300">
-                        <td className="px-3 py-3 font-semibold text-slate-100">{row.salt.name}</td>
+                      <tr key={row.salt.id} className="text-slate-300" style={saltVisualStyle(row.salt)}>
+                        <td className="px-3 py-3">
+                          <div className="font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
+                          <SaltIonBadges salt={row.salt} className="mt-1 text-[10px]" />
+                        </td>
                         <td className="px-3 py-3 text-slate-400">{row.form.label}</td>
                         <td className="px-3 py-3 text-right tabular-nums">{row.target.toFixed(2)} ppm</td>
                         <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tone.accent}`}>
@@ -11703,13 +11787,16 @@ function RecipeConcentrateBottleCard({
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {stockRows.map(row => (
-          <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5">
+          <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={saltVisualStyle(row.salt)}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-2">
-                <span className={`recipe-concentrate-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full ${colors.accent}`} aria-hidden="true" />
+                <span className="recipe-concentrate-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getSaltColorTokens(row.salt).primary }} aria-hidden="true" />
                 <div className="min-w-0">
-                  <div className="truncate text-[11px] font-semibold text-slate-100">{row.salt.name}</div>
-                  <div className="mt-0.5 truncate text-[9px] text-slate-500">{row.form.label} · {row.salt.formula}</div>
+                  <div className="truncate text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
+                    <span>{row.form.label} ·</span>
+                    <SaltIonBadges salt={row.salt} />
+                  </div>
                 </div>
               </div>
               <div className="shrink-0 text-right">
@@ -12117,15 +12204,27 @@ function RecipeConcentrateBuilder({
               </div>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {dropEquivalents.perSalt.map(row => (
-                <div key={row.saltId} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5">
+               {dropEquivalents.perSalt.map(row => {
+                 const salt = SALTS.find(item => item.id === row.saltId);
+                 return (
+                 <div key={row.saltId} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={salt ? saltVisualStyle(salt) : undefined}>
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-slate-100">{row.saltName}</span>
+                     <span
+                       className="text-[11px] font-semibold text-[color:var(--salt-primary)]"
+                       style={salt ? { '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties : undefined}
+                     >
+                       {row.saltName}
+                     </span>
                     <span className="text-[10px] font-semibold tabular-nums text-cyan-200">{recipeConcentrateNumber(row.saltMgPerDrop, 2)} mg/drop</span>
                   </div>
-                  <div className="mt-1 text-[9px] text-slate-500">{row.formLabel} · {recipeConcentrateNumber(row.targetPpm, 1)} ppm target</div>
+                   <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
+                     <span>{row.formLabel} ·</span>
+                     {salt && <SaltIonBadges salt={salt} />}
+                     <span>· {recipeConcentrateNumber(row.targetPpm, 1)} ppm target</span>
+                   </div>
                 </div>
-              ))}
+                 );
+               })}
             </div>
             <p className="mt-3 text-[10px] leading-relaxed text-slate-500">Physical salt mass includes the selected hydration form. Salt-equivalent ppm remains the recipe basis and is not a TDS-meter reading.</p>
           </section>
@@ -14776,11 +14875,11 @@ function ConcentrateRecipeStepsModal({
                           {details.rows.map((row, index) => {
                             const isCarbonate = saltMixGroup(row.salt) === 3;
                             return (
-                              <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
+                               <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
                                 isCarbonate
                                   ? 'border-amber-300/35 bg-amber-500/[0.08]'
                                   : 'border-white/[0.08] bg-slate-900/50'
-                              }`}>
+                               }`} style={saltVisualStyle(row.salt)}>
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="flex min-w-0 items-start gap-2.5">
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
@@ -14791,8 +14890,11 @@ function ConcentrateRecipeStepsModal({
                                       {index + 1}
                                     </span>
                                     <div className="min-w-0">
-                                      <div className="text-[11px] font-semibold text-slate-200">{row.salt.name}</div>
-                                      <div className="mt-0.5 text-[10px] text-slate-500">{row.form.label} · {row.salt.formula}</div>
+                                       <div className="text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
+                                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                                         <span>{row.form.label} ·</span>
+                                         <SaltIonBadges salt={row.salt} />
+                                       </div>
                                       {isCarbonate && (
                                         <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
                                           Add last — reduce precipitation risk
@@ -15318,14 +15420,21 @@ function BrewerRecipeStepsModal({
                          ? 'border-rose-200/40 bg-rose-400/20 text-rose-50'
                          : saltStepValueStyles[index % saltStepValueStyles.length];
                       return (
-                         <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2.5 py-2 ${saltStyle}`}>
+                          <div key={`step-salt-${salt.id}`} className={`rounded-lg border px-2.5 py-2 ${saltStyle}`} style={saltVisualStyle(salt)}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                               <div className="text-xs font-semibold sm:text-sm">
+                                <div
+                                  className="text-xs font-semibold text-[color:var(--salt-primary)] sm:text-sm"
+                                  style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
+                                >
                                 {index + 1}. {nerdLevel === 'brewer' ? simpleSaltNames[salt.id] ?? salt.name : salt.name}
                               </div>
-                               <div className="mt-0.5 text-[10px] text-slate-300/65">
-                                {nerdLevel === 'brewer' ? saltGroup(salt) : `${salt.formula} · ${form.label}`}
+                                <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-300/65">
+                                 {nerdLevel === 'brewer' ? (
+                                   <><span>{saltGroup(salt)} ·</span><SaltIonBadges salt={salt} /></>
+                                 ) : (
+                                   <><span>{form.label} ·</span><SaltIonBadges salt={salt} /></>
+                                 )}
                               </div>
                                {allInOneConcentrate && isAlkalinitySalt && (
                                  <div className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-rose-100">
@@ -15422,16 +15531,16 @@ function BrewerRecipeStepsModal({
                      milliliters: concentrateDoseMlPerGallon,
                      drops: concentrateDropsPerGallon,
                    },
-                 ].map(dose => (
-                   <div key={dose.label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2.5 py-2.5">
+                  ].map(dose => (
+                    <div key={dose.label} className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2.5 py-2.5">
                      <div className="font-bold uppercase tracking-[0.16em] text-[#47737a] text-[18px]">{dose.label}</div>
                      <div className="mt-1.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{dose.milliliters.toFixed(1)} mL</div>
                      <div className="mt-0.5 flex items-center gap-1 text-[#47737a] text-[16px]">
                        <Droplet className="h-3.5 w-3.5 shrink-0 text-[#0d6170]" aria-hidden="true" />
                        <span>≈ {dose.drops.toLocaleString()} drops</span>
                      </div>
-                   </div>
-                 ))}
+                    </div>
+                 })}
                  </div>
                  <div className="mt-3 border-t border-[#0d6170]/35 pt-3 text-[9px] leading-relaxed text-[#47737a]">
                    Drops use your calibrated setting of <span className="font-mono font-bold text-[#0d6170]">{dropsPerMl.toFixed(1)}</span> drops per mL.
@@ -15523,6 +15632,7 @@ function BrewStationMode({
 
   const safeIndex = Math.min(stepIndex, Math.max(0, steps.length - 1));
   const currentStep = steps[safeIndex];
+  const currentSalt = currentStep ? SALTS.find(salt => salt.id === currentStep.id) : undefined;
   const rawReading = parseFloat(scaleReading);
   // The field represents the net running weight shown by the scale. Tare is a
   // physical scale action, so it must not also be subtracted from this value.
@@ -15576,7 +15686,19 @@ function BrewStationMode({
         <main className="flex flex-1 flex-col pt-1 pb-10 sm:pt-0 sm:pb-12">
           <div className="text-center">
             <div className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Current ingredient</div>
-            <h1 className="mt-3 text-5xl font-black tracking-tight sm:mt-4 sm:text-8xl">{currentStep.label}</h1>
+             <h1
+               className="mt-3 text-5xl font-black tracking-tight text-[color:var(--salt-primary)] sm:mt-4 sm:text-8xl"
+               style={currentSalt ? { '--salt-primary': getSaltColorTokens(currentSalt).primary } as CSSProperties : undefined}
+             >
+               {currentStep.label}
+             </h1>
+             {currentSalt && (
+               <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm text-zinc-400">
+                 <span className="font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(currentSalt).primary } as CSSProperties}>{currentSalt.formula}</span>
+                 <span aria-hidden="true">·</span>
+                 <SaltIonBadges salt={currentSalt} className="text-sm" />
+               </div>
+             )}
             <div className="mt-9 text-base font-bold uppercase tracking-[0.22em] text-zinc-500 sm:mt-11 sm:text-xl">Add this much</div>
             <div className="mt-1 font-mono text-7xl font-black tracking-tight text-emerald-300 sm:text-9xl">{formatted(currentStep.grams)}<span className="ml-2 text-3xl sm:text-5xl">g</span></div>
             <div className="mt-3 text-sm font-bold text-zinc-500">

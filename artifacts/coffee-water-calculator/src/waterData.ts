@@ -31,6 +31,14 @@ export interface IonColorTokens {
   shadow: string;
 }
 
+export interface SaltColorTokens {
+  primary: string;
+  secondary: string;
+  primarySoft: string;
+  secondarySoft: string;
+  border: string;
+}
+
 export interface IonRanges {
   greenMax: number;
   yellowMax: number;
@@ -294,6 +302,34 @@ export const WATERMANCER_SENSORY_PROFILE: WaterProfile = {
 };
 
 export const ION_MAP = Object.fromEntries(IONS.map(i => [i.id, i])) as Record<IonId, IonInfo>;
+
+/**
+ * Salt cards use the same sensory palette as their contributing ions. A
+ * multi-ion salt gets a two-color accent; the contribution labels below it
+ * still use the individual ion tokens.
+ */
+export function getSaltColorTokens(salt: SaltInfo): SaltColorTokens {
+  const ionColors = salt.ions
+    .map(contribution => ION_MAP[contribution.ionId]?.color)
+    .filter((color): color is IonColorTokens => Boolean(color));
+  const primary = ionColors[0] ?? {
+    foreground: '#cbd5e1',
+    lightForeground: '#475569',
+    soft: 'rgba(203, 213, 225, 0.12)',
+    border: 'rgba(203, 213, 225, 0.35)',
+    bar: '#cbd5e1',
+    shadow: 'rgba(203, 213, 225, 0.2)',
+  };
+  const secondary = ionColors[1] ?? primary;
+  const withAlpha = (hex: string, alpha: string) => hex.length === 7 ? `${hex}${alpha}` : hex;
+  return {
+    primary: primary.foreground,
+    secondary: secondary.foreground,
+    primarySoft: withAlpha(primary.foreground, '1f'),
+    secondarySoft: withAlpha(secondary.foreground, '14'),
+    border: primary.border,
+  };
+}
 
 export interface IonChemistry {
   /** Exact ion molar mass in g/mol for converting modeled mg/L to mmol/L. */

@@ -22,6 +22,7 @@ import {
   ION_CHEMISTRY,
   RECIPES,
   MAGNESIUM_GLYCINATE_LABEL,
+  getSaltColorTokens,
 } from './waterData';
 
 describe('published Kimoi recipe conversions', () => {
@@ -135,6 +136,23 @@ describe('shared sensory ion palette', () => {
     expect(new Set(barColors).size).toBe(IONS.length);
     expect(IONS.every(ion => ion.color.foreground.startsWith('#'))).toBe(true);
     expect(IONS.every(ion => ion.color.lightForeground.startsWith('#'))).toBe(true);
+  });
+});
+
+describe('derived salt palette', () => {
+  it('uses a single ion accent for one-ion salts and a deterministic blend for multi-ion salts', () => {
+    const sodiumBicarbonate = SALTS.find(salt => salt.id === 'nahco3')!;
+    const magnesiumGlycinate = SALTS.find(salt => salt.id === 'mggly')!;
+    const bicarbonateSalt = getSaltColorTokens(sodiumBicarbonate);
+    const singleIonSalt = getSaltColorTokens(magnesiumGlycinate);
+
+    expect(bicarbonateSalt.primary).toBe(IONS.find(ion => ion.id === 'sodium')!.color.foreground);
+    expect(bicarbonateSalt.secondary).toBe(IONS.find(ion => ion.id === 'bicarbonate')!.color.foreground);
+    expect(singleIonSalt.primary).toBe(IONS.find(ion => ion.id === 'magnesium')!.color.foreground);
+    expect(singleIonSalt.secondary).toBe(singleIonSalt.primary);
+    expect(bicarbonateSalt.border).not.toBe(singleIonSalt.border);
+    expect(bicarbonateSalt.primarySoft).toMatch(/^(#|rgba)/);
+    expect(bicarbonateSalt.secondarySoft).toMatch(/^(#|rgba)/);
   });
 });
 
