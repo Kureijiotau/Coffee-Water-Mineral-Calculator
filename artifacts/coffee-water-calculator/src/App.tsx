@@ -7243,14 +7243,8 @@ function App() {
               {publishedTargetLabel === 'Salt target (ppm)' ? (
                 <>
                   Salt target{' '}
-                  <span className="group/ppm relative inline-flex cursor-help border-b border-dotted border-slate-500/80 focus:outline-none focus:ring-1 focus:ring-cyan-300/70" tabIndex={0} aria-label="Salt target ppm explanation">
+                  <span className="cursor-help" title="ppm as CaCO₃">
                     (ppm)
-                    <span
-                      role="tooltip"
-                      className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-64 rounded-lg border border-slate-600/70 bg-slate-950 px-3 py-2 text-left text-[10px] font-normal normal-case leading-relaxed tracking-normal text-slate-200 shadow-xl group-hover/ppm:block group-focus/ppm:block"
-                    >
-                      Salt target is milligrams per liter of the selected salt&apos;s anhydrous equivalent. GH/KH summaries are expressed as ppm as CaCO₃.
-                    </span>
                   </span>
                 </>
               ) : publishedTargetLabel}
