@@ -14867,7 +14867,6 @@ function BrewerRecipeStepsModal({
 
     setIsSavingImage(true);
     setSaveImageError(false);
-    let clone: HTMLDivElement | null = null;
     let imageUrl: string | null = null;
     const downloadUrl = (url: string, filename: string) => {
       const link = document.createElement('a');
@@ -14879,65 +14878,59 @@ function BrewerRecipeStepsModal({
       link.remove();
     };
     try {
-      clone = source.cloneNode(true) as HTMLDivElement;
-      source.parentElement?.appendChild(clone) ?? document.body.appendChild(clone);
-      clone.style.position = 'fixed';
-      clone.style.left = '-100000px';
-      clone.style.top = '0';
-      clone.style.width = `${Math.ceil(source.getBoundingClientRect().width)}px`;
-      clone.style.maxHeight = 'none';
-      clone.style.height = 'auto';
-      clone.style.overflow = 'visible';
-      clone.querySelectorAll<HTMLElement>('[data-recipe-steps-scroll]').forEach(element => {
-        element.style.height = 'auto';
-        element.style.maxHeight = 'none';
-        element.style.overflow = 'visible';
-        element.style.flex = 'none';
-      });
-      clone.querySelectorAll<HTMLElement>('[data-recipe-water-copy]').forEach(element => {
-        element.style.display = 'block';
-        element.style.height = 'auto';
-        element.style.lineHeight = '1.15';
-        element.style.overflow = 'visible';
-        element.style.textOverflow = 'clip';
-        element.style.whiteSpace = 'nowrap';
-      });
-      clone.querySelectorAll<HTMLElement>('[data-recipe-mineral-label]').forEach(label => {
-        label.style.overflow = 'visible';
-        label.querySelectorAll<HTMLElement>('*').forEach(element => {
-          const computed = window.getComputedStyle(element);
-          const fontSize = parseFloat(computed.fontSize);
-          element.style.overflow = 'visible';
-          element.style.textOverflow = 'clip';
-          if (Number.isFinite(fontSize) && fontSize > 0) {
-            element.style.lineHeight = `${Math.ceil(fontSize * 1.2)}px`;
-          }
-        });
-      });
-      clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
-
-      const width = Math.ceil(clone.getBoundingClientRect().width);
-      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
       const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(clone, {
+      const canvas = await html2canvas(source, {
         backgroundColor: '#1e293b',
-        width,
-        height,
         scale: 2,
         useCORS: true,
         logging: false,
-        windowWidth: width,
-        windowHeight: height,
+        onclone: (_clonedDocument, clonedElement) => {
+          const clone = clonedElement as HTMLDivElement;
+          const width = Math.ceil(source.getBoundingClientRect().width);
+          clone.style.width = `${width}px`;
+          clone.style.maxHeight = 'none';
+          clone.style.height = 'auto';
+          clone.style.overflow = 'visible';
+          clone.querySelectorAll<HTMLElement>('[data-recipe-steps-scroll]').forEach(element => {
+            element.style.height = 'auto';
+            element.style.maxHeight = 'none';
+            element.style.overflow = 'visible';
+            element.style.flex = 'none';
+          });
+          clone.querySelectorAll<HTMLElement>('[data-recipe-water-copy]').forEach(element => {
+            element.style.display = 'block';
+            element.style.height = 'auto';
+            element.style.lineHeight = '1.15';
+            element.style.overflow = 'visible';
+            element.style.textOverflow = 'clip';
+            element.style.whiteSpace = 'nowrap';
+          });
+          clone.querySelectorAll<HTMLElement>('[data-recipe-mineral-label]').forEach(label => {
+            label.style.overflow = 'visible';
+            label.querySelectorAll<HTMLElement>('*').forEach(element => {
+              const computed = window.getComputedStyle(element);
+              const fontSize = parseFloat(computed.fontSize);
+              element.style.overflow = 'visible';
+              element.style.textOverflow = 'clip';
+              if (Number.isFinite(fontSize) && fontSize > 0) {
+                element.style.lineHeight = `${Math.ceil(fontSize * 1.2)}px`;
+              }
+            });
+          });
+          clone.querySelectorAll('[data-export-ignore]').forEach(element => element.remove());
+        },
       });
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
       if (!jpg) throw new Error('Recipe card JPEG could not be exported.');
 
       imageUrl = URL.createObjectURL(jpg);
       downloadUrl(imageUrl, 'coffee-water-recipe-steps.jpg');
+      const downloadedImageUrl = imageUrl;
+      imageUrl = null;
+      window.setTimeout(() => URL.revokeObjectURL(downloadedImageUrl), 1000);
     } catch {
       setSaveImageError(true);
     } finally {
-      clone?.remove();
       if (imageUrl) URL.revokeObjectURL(imageUrl);
       setIsSavingImage(false);
     }
@@ -14951,6 +14944,7 @@ function BrewerRecipeStepsModal({
     >
       <div
         ref={recipeCardRef}
+        data-recipe-card-export
         className="flex max-h-[calc(100dvh-1rem)] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-sky-400/25 bg-slate-800 shadow-2xl sm:max-h-[calc(100dvh-2rem)]"
         onClick={event => event.stopPropagation()}
         role="dialog"
