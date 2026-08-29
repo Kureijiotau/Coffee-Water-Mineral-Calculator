@@ -91,7 +91,7 @@ import {
 } from './watermancerWorkerClient';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
-const WATER_RECIPE_IMAGE_SIZE = 50;
+const WATER_RECIPE_IMAGE_SIZE = 256;
 
 async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Promise<Uint8Array<ArrayBuffer>> {
   const response = await fetch(sourceUrl);
@@ -116,40 +116,43 @@ async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Pr
     const words = title.trim().split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let currentLine = '';
-    context.font = '700 5px system-ui, sans-serif';
+    const maxTextWidth = WATER_RECIPE_IMAGE_SIZE - 20;
+    const maxLines = 3;
+    const lineHeight = 25;
+    context.font = '700 20px system-ui, sans-serif';
     for (const word of words) {
       const candidate = currentLine ? `${currentLine} ${word}` : word;
-      if (currentLine && context.measureText(candidate).width > WATER_RECIPE_IMAGE_SIZE - 6) {
+      if (currentLine && context.measureText(candidate).width > maxTextWidth) {
         lines.push(currentLine);
         currentLine = word;
       } else {
         currentLine = candidate;
       }
-      if (lines.length === 2) break;
+      if (lines.length === maxLines - 1) break;
     }
-    if (lines.length < 2 && currentLine) lines.push(currentLine);
+    if (lines.length < maxLines && currentLine) lines.push(currentLine);
     if (lines.length === 0) lines.push('Water recipe');
-    if (lines.length > 2) lines.length = 2;
+    if (lines.length > maxLines) lines.length = maxLines;
     const lastLine = lines[lines.length - 1] ?? '';
-    if (words.length > 0 && lines.length === 2 && !lastLine.endsWith('…')) {
+    if (words.length > 0 && !lastLine.endsWith('…')) {
       const displayedWords = lines.join(' ').split(/\s+/).length;
       if (displayedWords < words.length) {
         let shortened = lastLine;
-        while (shortened.length > 1 && context.measureText(`${shortened}…`).width > WATER_RECIPE_IMAGE_SIZE - 6) {
+        while (shortened.length > 1 && context.measureText(`${shortened}…`).width > maxTextWidth) {
           shortened = shortened.slice(0, -1);
         }
         lines[lines.length - 1] = `${shortened}…`;
       }
     }
 
-    const bandHeight = Math.max(10, lines.length * 6 + 3);
+    const bandHeight = Math.max(54, lines.length * lineHeight + 14);
     context.fillStyle = 'rgba(2, 6, 23, 0.82)';
     context.fillRect(0, 0, WATER_RECIPE_IMAGE_SIZE, bandHeight);
     context.fillStyle = '#ffffff';
     context.textAlign = 'center';
     context.textBaseline = 'top';
     lines.forEach((line, index) => {
-      context.fillText(line, WATER_RECIPE_IMAGE_SIZE / 2, 2 + index * 6);
+      context.fillText(line, WATER_RECIPE_IMAGE_SIZE / 2, 7 + index * lineHeight);
     });
 
     const pngBlob = await new Promise<Blob>((resolve, reject) => {
