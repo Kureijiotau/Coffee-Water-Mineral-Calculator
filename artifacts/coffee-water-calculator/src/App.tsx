@@ -1128,8 +1128,8 @@ export function autoCraftSaltTargets(
     const value = Number(overshootPolicy.maxPpm[ionId] ?? 0);
     return Number.isFinite(value) ? Math.max(0, value) : 0;
   };
-  const sourcePreferenceFor = (ionId: IonId): WatermancerIonSourcePreference => (
-    overshootPolicy?.ionSourcePreferences?.[ionId] ?? 'dont-care'
+  const sourcePreferenceFor = (ionId: IonId): WatermancerIonSourcePreference | undefined => (
+    overshootPolicy?.ionSourcePreferences?.[ionId]
   );
   const softDeficitAllowanceFor = (ionId: IonId): number => {
     if (!controlledOvershootEnabled || !overshootPolicy?.softDeficitIons?.includes(ionId)) return 0;
@@ -1138,6 +1138,13 @@ export function autoCraftSaltTargets(
   };
   const weightedDeviation = (ionId: IonId, actual: number, target: number): number => {
     const delta = actual - target;
+    // Optimized means target proximity is the only objective for this ion:
+    // exact first, then the closest available over- or under-target result.
+    // Do not let a policy allowance or coverage weighting hide a larger
+    // real-world deviation.
+    if (sourcePreferenceFor(ionId) === 'dont-care') {
+      return Math.abs(delta);
+    }
     if (!controlledOvershootEnabled) {
       return objective === 'coverage'
         ? delta < 0 ? Math.abs(delta) * 2 : Math.abs(delta) * 0.35
@@ -1499,14 +1506,14 @@ export function autoFillWaterVolumes(
     ? Math.max(0, positiveTargetWigglePpm)
     : 0;
   const positiveTargetWiggleAmount = safePositiveTargetWigglePpm * batchMl;
+  const sourcePreferenceFor = (id: IonId): WatermancerIonSourcePreference => (
+    overshootPolicy?.ionSourcePreferences?.[id] ?? 'dont-care'
+  );
   const overshootAllowanceAmount = (id: IonId): number => {
     if (!overshootPolicy?.enabled || !overshootPolicy.allowedIons.includes(id)) return 0;
     const limit = Number(overshootPolicy.maxPpm[id] ?? 0);
     return Number.isFinite(limit) ? Math.max(0, limit) * batchMl : 0;
   };
-  const sourcePreferenceFor = (id: IonId): WatermancerIonSourcePreference => (
-    overshootPolicy?.ionSourcePreferences?.[id] ?? 'dont-care'
-  );
   const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
   const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
   const fixedContributions = Object.fromEntries(
@@ -2211,6 +2218,9 @@ function executeWatermancerRoute(
     normalizeWatermancerIonOrder(routePlan.overshootOrder).map((id, index) => [id, index]),
   );
   const score = deviations.reduce((total, deviation) => {
+    if (routePlan.ionSourcePreferences?.[deviation.id] === 'dont-care') {
+      return total + Math.abs(deviation.delta);
+    }
     const allowance = routePlan.allowOvershoot
       && routePlan.allowedOvershootIons.includes(deviation.id)
       && (routePlan.targetIons[deviation.id] ?? 0) > 0
@@ -2770,7 +2780,16 @@ export function totalWatermancerDeviation(
     ) as Record<IonId, number>,
     target,
   ).reduce(
-    (total, deviation) => total + Math.abs(watermancerDeviationBeyondPolicy(deviation, plan)),
+    (total, deviation) => (
+      total + (
+        plan.ionSourcePreferences?.[deviation.id] === 'dont-care'
+          ? Math.abs(deviation.delta) * optimizedIonPriorityWeight(
+            deviation.id,
+            plan.overshootOrder ?? plan.ionPriority ?? [],
+          )
+          : Math.abs(watermancerDeviationBeyondPolicy(deviation, plan))
+      )
+    ),
     0,
   );
 }

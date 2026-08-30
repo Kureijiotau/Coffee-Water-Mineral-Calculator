@@ -92,6 +92,23 @@ describe('autoFillWaterVolumes', () => {
     )).toBeCloseTo(5.9, 5);
   });
 
+  it('makes Optimized choose exact first and then the closest side of the target', () => {
+    const plan = {
+      targetIons: { calcium: 10 },
+      allowOvershoot: true,
+      allowedOvershootIons: ['calcium'],
+      overshootLimits: { calcium: 5 },
+      softDeficitIons: [],
+      softDeficitLimits: {},
+      ionSourcePreferences: { calcium: 'dont-care' },
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    expect(totalWatermancerDeviation({ calcium: 10 }, plan.targetIons, plan)).toBe(0);
+    expect(totalWatermancerDeviation({ calcium: 11 }, plan.targetIons, plan)).toBe(1);
+    expect(totalWatermancerDeviation({ calcium: 9 }, plan.targetIons, plan)).toBe(1);
+    expect(totalWatermancerDeviation({ calcium: 12 }, plan.targetIons, plan)).toBe(2);
+  });
+
   it('recalculates the selected route card from edited visible water volumes', () => {
     const source = water('source', { calcium: 10 });
     source.volumeMl = '500';
