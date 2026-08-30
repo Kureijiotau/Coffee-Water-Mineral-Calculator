@@ -1070,6 +1070,26 @@ function optimizedIonDeviation(actual: number, target: number): number {
   return Math.abs(safeActual - safeTarget) / safeTarget;
 }
 
+export function roundWatermancerSaltTargetToWholeMg(
+  targetPpm: number,
+  liters: number,
+  salt: typeof SALTS[number],
+  form: typeof SALTS[number]['hydrationForms'][number],
+): number {
+  if (!Number.isFinite(targetPpm) || targetPpm <= 0 || !Number.isFinite(liters) || liters <= 0) {
+    return 0;
+  }
+  const massMg = computeSaltMg(targetPpm, liters, form.molarMass, salt.anhydrousMass);
+  if (!Number.isFinite(massMg) || massMg <= 0) return 0;
+  const wholeMg = Math.max(1, Math.round(massMg));
+  return wholeMg * salt.anhydrousMass / (liters * form.molarMass);
+}
+
+function formatWatermancerSaltDoseMg(massMg: number): string {
+  if (!Number.isFinite(massMg) || massMg <= 0) return '0';
+  return String(Math.max(1, Math.round(massMg)));
+}
+
 export function autoCraftSaltTargets(
   allowedSaltIds: string[],
   waterIons: Partial<Record<IonId, number>>,
@@ -5249,7 +5269,40 @@ function App() {
       return;
     }
     if (!preview) return;
-    const route = cloneWatermancerRouteCandidate(preview.route);
+    const candidateRoute = cloneWatermancerRouteCandidate(preview.route);
+    const route = {
+      ...candidateRoute,
+      plan: {
+        ...candidateRoute.plan,
+        fixedSaltDoses: Object.fromEntries(
+          Object.entries(candidateRoute.plan.fixedSaltDoses).map(([saltId, dosePpm]) => {
+            const saltIndex = SALTS.findIndex(salt => salt.id === saltId);
+            const salt = SALTS[saltIndex];
+            const form = salt
+              ? salt.hydrationForms[rows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0]
+                ?? salt.hydrationForms[salt.defaultFormIdx ?? 0]
+              : undefined;
+            return [
+              saltId,
+              salt && form
+                ? roundWatermancerSaltTargetToWholeMg(dosePpm, L, salt, form)
+                : dosePpm,
+            ];
+          }),
+        ),
+      },
+      saltTargets: Object.fromEntries(
+        SALTS.map((salt, index) => {
+          const targetPpm = candidateRoute.saltTargets[salt.id] ?? 0;
+          const form = salt.hydrationForms[rows[index]?.formIdx ?? salt.defaultFormIdx ?? 0]
+            ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+          return [
+            salt.id,
+            roundWatermancerSaltTargetToWholeMg(targetPpm, L, salt, form),
+          ];
+        }),
+      ),
+    };
     setAutoCraftPreset(preview.strategy);
     setWatermancerSaltObjective(preview.saltObjective);
     setAutoFillPriorityPreset(preview.priorityPreset);
@@ -5273,7 +5326,7 @@ function App() {
         const massMg = salt && form && L > 0
           ? dosePpm * L * form.molarMass / salt.anhydrousMass
           : 0;
-        return [saltId, massMg];
+        return [saltId, massMg > 0 ? Math.max(1, Math.round(massMg)) : 0];
       }).filter(([, massMg]) => Number(massMg) > 0),
     ));
     setActiveRecipeId('custom');
@@ -8560,7 +8613,7 @@ function App() {
                         : 0;
                        const doseInputValue = Object.prototype.hasOwnProperty.call(watermancerDoseInputDrafts, salt.id)
                          ? watermancerDoseInputDrafts[salt.id]
-                         : (used ? activeMg.toFixed(1) : '0.0');
+                          : (used ? formatWatermancerSaltDoseMg(activeMg) : '0');
                        const updateDoseInput = (
                          value: string,
                          selectionStart: number | null,
@@ -9095,7 +9148,7 @@ function App() {
                                       <SaltIonBadges salt={salt} />
                                     </span>
                                   </span>
-                                  <span className="shrink-0 font-semibold tabular-nums text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{massMg.toFixed(1)} mg</span>
+                                  <span className="shrink-0 font-semibold tabular-nums text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{formatWatermancerSaltDoseMg(massMg)} mg</span>
                                 </div>
                               );
                             })
@@ -14849,7 +14902,10 @@ function BrewerRecipeStepsModal({
     const volume = concentrateOn && concentrateLiters > 0 ? concentrateLiters : liters;
     const mass = computeSaltMg(target, volume || 1, form.molarMass, salt.anhydrousMass)
       * (concentrateOn ? concentrateStrength : 1);
-    return mass >= 1000 ? `${(mass / 1000).toFixed(2)} g` : `${mass.toFixed(2)} mg`;
+    const displayMass = nerdLevel === 'watermancer'
+      ? Number(formatWatermancerSaltDoseMg(mass))
+      : mass;
+    return displayMass >= 1000 ? `${(displayMass / 1000).toFixed(2)} g` : `${displayMass.toFixed(0)} mg`;
   };
   const amountLabel = (salt: typeof SALTS[number], targets = saltTargets) => {
     const target = targets[salt.id] ?? 0;
@@ -15013,6 +15069,24 @@ function BrewerRecipeStepsModal({
       }
       : undefined,
   });
+  const recipeCardPayload = serializeRecipeFile({
+    name: recipeName !== 'Custom' ? recipeName : 'Mineral recipe',
+    salts: Object.fromEntries(
+      SALTS
+        .map((salt, index) => {
+          const target = stepSaltTargets[salt.id] ?? 0;
+          if (target <= 0) return null;
+          return [
+            salt.id,
+            {
+              target: String(target),
+              formIdx: recipeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0,
+            },
+          ] as const;
+        })
+        .filter((entry): entry is readonly [string, { target: string; formIdx: number }] => entry !== null),
+    ),
+  });
   const waterStepStyles = [
     'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',
     'border-sky-300/35 bg-sky-400/[0.08] text-sky-100',
@@ -15075,7 +15149,8 @@ function BrewerRecipeStepsModal({
     try {
       const rendered = buildRecipeShareCardSvg(shareCardModel);
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
-      downloadBlob(blob, 'coffee-water-recipe.png');
+      const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
+      downloadBlob(new Blob([packagedPng], { type: 'image/png' }), 'coffee-water-recipe.WATER.png');
     } catch {
       setSaveImageError(true);
     } finally {

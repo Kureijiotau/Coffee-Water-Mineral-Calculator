@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
+  roundWatermancerSaltTargetToWholeMg,
   buildWatermancerPrecisionRecommendation,
   computeConcentrateStockSaltMassMg,
   computeConcentrateSaltMgPerDrop,
@@ -153,6 +154,16 @@ describe('autoFillWaterVolumes', () => {
       plan.targetIons,
       plan,
     )).toBe(0);
+  });
+
+  it('rounds matched salt targets to whole physical milligrams', () => {
+    const salt = SALTS.find(item => item.id === 'kcl')!;
+    const form = salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const targetPpm = 2.4 * salt.anhydrousMass / form.molarMass;
+
+    const roundedTarget = roundWatermancerSaltTargetToWholeMg(targetPpm, 1, salt, form);
+
+    expect(roundedTarget * form.molarMass / salt.anhydrousMass).toBeCloseTo(2, 8);
   });
 
   it('recalculates the selected route card from edited visible water volumes', () => {

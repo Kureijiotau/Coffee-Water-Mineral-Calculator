@@ -7,6 +7,7 @@ import {
   rasterizeRecipeShareCard,
   wrapRecipeShareCardText,
 } from './waterRecipeImage';
+import { parseRecipeFile, serializeRecipeFile } from './recipes';
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
@@ -25,6 +26,24 @@ describe('Watermancer image recipe metadata', () => {
 
     expect(Array.from(output.slice(0, 8))).toEqual(Array.from(ONE_PIXEL_PNG.slice(0, 8)));
     expect(extractWaterRecipeJsonFromPng(output)).toBe(json);
+  });
+
+  it('keeps recipe-card payloads importable after PNG packaging', () => {
+    const recipeText = serializeRecipeFile({
+      name: 'Bright cup',
+      salts: {
+        mgso4: { target: '12.5', formIdx: 0 },
+        nahco3: { target: '4', formIdx: 0 },
+      },
+    });
+    const packaged = embedWaterRecipeJsonInPng(ONE_PIXEL_PNG, recipeText);
+    const imported = parseRecipeFile(extractWaterRecipeJsonFromPng(packaged) ?? '');
+
+    expect(imported?.name).toBe('Bright cup');
+    expect(imported?.salts).toEqual({
+      mgso4: { target: '12.5', formIdx: 0 },
+      nahco3: { target: '4', formIdx: 0 },
+    });
   });
 
   it('returns null for non-PNG input', () => {

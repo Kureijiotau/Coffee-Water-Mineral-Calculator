@@ -38,6 +38,7 @@
 - [Taste starting recipe boundary](taste-starting-recipe-boundary.md) — coffee preferences generate a tunable Brewer recipe starting point, not bottled-water or roaster-specific chemistry
 - [Taste profile mini triangle](taste-profile-mini-triangle.md) — Brewer Taste Profile can drive the shared flavor recipe; Alchemist and Watermancer remain static
 - [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts
+- [Watermancer whole-milligram doses](watermancer-whole-milligram-doses.md) — apply matched salt amounts as nearest whole mg and recompute final ions from those physical doses
 - [Brewer Week 1 guide integration](brewer-week1-guide-integration.md) — keep sourced lesson recipes on the shared chemistry engine behind a temporary Brewer override
 - [Calcium Lactate boundary](calcium-lactate-boundary.md) — model calcium normally while keeping lactate display-only and outside Watermancer solver dimensions
 - [Magnesium Glycinate label basis](magnesium-glycinate-label-basis.md) — calibrate the product from its 1.8 g / 210 mg label and keep the carrier supplemental
