@@ -1347,10 +1347,10 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(chloride).toBeCloseTo(2.7, 1);
   });
 
-  it('omits an impractical sub-10 mg physical salt dose', () => {
+  it('allows a practical salt dose starting at 1 mg', () => {
     const kcl = SALTS.find(salt => salt.id === 'kcl')!;
     const form = kcl.hydrationForms[kcl.defaultFormIdx ?? 0];
-    const minimumPpm = 10 * kcl.anhydrousMass / form.molarMass;
+    const minimumPpm = 1 * kcl.anhydrousMass / form.molarMass;
     const targets = autoCraftSaltTargets(
       ['kcl'],
       {},
@@ -1367,7 +1367,7 @@ describe('Watermancer salt-to-ion helpers', () => {
       },
     );
 
-    expect(targets.kcl).toBe(0);
+    expect(targets.kcl).toBeGreaterThanOrEqual(minimumPpm);
   });
 
   it('protects primary ions instead of trading calcium coverage for chloride', () => {

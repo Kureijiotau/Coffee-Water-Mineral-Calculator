@@ -1381,8 +1381,8 @@ const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-po
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
 const DEFAULT_DROPS_PER_ML = 20;
-/** Smallest practical physical salt dose shown by Watermancer. */
-const WATERMANCER_MIN_SALT_MG = 10;
+/** Smallest physical salt dose considered by Watermancer. */
+const WATERMANCER_MIN_SALT_MG = 1;
 const DEFAULT_OVERSHOOT_SETTINGS: OvershootSettings = {
   enabled: true,
   allowedIons: [...ACTIVE_ION_IDS],
