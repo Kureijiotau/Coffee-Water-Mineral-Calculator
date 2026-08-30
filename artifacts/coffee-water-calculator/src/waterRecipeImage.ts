@@ -176,6 +176,21 @@ export type RecipeShareCardIon = {
   category: 'Cations' | 'Anions' | 'Other modeled ions';
 };
 
+export type RecipeShareCardProfileTarget = {
+  id: string;
+  name: string;
+  formula: string;
+  value: number;
+};
+
+export type RecipeShareCardProfile = {
+  id?: string;
+  name: string;
+  source: string;
+  details?: string;
+  targets: RecipeShareCardProfileTarget[];
+};
+
 export type RecipeShareCardModel = {
   recipeName: string;
   batchLabel: string;
@@ -192,6 +207,7 @@ export type RecipeShareCardModel = {
     gh: number;
     kh: number;
   };
+  profile?: RecipeShareCardProfile;
   concentrateGuide?: {
     stockLabel: string;
     doses: Array<{ label: string; milliliters: number; drops: number }>;
@@ -284,6 +300,20 @@ export function createRecipeShareCardModel(input: RecipeShareCardInput): RecipeS
       gh: finiteNumber(input.analysis.gh),
       kh: finiteNumber(input.analysis.kh),
     },
+    profile: input.profile
+      ? {
+        ...(input.profile.id ? { id: input.profile.id.trim() } : {}),
+        name: input.profile.name.trim() || 'Custom target profile',
+        source: input.profile.source.trim() || 'Watermancer',
+        ...(input.profile.details?.trim() ? { details: input.profile.details.trim() } : {}),
+        targets: input.profile.targets.map(target => ({
+          id: target.id.trim(),
+          name: target.name.trim() || target.id.trim(),
+          formula: target.formula.trim(),
+          value: finiteNumber(target.value),
+        })),
+      }
+      : undefined,
     concentrateGuide: input.concentrateGuide
       ? {
         stockLabel: input.concentrateGuide.stockLabel.trim() || 'Concentrate',
@@ -504,6 +534,76 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     { fill: '#0d6170', size: 23, weight: 700, family: 'Georgia, serif', anchor: 'middle' },
   )).join('');
   cursor += Math.max(56, nameLines.length * 25 + 30);
+  if (model.profile) {
+    const profileNameLines = wrapRecipeShareCardText(model.profile.name, 30);
+    const sourceLines = wrapRecipeShareCardText(`Source · ${model.profile.source}`, 46);
+    const detailLines = model.profile.details
+      ? wrapRecipeShareCardText(model.profile.details, 46)
+      : [];
+    const targetRows: RecipeShareCardProfileTarget[][] = [];
+    for (let index = 0; index < model.profile.targets.length; index += 2) {
+      targetRows.push(model.profile.targets.slice(index, index + 2));
+    }
+    const profileHeight = 82
+      + profileNameLines.length * 20
+      + sourceLines.length * 16
+      + detailLines.length * 16
+      + targetRows.length * 30;
+    svg += roundedRect(innerX, cursor, innerWidth, profileHeight, '#d9eee7', '#8bc5bd');
+    svg += sectionLabel(innerX + 16, cursor + 24, 'TARGET PROFILE', '#47737a');
+    let profileCursor = cursor + 48;
+    svg += profileNameLines.map((line, index) => svgText(
+      innerX + 16,
+      profileCursor + index * 20,
+      line,
+      { fill: '#0d6170', size: 16, weight: 700 },
+    )).join('');
+    profileCursor += profileNameLines.length * 20 + 3;
+    svg += sourceLines.map((line, index) => svgText(
+      innerX + 16,
+      profileCursor + index * 16,
+      line,
+      { fill: '#47737a', size: 10, weight: 700 },
+    )).join('');
+    profileCursor += sourceLines.length * 16;
+    if (detailLines.length > 0) {
+      svg += detailLines.map((line, index) => svgText(
+        innerX + 16,
+        profileCursor + 2 + index * 16,
+        line,
+        { fill: '#47737a', size: 10, weight: 600 },
+      )).join('');
+      profileCursor += detailLines.length * 16 + 2;
+    }
+    svg += svgText(innerX + 16, profileCursor + 16, 'TARGET IONS · mg/L', {
+      fill: '#47737a',
+      size: 9,
+      weight: 700,
+      letterSpacing: 1.1,
+    });
+    profileCursor += 28;
+    for (const row of targetRows) {
+      row.forEach((target, index) => {
+        const cellWidth = innerWidth / 2;
+        const cellX = innerX + index * cellWidth;
+        const targetLabel = `${target.formula} ${target.name}`;
+        svg += svgText(cellX, profileCursor, targetLabel, {
+          fill: '#173f49',
+          size: 10,
+          weight: 700,
+        });
+        svg += svgText(cellX + cellWidth - 12, profileCursor, target.value.toFixed(1), {
+          fill: '#0d6170',
+          size: 11,
+          weight: 700,
+          family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+          anchor: 'end',
+        });
+      });
+      profileCursor += 30;
+    }
+    cursor += profileHeight + 18;
+  }
   svg += `<line x1="${innerX}" y1="${cursor}" x2="${innerX + innerWidth}" y2="${cursor}" stroke="#0d6170" stroke-opacity="0.3"/>`;
   cursor += 24;
 

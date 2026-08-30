@@ -98,6 +98,15 @@ export type WaterRecipeShare = {
   version: typeof WATER_RECIPE_FILE_VERSION;
   name: string;
   ions: Record<string, number>;
+  profile?: WaterRecipeProfileShare;
+};
+
+export type WaterRecipeProfileShare = {
+  id?: string;
+  name: string;
+  source: string;
+  details?: string;
+  targets: Record<string, number>;
 };
 
 export function isAutoSavedWaterPlan(plan: Pick<WaterPlan, 'name'>): boolean {
@@ -230,7 +239,11 @@ export function serializeWaterPlanFile(plan: WaterPlan): string {
   }, null, 2);
 }
 
-export function serializeWaterRecipeFile(name: string, ions: Record<string, number>): string {
+export function serializeWaterRecipeFile(
+  name: string,
+  ions: Record<string, number>,
+  profile?: WaterRecipeProfileShare,
+): string {
   const recipe: WaterRecipeShare = {
     kind: WATER_RECIPE_FILE_KIND,
     version: WATER_RECIPE_FILE_VERSION,
@@ -240,6 +253,21 @@ export function serializeWaterRecipeFile(name: string, ions: Record<string, numb
         .filter(([, value]) => Number.isFinite(value))
         .map(([id, value]) => [id, Math.max(0, value)]),
     ),
+    ...(profile
+      ? {
+        profile: {
+          ...(profile.id ? { id: profile.id } : {}),
+          name: profile.name.trim() || 'Custom target profile',
+          source: profile.source.trim() || 'Watermancer',
+          ...(profile.details?.trim() ? { details: profile.details.trim() } : {}),
+          targets: Object.fromEntries(
+            Object.entries(profile.targets)
+              .filter(([, value]) => Number.isFinite(value))
+              .map(([id, value]) => [id, Math.max(0, value)]),
+          ),
+        },
+      }
+      : {}),
   };
   return JSON.stringify(recipe, null, 2);
 }
@@ -260,6 +288,24 @@ export function parseWaterRecipeFile(text: string): WaterRecipeShare | null {
       ions: Object.fromEntries(
         Object.entries(parsed.ions).map(([id, value]) => [id, Math.max(0, value)]),
       ),
+      ...(isRecord(parsed.profile)
+        && typeof parsed.profile.name === 'string'
+        && typeof parsed.profile.source === 'string'
+        && isNumberRecord(parsed.profile.targets)
+        ? {
+          profile: {
+            ...(typeof parsed.profile.id === 'string' ? { id: parsed.profile.id } : {}),
+            name: parsed.profile.name.trim() || 'Custom target profile',
+            source: parsed.profile.source.trim() || 'Watermancer',
+            ...(typeof parsed.profile.details === 'string' && parsed.profile.details.trim()
+              ? { details: parsed.profile.details.trim() }
+              : {}),
+            targets: Object.fromEntries(
+              Object.entries(parsed.profile.targets).map(([id, value]) => [id, Math.max(0, value)]),
+            ),
+          },
+        }
+        : {}),
     };
   } catch {
     return null;

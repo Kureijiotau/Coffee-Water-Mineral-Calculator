@@ -71,6 +71,16 @@ const shareCardFixture = {
     gh: 54.3,
     kh: 14.9,
   },
+  profile: {
+    id: 'aiki-default',
+    name: 'Aiki safe profile',
+    source: 'Built-in safe profile',
+    details: 'Published conservative ceilings for coffee water.',
+    targets: [
+      { id: 'calcium', name: 'Calcium', formula: 'Ca²⁺', value: 40 },
+      { id: 'magnesium', name: 'Magnesium', formula: 'Mg²⁺', value: 12 },
+    ],
+  },
 };
 
 describe('Watermancer recipe share card', () => {
@@ -87,6 +97,8 @@ describe('Watermancer recipe share card', () => {
     });
     expect(model.recipeName).toBe('Mineral recipe');
     expect(model.saltSteps[0]?.contributionPpm).toBe(0);
+    expect(model.profile?.name).toBe('Aiki safe profile');
+    expect(model.profile?.targets[0]?.value).toBe(40);
     const short = buildRecipeShareCardSvg({
       ...shareCardFixture,
       saltSteps: [],
@@ -96,6 +108,9 @@ describe('Watermancer recipe share card', () => {
     expect(long.width).toBe(1200);
     expect(long.height).toBeGreaterThan(short.height);
     expect(long.svg).toContain('Magnesium chloride');
+    expect(long.svg).toContain('TARGET PROFILE');
+    expect(long.svg).toContain('Aiki safe profile');
+    expect(long.svg).toContain('Published conservative ceilings');
     expect(long.svg).toContain('MIXING VESSEL');
     expect(long.svg).not.toContain('…');
   });

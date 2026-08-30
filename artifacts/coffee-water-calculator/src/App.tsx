@@ -46,6 +46,7 @@ import {
   type WaterPlan,
   type WaterPlanConcentrateSnapshot,
   type WaterPlanSnapshot,
+  type WaterRecipeProfileShare,
   WATER_PLAN_AUTOSAVE_NAME,
 } from './waterPlans';
 import {
@@ -5984,6 +5985,61 @@ function App() {
       ? AIKI_DEFAULT_PROFILE.name
       : watermancerTargetSourceLabel
     : displayedRecipeName;
+  const recipeShareProfile = useMemo(() => {
+    const sourceId = watermancerTargetSource;
+    const sourceProfile = sourceId.startsWith('profile:')
+      ? profiles.find(profile => profile.id === sourceId.slice('profile:'.length))
+      : undefined;
+    const savedProfile = sourceId.startsWith('saved:')
+      ? wmProfiles.find(profile => profile.id === sourceId.slice('saved:'.length))
+      : undefined;
+    const source = watermancerTargetOverride
+      ? 'Manual target override'
+      : sourceId === 'safe-profile'
+        ? 'Built-in safe profile'
+        : sourceId === 'salt-table'
+          ? 'Current salt table'
+          : sourceProfile
+            ? sourceProfile.locked ? 'Built-in ionic profile' : 'Saved ionic profile'
+            : savedProfile
+              ? 'Saved Watermancer profile'
+              : sourceId.startsWith('reference:')
+                ? 'Published reference water'
+                : sourceId.startsWith('recipe:')
+                  ? 'Saved mineral recipe'
+                  : sourceId.startsWith('external:')
+                    ? 'Published guide recipe'
+                    : sourceId.startsWith('lotus:')
+                      ? 'Lotus recipe'
+                      : 'Watermancer target source';
+    const details = watermancerTargetOverride
+      ? 'Targets were edited directly in Watermancer.'
+      : sourceProfile?.description
+        ?? (savedProfile
+          ? 'Saved Watermancer ion targets.'
+          : sourceId === 'salt-table'
+            ? 'Derived from the active mineral recipe.'
+            : undefined);
+    return {
+      ...(watermancerTargetOverride ? {} : { id: sourceId }),
+      name: watermancerTargetOverride ? 'Custom target override' : watermancerTargetSourceLabel || 'Custom target profile',
+      source,
+      details,
+      targets: ACTIVE_ION_IDS.map(id => ({
+        id,
+        name: ION_MAP[id].name,
+        formula: ION_MAP[id].formula,
+        value: Math.max(Number(watermancerIonTargets[id] ?? 0), 0),
+      })),
+    };
+  }, [
+    profiles,
+    watermancerIonTargets,
+    watermancerTargetOverride,
+    watermancerTargetSource,
+    watermancerTargetSourceLabel,
+    wmProfiles,
+  ]);
   // Recipe steps must describe the same salts the active tab will actually
   // prepare. Alchemist uses the source-water-adjusted dosing map (not the
   // untouched recipe rows); Watermancer uses its live route and dose
@@ -6610,7 +6666,16 @@ function App() {
     const recipeName = watermancerTargetSourceLabel || 'Custom recipe';
     const slug = recipeName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'water-recipe';
     const fileName = `${slug}.WATER.png`;
-    const json = serializeWaterRecipeFile(recipeName, watermancerIonTargets);
+    const profileMetadata: WaterRecipeProfileShare = {
+      ...(recipeShareProfile.id ? { id: recipeShareProfile.id } : {}),
+      name: recipeShareProfile.name,
+      source: recipeShareProfile.source,
+      ...(recipeShareProfile.details ? { details: recipeShareProfile.details } : {}),
+      targets: Object.fromEntries(
+        recipeShareProfile.targets.map(target => [target.id, target.value]),
+      ),
+    };
+    const json = serializeWaterRecipeFile(recipeName, watermancerIonTargets, profileMetadata);
     const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
@@ -9214,6 +9279,7 @@ function App() {
           tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
+           profile={recipeShareProfile}
           onClose={() => setShowBrewerSteps(null)}
         />
       )}
@@ -14690,6 +14756,7 @@ function BrewerRecipeStepsModal({
   tdsTarget,
   dropsPerMl,
   dosingMethod,
+  profile,
   onClose,
 }: {
   recipeName: string;
@@ -14710,6 +14777,7 @@ function BrewerRecipeStepsModal({
   tdsTarget: number;
   dropsPerMl: number;
   dosingMethod: 'dry' | 'dropper';
+  profile: NonNullable<ReturnType<typeof createRecipeShareCardModel>['profile']>;
   onClose: () => void;
 }) {
   const configuredBaseWaters = baseWaters
@@ -14898,6 +14966,7 @@ function BrewerRecipeStepsModal({
       gh: finalProfileGh,
       kh: finalProfileKh,
     },
+    profile,
     concentrateGuide: concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0
       ? {
         stockLabel: `Stock · ${formatWaterVolume(concentrateLiters * 1000)}`,

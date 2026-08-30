@@ -105,6 +105,23 @@ describe('water plan persistence', () => {
     });
   });
 
+  it('round-trips an optional target profile with a recipe share', () => {
+    const profile = {
+      id: 'aiki-default',
+      name: 'Aiki safe profile',
+      source: 'Built-in safe profile',
+      details: 'Published conservative ceilings for coffee water.',
+      targets: { calcium: 40, magnesium: 12, chloride: 0 },
+    };
+    const parsed = parseWaterRecipeFile(serializeWaterRecipeFile(
+      'Bright washed',
+      { calcium: 40, magnesium: 12 },
+      profile,
+    ));
+
+    expect(parsed?.profile).toEqual(profile);
+  });
+
   it('reads a recipe-only share file without accepting extra plan state', () => {
     const parsed = parseWaterRecipeFile(JSON.stringify({
       kind: 'coffee-water-recipe',
