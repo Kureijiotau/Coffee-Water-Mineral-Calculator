@@ -108,9 +108,9 @@ describe('Watermancer recipe share card', () => {
     expect(long.width).toBe(1200);
     expect(long.height).toBeGreaterThan(short.height);
     expect(long.svg).toContain('Magnesium chloride');
-    expect(long.svg).toContain('TARGET PROFILE');
-    expect(long.svg).toContain('Aiki safe profile');
-    expect(long.svg).toContain('Published conservative ceilings');
+    expect(long.svg).not.toContain('TARGET PROFILE');
+    expect(long.svg).not.toContain('Aiki safe profile');
+    expect(long.svg).not.toContain('Published conservative ceilings');
     expect(long.svg).toContain('MIXING VESSEL');
     expect(long.svg).not.toContain('…');
   });

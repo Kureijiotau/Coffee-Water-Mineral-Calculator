@@ -7,6 +7,8 @@ export interface WatermancerProfile {
   id: string;
   name: string;
   targets: IonicTargetValues;
+  source?: string;
+  details?: string;
 }
 
 const STORAGE_KEY = 'cwm.watermancerProfiles';
@@ -25,7 +27,13 @@ function readProfiles(): WatermancerProfile[] {
           return Number.isFinite(value) && value >= 0 ? [[id, value]] : [];
         }),
       ) as IonicTargetValues;
-      return [{ id: profile.id, name: profile.name, targets }];
+      return [{
+        id: profile.id,
+        name: profile.name,
+        targets,
+        ...(typeof profile.source === 'string' && profile.source.trim() ? { source: profile.source.trim() } : {}),
+        ...(typeof profile.details === 'string' && profile.details.trim() ? { details: profile.details.trim() } : {}),
+      }];
     });
   } catch {
     return [];
@@ -44,12 +52,18 @@ export function saveWatermancerProfiles(profiles: WatermancerProfile[]): void {
   }
 }
 
-export function createWatermancerProfile(name: string, targets: IonicTargetValues): WatermancerProfile {
+export function createWatermancerProfile(
+  name: string,
+  targets: IonicTargetValues,
+  metadata?: Pick<WatermancerProfile, 'source' | 'details'>,
+): WatermancerProfile {
   return {
     id: `watermancer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name,
     targets: Object.fromEntries(
       ACTIVE_ION_IDS.map(id => [id, Math.max(Number(targets[id] ?? 0), 0)]),
     ) as IonicTargetValues,
+    ...(metadata?.source?.trim() ? { source: metadata.source.trim() } : {}),
+    ...(metadata?.details?.trim() ? { details: metadata.details.trim() } : {}),
   };
 }

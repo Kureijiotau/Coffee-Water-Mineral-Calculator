@@ -6002,7 +6002,7 @@ function App() {
           : sourceProfile
             ? sourceProfile.locked ? 'Built-in ionic profile' : 'Saved ionic profile'
             : savedProfile
-              ? 'Saved Watermancer profile'
+              ? savedProfile.source ?? 'Saved Watermancer profile'
               : sourceId.startsWith('reference:')
                 ? 'Published reference water'
                 : sourceId.startsWith('recipe:')
@@ -6016,7 +6016,7 @@ function App() {
       ? 'Targets were edited directly in Watermancer.'
       : sourceProfile?.description
         ?? (savedProfile
-          ? 'Saved Watermancer ion targets.'
+          ? savedProfile.details ?? 'Saved Watermancer ion targets.'
           : sourceId === 'salt-table'
             ? 'Derived from the active mineral recipe.'
             : undefined);
@@ -6217,17 +6217,24 @@ function App() {
         window.alert('Switch to Watermancer before importing an ion recipe.');
         return;
       }
-      const importedProfileName = file.name
+      const importedProfileName = waterRecipe.profile?.name?.trim() || file.name
         .replace(/(?:\.WATER)?\.png$/i, '')
         .replace(/\.WATER$/i, '')
         .replace(/\.json$/i, '')
         .trim() || waterRecipe.name;
+      const importedTargets = waterRecipe.profile?.targets ?? waterRecipe.ions;
       const importedProfile = createWatermancerProfile(
         importedProfileName,
-        waterRecipe.ions as IonicTargetValues,
+        importedTargets as IonicTargetValues,
+        waterRecipe.profile
+          ? {
+            source: waterRecipe.profile.source,
+            details: waterRecipe.profile.details,
+          }
+          : undefined,
       );
       setWmProfiles(prev => [...prev, importedProfile]);
-      setWatermancerTargetOverride(waterRecipe.ions as IonicTargetValues);
+      setWatermancerTargetOverride(waterRecipe.profile ? null : waterRecipe.ions as IonicTargetValues);
       setWatermancerImportedRecipeName(importedProfile.name);
       setWatermancerTargetSource(`saved:${importedProfile.id}`);
       return;

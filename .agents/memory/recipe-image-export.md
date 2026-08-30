@@ -7,4 +7,4 @@ Export the recipe as a dedicated, content-only SVG share card with a fixed width
 
 **Why:** The modal is optimized for interaction and scrolling, so DOM screenshot approaches vary with viewport and scroll state and can capture controls that do not belong in a share image.
 
-**How to apply:** Build a serializable recipe view model first, wrap every variable-length label before laying out SVG panels, rasterize to PNG/JPG with a canvas, and always reset the saving state in a finally block. Keep editable WATER/JSON exports independent, but allow the PNG’s Watermancer-Recipe JSON to carry a profile snapshot so the image is both human-readable and re-importable.
+**How to apply:** Build a serializable recipe view model first, wrap every variable-length label before laying out SVG panels, rasterize to PNG/JPG with a canvas, and always reset the saving state in a finally block. Keep editable WATER/JSON exports independent, but allow the PNG’s Watermancer-Recipe JSON to carry a profile snapshot for profile-aware import; keep that snapshot out of the visible recipe card.
