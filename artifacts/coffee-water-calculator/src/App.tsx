@@ -482,6 +482,22 @@ function loadWatermancerTargetSource(): WatermancerTargetSourceId {
   return 'safe-profile';
 }
 
+export function normalizeWatermancerTargetSourceForSavedItems(
+  source: WatermancerTargetSourceId,
+  savedProfiles: Array<{ id: string }>,
+  savedRecipes: Array<{ id: string }>,
+): WatermancerTargetSourceId {
+  const [prefix, id] = source.split(':', 2);
+  if (!id) return source;
+  if (prefix === 'recipe' && savedProfiles.some(profile => profile.id === id)) {
+    return `saved:${id}` as WatermancerTargetSourceId;
+  }
+  if (prefix === 'saved' && savedRecipes.some(recipe => recipe.id === id)) {
+    return `recipe:${id}` as WatermancerTargetSourceId;
+  }
+  return source;
+}
+
 function loadWatermancerIonSourcePreferences(): Record<IonId, WatermancerIonSourcePreference> {
   try {
     const stored = JSON.parse(
@@ -4526,13 +4542,22 @@ function App() {
   }, [watermancerTargetSource]);
 
   useEffect(() => {
+    const normalizedSource = normalizeWatermancerTargetSourceForSavedItems(
+      watermancerTargetSource,
+      wmProfiles,
+      savedRecipes,
+    );
+    if (normalizedSource !== watermancerTargetSource) {
+      setWatermancerTargetSource(normalizedSource);
+      return;
+    }
     if (
       watermancerTargetSource.startsWith('saved:')
       && !wmProfiles.some(profile => profile.id === watermancerTargetSource.slice('saved:'.length))
     ) {
       setWatermancerTargetSource('safe-profile');
     }
-  }, [watermancerTargetSource, wmProfiles]);
+  }, [savedRecipes, watermancerTargetSource, wmProfiles]);
 
   const handleWatermancerTargetSourceChange = (source: WatermancerTargetSourceId) => {
     enterWatermancerManualMode();
@@ -5976,24 +6001,24 @@ function App() {
       accent: 'emerald',
       options: [{ value: 'custom', label: 'Custom' }],
     },
+    ...(savedRecipes.length > 0
+      ? [{
+          label: 'My saved profiles',
+          accent: 'violet' as const,
+          options: savedRecipes.map(recipe => ({
+            value: `recipe:${recipe.id}`,
+            label: `Recipe · ${recipe.name}`,
+          })),
+        }]
+      : []),
     {
-      label: 'Built-in',
+      label: 'Kimoi.coffee Recipes',
       accent: 'cyan',
       options: RECIPES.map(recipe => ({
         value: `recipe:${recipe.id}`,
         label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
       })),
     },
-    ...(savedRecipes.length > 0
-      ? [{
-          label: 'My recipes',
-          accent: 'violet' as const,
-          options: savedRecipes.map(recipe => ({
-            value: `recipe:${recipe.id}`,
-            label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
-          })),
-        }]
-      : []),
     {
       label: 'Watering Hole · Filter',
       accent: 'amber',
@@ -6002,17 +6027,17 @@ function App() {
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
     {
-      label: 'Watering Hole · Espresso',
-      accent: 'amber',
-      options: ROBERT_ASAMI_RECIPES
-        .filter(recipe => recipe.method === 'Espresso')
-        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
-    },
-    {
       label: 'Watering Hole · Tap-water proxy',
       accent: 'amber',
       options: ROBERT_ASAMI_RECIPES
         .filter(recipe => recipe.method.includes('tap-water'))
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+    {
+      label: 'Watering Hole · Espresso',
+      accent: 'amber',
+      options: ROBERT_ASAMI_RECIPES
+        .filter(recipe => recipe.method === 'Espresso')
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
   ];
@@ -7216,6 +7241,7 @@ function App() {
               wmProfiles={wmProfiles}
                currentFinalIons={watermancerCurrentFinalIons}
               allRecipes={allRecipes}
+               savedRecipes={savedRecipes}
               externalRecipes={ROBERT_ASAMI_RECIPES}
               lotusRecipes={LOTUS_RECIPES}
               referenceWaters={EMPIRICAL_WATERS}
@@ -12212,6 +12238,7 @@ function WatermancerIonProfileCard({
   activeProfileId,
   wmProfiles,
   allRecipes,
+  savedRecipes,
   externalRecipes,
   lotusRecipes,
   referenceWaters,
@@ -12236,6 +12263,7 @@ function WatermancerIonProfileCard({
   activeProfileId: string;
   wmProfiles: WatermancerProfile[];
   allRecipes: SaltRecipe[];
+  savedRecipes: SaltRecipe[];
   externalRecipes: ExternalRecipe[];
   lotusRecipes: LotusRecipe[];
   referenceWaters: typeof EMPIRICAL_WATERS;
@@ -12445,6 +12473,30 @@ function WatermancerIonProfileCard({
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
   const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => [
+    ...(wmProfiles.length > 0 || savedRecipes.length > 0
+      ? [{
+          label: 'My saved profiles',
+          accent: 'violet' as const,
+          options: [
+            ...wmProfiles.map(profile => ({
+              value: `saved:${profile.id}`,
+              label: `Profile · ${profile.name}`,
+            })),
+            ...savedRecipes.map(recipe => ({
+              value: `recipe:${recipe.id}`,
+              label: `Recipe · ${recipe.name}`,
+            })),
+          ],
+        }]
+      : []),
+    {
+      label: 'Kimoi.coffee Recipes',
+      accent: 'emerald',
+      options: RECIPES.map(recipe => ({
+        value: `recipe:${recipe.id}`,
+        label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
+      })),
+    },
     {
       label: 'Empirical Water Profiles',
       accent: 'cyan',
@@ -12458,36 +12510,11 @@ function WatermancerIonProfileCard({
             .replace(/ ionic profile$/, ''),
         })),
     },
-    ...(wmProfiles.length > 0
-      ? [{
-          label: 'My saved profiles',
-          accent: 'violet' as const,
-          options: wmProfiles.map(profile => ({
-            value: `saved:${profile.id}`,
-            label: profile.name,
-          })),
-        }]
-      : []),
-    {
-      label: 'Kimoi.coffee Recipes',
-      accent: 'emerald',
-      options: allRecipes.map(recipe => ({
-        value: `recipe:${recipe.id}`,
-        label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
-      })),
-    },
     {
       label: 'Watering Hole · Filter',
       accent: 'amber',
       options: externalRecipes
         .filter(recipe => recipe.method === 'Filter')
-        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
-    },
-    {
-      label: 'Watering Hole · Espresso',
-      accent: 'amber',
-      options: externalRecipes
-        .filter(recipe => recipe.method === 'Espresso')
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
     {
@@ -12498,14 +12525,21 @@ function WatermancerIonProfileCard({
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
     {
-      label: 'Lotus Coffee Products',
+      label: 'Lotus Coffee',
       accent: 'violet',
       options: lotusRecipes.map(recipe => ({
         value: `lotus:${recipe.id}`,
         label: recipe.name,
       })),
     },
-  ], [activeProfileId, allRecipes, externalRecipes, lotusRecipes, profiles, wmProfiles]);
+    {
+      label: 'Watering Hole · Espresso',
+      accent: 'amber',
+      options: externalRecipes
+        .filter(recipe => recipe.method === 'Espresso')
+        .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
+    },
+  ], [externalRecipes, lotusRecipes, profiles, savedRecipes, wmProfiles]);
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">

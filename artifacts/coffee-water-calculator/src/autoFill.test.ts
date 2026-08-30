@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   autoFillWaterVolumes,
   autoCraftSaltTargets,
+  normalizeWatermancerTargetSourceForSavedItems,
   roundWatermancerSaltTargetToWholeMg,
   buildWatermancerPrecisionRecommendation,
   computeConcentrateStockSaltMassMg,
@@ -164,6 +165,19 @@ describe('autoFillWaterVolumes', () => {
     const roundedTarget = roundWatermancerSaltTargetToWholeMg(targetPpm, 1, salt, form);
 
     expect(roundedTarget * form.molarMass / salt.anhydrousMass).toBeCloseTo(2, 8);
+  });
+
+  it('moves legacy saved-profile target sources into the personal profile namespace', () => {
+    expect(normalizeWatermancerTargetSourceForSavedItems(
+      'recipe:profile-1',
+      [{ id: 'profile-1' }],
+      [],
+    )).toBe('saved:profile-1');
+    expect(normalizeWatermancerTargetSourceForSavedItems(
+      'saved:recipe-1',
+      [],
+      [{ id: 'recipe-1' }],
+    )).toBe('recipe:recipe-1');
   });
 
   it('recalculates the selected route card from edited visible water volumes', () => {
