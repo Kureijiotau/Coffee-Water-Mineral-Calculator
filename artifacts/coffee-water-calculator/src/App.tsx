@@ -6213,7 +6213,7 @@ function App() {
       ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
-      if (!showWatermancer) {
+      if (!showWatermancer && !waterRecipe.profile) {
         window.alert('Switch to Watermancer before importing an ion recipe.');
         return;
       }
