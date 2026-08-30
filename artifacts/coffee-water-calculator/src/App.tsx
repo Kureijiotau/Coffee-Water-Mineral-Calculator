@@ -1063,6 +1063,13 @@ export function computeWatermancerFinalIons(
   );
 }
 
+function optimizedIonDeviation(actual: number, target: number): number {
+  const safeActual = Number.isFinite(actual) ? actual : 0;
+  const safeTarget = Number.isFinite(target) ? Math.max(target, 0) : 0;
+  if (safeTarget <= 0) return 0;
+  return Math.abs(safeActual - safeTarget) / safeTarget;
+}
+
 export function autoCraftSaltTargets(
   allowedSaltIds: string[],
   waterIons: Partial<Record<IonId, number>>,
@@ -1245,6 +1252,11 @@ export function autoCraftSaltTargets(
   const solveGlobalSaltTargets = (): Record<string, number> | null => {
     const weights = IONS.map(ion => {
       const target = targetIons[ion.id] ?? 0;
+      if (overshootPolicy?.ionSourcePreferences?.[ion.id] === 'dont-care') {
+        // Seed the active-set solver with the same per-ion scale as the
+        // Optimized L1 objective. Zero-target ions are intentionally neutral.
+        return target > 0 ? 1 / (target * target) : 1e-6;
+      }
       if (target <= 0) return 4;
       return overshootPolicy?.softDeficitIons?.includes(ion.id) ? 2 : 12;
     });
@@ -2219,7 +2231,7 @@ function executeWatermancerRoute(
   );
   const score = deviations.reduce((total, deviation) => {
     if (routePlan.ionSourcePreferences?.[deviation.id] === 'dont-care') {
-      return total + Math.abs(deviation.delta);
+      return total + optimizedIonDeviation(deviation.actual, deviation.target);
     }
     const allowance = routePlan.allowOvershoot
       && routePlan.allowedOvershootIons.includes(deviation.id)
@@ -2783,7 +2795,7 @@ export function totalWatermancerDeviation(
     (total, deviation) => (
       total + (
         plan.ionSourcePreferences?.[deviation.id] === 'dont-care'
-          ? Math.abs(deviation.delta)
+          ? optimizedIonDeviation(deviation.actual, deviation.target)
           : Math.abs(watermancerDeviationBeyondPolicy(deviation, plan))
       )
     ),

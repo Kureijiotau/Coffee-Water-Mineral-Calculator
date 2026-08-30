@@ -104,9 +104,55 @@ describe('autoFillWaterVolumes', () => {
     } as unknown as WatermancerRouteCandidate['plan'];
 
     expect(totalWatermancerDeviation({ calcium: 10 }, plan.targetIons, plan)).toBe(0);
-    expect(totalWatermancerDeviation({ calcium: 11 }, plan.targetIons, plan)).toBe(1);
-    expect(totalWatermancerDeviation({ calcium: 9 }, plan.targetIons, plan)).toBe(1);
-    expect(totalWatermancerDeviation({ calcium: 12 }, plan.targetIons, plan)).toBe(2);
+    expect(totalWatermancerDeviation({ calcium: 11 }, plan.targetIons, plan)).toBeCloseTo(0.1, 5);
+    expect(totalWatermancerDeviation({ calcium: 9 }, plan.targetIons, plan)).toBeCloseTo(0.1, 5);
+    expect(totalWatermancerDeviation({ calcium: 12 }, plan.targetIons, plan)).toBeCloseTo(0.2, 5);
+  });
+
+  it('scores Optimized misses by each ion target percentage', () => {
+    const plan = {
+      targetIons: { sodium: 8, potassium: 1 },
+      allowOvershoot: true,
+      allowedOvershootIons: ['sodium', 'potassium'],
+      overshootLimits: { sodium: 5, potassium: 5 },
+      softDeficitIons: [],
+      softDeficitLimits: {},
+      ionSourcePreferences: { sodium: 'dont-care', potassium: 'dont-care' },
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    expect(totalWatermancerDeviation(
+      { sodium: 7.2, potassium: 1 },
+      plan.targetIons,
+      plan,
+    )).toBeCloseTo(0.1, 5);
+    expect(totalWatermancerDeviation(
+      { sodium: 8, potassium: 0.9 },
+      plan.targetIons,
+      plan,
+    )).toBeCloseTo(0.1, 5);
+    expect(totalWatermancerDeviation(
+      { sodium: 8, potassium: 0.32 },
+      plan.targetIons,
+      plan,
+    )).toBeCloseTo(0.68, 5);
+  });
+
+  it('does not score zero-target ions in Optimized percentage matching', () => {
+    const plan = {
+      targetIons: { potassium: 1, citrates: 0 },
+      allowOvershoot: true,
+      allowedOvershootIons: ['potassium', 'citrates'],
+      overshootLimits: { potassium: 5, citrates: 5 },
+      softDeficitIons: [],
+      softDeficitLimits: {},
+      ionSourcePreferences: { potassium: 'dont-care', citrates: 'dont-care' },
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    expect(totalWatermancerDeviation(
+      { potassium: 1, citrates: 100 },
+      plan.targetIons,
+      plan,
+    )).toBe(0);
   });
 
   it('recalculates the selected route card from edited visible water volumes', () => {
