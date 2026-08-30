@@ -2783,10 +2783,7 @@ export function totalWatermancerDeviation(
     (total, deviation) => (
       total + (
         plan.ionSourcePreferences?.[deviation.id] === 'dont-care'
-          ? Math.abs(deviation.delta) * optimizedIonPriorityWeight(
-            deviation.id,
-            plan.overshootOrder ?? plan.ionPriority ?? [],
-          )
+          ? Math.abs(deviation.delta)
           : Math.abs(watermancerDeviationBeyondPolicy(deviation, plan))
       )
     ),
