@@ -5553,6 +5553,25 @@ function App() {
       [saltId]: Math.max(0, currentMg + deltaMg),
     }));
   };
+  const resetWatermancerSaltTable = () => {
+    // Invalidate any deferred matcher callback so it cannot repopulate the
+    // table after the user explicitly reset it.
+    watermancerActionGenerationRef.current += 1;
+    watermancerActionBusyRef.current = false;
+    setWatermancerActionRunning(false);
+    setWatermancerBestMatchRunning(false);
+    setWatermancerActionMessage(null);
+    setWatermancerBestMatchPreview(null);
+    setWatermancerBestMatchMessage(null);
+    setWatermancerAppliedBestMatchRoute(null);
+    setWatermancerManualRoute(null);
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerMatchMode('automatic');
+    setWatermancerUsedSaltIds([]);
+    setWatermancerDoseOverridesMg({});
+    setWatermancerDoseInputDrafts({});
+    setRows(currentRows => currentRows.map(row => ({ ...row, target: '' })));
+  };
     // Build the salt recommendation shown below the calculator. The sulfate /
     // chloride preference is a real source selection for magnesium, not merely
     // a sort order. Keep the user's actual recipe rows unchanged until they
@@ -8604,13 +8623,10 @@ function App() {
                         <span>Dose</span>
                         <button
                           type="button"
-                          onClick={() => {
-                            enterWatermancerManualMode();
-                            setWatermancerDoseOverridesMg({});
-                          }}
+                          onClick={resetWatermancerSaltTable}
                           className="rounded border border-slate-600/70 bg-slate-900/60 px-1.5 py-0.5 text-[9px] font-semibold normal-case tracking-normal text-slate-400 transition hover:border-indigo-300/50 hover:bg-indigo-500/15 hover:text-indigo-200"
                           aria-label="Reset salt doses"
-                          title="Reset salt dose adjustments while keeping Used salts"
+                          title="Reset adjusted salt doses and return all salts to zero"
                         >
                           Reset
                         </button>
