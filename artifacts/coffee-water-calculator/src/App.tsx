@@ -6265,13 +6265,18 @@ function App() {
     setActiveRecipeId(recipe.id);
   };
 
-  const handleDeleteRecipe = () => {
-    const recipe = savedRecipes.find(r => r.id === activeRecipeId);
+  const handleDeleteRecipe = (recipeId = activeRecipeId) => {
+    const recipe = savedRecipes.find(r => r.id === recipeId);
     if (!recipe) return;
     if (!window.confirm(`Delete saved recipe "${recipe.name}"? This cannot be undone.`)) return;
     setSavedRecipes(prev => prev.filter(r => r.id !== recipe.id));
-    setActiveRecipeId('custom');
-    setExternalRecipeId('custom');
+    if (activeRecipeId === recipe.id) {
+      setActiveRecipeId('custom');
+      setExternalRecipeId('custom');
+    }
+    if (watermancerTargetSource === `recipe:${recipe.id}`) {
+      setWatermancerTargetSource('safe-profile');
+    }
   };
 
   const handleExportRecipe = () => {
@@ -7251,6 +7256,7 @@ function App() {
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
               onSaveWmProfile={handleSaveWmProfile}
               onDeleteWmProfile={handleDeleteWmProfile}
+               onDeleteRecipe={handleDeleteRecipe}
                hasSaltRecipeTargets={hasSaltRecipeTargets}
                onSendRecipeToConcentrate={handleSendRecipeToConcentrate}
                onShareRecipe={handleShareWatermancerPlan}
@@ -7317,7 +7323,7 @@ function App() {
               )}
               {isSavedRecipeActive && (
                 <button
-                  onClick={handleDeleteRecipe}
+                  onClick={() => handleDeleteRecipe()}
                    className="flex items-center gap-1.5 text-xs text-rose-300 hover:text-rose-100 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-400/25 hover:border-rose-300/45 rounded-lg px-2.5 py-1.5 transition"
                   title="Delete this saved recipe"
                 >
@@ -12248,6 +12254,7 @@ function WatermancerIonProfileCard({
   onTargetOverrideChange,
   onSaveWmProfile,
   onDeleteWmProfile,
+  onDeleteRecipe,
   hasSaltRecipeTargets,
   onSendRecipeToConcentrate,
   onShareRecipe,
@@ -12273,6 +12280,7 @@ function WatermancerIonProfileCard({
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
   onSaveWmProfile: (profile: WatermancerProfile) => void;
   onDeleteWmProfile: (id: string) => void;
+  onDeleteRecipe: (id: string) => void;
   hasSaltRecipeTargets: boolean;
   onSendRecipeToConcentrate: () => void;
   onShareRecipe: () => void;
@@ -12433,11 +12441,21 @@ function WatermancerIonProfileCard({
   const selectedSavedProfile = currentDropdownValue.startsWith('saved:')
     ? wmProfiles.find(profile => profile.id === currentDropdownValue.slice('saved:'.length))
     : undefined;
+  const selectedSavedRecipe = currentDropdownValue.startsWith('recipe:')
+    ? savedRecipes.find(recipe => recipe.id === currentDropdownValue.slice('recipe:'.length))
+    : undefined;
 
   const handleDeleteSelectedProfile = () => {
     if (!selectedSavedProfile) return;
     if (!window.confirm(`Delete saved profile “${selectedSavedProfile.name}”?`)) return;
     onDeleteWmProfile(selectedSavedProfile.id);
+    finishEditing();
+  };
+
+  const handleDeleteSelectedRecipe = () => {
+    if (!selectedSavedRecipe) return;
+    if (!window.confirm(`Delete saved recipe “${selectedSavedRecipe.name}”?`)) return;
+    onDeleteRecipe(selectedSavedRecipe.id);
     finishEditing();
   };
 
@@ -12609,13 +12627,13 @@ function WatermancerIonProfileCard({
                </>
              )}
            </div>
-            {selectedSavedProfile && (
+             {(selectedSavedProfile || selectedSavedRecipe) && (
               <button
                 type="button"
-                onClick={handleDeleteSelectedProfile}
+                 onClick={selectedSavedProfile ? handleDeleteSelectedProfile : handleDeleteSelectedRecipe}
                 className="flex items-center gap-1.5 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
-                aria-label={`Delete saved profile ${selectedSavedProfile.name}`}
-                title="Delete this saved profile"
+                 aria-label={`Delete ${selectedSavedProfile ? 'saved profile' : 'saved recipe'} ${selectedSavedProfile?.name ?? selectedSavedRecipe?.name ?? ''}`}
+                 title={selectedSavedProfile ? 'Delete this saved profile' : 'Delete this saved recipe'}
               >
                 <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="hidden sm:inline">Delete</span>
