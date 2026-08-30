@@ -12351,6 +12351,11 @@ function WatermancerIonProfileCard({
         recipe => recipe.id === currentDropdownValue.slice('recipe:'.length),
       )?.sourceUrl;
     }
+    if (currentDropdownValue.startsWith('saved:')) {
+      return wmProfiles.find(
+        profile => profile.id === currentDropdownValue.slice('saved:'.length),
+      )?.sourceUrl;
+    }
     if (currentDropdownValue.startsWith('external:')) {
       return externalRecipes.find(
         recipe => recipe.id === currentDropdownValue.slice('external:'.length),
