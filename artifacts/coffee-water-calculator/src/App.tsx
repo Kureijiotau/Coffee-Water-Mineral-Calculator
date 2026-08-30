@@ -15382,6 +15382,20 @@ function BrewerRecipeStepsModal({
                <p className="mt-1.5 text-center text-[10px] text-slate-500">
                   Download a clean PNG share card with the recipe steps and mineral analysis.
                </p>
+                <div
+                  className="mt-3 flex items-start gap-2.5 rounded-xl border border-cyan-300/25 bg-cyan-400/[0.08] px-3 py-2.5 text-left"
+                  role="note"
+                >
+                  <Share2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" aria-hidden="true" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-100">
+                      Shareable + importable
+                    </div>
+                    <p className="mt-1 text-[10px] leading-relaxed text-cyan-100/75">
+                      Send this recipe card to someone else. They can import the <span className="font-mono text-cyan-100">.WATER.png</span> image to load the recipe.
+                    </p>
+                  </div>
+                </div>
              </div>
            {concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0 && (
              <aside
