@@ -96,6 +96,7 @@ import {
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const WATER_RECIPE_IMAGE_SIZE = 256;
+const WATERMANCER_DEFERRED_SOLVE_MS = 180;
 
 async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Promise<Uint8Array<ArrayBuffer>> {
   const response = await fetch(sourceUrl);
@@ -4993,12 +4994,35 @@ function App() {
     // Vite injects React Refresh into App.tsx during development. Because the
     // worker imports the computation export from this large legacy module,
     // that refresh runtime would execute without `window` inside the worker.
-    // Keep development stable with the synchronous fallback until the solver
-    // is extracted into a React-free engine module.
+    // Defer the development fallback until input settles so the live route
+    // can keep rendering current readings without solving on every tick.
     if (!import.meta.env.PROD) {
-      watermancerWorkerFailedRef.current = true;
-      setWatermancerWorkerGeneration(generation => generation + 1);
-      return;
+      const requestSignature = watermancerInputSignature;
+      const requestStartedAt = performance.now();
+      const timeoutId = window.setTimeout(() => {
+        if (requestSignature !== watermancerInputSignatureRef.current) return;
+        try {
+          const result = solveWatermancerRoutes({
+            plan: watermancerPlan,
+            batchMl,
+            baseWaters: mineralWaters,
+            additionWaters,
+          });
+          if (requestSignature !== watermancerInputSignatureRef.current) return;
+          setWatermancerWorkerResult({
+            inputSignature: requestSignature,
+            result,
+          });
+          if (import.meta.env.DEV) {
+            console.debug('[watermancer] deferred solve', {
+              elapsedMs: Number((performance.now() - requestStartedAt).toFixed(2)),
+            });
+          }
+        } catch (error) {
+          console.error('[watermancer] deferred solve failed', error);
+        }
+      }, WATERMANCER_DEFERRED_SOLVE_MS);
+      return () => window.clearTimeout(timeoutId);
     }
     if (!watermancerWorkerRef.current) {
       try {
@@ -5043,6 +5067,7 @@ function App() {
       watermancerWorkerFailedRef.current = true;
       setWatermancerWorkerGeneration(generation => generation + 1);
     });
+    return undefined;
   }, [
     additionWaters,
     batchMl,
