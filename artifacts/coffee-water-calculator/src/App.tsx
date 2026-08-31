@@ -553,7 +553,7 @@ function HoldStepperButton({
   children: ReactNode;
   className: string;
 }) {
-  const HOLD_REPEAT_INTERVAL_MS = 250;
+  const HOLD_REPEAT_INTERVAL_MS = 90;
   const timeoutRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
@@ -3202,7 +3202,7 @@ function WaterVolumeStepper({
   onChange: (value: string) => void;
   accent?: 'sky' | 'indigo';
 }) {
-  const HOLD_REPEAT_INTERVAL_MS = 250;
+  const HOLD_REPEAT_INTERVAL_MS = 100;
   const repeatTimeoutRef = useRef<number | null>(null);
   const repeatIntervalRef = useRef<number | null>(null);
   const currentValue = Math.max(0, Math.round(num(value)));
