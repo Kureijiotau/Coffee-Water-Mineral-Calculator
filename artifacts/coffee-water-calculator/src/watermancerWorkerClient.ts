@@ -1,4 +1,4 @@
-import type { WatermancerRouteInputs } from './App';
+import type { WatermancerRouteInputs } from './watermancerSolver';
 import type { WatermancerSolverResult } from './watermancerPlan';
 import type {
   WatermancerWorkerRequest,
@@ -73,7 +73,16 @@ export function createWatermancerWorkerClient(
       return new Promise((resolve, reject) => {
         pending.set(requestId, { resolve, reject });
         const message: WatermancerWorkerRequest = { requestId, inputs };
-        worker.postMessage(message);
+        try {
+          worker.postMessage(message);
+        } catch (error) {
+          pending.delete(requestId);
+          const workerError = error instanceof Error
+            ? error
+            : new Error(String(error));
+          onWorkerError?.(workerError);
+          reject(workerError);
+        }
       });
     },
     dispose: () => {

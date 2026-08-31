@@ -1,7 +1,7 @@
 import {
   solveWatermancerRoutes,
   type WatermancerRouteInputs,
-} from './App';
+} from './watermancerSolver';
 import type { WatermancerSolverResult } from './watermancerPlan';
 
 export type WatermancerWorkerRequest = {

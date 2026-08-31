@@ -1,5 +1,5 @@
 import { ACTIVE_ION_IDS, type IonId, type IonOvershoot } from './waterData';
-import type { MineralWaterEntry } from './App';
+import type { MineralWaterEntry } from './watermancerSolver';
 
 export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 export type WatermancerSaltObjective = 'balanced' | 'coverage';
