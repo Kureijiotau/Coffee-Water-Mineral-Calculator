@@ -13106,51 +13106,13 @@ function WatermancerIonCoverageBars({
   onToggleFeedback: () => void;
   onToggleFollow: () => void;
 }) {
-  const [isScrolling, setIsScrolling] = useState(false);
-  const completeActualIons = completeIonTotals(actualIons);
-  const finalGh = computeGH(completeActualIons);
-  const finalKh = computeKH(completeActualIons);
-  const finalTds = Object.values(actualIons).reduce((total, ppm) => total + (ppm ?? 0), 0);
-  const finalGhKhRatio = finalKh > 0 && Number.isFinite(finalGh / finalKh)
-    ? `${(finalGh / finalKh).toFixed(1)}:1`
-    : '—';
-  useEffect(() => {
-    if (!followEnabled) {
-      setIsScrolling(false);
-      return;
-    }
-    let scrollEndTimer: number | null = null;
-    const handleScroll = () => {
-      setIsScrolling(true);
-      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
-      scrollEndTimer = window.setTimeout(() => {
-        setIsScrolling(false);
-        scrollEndTimer = null;
-      }, 180);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      if (scrollEndTimer !== null) window.clearTimeout(scrollEndTimer);
-    };
-  }, [followEnabled]);
-  const compact = followEnabled && isScrolling;
   const followPositionClass = dockPosition === 'left'
     ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
     : dockPosition === 'right'
       ? 'fixed inset-x-3 top-3 sm:left-auto sm:right-3 sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
       : 'fixed inset-x-3 bottom-3 top-auto sm:left-1/2 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-5xl sm:-translate-x-1/2';
-  const compactPositionClass = dockPosition === 'left'
-    ? 'fixed bottom-3 left-3 right-auto w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
-    : dockPosition === 'right'
-      ? 'fixed bottom-3 left-auto right-3 w-[calc(100%-1.5rem)] max-w-sm translate-x-0'
-      : 'fixed bottom-3 left-1/2 right-auto w-[calc(100%-1.5rem)] max-w-sm -translate-x-1/2';
-  const positionClass = compact
-    ? compactPositionClass
-    : followEnabled
-      ? followPositionClass
-      : 'relative';
-  const followHeightClass = followEnabled && !compact && dockPosition === 'center'
+  const positionClass = followEnabled ? followPositionClass : 'relative';
+  const followHeightClass = followEnabled && dockPosition === 'center'
     ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
     : '';
   return (
@@ -13232,7 +13194,7 @@ function WatermancerIonCoverageBars({
           </span>
         </div>
       </div>
-         <div className={`${compact ? 'hidden' : ''} app-card-body min-h-0 flex-1 space-y-3 ${followEnabled && !compact ? 'overflow-y-auto overscroll-contain' : ''}`}>
+         <div className={`app-card-body min-h-0 flex-1 space-y-3 ${followEnabled ? 'overflow-y-auto overscroll-contain' : ''}`}>
         {ACTIVE_ION_IDS.map(id => (
           <WatermancerIonReadingRow
             key={id}
@@ -13274,22 +13236,6 @@ function WatermancerIonCoverageBars({
          );
        })}
       </div>
-      {compact && (
-        <div className="grid grid-cols-4 divide-x divide-cyan-400/15 border-t border-cyan-400/15 bg-slate-950/45 px-2 py-2" aria-label="Final mixture summary">
-          {[
-            ['GH', finalGh.toFixed(1), 'ppm as CaCO₃', 'text-indigo-200/70', 'text-indigo-200'],
-            ['KH', finalKh.toFixed(1), 'ppm as CaCO₃', 'text-amber-200/70', 'text-amber-200'],
-            ['GH:KH', finalGhKhRatio, 'ratio', 'text-emerald-200/70', 'text-emerald-200'],
-            ['TDS', finalTds.toFixed(1), 'mg/L', 'text-cyan-200/70', 'text-cyan-200'],
-          ].map(([label, value, unit, labelClass, valueClass]) => (
-            <div key={label} className="min-w-0 px-1 text-center">
-              <div className={`text-[9px] font-semibold uppercase tracking-wider ${labelClass}`}>{label}</div>
-              <div className={`mt-0.5 text-xs font-semibold tabular-nums ${valueClass}`}>{value}</div>
-              <div className="text-[9px] text-slate-500">{unit}</div>
-            </div>
-          ))}
-        </div>
-      )}
       </div>
       {feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
         <div
