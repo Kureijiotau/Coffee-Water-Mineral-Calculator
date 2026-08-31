@@ -1,0 +1,165 @@
+{
+  "kind": "coffee-water-plan",
+  "version": 1,
+  "id": "plan-mtcnhyzf-0p29w9",
+  "name": "Version 8",
+  "createdAt": "2026-08-28T07:49:21.627Z",
+  "updatedAt": "2026-08-28T07:49:21.627Z",
+  "snapshot": {
+    "version": 1,
+    "appTab": "calculator",
+    "nerdLevel": "watermancer",
+    "liters": "1",
+    "volumeUnit": "liters",
+    "rows": [
+      {
+        "target": "0.4883",
+        "formIdx": 1
+      },
+      {
+        "target": "21.8878",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "14.3055",
+        "formIdx": 0
+      },
+      {
+        "target": "",
+        "formIdx": 0
+      },
+      {
+        "target": "1",
+        "formIdx": 0
+      },
+      {
+        "target": "",
+        "formIdx": 0
+      },
+      {
+        "target": "",
+        "formIdx": 0
+      }
+    ],
+    "mineralWaters": [
+      {
+        "id": "mw_1_1787903093129",
+        "name": "Sama",
+        "ions": {
+          "sodium": "16.8",
+          "potassium": "1.6",
+          "magnesium": "16.1",
+          "calcium": "20.3",
+          "chloride": "20.7",
+          "sulfate": "15.9"
+        },
+        "metadata": {},
+        "volumeMl": "140",
+        "sourceLocalId": "lw_1787572128577_6h7oyx"
+      }
+    ],
+    "additionWaters": [],
+    "magnesiumPreference": "original",
+    "autoFillPriorityPreset": "mineral-first",
+    "autoFillCustomPriority": [
+      "calcium",
+      "magnesium",
+      "sodium",
+      "potassium",
+      "chloride",
+      "sulfate",
+      "citrates",
+      "bicarbonate"
+    ],
+    "autoFillDeviationPpm": 0,
+    "overshootSettings": {
+      "enabled": true,
+      "allowedIons": [],
+      "limits": {
+        "sodium": 0.3,
+        "potassium": 0.4,
+        "magnesium": 0.4,
+        "calcium": 0.5,
+        "chloride": 0.5,
+        "sulfate": 0.5,
+        "bicarbonate": 0.5,
+        "citrates": 0.4
+      }
+    },
+    "brewerDropsPerMl": 20,
+    "brewerFlavor": {
+      "brightness": 70,
+      "body": 35,
+      "juiciness": 65,
+      "sweetness": 55
+    },
+    "brewerRecipeOverride": null,
+    "externalRecipeId": "custom",
+    "activeRecipeId": "custom",
+    "activeProfileId": "aiki-light-roast-pourover",
+    "watermancerTargetSource": "saved:watermancer-1787903297316-iyp8yt",
+    "watermancerTargetOverride": null,
+    "watermancerUsedSaltIds": [
+      "mgcl2",
+      "nacl",
+      "mgso4",
+      "nahco3",
+      "khco3",
+      "cacl2"
+    ],
+    "autoCraftPreset": "closest-match",
+    "watermancerSaltObjective": "balanced",
+    "watermancerBestMatchDeviationMode": "permissive",
+    "watermancerIonSourcePreferences": {
+      "sodium": "dont-care",
+      "potassium": "dont-care",
+      "magnesium": "dont-care",
+      "calcium": "dont-care",
+      "chloride": "dont-care",
+      "sulfate": "dont-care",
+      "bicarbonate": "dont-care",
+      "citrates": "dont-care"
+    },
+    "watermancerDoseOverridesMg": {
+      "mgso4": 5,
+      "khco3": 2,
+      "cacl2": 4.000000000000001,
+      "mgcl2": 26,
+      "nacl": 4,
+      "nahco3": 14
+    },
+    "sodiumCorrectionOn": false,
+    "concentrateRecipeHandoff": null,
+    "concentrate": {
+      "mode": "builder",
+      "saltId": "mgso4",
+      "formIdx": 0,
+      "strengthInput": "5",
+      "totalStockMassInput": "50",
+      "calibrationDrops": "100",
+      "calibrationStockMass": "5",
+      "targetSaltMass": "40",
+      "doseDrops": "1",
+      "doseLiters": "1",
+      "dropperStyle": "straight",
+      "straightDropsPerMlInput": "20",
+      "recipeConcentratePlan": null
+    }
+  }
+}
