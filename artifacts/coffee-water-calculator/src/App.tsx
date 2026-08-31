@@ -6064,6 +6064,7 @@ function App() {
                     </div>
                   ))}
                 </div>
+                <WaterHardnessRatioFooter ions={entry.ions} />
                 <WaterMetadataFields
                   metadata={entry.metadata}
                   onChange={metadata => updateMineralWater(entry.id, { metadata })}
@@ -14198,6 +14199,45 @@ function WaterMetadataFields({
         ))}
       </div>
     </details>
+  );
+}
+
+function WaterHardnessRatioFooter({
+  ions,
+}: {
+  ions: Partial<Record<IonId, string>>;
+}) {
+  const waterIons = completeIonTotals(
+    numericIons(ions) as Partial<Record<IonId, number>>,
+  );
+  const gh = computeGH(waterIons);
+  const kh = computeKH(waterIons);
+  const ratio = kh > 0 && Number.isFinite(gh / kh)
+    ? `${(gh / kh).toFixed(2)} : 1`
+    : '—';
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-700/40 pt-2"
+      aria-label={`Water hardness balance: GH ${fmt(gh)} ppm, KH ${kh > 0 ? `${fmt(kh)} ppm` : 'not available'}, ratio ${ratio}`}
+    >
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+        GH : KH balance
+      </span>
+      <div className="flex flex-wrap items-center gap-2 text-[11px] tabular-nums">
+        <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle('magnesium')}>
+          GH {fmt(gh)}
+        </span>
+        <span className="text-slate-600">:</span>
+        <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle('bicarbonate')}>
+          KH {kh > 0 ? fmt(kh) : '—'}
+        </span>
+        <span className="text-slate-600">·</span>
+        <span className="text-slate-500">
+          Ratio <span className="font-semibold text-sky-300">{ratio}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 
