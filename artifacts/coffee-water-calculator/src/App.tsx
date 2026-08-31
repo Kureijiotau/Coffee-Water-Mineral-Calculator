@@ -553,6 +553,7 @@ function HoldStepperButton({
   children: ReactNode;
   className: string;
 }) {
+  const HOLD_REPEAT_INTERVAL_MS = 250;
   const timeoutRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
   const suppressClickRef = useRef(false);
@@ -582,7 +583,7 @@ function HoldStepperButton({
     onStepRef.current();
     clearHold();
     timeoutRef.current = window.setTimeout(() => {
-      intervalRef.current = window.setInterval(() => onStepRef.current(), 90);
+      intervalRef.current = window.setInterval(() => onStepRef.current(), HOLD_REPEAT_INTERVAL_MS);
     }, 350);
   };
 
@@ -3201,6 +3202,7 @@ function WaterVolumeStepper({
   onChange: (value: string) => void;
   accent?: 'sky' | 'indigo';
 }) {
+  const HOLD_REPEAT_INTERVAL_MS = 250;
   const repeatTimeoutRef = useRef<number | null>(null);
   const repeatIntervalRef = useRef<number | null>(null);
   const currentValue = Math.max(0, Math.round(num(value)));
@@ -3230,7 +3232,7 @@ function WaterVolumeStepper({
     stopRepeating();
     adjust(delta);
     repeatTimeoutRef.current = window.setTimeout(() => {
-      repeatIntervalRef.current = window.setInterval(() => adjust(delta), 100);
+      repeatIntervalRef.current = window.setInterval(() => adjust(delta), HOLD_REPEAT_INTERVAL_MS);
     }, 350);
   }, [adjust, stopRepeating]);
 
