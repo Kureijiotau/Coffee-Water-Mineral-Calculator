@@ -13117,6 +13117,15 @@ function WatermancerIonCoverageBars({
   const followHeightClass = followEnabled && dockPosition === 'center'
     ? 'max-h-[42vh] sm:max-h-[min(56vh,34rem)]'
     : '';
+  const visibleIonIds = ACTIVE_ION_IDS.filter(id => (
+    id !== 'citrates' || (actualIons[id] ?? 0) > 0
+  ));
+  const completeActualIons = completeIonTotals(actualIons);
+  const gh = computeGH(completeActualIons);
+  const kh = computeKH(completeActualIons);
+  const ghKhRatio = kh > 0 && Number.isFinite(gh / kh)
+    ? `${(gh / kh).toFixed(1)}:1`
+    : '—';
   return (
     <>
       <div
@@ -13197,7 +13206,7 @@ function WatermancerIonCoverageBars({
         </div>
       </div>
          <div className={`app-card-body min-h-0 flex-1 space-y-3 ${followEnabled ? 'overflow-y-auto overscroll-contain' : ''}`}>
-        {ACTIVE_ION_IDS.map(id => (
+        {visibleIonIds.map(id => (
           <WatermancerIonReadingRow
             key={id}
             id={id}
@@ -13237,6 +13246,13 @@ function WatermancerIonCoverageBars({
            </div>
          );
        })}
+       <div className="flex items-center justify-center gap-2 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
+         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">GH : KH ratio</span>
+         <span style={{ color: ION_MAP.magnesium.color.foreground }}>GH</span>
+         <span className="text-slate-500">:</span>
+         <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>KH</span>
+         <span className="text-slate-300">{ghKhRatio}</span>
+       </div>
       </div>
       </div>
       {feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
