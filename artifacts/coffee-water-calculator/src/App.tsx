@@ -5406,29 +5406,6 @@ function App() {
       watermancerPlan,
     ],
   );
-  const activeWatermancerRouteBaseline = useMemo(
-    () => showWatermancer
-      ? recalculateWatermancerRouteAtCurrentVolumes(
-        {
-          plan: watermancerPlan,
-          batchMl,
-          baseWaters: mineralWaters,
-          additionWaters,
-        },
-        selectedWatermancerRouteCandidate,
-        selectedWatermancerRouteCandidate.saltTargets,
-      )
-      : watermancerLiveResult.primaryPlan,
-    [
-      additionWaters,
-      batchMl,
-      mineralWaters,
-      selectedWatermancerRouteCandidate,
-      showWatermancer,
-      watermancerLiveResult,
-      watermancerPlan,
-    ],
-  );
   const activeWatermancerSaltTargets = useMemo(() => {
     const targets: Record<string, number> = {};
     SALTS.forEach((salt, index) => {
@@ -5450,20 +5427,19 @@ function App() {
           / (L * form.molarMass);
         return;
       }
-      targets[salt.id] = Math.max(0, Number(activeWatermancerRouteBaseline.saltTargets[salt.id] ?? 0));
+      targets[salt.id] = Math.max(0, Number(selectedWatermancerRouteCandidate.saltTargets[salt.id] ?? 0));
     });
     return targets;
   }, [
     L,
-    activeWatermancerRouteBaseline.saltTargets,
     rows,
+    selectedWatermancerRouteCandidate.saltTargets,
     watermancerDoseOverridesMg,
     watermancerUsedSaltIds,
   ]);
   // This is the single route used by Watermancer result cards, ion coverage,
-  // Recipe steps, and exports. The baseline route keeps
-  // the selected candidate's doses; the final pass materializes visible salt
-  // selection and physical-dose overrides into the route itself.
+  // Recipe steps, and exports. Materialize visible salt selection and
+  // physical-dose overrides directly into the current-volume route.
   const activeWatermancerRoute = useMemo(
     () => showWatermancer
       ? recalculateWatermancerRouteAtCurrentVolumes(
@@ -5473,17 +5449,18 @@ function App() {
           baseWaters: mineralWaters,
           additionWaters,
         },
-        activeWatermancerRouteBaseline,
+        selectedWatermancerRouteCandidate,
         activeWatermancerSaltTargets,
       )
-      : activeWatermancerRouteBaseline,
+      : watermancerLiveResult.primaryPlan,
     [
-      activeWatermancerRouteBaseline,
       activeWatermancerSaltTargets,
       additionWaters,
       batchMl,
       mineralWaters,
+      selectedWatermancerRouteCandidate,
       showWatermancer,
+      watermancerLiveResult,
       watermancerPlan,
     ],
   );
