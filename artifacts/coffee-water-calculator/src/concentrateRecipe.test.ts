@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { computeRecipeConcentrateDropEquivalents, computeRecipeStockSaltMassMg } from './App';
+import {
+  computeRecipeConcentrateDropEquivalents,
+  computeRecipeConcentrateStrengthForPhysicalSaltPpm,
+  computeRecipeStockSaltMassMg,
+} from './App';
 import { SALTS } from './waterData';
 
 describe('recipe concentrate stock conversion', () => {
@@ -84,6 +88,60 @@ describe('all-in-one recipe drop equivalents', () => {
 
     expect(measured.totalSaltMgPerDrop).toBeCloseTo(assumed.totalSaltMgPerDrop * 20 / 25, 8);
     expect(measured.dropsPerLiter).toBe(50);
+  });
+
+  it('solves stock strength for a requested physical salt ppm per drop', () => {
+    const saltTargets = { mgso4: 10, cacl2: 5 };
+    const requestedPpm = 0.75;
+    const strength = computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets,
+      dropsPerMl: 20,
+      finalLiters: 1,
+      physicalSaltPpmPerDrop: requestedPpm,
+    });
+    const result = computeRecipeConcentrateDropEquivalents({
+      saltTargets,
+      strength,
+      dropsPerMl: 20,
+      finalLiters: 1,
+    });
+
+    expect(strength).toBeGreaterThan(0);
+    expect(result.totalSaltMgPerDrop / 1).toBeCloseTo(requestedPpm, 8);
+  });
+
+  it('preserves a pinned physical ppm target when volume and dropper rate change', () => {
+    const saltTargets = { mgso4: 10, cacl2: 5 };
+    const requestedPpm = 0.75;
+    const strength = computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets,
+      dropsPerMl: 25,
+      finalLiters: 2,
+      physicalSaltPpmPerDrop: requestedPpm,
+    });
+    const result = computeRecipeConcentrateDropEquivalents({
+      saltTargets,
+      strength,
+      dropsPerMl: 25,
+      finalLiters: 2,
+    });
+
+    expect(result.totalSaltMgPerDrop / 2).toBeCloseTo(requestedPpm, 8);
+  });
+
+  it('rejects unusable inverse-calculation inputs', () => {
+    expect(computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets: { mgso4: 10 },
+      dropsPerMl: 20,
+      finalLiters: 1,
+      physicalSaltPpmPerDrop: 0,
+    })).toBe(0);
+    expect(computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets: {},
+      dropsPerMl: 20,
+      finalLiters: 1,
+      physicalSaltPpmPerDrop: 1,
+    })).toBe(0);
   });
 
   it('returns safe empty values for invalid or empty inputs', () => {

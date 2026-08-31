@@ -9,6 +9,7 @@
 - [Builder research boundary](builder-research-boundary.md) — evolve builder UX from research without replacing the established chemistry engine
 - [Ion tooltip research boundary](ion-tooltip-research-boundary.md) — use Gemini research to refine explanatory copy only; never turn sensory guidance into solver or target rules
 - [Builder dropper strength](builder-dropper-strength.md) — use conservative 500× stocks so small bottles make fewer batches instead of stronger solutions
+- [Editable drop contribution](editable-drop-contribution.md) — pin physical salt ppm per drop while solving stock strength around fixed bottle volume
 - [Builder dosing methods](builder-dosing-methods.md) — keep dry-salt and dropper workflows as presentation choices over the shared chemistry engine
 - [API health route](api-health-route.md) — use `/api/healthz` for API checks; `/api/health` is not a valid route
 - [Water auto-fill constraints](water-auto-fill-constraints.md) — solve selected waters together under every ion ceiling, including zero-target ions

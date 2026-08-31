@@ -273,6 +273,7 @@ type ConcentratePlanSnapshot = {
   strategy: ConcentrateStrategy;
   strategyLabel: string;
   strength: number;
+  physicalSaltPpmPerDropInput: string | null;
   maxSafeStrength: number | null;
   dropperStyle: LotusDropperStyle;
   straightDropsPerMl: number;
@@ -342,6 +343,42 @@ export type RecipeConcentrateDropEquivalents = {
   ionPpmPerDrop: Partial<Record<IonId, number>>;
   perSalt: RecipeConcentrateSaltDropContribution[];
 };
+
+export function computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+  saltTargets,
+  formIdxBySaltId = {},
+  dropsPerMl,
+  finalLiters,
+  physicalSaltPpmPerDrop,
+}: {
+  saltTargets: Record<string, number>;
+  formIdxBySaltId?: Record<string, number>;
+  dropsPerMl: number;
+  finalLiters: number;
+  physicalSaltPpmPerDrop: number;
+}): number {
+  if (
+    !Number.isFinite(physicalSaltPpmPerDrop)
+    || physicalSaltPpmPerDrop <= 0
+    || !Number.isFinite(finalLiters)
+    || finalLiters <= 0
+  ) {
+    return 0;
+  }
+  const strengthOne = computeRecipeConcentrateDropEquivalents({
+    saltTargets,
+    formIdxBySaltId,
+    strength: 1,
+    dropsPerMl,
+    finalLiters,
+  });
+  const physicalPpmAtStrengthOne = strengthOne.valid
+    ? strengthOne.totalSaltMgPerDrop / finalLiters
+    : 0;
+  return physicalPpmAtStrengthOne > 0 && Number.isFinite(physicalPpmAtStrengthOne)
+    ? physicalSaltPpmPerDrop / physicalPpmAtStrengthOne
+    : 0;
+}
 
 /**
  * Convert a recipe's canonical salt targets into physical drop equivalents.
@@ -8630,6 +8667,7 @@ function LegacyRecipeConcentrateBuilder({
       strategy: stockStrategy,
       strategyLabel: stockStrategyDetails.label,
       strength,
+      physicalSaltPpmPerDropInput: null,
       maxSafeStrength,
         dropperStyle,
         straightDropsPerMl,
@@ -9294,12 +9332,14 @@ function RecipeConcentrateBottleCard({
   dropperStyle,
   straightDropsPerMl,
   measuredDropsPerMlInput,
+  physicalSaltPpmPerDropInput,
   onStrengthChange,
   onVolumeChange,
   onFinalVolumeChange,
   onToggleVolumeUnit,
   onDropperStyleChange,
   onMeasuredDropsPerMlChange,
+  onPhysicalSaltPpmPerDropChange,
 }: {
   group: RecipeBottleGroup;
   handoff: ConcentrateRecipeHandoff;
@@ -9311,12 +9351,14 @@ function RecipeConcentrateBottleCard({
   dropperStyle: LotusDropperStyle;
   straightDropsPerMl: number;
   measuredDropsPerMlInput: string;
+  physicalSaltPpmPerDropInput: string | null;
   onStrengthChange: (value: string) => void;
   onVolumeChange: (value: string) => void;
   onFinalVolumeChange: (value: string) => void;
   onToggleVolumeUnit: () => void;
   onDropperStyleChange: (style: LotusDropperStyle) => void;
   onMeasuredDropsPerMlChange: (value: string) => void;
+  onPhysicalSaltPpmPerDropChange?: (value: string) => void;
 }) {
   const saltTargets = Object.fromEntries(
     group.saltIds.map(saltId => [saltId, num(handoff.salts[saltId]?.target)]),
@@ -9576,7 +9618,20 @@ function RecipeConcentrateBottleCard({
             </div>
             <div className={`recipe-concentrate-dose-metric rounded-lg border px-2.5 py-2 text-right ${colors.border} ${colors.soft}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
-              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
+              {onPhysicalSaltPpmPerDropChange ? (
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={physicalSaltPpmPerDropInput ?? recipeConcentrateNumber(ppmPerDrop, 2)}
+                  onChange={event => onPhysicalSaltPpmPerDropChange(event.target.value)}
+                  aria-label={`${cardName} physical salt ppm added by one drop`}
+                  title="Set the physical salt ppm added by one drop; stock strength adjusts to match"
+                  className="recipe-concentrate-input mt-1 w-full bg-transparent text-right text-lg font-semibold tabular-nums text-white outline-none"
+                />
+              ) : (
+                <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
+              )}
               <div className="text-[9px]">physical salt ppm</div>
             </div>
           </div>
@@ -9673,6 +9728,7 @@ function RecipeConcentrateBuilder({
   singleSaltOnly?: boolean;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
+  const [physicalSaltPpmPerDropInput, setPhysicalSaltPpmPerDropInput] = useState<string | null>(null);
   const [stockStrategy, setStockStrategy] = useState<ConcentrateStrategy>(
     singleSaltOnly ? 'all-in-one' : 'gh-kh',
   );
@@ -9745,13 +9801,26 @@ function RecipeConcentrateBuilder({
   const groupFormsFor = (group: { saltIds: string[] }) => Object.fromEntries(
     group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
   );
-  const strength = Math.max(0, Number(strengthInput) || 0);
+  const rawStrength = Math.max(0, Number(strengthInput) || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
   const activeDropsPerMl = hasMeasuredDropsPerMl
     ? measuredDropsPerMl
     : lotusDropsPerMl(dropperStyle, straightDropsPerMl);
+  const hasPinnedDropTarget = stockStrategy === 'all-in-one'
+    && physicalSaltPpmPerDropInput !== null
+    && Number(physicalSaltPpmPerDropInput) > 0;
+  const pinnedStrength = hasPinnedDropTarget
+    ? computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets,
+      formIdxBySaltId,
+      dropsPerMl: activeDropsPerMl,
+      finalLiters,
+      physicalSaltPpmPerDrop: Number(physicalSaltPpmPerDropInput),
+    })
+    : 0;
+  const strength = pinnedStrength > 0 ? pinnedStrength : rawStrength;
   const dropDosingOptions = {
     minimumFinalLiters: 0.1,
     minimumDrops: 1,
@@ -9788,7 +9857,7 @@ function RecipeConcentrateBuilder({
   const dropEquivalents = computeRecipeConcentrateDropEquivalents({
     saltTargets,
     formIdxBySaltId,
-    strength: stockStrategy === 'all-in-one' && maxSafeStrength != null && strength <= maxSafeStrength ? strength : 0,
+    strength: stockStrategy === 'all-in-one' ? strength : 0,
     dropsPerMl: activeDropsPerMl,
     finalLiters,
   });
@@ -9808,6 +9877,14 @@ function RecipeConcentrateBuilder({
     undefined,
     dropDosingOptions,
   );
+  const updateStrength = (groupId: string, value: string) => {
+    if (stockStrategy === 'all-in-one') {
+      setPhysicalSaltPpmPerDropInput(null);
+      setStrengthInput(value);
+      return;
+    }
+    setStockStrengthInputs(previous => ({ ...previous, [groupId]: value }));
+  };
 
   useEffect(() => {
     const initialAllInOneStrength = allInOneStockGroups.length > 0
@@ -9818,6 +9895,7 @@ function RecipeConcentrateBuilder({
     );
     const restored = restoredPlan && restoredPlan.strategy ? restoredPlan : null;
     setStrengthInput(restored && !singleSaltOnly ? String(restored.strength) : String(initialAllInOneStrength));
+    setPhysicalSaltPpmPerDropInput(restored?.physicalSaltPpmPerDropInput ?? null);
     setStockStrategy(singleSaltOnly ? 'all-in-one' : restored?.strategy ?? 'gh-kh');
     setStockStrengthInputs(restored
       && !singleSaltOnly
@@ -9852,6 +9930,7 @@ function RecipeConcentrateBuilder({
       strategy: stockStrategy,
       strategyLabel: stockStrategyDetails.label,
       strength,
+      physicalSaltPpmPerDropInput,
       maxSafeStrength,
       dropperStyle,
       straightDropsPerMl,
@@ -9884,6 +9963,7 @@ function RecipeConcentrateBuilder({
     maxSafeStrength,
     measuredDropsPerMl,
     onPlanChange,
+    physicalSaltPpmPerDropInput,
     planFormSignature,
     planGroupSignature,
     planStrengthSignature,
@@ -9945,6 +10025,7 @@ function RecipeConcentrateBuilder({
             onClick={() => {
               setStockStrategy(value);
               if (value === 'all-in-one' && maxSafeStrengthByStrategy['all-in-one'] != null) {
+                setPhysicalSaltPpmPerDropInput(null);
                 setStrengthInput(String(maxSafeStrengthByStrategy['all-in-one']));
               }
             }}
@@ -9980,7 +10061,11 @@ function RecipeConcentrateBuilder({
               key={group.id}
               group={group}
               handoff={handoff}
-              strengthInput={stockStrategy === 'all-in-one' ? strengthInput : stockStrengthInputs[group.id] ?? '1'}
+              strengthInput={stockStrategy === 'all-in-one' && hasPinnedDropTarget
+                ? recipeConcentrateNumber(strength, 2)
+                : stockStrategy === 'all-in-one'
+                  ? strengthInput
+                  : stockStrengthInputs[group.id] ?? '1'}
               volumeInput={stockVolumeInputs[group.id] ?? '100'}
               finalVolumeInput={finalVolumeInput}
               finalLiters={finalLiters}
@@ -9988,9 +10073,8 @@ function RecipeConcentrateBuilder({
               dropperStyle={dropperStyle}
               straightDropsPerMl={straightDropsPerMl}
               measuredDropsPerMlInput={measuredDropsPerMlInput}
-              onStrengthChange={value => stockStrategy === 'all-in-one'
-                ? setStrengthInput(value)
-                : setStockStrengthInputs(previous => ({ ...previous, [group.id]: value }))}
+              physicalSaltPpmPerDropInput={stockStrategy === 'all-in-one' ? physicalSaltPpmPerDropInput : null}
+              onStrengthChange={value => updateStrength(group.id, value)}
               onVolumeChange={value => setStockVolumeInputs(previous => ({ ...previous, [group.id]: value }))}
               onFinalVolumeChange={updateFinalVolume}
               onToggleVolumeUnit={() => {
@@ -10000,6 +10084,9 @@ function RecipeConcentrateBuilder({
               }}
               onDropperStyleChange={onDropperStyleChange}
               onMeasuredDropsPerMlChange={setMeasuredDropsPerMlInput}
+              onPhysicalSaltPpmPerDropChange={stockStrategy === 'all-in-one'
+                ? setPhysicalSaltPpmPerDropInput
+                : undefined}
             />
           )) : (
             <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-4 py-5 text-sm text-amber-100/80">
