@@ -13039,8 +13039,8 @@ function WatermancerIonReadingRow({
         >
           <div className={`relative ${barHeightClass} overflow-hidden rounded-full bg-slate-700/70 transition-opacity group-hover/profile-result-bar:hidden group-focus/profile-result-bar:hidden`}>
             <div
-              className="h-full rounded-full transition-all duration-300"
-              style={{ width: `${percentage}%`, backgroundColor: 'var(--ion-bar)', boxShadow: '0 0 10px var(--ion-shadow)' }}
+              className="h-full origin-left rounded-full transition-transform duration-150 ease-out will-change-transform"
+              style={{ width: '100%', transform: `scaleX(${percentage / 100})`, backgroundColor: 'var(--ion-bar)', boxShadow: '0 0 10px var(--ion-shadow)' }}
             />
             <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-semibold tabular-nums leading-none ${
               covered || overshoot ? 'text-slate-950/80' : 'text-slate-300'
@@ -13053,8 +13053,8 @@ function WatermancerIonReadingRow({
             aria-hidden="true"
           >
             <div
-              className="relative h-full rounded-full transition-all duration-300"
-              style={{ width: `${profileFillPercent}%`, backgroundColor: 'var(--ion-bar)' }}
+              className="relative h-full origin-left rounded-full transition-transform duration-150 ease-out will-change-transform"
+              style={{ width: '100%', transform: `scaleX(${profileFillPercent / 100})`, backgroundColor: 'var(--ion-bar)' }}
             />
             <div
               className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
