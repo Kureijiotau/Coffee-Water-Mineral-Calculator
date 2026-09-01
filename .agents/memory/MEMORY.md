@@ -3,6 +3,8 @@
 - [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
 - [Base water final mixture](base-water-final-mixture.md) — keep base salt recipe metrics separate from configured-water final mixture metrics
 - [Ion profile view model](ion-profile-view-model.md) — distinguish original salt-only ions from final configured-water ions with an explicit toggle
+- [Ion ratio swap persistence](ion-ratio-swap-persistence.md) — relationship edits must preserve the user’s swapped first/second orientation
+- [Profile-seeded ion ratios](profile-seeded-ion-ratios.md) — explicitly opening Set ion ratios snapshots the selected Watermancer profile without continuous syncing
 - [Ion overshoot reporting](ion-overshoot-reporting.md) — report every modeled final-ion excess, including zero-target co-ions
 - [Ion deviation reporting](ion-deviation-reporting.md) — show final under/over-target ions without changing suggested salt calculations
 - [Sodium NaCl correction](sodium-nacl-correction.md) — optionally close a sodium gap with NaCl while recomputing coupled chloride
@@ -74,6 +76,7 @@
 - [Watermancer salt row order](watermancer-salt-order.md) — group Watermancer salt rows by anion and keep citrate salts at the bottom
 - [Commercial water research boundary](commercial-water-research.md) — keep Gemini candidates reviewable until core ions and provenance are independently verified
 - [Workframe profile handoff](workframe-profile-handoff.md) — finalize relationship-first controls as explicit named ion targets, then let Watermancer translate them
+- [Ion ratio import boundary](ion-ratio-import-boundary.md) — ratio editing is a Watermancer control surface; GH/KH stays diagnostic and imports only six direct ion targets
 - [Browser smoke harness](browser-smoke-cdp.md) — use explicit CDP interactively; align Playwright, browser builds, and Node for automated cross-browser checks
 - [React-free Watermancer solver](watermancer-react-free-solver.md) — keep route computation isolated from App.tsx so development and production can share the worker path
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
