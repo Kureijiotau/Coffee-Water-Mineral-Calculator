@@ -1,0 +1,152 @@
+{
+  "kind": "coffee-water-plan",
+  "version": 1,
+  "id": "plan-mti4xwl2-81x0ml",
+  "name": "Big batch V8",
+  "createdAt": "2026-09-01T03:56:29.365Z",
+  "updatedAt": "2026-09-01T03:56:29.365Z",
+  "snapshot": {
+    "version": 1,
+    "appTab": "calculator",
+    "nerdLevel": "alchemist",
+    "liters": "10",
+    "volumeUnit": "liters",
+    "rows": [
+      {
+        "target": "2.7347468698523985",
+        "formIdx": 1
+      },
+      {
+        "target": "12.643986010890258",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "3.548083097518502",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "",
+        "formIdx": 1
+      },
+      {
+        "target": "13.6",
+        "formIdx": 0
+      },
+      {
+        "target": "3.2",
+        "formIdx": 0
+      },
+      {
+        "target": "2.2",
+        "formIdx": 0
+      },
+      {
+        "target": "",
+        "formIdx": 0
+      },
+      {
+        "target": "",
+        "formIdx": 0
+      }
+    ],
+    "mineralWaters": [
+      {
+        "id": "mw_1_1788234988305",
+        "name": "Sama",
+        "ions": {},
+        "metadata": {},
+        "volumeMl": "1300"
+      }
+    ],
+    "additionWaters": [],
+    "magnesiumPreference": "original",
+    "autoFillPriorityPreset": "mineral-first",
+    "autoFillCustomPriority": [
+      "calcium",
+      "magnesium",
+      "sodium",
+      "potassium",
+      "chloride",
+      "sulfate",
+      "citrates",
+      "bicarbonate"
+    ],
+    "autoFillDeviationPpm": 1,
+    "overshootSettings": {
+      "enabled": true,
+      "allowedIons": [
+        "sodium",
+        "potassium",
+        "magnesium",
+        "calcium",
+        "chloride",
+        "sulfate",
+        "bicarbonate",
+        "citrates"
+      ],
+      "limits": {
+        "sodium": 0,
+        "potassium": 0,
+        "magnesium": 0,
+        "calcium": 0,
+        "chloride": 0,
+        "sulfate": 0,
+        "bicarbonate": 0,
+        "citrates": 0
+      }
+    },
+    "brewerDropsPerMl": 20,
+    "brewerFlavor": {
+      "brightness": 70,
+      "body": 35,
+      "juiciness": 65,
+      "sweetness": 55
+    },
+    "brewerRecipeOverride": null,
+    "externalRecipeId": "custom",
+    "activeRecipeId": "custom",
+    "activeProfileId": "aiki-light-roast-pourover",
+    "watermancerTargetSource": "safe-profile",
+    "watermancerTargetOverride": null,
+    "watermancerUsedSaltIds": [],
+    "autoCraftPreset": "closest-match",
+    "watermancerSaltObjective": "balanced",
+    "watermancerBestMatchDeviationMode": null,
+    "watermancerIonSourcePreferences": {
+      "sodium": "dont-care",
+      "potassium": "dont-care",
+      "magnesium": "dont-care",
+      "calcium": "dont-care",
+      "chloride": "dont-care",
+      "sulfate": "dont-care",
+      "bicarbonate": "dont-care",
+      "citrates": "dont-care"
+    },
+    "watermancerDoseOverridesMg": {},
+    "sodiumCorrectionOn": false,
+    "concentrateRecipeHandoff": null,
+    "concentrate": {
+      "mode": "builder",
+      "saltId": "mgso4",
+      "formIdx": 0,
+      "strengthInput": "5",
+      "totalStockMassInput": "50",
+      "calibrationDrops": "100",
+      "calibrationStockMass": "5",
+      "targetSaltMass": "40",
+      "doseDrops": "1",
+      "doseLiters": "1",
+      "dropperStyle": "straight",
+      "straightDropsPerMlInput": "20",
+      "recipeConcentratePlan": null
+    }
+  }
+}
