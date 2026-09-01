@@ -7,6 +7,7 @@ uri = "file://research/notes.md"
 type = "text"
 title = "Research Notes: Brewing-Ion Effects"
 description = "Deep-research plan and running findings for the eight Watermancer ion tooltips."
+logical_id = "74341067-0762-4ea4-a704-c4eb789c5ee6"
 
 [[outputs]]
 id = "4mhOLOXgAecijgt_40K5T"
@@ -14,6 +15,7 @@ uri = "file://research/gemini-ion-deep-dive.md"
 type = "text"
 title = "Gemini Deep Research: Coffee Brewing Ions"
 description = "Five focused Gemini investigations synthesized into evidence-aware tooltip guidance for the eight Watermancer ion cards."
+logical_id = "9ed85384-a0b8-4cb0-b245-7f78e078ab38"
 
 [[outputs]]
 id = "yob8EnqG68W2TPtE6HRbE"
@@ -21,6 +23,7 @@ uri = "file://research/gemini-brand-ion-refinement.md"
 type = "text"
 title = "Gemini Brand-Source Ion Research"
 description = "Deep cross-check of Apax Lab, Lotus Water, Empirical Water, other published coffee-water guidance, and academic evidence for the eight ion tooltips."
+logical_id = "b77955a4-ae5b-4f83-8cb5-069c31bddec6"
 
 [[outputs]]
 id = "4jUjTbMNuQJrdjX9XoaWO"
@@ -28,3 +31,18 @@ uri = "file://research/gemini-amounts-ratios-balance.md"
 type = "text"
 title = "Gemini Coffee-Water Amounts, Ratios & Balance Research"
 description = "Quantitative research into loose sensory thresholds, useful ion ratios, total balance, and practical suggestion ranges."
+logical_id = "a715a085-a642-4d27-8942-336dbd148a0f"
+
+[[outputs]]
+id = "kmV0t1366lpZnexxR0Nvy"
+uri = "file://attached_assets/Big%20batch%20V8.json"
+type = "unspecified"
+title = "Big batch V8 session"
+description = "Coffee Water Calculator session with a 10 L batch: 8.70 L purified water, 1.30 L Sama, and the six salt doses transcribed from the attached recipe card."
+logical_id = "1cfcd320-2bd3-4a34-abd2-e5916a32c6b1"
+content_hash = "sha256:b49dd2d841a47a87c915549e4c8b0630245687b34c22597dd4afebff5761a97a"
+size = 3411
+mtime_ms = 1788235048888
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/1cfcd320-2bd3-4a34-abd2-e5916a32c6b1/c191eb9e-0622-4618-9a2e-222953d2e889"
+storage_version_token = "1788235061835897"
+content_type = "application/octet-stream"
