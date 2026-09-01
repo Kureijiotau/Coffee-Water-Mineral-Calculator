@@ -7,4 +7,4 @@ The Replit GitHub integration authenticates API calls but does not automatically
 
 **Why:** A rejected local push can therefore have two separate causes: stale local Git authentication and a connector limitation on workflow paths.
 
-**How to apply:** Verify the actual remote ref through the connected GitHub API before merging histories. If API sync is used, refresh local GitHub authentication and reconcile local history afterward; do not assume the integration changed the local Git transport.
+**How to apply:** Verify the actual remote ref through the connected GitHub API before merging histories. If API sync is used, refresh local GitHub authentication and reconcile local history afterward; do not assume the integration changed the local Git transport. For protected `.github/workflows/*` paths, REST contents and Git-data tree writes may fail; GitHub GraphQL `createCommitOnBranch` can apply an authorized file deletion when the expected head SHA is known.
