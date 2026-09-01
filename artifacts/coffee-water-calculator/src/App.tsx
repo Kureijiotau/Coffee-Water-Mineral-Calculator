@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -53,6 +53,8 @@ import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles,
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
+import { IonRatioTable } from './IonRatioTable';
+import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
 import {
   embedWaterRecipeJsonInPng,
   extractWaterRecipeJsonFromPng,
@@ -508,7 +510,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate';
+type AppTab = 'calculator' | 'guide' | 'concentrate' | 'ion-ratios';
 type ConcentrateMode = 'builder' | 'lotus';
 
 const DEFAULT_WATER_PLAN_CONCENTRATE: WaterPlanConcentrateSnapshot = {
@@ -2378,6 +2380,7 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [ionRatioSeedDraft, setIonRatioSeedDraft] = useState<IonRatioDraft | null>(null);
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
   const [plansOpen, setPlansOpen] = useState(false);
@@ -2807,6 +2810,17 @@ function App() {
       ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
     ) as Partial<Record<IonId, number>>;
   }, [allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
+  const hasSelectedWatermancerProfile = watermancerTargetSource === 'safe-profile'
+    || watermancerTargetSource.startsWith('profile:')
+    || watermancerTargetSource.startsWith('saved:');
+  const handleOpenIonRatios = useCallback(() => {
+    setIonRatioSeedDraft(
+      hasSelectedWatermancerProfile
+        ? createIonRatioDraftFromTargets(watermancerIonTargets)
+        : { ...DEFAULT_ION_RATIO_DRAFT },
+    );
+    setAppTab('ion-ratios');
+  }, [hasSelectedWatermancerProfile, watermancerIonTargets]);
   const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
     ...profiles
       .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id
@@ -4971,9 +4985,9 @@ function App() {
             <button
               type="button"
               role="tab"
-              aria-selected={appTab === 'calculator'}
+              aria-selected={appTab === 'calculator' || appTab === 'ion-ratios'}
               onClick={() => setAppTab('calculator')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <CalculatorIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Calculator
@@ -5003,6 +5017,48 @@ function App() {
          </div>
        </div>
   );
+
+  if (appTab === 'ion-ratios') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-5xl flex-col">
+            {appHeader}
+            <main className="app-card overflow-hidden rounded-2xl border border-cyan-300/20 bg-slate-800/70 shadow-2xl shadow-cyan-950/20 backdrop-blur-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-cyan-300/15 bg-gradient-to-r from-cyan-500/10 via-transparent to-indigo-500/10 px-4 py-4 sm:px-6">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-300/35 bg-cyan-400/10 text-cyan-200" aria-hidden="true">↔</span>
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/75">Watermancer tool</div>
+                    <h1 className="mt-1 text-lg font-semibold text-white">Ion ratios</h1>
+                    <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                      Tune familiar ion relationships without crowding the main Watermancer workflow.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppTab('calculator');
+                    setNerdLevel('watermancer');
+                  }}
+                  className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  Back to Watermancer
+                </button>
+              </div>
+              <IonRatioTable
+                targetIons={watermancerIonTargets}
+                seedDraft={ionRatioSeedDraft}
+                onImport={ratioTargets => handleWatermancerTargetOverrideChange(mergeDirectIonTargets(watermancerIonTargets, ratioTargets))}
+              />
+            </main>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (appTab === 'concentrate') {
     return (
@@ -5106,41 +5162,42 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
-              {([
-                ['alchemist', 'Alchemist', 'Salt & concentrate lab'],
-                ['watermancer', 'Watermancer', 'Source water & ions'],
-              ] as const).map(([value, label, description]) => (
+             <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+               <button
+                 type="button"
+                 onClick={() => handleNerdLevelChange('alchemist')}
+                 aria-pressed={nerdLevel === 'alchemist'}
+                 title="Salt & concentrate lab"
+                 className={`mode-switcher__button inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+                   nerdLevel === 'alchemist'
+                     ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-200 shadow-sm'
+                     : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                 }`}
+               >
+                 <AlchemistMark
+                   className={nerdLevel === 'alchemist' ? 'text-emerald-200' : 'text-slate-500'}
+                   aria-hidden="true"
+                 />
+                 Alchemist
+               </button>
                 <button
-                  key={value}
                   type="button"
-                  onClick={() => handleNerdLevelChange(value)}
-                  aria-pressed={nerdLevel === value}
-                  title={description}
-                  className={`mode-switcher__button inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
-                    nerdLevel === value
-                      ? value === 'alchemist'
-                        ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-400/40 shadow-sm'
-                      : 'bg-indigo-500/20 text-indigo-200 border border-indigo-400/40 shadow-sm'
+                  onClick={() => handleNerdLevelChange('watermancer')}
+                  aria-pressed={nerdLevel === 'watermancer'}
+                  title="Source water & ions"
+                  className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+                    nerdLevel === 'watermancer'
+                      ? 'border border-indigo-400/40 bg-indigo-500/20 text-indigo-200 shadow-sm'
                       : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
                   }`}
                 >
-                  {value === 'alchemist' && (
-                    <AlchemistMark
-                      className={nerdLevel === value ? 'text-emerald-200' : 'text-slate-500'}
-                      aria-hidden="true"
-                    />
-                  )}
-                  {value === 'watermancer' && (
-                    <WatermancerMark
-                      className={nerdLevel === value ? 'text-indigo-200' : 'text-slate-500'}
-                      aria-hidden="true"
-                    />
-                  )}
-                  {label}
+                  <WatermancerMark
+                    className={nerdLevel === 'watermancer' ? 'text-indigo-200' : 'text-slate-500'}
+                    aria-hidden="true"
+                  />
+                  Watermancer
                 </button>
-              ))}
-            </div>
+             </div>
           </div>
         </div>
 
@@ -5227,6 +5284,7 @@ function App() {
                shareStatus={watermancerShareStatus}
                onImportRecipeFile={handleImportFile}
                onReset={() => setShowResetConfirm(true)}
+                onOpenIonRatios={handleOpenIonRatios}
             />
           </div>
          )}
@@ -10273,6 +10331,7 @@ function WatermancerIonProfileCard({
   shareStatus,
   onImportRecipeFile,
   onReset,
+   onOpenIonRatios,
 }: {
   ions: Partial<Record<IonId, number>>;
   currentFinalIons: Partial<Record<IonId, number>>;
@@ -10299,6 +10358,7 @@ function WatermancerIonProfileCard({
   shareStatus: 'idle' | 'downloaded' | 'shared' | 'error';
   onImportRecipeFile: (file: File) => void;
   onReset: () => void;
+   onOpenIonRatios: () => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [editingIonId, setEditingIonId] = useState<IonId | null>(null);
@@ -10720,21 +10780,32 @@ function WatermancerIonProfileCard({
            />
         </div>
       </div>
-      <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
-        <button
-          type="button"
-          aria-expanded={compareProfilesOpen}
-          onClick={() => setCompareProfilesOpen(open => !open)}
-          className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
-            compareProfilesOpen
-              ? 'border-cyan-300/60 bg-cyan-400/15 text-cyan-100'
-              : 'border-slate-600/70 bg-slate-900/35 text-slate-300 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
-          }`}
-        >
-          <span className="flex h-5 w-5 items-center justify-center rounded-md border border-current/30 bg-black/10 text-[10px]">↔</span>
-          Compare profiles
-          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${compareProfilesOpen ? 'rotate-180' : ''}`} />
-        </button>
+       <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
+         <div className="flex flex-wrap items-center justify-between gap-2">
+           <button
+             type="button"
+             aria-expanded={compareProfilesOpen}
+             onClick={() => setCompareProfilesOpen(open => !open)}
+             className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+               compareProfilesOpen
+                 ? 'border-cyan-300/60 bg-cyan-400/15 text-cyan-100'
+                 : 'border-slate-600/70 bg-slate-900/35 text-slate-300 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
+             }`}
+           >
+             <span className="flex h-5 w-5 items-center justify-center rounded-md border border-current/30 bg-black/10 text-[10px]">↔</span>
+             Compare profiles
+             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${compareProfilesOpen ? 'rotate-180' : ''}`} />
+           </button>
+           <button
+             type="button"
+             onClick={onOpenIonRatios}
+             className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/[0.12] focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+             aria-label="Set ion ratios"
+           >
+             <Scale className="h-4 w-4" aria-hidden="true" />
+             Set ion ratios
+           </button>
+         </div>
         {compareProfilesOpen && (
           <div className="mt-3 rounded-xl border border-cyan-400/25 bg-cyan-950/15 p-3 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
