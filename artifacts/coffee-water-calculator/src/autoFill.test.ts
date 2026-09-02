@@ -1,4 +1,56 @@
- () => {
+import { describe, expect, it } from 'vitest';
+import {
+  autoFillWaterVolumes,
+  autoCraftSaltTargets,
+  normalizeWatermancerTargetSourceForSavedItems,
+  roundWatermancerSaltTargetToWholeMg,
+  buildWatermancerPrecisionRecommendation,
+  computeConcentrateStockSaltMassMg,
+  computeConcentrateSaltMgPerDrop,
+  computeConcentrateDropsForSaltMass,
+  computeWatermancerBottledIons,
+  computeWatermancerFinalIons,
+  computeSaltGapOptionPpm,
+  craftGlacialStyleWatermancerMatch,
+  translateSaltTargetsToIonTargets,
+  solveWatermancerRoutes,
+  applyWatermancerBestMatchDeviationMode,
+  findBestWatermancerMatch,
+  selectBestWatermancerMatchCandidate,
+  selectWatermancerRouteCandidate,
+  recalculateWatermancerRouteAtCurrentVolumes,
+  totalWatermancerDeviation,
+  totalWatermancerAbsoluteDeviation,
+  executeWatermancerRouteCandidate,
+  watermancerRouteWaterInputs,
+  watermancerRouteMatchesCurrentInputs,
+  isWatermancerActionSnapshotCurrent,
+  watermancerBestMatchPreviewIsCurrent,
+  mergeRecipeStepTargets,
+  selectRecipePreparationTargets,
+  type MineralWaterEntry,
+  type WatermancerRouteCandidate,
+} from './App';
+import type { WatermancerBestMatchCandidate } from './watermancerSolver';
+import {
+  watermancerGhKhBalanceDeviation,
+  watermancerPracticalIonDeviation,
+} from './watermancerSolver';
+import { computeIonTotals, findIonOvershoots, findIonUnderdoses, IONS, RECIPES, SALTS } from './waterData';
+import { EMPIRICAL_WATERS } from './empiricalWaters';
+
+const water = (
+  id: string,
+  ions: Partial<Record<string, number>>,
+): MineralWaterEntry => ({
+  id,
+  name: id,
+  ions: Object.fromEntries(Object.entries(ions).map(([key, value]) => [key, String(value)])),
+  metadata: {},
+  volumeMl: '0',
+});
+
+describe('autoFillWaterVolumes', () => {
   it('uses each tab’s active preparation targets in Recipe steps', () => {
     const brewer = { mgso4: 8 };
     const alchemist = { mgso4: 6, cacl2: 4 };

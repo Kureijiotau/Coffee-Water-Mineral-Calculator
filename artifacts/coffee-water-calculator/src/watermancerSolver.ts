@@ -1,4 +1,718 @@
-urrentAfterStrictFill < target - 1e-8
+import { SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, computeIonTotals, computeSaltMg, computeGH, computeKH, findIonOvershoots, type IonId } from './waterData';
+import { solveBoundedCoupledSaltTargets } from './watermancerSaltSolver';
+import {
+  compareWatermancerRatioEvaluations,
+  evaluateWatermancerRatios,
+  type WatermancerRatioEvaluation,
+} from './watermancerRatios';
+import type { WaterMetadata } from './localWaters';
+import { normalizeWatermancerIonOrder, normalizeWatermancerIonSourcePreferences, type WatermancerIonDeviation, type WatermancerIonConflict, type WatermancerIonSourcePreference, type WatermancerMatchRecommendationAction, type WatermancerMatchRecommendation, type WatermancerMatchDiagnostics, type WatermancerRouteCandidate, type WatermancerStrategy, type WatermancerSaltObjective, type WatermancerOvershootPolicy, type WatermancerSolverResult, type WatermancerPlan } from './watermancerPlan';
+export type MineralWaterEntry = {
+  id: string;
+  name: string;
+  ions: Partial<Record<IonId, string>>;
+  metadata: Partial<Record<keyof WaterMetadata, string>>;
+  volumeMl: string;
+  sourceLocalId?: string;
+};
+export type WatermancerRouteInputs = { plan: WatermancerPlan; batchMl:number; baseWaters:MineralWaterEntry[]; additionWaters:MineralWaterEntry[] };
+export type AutoCraftPreset = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
+type AutoCraftObjective = WatermancerSaltObjective;
+export type SaltRow = { target: string; formIdx: number };
+type AutoFillPriorityPreset = 'mineral-first' | 'bicarbonate-first' | 'balanced-gh-kh' | 'custom';
+export type WatermancerBestMatchDeviationMode = 'strict' | 'permissive';
+const AUTO_FILL_MAX_ML = 2000;
+const DEFAULT_AUTO_FILL_DEVIATION_PPM = 1;
+const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
+  'calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate',
+  'citrates', 'bicarbonate',
+];
+const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }> = {
+  'mineral-first': { label: 'Mineral-first', ions: AUTO_FILL_SOURCE_PRIORITY },
+  'bicarbonate-first': { label: 'Bicarbonate-first', ions: ['bicarbonate', 'calcium', 'magnesium', 'sodium', 'potassium', 'chloride', 'sulfate', 'citrates'] },
+  'balanced-gh-kh': { label: 'Balanced GH / KH', ions: ['calcium', 'magnesium', 'bicarbonate', 'sodium', 'potassium', 'chloride', 'sulfate', 'citrates'] },
+};
+const WATERMANCER_STRATEGY_LABELS: Record<WatermancerStrategy, string> = {
+  'closest-match': 'Closest match',
+  'water-first': 'Water first',
+  'gh-kh-harmony': 'GH / KH harmony',
+  'added-water-mineral-first': 'Added-water mineral first',
+};
+const num=(s:string):number=>{const v=parseFloat(s);return !Number.isFinite(v)||v<0?0:v;};
+export function translateSaltTargetsToIonTargets(
+  saltTargets: Record<string, number>,
+): Partial<Record<IonId, number>> {
+  return computeIonTotals(saltTargets, {}, 1);
+}
+
+export function computeSaltGapOptionPpm(
+  salt: typeof SALTS[number],
+  ionGaps: Partial<Record<IonId, number>>,
+): number {
+  const relevantContributions = salt.ions.filter(
+    contribution => (ionGaps[contribution.ionId] ?? 0) > 0,
+  );
+  if (relevantContributions.length === 0) return 0;
+  const targetPpm = Math.min(...relevantContributions.map(contribution => {
+    const gap = ionGaps[contribution.ionId] ?? 0;
+    return contribution.fraction > 0 ? gap / contribution.fraction : 0;
+  }));
+  return Number.isFinite(targetPpm) ? Math.max(targetPpm, 0) : 0;
+}
+
+export const completeIonTotals = (values: Partial<Record<IonId, number>>): Record<IonId, number> => (
+  Object.fromEntries(
+    IONS.map(ion => [ion.id, values[ion.id] ?? 0]),
+  ) as Record<IonId, number>
+);
+
+const PRECISION_DRY_SALT_THRESHOLD_MG = 100;
+const PRECISION_STOCK_STRENGTH = 500;
+const PRECISION_STOCK_VOLUME_ML = 500;
+
+type WatermancerPrecisionSalt = {
+  id: string;
+  name: string;
+  massMg: number;
+  stockMassMg: number;
+};
+
+export type WatermancerPrecisionRecommendation = {
+  status: 'needs-volume' | 'ready';
+  activeSalts: WatermancerPrecisionSalt[];
+  currentMinimumMassMg: number;
+  recommendedBatchLiters: number;
+  recommendedMinimumMassMg: number;
+  stockDoseMlPerLiter: number;
+  stockDropsPerLiter: number;
+  stockMasses: WatermancerPrecisionSalt[];
+};
+
+export function buildWatermancerPrecisionRecommendation(
+  saltTargets: Record<string, number>,
+  recipeRows: SaltRow[],
+  liters: number,
+  dropsPerMl: number,
+): WatermancerPrecisionRecommendation | null {
+  if (!Number.isFinite(liters) || liters <= 0) return null;
+  const activeSalts = SALTS.map((salt, index) => {
+    const target = Math.max(0, Number(saltTargets[salt.id] ?? 0));
+    if (target <= 0) return null;
+    const form = salt.hydrationForms[
+      recipeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0
+    ] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+    const massMg = computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass);
+    const stockMassMg = computeSaltMg(
+      target,
+      PRECISION_STOCK_VOLUME_ML / 1000,
+      form.molarMass,
+      salt.anhydrousMass,
+    ) * PRECISION_STOCK_STRENGTH;
+    return {
+      id: salt.id,
+      name: salt.name,
+      massMg,
+      stockMassMg,
+    };
+  }).filter((salt): salt is WatermancerPrecisionSalt => salt !== null && salt.massMg > 0);
+  if (activeSalts.length === 0) return null;
+
+  const currentMinimumMassMg = Math.min(...activeSalts.map(salt => salt.massMg));
+  const multiplier = Math.max(
+    1,
+    Math.ceil((PRECISION_DRY_SALT_THRESHOLD_MG / currentMinimumMassMg) - 1e-9),
+  );
+  const recommendedBatchLiters = multiplier === 1
+    ? liters
+    : Math.max(liters, Math.ceil(liters * multiplier * 2 - 1e-9) / 2);
+  const recommendedMinimumMassMg = currentMinimumMassMg * (recommendedBatchLiters / liters);
+  const stockDoseMlPerLiter = 1000 / PRECISION_STOCK_STRENGTH;
+  const safeDropsPerMl = Number.isFinite(dropsPerMl) && dropsPerMl > 0 ? dropsPerMl : 20;
+
+  return {
+    status: currentMinimumMassMg < PRECISION_DRY_SALT_THRESHOLD_MG ? 'needs-volume' : 'ready',
+    activeSalts,
+    currentMinimumMassMg,
+    recommendedBatchLiters,
+    recommendedMinimumMassMg,
+    stockDoseMlPerLiter,
+    stockDropsPerLiter: Math.max(1, Math.round(stockDoseMlPerLiter * safeDropsPerMl)),
+    stockMasses: activeSalts.map(salt => ({ ...salt })),
+  };
+}
+
+export function computeConcentrateStockSaltMassMg(
+  strengthPercent: number,
+  totalStockMassG: number,
+): number {
+  if (!Number.isFinite(strengthPercent) || !Number.isFinite(totalStockMassG)) return 0;
+  return Math.max(0, strengthPercent) * 10 * Math.max(0, totalStockMassG);
+}
+
+export function computeConcentrateSaltMgPerDrop(
+  strengthPercent: number,
+  measuredDrops: number,
+  measuredStockMassG: number,
+): number {
+  const saltMgPerG = Math.max(0, strengthPercent) * 10;
+  return saltMgPerG > 0
+    && Number.isFinite(measuredDrops) && measuredDrops > 0
+    && Number.isFinite(measuredStockMassG) && measuredStockMassG > 0
+    ? saltMgPerG * measuredStockMassG / measuredDrops
+    : 0;
+}
+
+export function computeConcentrateDropsForSaltMass(
+  saltMassMg: number,
+  saltMgPerDrop: number,
+): number {
+  return Number.isFinite(saltMassMg)
+    && Number.isFinite(saltMgPerDrop)
+    && saltMassMg > 0
+    && saltMgPerDrop > 0
+    ? saltMassMg / saltMgPerDrop
+    : 0;
+}
+
+export function computeWatermancerBottledIons(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+): Record<IonId, number> {
+  const rawVolume = entries.reduce((total, entry) => total + num(entry.volumeMl), 0);
+  const sourceScale = batchMl > 0 ? Math.min(1, batchMl / rawVolume || 0) : 0;
+  return Object.fromEntries(
+    IONS.map(ion => [
+      ion.id,
+      batchMl > 0
+        ? entries.reduce(
+          (total, entry) => total + (num(entry.ions[ion.id] ?? '') * num(entry.volumeMl) * sourceScale) / batchMl,
+          0,
+        )
+        : 0,
+    ]),
+  ) as Record<IonId, number>;
+}
+
+export function computeWatermancerFinalIons(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+  saltTargets: Record<string, number>,
+): Record<IonId, number> {
+  return computeIonTotals(
+    saltTargets,
+    computeWatermancerBottledIons(entries, batchMl),
+    1,
+  );
+}
+
+const PRACTICAL_ION_MARGIN_PPM = 0.65;
+const WATERMANCER_GH_KH_SCORE_WEIGHT = 1000;
+const WATERMANCER_PRACTICAL_SCORE_WEIGHT = 1;
+// Let GH/KH resolve only effectively tied percentile coverage (0.1% of the
+// aggregate normalized target error), keeping the hierarchy deterministic.
+const WATERMANCER_PERCENTILE_TIE_EPSILON = 0.001;
+const WATERMANCER_GH_KH_TIE_EPSILON = 0.001;
+const PRACTICAL_COVERAGE_OFFSETS_PPM = [
+  -PRACTICAL_ION_MARGIN_PPM,
+  PRACTICAL_ION_MARGIN_PPM,
+];
+
+function optimizedIonDeviation(
+  actual: number,
+  target: number,
+): number {
+  const safeActual = Number.isFinite(actual) ? actual : 0;
+  const safeTarget = Number.isFinite(target) ? Math.max(target, 0) : 0;
+  // Optimized is source agnostic, while still treating zero-target ions as
+  // hard ceilings. Positive targets may use a bounded practical surplus when
+  // that is better than leaving a priority ion substantially short.
+  // A zero target is still a final-ion ceiling and any modeled contribution
+  // is a real deviation.
+  if (safeTarget <= 0) return Math.abs(safeActual);
+  const delta = safeActual - safeTarget;
+  const relativeDeviation = Math.abs(delta) / safeTarget;
+  // Percentile coverage is the first objective, so optimized over- and
+  // under-target results remain symmetric here. GH/KH and the practical
+  // absolute margin are applied only after this primary comparison.
+  return relativeDeviation;
+}
+
+export function watermancerGhKhBalanceDeviation(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+): number {
+  const targetIons = completeIonTotals(target);
+  const targetGh = computeGH(targetIons);
+  const targetKh = computeKH(targetIons);
+  if (targetGh <= 0 || targetKh <= 0) return 0;
+
+  const actualIons = completeIonTotals(actual);
+  const ghFraction = computeGH(actualIons) / targetGh;
+  const khFraction = computeKH(actualIons) / targetKh;
+  const hardnessFraction = (
+    computeGH(actualIons) + computeKH(actualIons)
+  ) / (targetGh + targetKh);
+  return Math.abs(ghFraction - khFraction)
+    + 0.5 * Math.abs(1 - hardnessFraction);
+}
+
+export function watermancerPracticalIonDeviation(
+  actual: Partial<Record<IonId, number>>,
+  target: Partial<Record<IonId, number>>,
+  ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>,
+): number {
+  return IONS.reduce((total, ion) => {
+    if ((ionSourcePreferences?.[ion.id] ?? 'dont-care') !== 'dont-care') {
+      return total;
+    }
+    const targetValue = Math.max(target[ion.id] ?? 0, 0);
+    const delta = Math.abs((actual[ion.id] ?? 0) - targetValue);
+    // Zero-target ions remain hard ceilings; the practical margin is only for
+    // positive requested ions.
+    return total + (
+      targetValue > 0
+        ? Math.max(delta - PRACTICAL_ION_MARGIN_PPM, 0)
+        : delta
+    );
+  }, 0);
+}
+
+export function roundWatermancerSaltTargetToWholeMg(
+  targetPpm: number,
+  liters: number,
+  salt: typeof SALTS[number],
+  form: typeof SALTS[number]['hydrationForms'][number],
+): number {
+  if (!Number.isFinite(targetPpm) || targetPpm <= 0 || !Number.isFinite(liters) || liters <= 0) {
+    return 0;
+  }
+  const massMg = computeSaltMg(targetPpm, liters, form.molarMass, salt.anhydrousMass);
+  if (!Number.isFinite(massMg) || massMg <= 0) return 0;
+  const wholeMg = Math.max(1, Math.round(massMg));
+  return wholeMg * salt.anhydrousMass / (liters * form.molarMass);
+}
+
+export function formatWatermancerSaltDoseMg(massMg: number): string {
+  if (!Number.isFinite(massMg) || massMg <= 0) return '0';
+  return String(Math.max(1, Math.round(massMg)));
+}
+
+export function autoCraftSaltTargets(
+  allowedSaltIds: string[],
+  waterIons: Partial<Record<IonId, number>>,
+  targetIons: Partial<Record<IonId, number>>,
+  fixedSaltTargets: Record<string, number> = {},
+  preset: AutoCraftPreset = 'closest-match',
+  objective: AutoCraftObjective = 'balanced',
+  overshootPolicy?: WatermancerOvershootPolicy,
+): Record<string, number> {
+  // These salts are an allowed inventory, not a required recipe. Fixed doses
+  // are user-owned overrides and are excluded from the optimizer; the
+  // coordinate descent below always includes zero for the remaining salts.
+  const allowedSalts = SALTS.filter(salt => (
+    allowedSaltIds.includes(salt.id)
+    && !Object.prototype.hasOwnProperty.call(fixedSaltTargets, salt.id)
+    && !salt.ions.some(contribution => (
+      (overshootPolicy?.ionSourcePreferences?.[contribution.ionId] ?? 'dont-care') === 'water-only'
+      && contribution.fraction > 0
+    ))
+  ));
+  if (allowedSalts.length === 0) return {};
+
+  const targets = Object.fromEntries(
+    allowedSalts.map(salt => [salt.id, 0]),
+  ) as Record<string, number>;
+  if (preset === 'gh-kh-harmony') {
+    Object.assign(
+      targets,
+       autoCraftSaltTargets(
+          allowedSaltIds,
+         waterIons,
+         targetIons,
+         fixedSaltTargets,
+         'closest-match',
+         objective,
+         overshootPolicy,
+       ),
+    );
+  }
+  const fixedIonTotals = computeIonTotals(fixedSaltTargets, waterIons, 1);
+  const ratioMode = overshootPolicy?.matchingMode === 'ratios';
+  const normalizedOvershootOrder = normalizeWatermancerIonOrder(
+    overshootPolicy?.priorityOrder ?? AUTO_FILL_SOURCE_PRIORITY,
+  );
+  const controlledOvershootEnabled = overshootPolicy?.enabled === true;
+  const minimumDosePpmFor = (saltId: string): number => {
+    const value = Number(overshootPolicy?.minimumSaltDosePpm?.[saltId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const practicalSaltDose = (saltId: string, candidate: number): number => {
+    if (!Number.isFinite(candidate) || candidate <= 1e-8) return 0;
+    return Math.max(candidate, minimumDosePpmFor(saltId));
+  };
+  const overshootAllowanceFor = (ionId: IonId): number => {
+    if (
+      !overshootPolicy?.enabled
+      || !overshootPolicy.allowedIons.includes(ionId)
+      || (targetIons[ionId] ?? 0) <= 0
+    ) return 0;
+    const value = Number(overshootPolicy.maxPpm[ionId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const sourcePreferenceFor = (ionId: IonId): WatermancerIonSourcePreference | undefined => (
+    overshootPolicy?.ionSourcePreferences?.[ionId]
+  );
+  const softDeficitAllowanceFor = (ionId: IonId): number => {
+    if (!controlledOvershootEnabled || !overshootPolicy?.softDeficitIons?.includes(ionId)) return 0;
+    const value = Number(overshootPolicy.softDeficitLimits?.[ionId] ?? 0);
+    return Number.isFinite(value) ? Math.max(0, value) : 0;
+  };
+  const weightedDeviation = (ionId: IonId, actual: number, target: number): number => {
+    const delta = actual - target;
+    if (ratioMode) {
+      if (target <= 0) return Math.max(actual, 0) * 100;
+      return Math.max(-delta, 0) * 12;
+    }
+    // Optimized compares final-ion coverage rather than where an ion came
+    // from. Do not let a policy allowance hide a larger real-world deviation.
+    if (sourcePreferenceFor(ionId) === 'dont-care') {
+      return optimizedIonDeviation(actual, target);
+    }
+    if (!controlledOvershootEnabled) {
+      return objective === 'coverage'
+        ? delta < 0 ? Math.abs(delta) * 2 : Math.abs(delta) * 0.35
+        : Math.abs(delta);
+    }
+    const allowance = overshootAllowanceFor(ionId);
+    const excessBeyondPolicy = Math.max(delta - allowance, 0);
+    const deficit = Math.max(-delta - softDeficitAllowanceFor(ionId), 0);
+    const priorityIndex = normalizedOvershootOrder.indexOf(ionId);
+    const priorityWeight = normalizedOvershootOrder.length - Math.max(priorityIndex, 0);
+    const softDeficitIon = Boolean(overshootPolicy?.softDeficitIons?.includes(ionId));
+    const deficitWeight = softDeficitIon ? 2 : 12;
+    return objective === 'coverage'
+      ? deficit * (deficitWeight + priorityWeight / normalizedOvershootOrder.length)
+        + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length)
+      : deficit * (deficitWeight + priorityWeight / normalizedOvershootOrder.length)
+        + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length);
+  };
+  const sourcePreferencePenalty = (saltTargets: Record<string, number>): number => {
+    const saltIons = computeIonTotals(saltTargets, {}, 1);
+    return ACTIVE_ION_IDS.reduce((total, ionId) => {
+      const preference = sourcePreferenceFor(ionId);
+      const saltContribution = Math.max(saltIons[ionId] ?? 0, 0);
+      const waterContribution = Math.max(waterIons[ionId] ?? 0, 0);
+      const target = Math.max(targetIons[ionId] ?? 0, 0);
+      if (preference === 'water-only') return total + saltContribution * 1000;
+      if (preference === 'salt-only') return total + waterContribution * 1000;
+      if (preference === 'water-then-salt') {
+        return total + Math.max(saltContribution - Math.max(target - waterContribution, 0), 0) * 20;
+      }
+      return total;
+    }, 0);
+  };
+  const ratioObjective = (actualIons: Partial<Record<IonId, number>>): number => {
+    if (!ratioMode) return 0;
+    const evaluation = evaluateWatermancerRatios(actualIons, targetIons);
+    return evaluation.zeroTargetViolationPpm * 100000
+      + evaluation.floorDeficitTotal * 1000
+      + evaluation.aggregateRatioError * 100
+      + evaluation.modeledMineralLoad * 0.001
+      + evaluation.positiveExcess * 0.01;
+  };
+  const qualityScore = (
+    actualIons: Partial<Record<IonId, number>>,
+    saltTargets: Record<string, number>,
+  ): number => {
+    const sourcePenalty = sourcePreferencePenalty(saltTargets);
+    let percentileDeviation = 0;
+    for (const ion of IONS) {
+      percentileDeviation += weightedDeviation(
+        ion.id,
+        actualIons[ion.id] ?? 0,
+        targetIons[ion.id] ?? 0,
+      );
+    }
+    if (ratioMode) {
+      return percentileDeviation
+        + ratioObjective(actualIons)
+        + sourcePenalty;
+    }
+    // Keep the optimization hierarchy explicit: percentile coverage is
+    // primary, GH/KH balance is secondary, and the absolute practical margin
+    // is a final tie-breaker.
+    // Source preferences are explicit constraints, so preserve their
+    // precedence over the optimization hierarchy.
+    return sourcePenalty * 1_000_000_000
+      + percentileDeviation * 1_000_000
+      + watermancerGhKhBalanceDeviation(actualIons, targetIons)
+        * WATERMANCER_GH_KH_SCORE_WEIGHT
+      + watermancerPracticalIonDeviation(
+        actualIons,
+        targetIons,
+        overshootPolicy?.ionSourcePreferences,
+      ) * WATERMANCER_PRACTICAL_SCORE_WEIGHT;
+  };
+  const ionValueWithoutSalt = (salt: typeof SALTS[number], ionId: IonId): number => {
+    let value = fixedIonTotals[ionId] ?? 0;
+    for (const otherSalt of allowedSalts) {
+      if (otherSalt.id === salt.id) continue;
+      value += (targets[otherSalt.id] ?? 0)
+        * (otherSalt.ions.find(item => item.ionId === ionId)?.fraction ?? 0);
+    }
+    return value;
+  };
+  const residualFor = (salt: typeof SALTS[number], candidate: number): number => {
+    const actualIons = { ...fixedIonTotals } as Record<IonId, number>;
+    for (const ion of IONS) {
+      const saltContribution = salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0;
+      const actual = ionValueWithoutSalt(salt, ion.id) + candidate * saltContribution;
+      actualIons[ion.id] = actual;
+    }
+    return qualityScore(actualIons, { ...targets, [salt.id]: candidate });
+  };
+
+  const scoreForSaltTargets = (saltTargets: Record<string, number>): number => {
+    const actualIons = computeIonTotals(saltTargets, fixedIonTotals, 1);
+    return qualityScore(actualIons, saltTargets);
+  };
+
+  const solveGlobalSaltTargets = (): Record<string, number> | null => {
+    const weights = IONS.map(ion => {
+      const target = targetIons[ion.id] ?? 0;
+      if (overshootPolicy?.ionSourcePreferences?.[ion.id] === 'dont-care') {
+        // Seed the active-set solver with the same per-ion scale as the
+        // primary normalized target-coverage objective. Zero-target ions are
+        // intentionally neutral in this numerical seed; the final candidate
+        // score still protects their ceilings.
+        return target > 0 ? 1 / (target * target) : 1e-6;
+      }
+      if (target <= 0) return 4;
+      return overshootPolicy?.softDeficitIons?.includes(ion.id) ? 2 : 12;
+    });
+    return solveBoundedCoupledSaltTargets({
+      allowedSalts,
+      fixedIonTotals,
+      targetIons,
+      ionWeights: Object.fromEntries(IONS.map((ion, index) => [ion.id, weights[index]])),
+      scoreCandidate: scoreForSaltTargets,
+      minimumDosePpmFor,
+      maxDosePpm: 5000,
+    })?.saltTargets ?? null;
+  };
+
+  // Coordinate descent over the hierarchical objective. For each salt, check
+  // zero, target, and target ± the practical margin for every coupled ion so
+  // the final tie-breaker remains deterministic without adding a solver.
+  for (let pass = 0; pass < 80; pass += 1) {
+    let largestChange = 0;
+    for (const salt of allowedSalts) {
+      const previous = targets[salt.id] ?? 0;
+      const candidates = [0, minimumDosePpmFor(salt.id)];
+      for (const contribution of salt.ions) {
+        if (contribution.fraction <= 0) continue;
+        let actualWithoutSalt = fixedIonTotals[contribution.ionId] ?? 0;
+        for (const otherSalt of allowedSalts) {
+          if (otherSalt.id === salt.id) continue;
+          actualWithoutSalt += (targets[otherSalt.id] ?? 0)
+            * (otherSalt.ions.find(item => item.ionId === contribution.ionId)?.fraction ?? 0);
+        }
+          candidates.push(practicalSaltDose(salt.id, Math.min(
+            5000,
+            (
+              (targetIons[contribution.ionId] ?? 0)
+              + overshootAllowanceFor(contribution.ionId)
+              - actualWithoutSalt
+            ) / contribution.fraction,
+          )));
+        if (
+          !ratioMode
+          && sourcePreferenceFor(contribution.ionId) === 'dont-care'
+          && (targetIons[contribution.ionId] ?? 0) > 0
+        ) {
+          PRACTICAL_COVERAGE_OFFSETS_PPM.forEach(offset => {
+            candidates.push(practicalSaltDose(salt.id, Math.min(
+              5000,
+              (
+                (targetIons[contribution.ionId] ?? 0)
+                + offset
+                + overshootAllowanceFor(contribution.ionId)
+                - actualWithoutSalt
+              ) / contribution.fraction,
+            )));
+          });
+        }
+      }
+      const next = candidates.reduce((best, candidate) => {
+        const bestScore = residualFor(salt, best);
+        const candidateScore = residualFor(salt, candidate);
+        return candidateScore < bestScore - 1e-8
+          || (Math.abs(candidateScore - bestScore) <= 1e-8 && candidate < best)
+          ? candidate
+          : best;
+      }, 0);
+       targets[salt.id] = Number(practicalSaltDose(salt.id, next).toFixed(6));
+      largestChange = Math.max(largestChange, Math.abs(next - previous));
+    }
+    if (largestChange < 1e-7) break;
+  }
+
+  const globalTargets = solveGlobalSaltTargets();
+  if (globalTargets && scoreForSaltTargets(globalTargets) < scoreForSaltTargets(targets) - 1e-7) {
+    Object.assign(targets, globalTargets);
+  }
+
+  return targets;
+}
+
+export function autoFillWaterVolumes(
+  entries: MineralWaterEntry[],
+  batchMl: number,
+  targets: Partial<Record<IonId, number>>,
+  fixedEntries: MineralWaterEntry[] = [],
+  sourcePriority: IonId[] = AUTO_FILL_SOURCE_PRIORITY,
+  deviationPpm = DEFAULT_AUTO_FILL_DEVIATION_PPM,
+  enforceAllIonCeilings = false,
+  ignoreZeroTargetCeilings = false,
+  volumeStepMl = 1,
+  positiveTargetWigglePpm = 0,
+  overshootPolicy?: WatermancerOvershootPolicy,
+  maxEntryVolumeMl = AUTO_FILL_MAX_ML,
+): MineralWaterEntry[] {
+  if (batchMl <= 0 || entries.length === 0) return entries;
+
+  const targetAmounts = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [id, Math.max(targets[id] ?? 0, 0) * batchMl]),
+  ) as Record<IonId, number>;
+  const bicarbonateTarget = targetAmounts.bicarbonate ?? 0;
+  const deviationAmount = enforceAllIonCeilings ? 0 : Math.max(0, deviationPpm) * batchMl;
+  const bicarbonateLimit = bicarbonateTarget + deviationAmount;
+  const priorityIonIds: IonId[] = ['calcium', 'magnesium', 'sodium'];
+  const safePositiveTargetWigglePpm = Number.isFinite(positiveTargetWigglePpm)
+    ? Math.max(0, positiveTargetWigglePpm)
+    : 0;
+  const positiveTargetWiggleAmount = safePositiveTargetWigglePpm * batchMl;
+  const sourcePreferenceFor = (id: IonId): WatermancerIonSourcePreference => (
+    overshootPolicy?.ionSourcePreferences?.[id] ?? 'dont-care'
+  );
+  const overshootAllowanceAmount = (id: IonId): number => {
+    if (!overshootPolicy?.enabled || !overshootPolicy.allowedIons.includes(id)) return 0;
+    const limit = Number(overshootPolicy.maxPpm[id] ?? 0);
+    return Number.isFinite(limit) ? Math.max(0, limit) * batchMl : 0;
+  };
+  const fixedVolume = fixedEntries.reduce((total, entry) => total + num(entry.volumeMl), 0);
+  const variableVolumeLimit = Math.max(batchMl - fixedVolume, 0);
+  const fixedContributions = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [
+      id,
+      fixedEntries.reduce((total, entry) => total + num(entry.ions[id] ?? '') * num(entry.volumeMl), 0),
+    ]),
+  ) as Record<IonId, number>;
+  const ceilingIonIds = enforceAllIonCeilings
+    ? ignoreZeroTargetCeilings
+      ? ACTIVE_ION_IDS.filter(id => (targetAmounts[id] ?? 0) > 0)
+      : ACTIVE_ION_IDS
+    : ['bicarbonate' as IonId];
+  const waterCeilingIonIds = enforceAllIonCeilings
+    ? ceilingIonIds
+    : ceilingIonIds;
+  const waterOnlyIonIds = ACTIVE_ION_IDS.filter(id => sourcePreferenceFor(id) === 'salt-only');
+  const effectiveWaterCeilingIonIds = [...new Set([...waterCeilingIonIds, ...waterOnlyIonIds])];
+  const fixedWaterAlreadyExceedsLimit = effectiveWaterCeilingIonIds
+    .some(id => fixedContributions[id] > (
+      enforceAllIonCeilings
+        ? sourcePreferenceFor(id) === 'salt-only'
+          ? 0
+          : (targetAmounts[id] ?? 0) + ((targetAmounts[id] ?? 0) > 0 ? positiveTargetWiggleAmount : 0)
+        + overshootAllowanceAmount(id)
+        : bicarbonateLimit
+    ) + 1e-8);
+  if (variableVolumeLimit <= 0 || fixedWaterAlreadyExceedsLimit) {
+    return entries.map(entry => ({ ...entry, volumeMl: '0' }));
+  }
+
+  const safeMaxEntryVolumeMl = Number.isFinite(maxEntryVolumeMl) && maxEntryVolumeMl > 0
+    ? maxEntryVolumeMl
+    : AUTO_FILL_MAX_ML;
+  const sortedEntries = entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => {
+      const sourcePreferenceScore = (entry: MineralWaterEntry): number => (
+        ACTIVE_ION_IDS.reduce((total, id) => {
+          const concentration = num(entry.ions[id] ?? '');
+          const target = Math.max(targets[id] ?? 0, 0);
+          const preference = sourcePreferenceFor(id);
+          const weight = preference === 'water-only'
+            ? 100
+            : preference === 'water-then-salt'
+              ? 25
+              : preference === 'salt-only'
+                ? -100
+                : 0;
+          return total + concentration * Math.max(target, 1) * weight;
+        }, 0)
+      );
+      const preferenceDifference = sourcePreferenceScore(b.entry) - sourcePreferenceScore(a.entry);
+      if (Math.abs(preferenceDifference) > 1e-8) return preferenceDifference > 0 ? -1 : 1;
+      for (const id of sourcePriority) {
+        const difference = num(b.entry.ions[id] ?? '') - num(a.entry.ions[id] ?? '');
+        if (Math.abs(difference) > 1e-8) return difference;
+      }
+      return a.index - b.index;
+    });
+  const volumes = entries.map(() => 0);
+  const covered = { ...fixedContributions };
+  let remainingVolume = variableVolumeLimit;
+  const safeVolumeStepMl = Number.isFinite(volumeStepMl) && volumeStepMl > 0 ? volumeStepMl : 1;
+  const volumePrecision = safeVolumeStepMl < 1
+    ? Math.ceil(-Math.log10(safeVolumeStepMl))
+    : 0;
+
+  // Deterministic priority fill: prefer source waters by the requested ion
+  // order. Recipe mode protects bicarbonate and the three GH mineral
+  // priorities; no-recipe mode protects every active ion at its safe ceiling.
+  for (const { entry, index } of sortedEntries) {
+    if (remainingVolume <= 0.01) break;
+      const limitingIds: IonId[] = enforceAllIonCeilings
+        ? effectiveWaterCeilingIonIds
+      : ['bicarbonate', ...priorityIonIds];
+    const availableAmount = Math.min(safeMaxEntryVolumeMl, remainingVolume);
+    const amountToCeiling = (allowPositiveTargetWiggle: boolean): number => {
+      let candidateAmount = availableAmount;
+      for (const id of limitingIds) {
+        const concentration = num(entry.ions[id] ?? '');
+        if (concentration <= 0) continue;
+        const target = targetAmounts[id] ?? 0;
+        const ceiling = enforceAllIonCeilings
+          ? sourcePreferenceFor(id) === 'salt-only'
+            ? 0
+            : target + (
+                allowPositiveTargetWiggle && target > 0
+                  ? positiveTargetWiggleAmount
+                  : 0
+              ) + overshootAllowanceAmount(id)
+          : id === 'bicarbonate'
+            ? bicarbonateLimit
+            : target + deviationAmount;
+        const remaining = Math.max(ceiling - covered[id], 0);
+        candidateAmount = Math.min(candidateAmount, remaining / concentration);
+      }
+      return candidateAmount;
+    };
+
+    const strictAmount = amountToCeiling(false);
+    let amount = strictAmount;
+    if (enforceAllIonCeilings && positiveTargetWiggleAmount > 0) {
+      const wiggleAmount = amountToCeiling(true);
+      const extraVolume = wiggleAmount - strictAmount;
+      const earnsMeaningfulCoverage = extraVolume > 0.01
+        && ceilingIonIds.some(id => {
+          const concentration = num(entry.ions[id] ?? '');
+          const target = targetAmounts[id] ?? 0;
+          const currentAfterStrictFill = covered[id] + strictAmount * concentration;
+          const extraPpm = extraVolume * concentration / batchMl;
+          return target > 0
+            && currentAfterStrictFill < target - 1e-8
             && extraPpm >= 0.5;
         });
       if (earnsMeaningfulCoverage) amount = wiggleAmount;
