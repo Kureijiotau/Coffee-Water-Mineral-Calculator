@@ -81,6 +81,8 @@ test('keeps automatic ion readings tied to the latest rapid water-volume edit', 
 
   await page.getByRole('button', { name: 'Watermancer' }).click();
   await expect(page.getByText('Precision Auto-match')).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Watermancer matching mode' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Set ion ratios' })).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (
     (window as WorkerProbe).__watermancerWorkerRequests ?? 0
   ))).toBeGreaterThanOrEqual(1);

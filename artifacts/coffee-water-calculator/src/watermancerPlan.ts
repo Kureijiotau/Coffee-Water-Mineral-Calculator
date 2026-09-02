@@ -3,6 +3,7 @@ import type { MineralWaterEntry } from './watermancerSolver';
 
 export type WatermancerStrategy = 'closest-match' | 'water-first' | 'gh-kh-harmony' | 'added-water-mineral-first';
 export type WatermancerSaltObjective = 'balanced' | 'coverage';
+export type WatermancerMatchingMode = 'target-values' | 'ratios';
 export type WatermancerIonSourcePreference =
   | 'water-only'
   | 'water-then-salt'
@@ -10,6 +11,7 @@ export type WatermancerIonSourcePreference =
   | 'dont-care';
 export type WatermancerOvershootPolicy = {
   enabled: boolean;
+  matchingMode?: WatermancerMatchingMode;
   allowedIons: IonId[];
   maxPpm: Partial<Record<IonId, number>>;
   /** Lower-impact ions may remain slightly below target when chemistry is coupled. */
@@ -30,6 +32,8 @@ export type WatermancerPlan = {
   fixedSaltDoses: Record<string, number>;
   strategy: WatermancerStrategy;
   saltObjective: WatermancerSaltObjective;
+  /** Optional so callers can still pass version-1 plans; missing means target-values. */
+  matchingMode?: WatermancerMatchingMode;
   ionPriority: IonId[];
   allowOvershoot: boolean;
   allowedOvershootIons: IonId[];
@@ -39,7 +43,13 @@ export type WatermancerPlan = {
   minimumSaltDosePpm?: Partial<Record<string, number>>;
   overshootOrder: IonId[];
   ionSourcePreferences?: Partial<Record<IonId, WatermancerIonSourcePreference>>;
+  /** Optional solver-only cap for each automatically allocated water entry. */
+  maxWaterVolumeMl?: number;
 };
+
+export function normalizeWatermancerMatchingMode(value: unknown): WatermancerMatchingMode {
+  return value === 'ratios' ? 'ratios' : 'target-values';
+}
 
 export type WatermancerRouteKind =
   | 'primary'
@@ -130,6 +140,13 @@ export type WatermancerRouteCandidate = {
   deviations: WatermancerIonDeviation[];
   overshoots: IonOvershoot[];
   score: number;
+  /** Primary target-coverage score used before GH/KH and practical tie-breakers. */
+  percentileDeviation?: number;
+  /** Secondary balance score for the final modeled GH and KH. */
+  ghKhBalanceDeviation?: number;
+  /** Final score for positive-target deviations outside the practical margin. */
+  practicalDeviation?: number;
+  ratioEvaluation?: import('./watermancerRatios').WatermancerRatioEvaluation;
   diagnostics?: WatermancerMatchDiagnostics;
   /** Set only by quality-gated routes, such as Added-water mineral-first. */
   qualityValid?: boolean;
@@ -206,6 +223,7 @@ export function createWatermancerPlanSignature(plan: WatermancerPlan): string {
     ),
     strategy: plan.strategy,
     saltObjective: plan.saltObjective,
+    matchingMode: normalizeWatermancerMatchingMode(plan.matchingMode),
     ionPriority: normalizeWatermancerIonOrder(plan.ionPriority),
     allowOvershoot: plan.allowOvershoot === true,
     allowedOvershootIons: [...new Set(plan.allowedOvershootIons ?? [])].sort(),

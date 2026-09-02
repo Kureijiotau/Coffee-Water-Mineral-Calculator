@@ -43,6 +43,7 @@ const snapshot: WaterPlanSnapshot = {
   watermancerUsedSaltIds: ['mgso4'],
   autoCraftPreset: 'closest-match',
   watermancerSaltObjective: 'balanced',
+  watermancerMatchingMode: 'target-values',
   watermancerBestMatchDeviationMode: 'strict',
   watermancerIonSourcePreferences: { calcium: 'water-then-salt' },
   watermancerDoseOverridesMg: { mgso4: 25 },
@@ -82,6 +83,15 @@ describe('water plan persistence', () => {
     expect(parsed?.id).not.toBe(plan.id);
     expect(parsed?.name).toBe(plan.name);
     expect(parsed?.snapshot).toEqual(snapshot);
+  });
+
+  it('accepts legacy snapshots without a matching mode and leaves them on target values', () => {
+    const legacySnapshot = { ...snapshot };
+    delete legacySnapshot.watermancerMatchingMode;
+    const plan = createWaterPlan('Legacy', legacySnapshot, '2026-08-15T00:00:00.000Z');
+
+    expect(isValidWaterPlan(plan)).toBe(true);
+    expect((plan.snapshot.watermancerMatchingMode ?? 'target-values')).toBe('target-values');
   });
 
   it('rejects files with the wrong kind or version', () => {

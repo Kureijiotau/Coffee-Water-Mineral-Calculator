@@ -1,51 +1,4 @@
-import { describe, expect, it } from 'vitest';
-import {
-  autoFillWaterVolumes,
-  autoCraftSaltTargets,
-  normalizeWatermancerTargetSourceForSavedItems,
-  roundWatermancerSaltTargetToWholeMg,
-  buildWatermancerPrecisionRecommendation,
-  computeConcentrateStockSaltMassMg,
-  computeConcentrateSaltMgPerDrop,
-  computeConcentrateDropsForSaltMass,
-  computeWatermancerBottledIons,
-  computeWatermancerFinalIons,
-  computeSaltGapOptionPpm,
-  craftGlacialStyleWatermancerMatch,
-  translateSaltTargetsToIonTargets,
-  solveWatermancerRoutes,
-  applyWatermancerBestMatchDeviationMode,
-  findBestWatermancerMatch,
-  selectBestWatermancerMatchCandidate,
-  selectWatermancerRouteCandidate,
-  recalculateWatermancerRouteAtCurrentVolumes,
-  totalWatermancerDeviation,
-  totalWatermancerAbsoluteDeviation,
-  executeWatermancerRouteCandidate,
-  watermancerRouteWaterInputs,
-  watermancerRouteMatchesCurrentInputs,
-  isWatermancerActionSnapshotCurrent,
-  watermancerBestMatchPreviewIsCurrent,
-  mergeRecipeStepTargets,
-  selectRecipePreparationTargets,
-  type MineralWaterEntry,
-  type WatermancerRouteCandidate,
-} from './App';
-import { computeIonTotals, findIonOvershoots, findIonUnderdoses, IONS, RECIPES, SALTS } from './waterData';
-import { EMPIRICAL_WATERS } from './empiricalWaters';
-
-const water = (
-  id: string,
-  ions: Partial<Record<string, number>>,
-): MineralWaterEntry => ({
-  id,
-  name: id,
-  ions: Object.fromEntries(Object.entries(ions).map(([key, value]) => [key, String(value)])),
-  metadata: {},
-  volumeMl: '0',
-});
-
-describe('autoFillWaterVolumes', () => {
+ () => {
   it('uses each tab’s active preparation targets in Recipe steps', () => {
     const brewer = { mgso4: 8 };
     const alchemist = { mgso4: 6, cacl2: 4 };
@@ -139,7 +92,31 @@ describe('autoFillWaterVolumes', () => {
     )).toBeCloseTo(0.68, 5);
   });
 
-  it('does not score zero-target ions in Optimized percentage matching', () => {
+  it('keeps percentile coverage ahead of practical overshoot', () => {
+    const plan = {
+      targetIons: { potassium: 0.8, chloride: 10 },
+      allowOvershoot: false,
+      allowedOvershootIons: [],
+      overshootLimits: {},
+      ionSourcePreferences: { potassium: 'dont-care', chloride: 'dont-care' },
+      ionPriority: ['potassium', 'chloride'],
+    } as unknown as WatermancerRouteCandidate['plan'];
+
+    const underCovered = totalWatermancerDeviation(
+      { potassium: 0.56, chloride: 10 },
+      plan.targetIons,
+      plan,
+    );
+    const practicallyCovered = totalWatermancerDeviation(
+      { potassium: 1.3, chloride: 10.4 },
+      plan.targetIons,
+      plan,
+    );
+
+    expect(underCovered).toBeLessThan(practicallyCovered);
+  });
+
+  it('scores zero-target ions in Optimized matching', () => {
     const plan = {
       targetIons: { potassium: 1, citrates: 0 },
       allowOvershoot: true,
@@ -154,7 +131,7 @@ describe('autoFillWaterVolumes', () => {
       { potassium: 1, citrates: 100 },
       plan.targetIons,
       plan,
-    )).toBe(0);
+    )).toBe(100);
   });
 
   it('rounds matched salt targets to whole physical milligrams', () => {
@@ -829,6 +806,117 @@ describe('Watermancer salt-to-ion helpers', () => {
       .toBe('closest-match');
   });
 
+  it('ranks material percentile coverage ahead of GH/KH balance', () => {
+    const route = {} as WatermancerRouteCandidate;
+    const matched = { status: 'matched' } as WatermancerSolverResult;
+    const makeCandidate = (
+      strategy: WatermancerBestMatchCandidate['strategy'],
+      percentileDeviation: number,
+      ghKhBalanceDeviation: number,
+    ): WatermancerBestMatchCandidate => ({
+      strategy,
+      deviationMode: 'strict',
+      saltObjective: 'balanced',
+      priorityPreset: 'mineral-first',
+      priority: [],
+      result: matched,
+      route,
+      totalDeviation: percentileDeviation,
+      percentileDeviation,
+      ghKhBalanceDeviation,
+    });
+
+    const winner = selectBestWatermancerMatchCandidate([
+      makeCandidate('closest-match', 0.2, 0.8),
+      makeCandidate('water-first', 0.21, 0.01),
+    ], 'closest-match');
+
+    expect(winner?.strategy).toBe('closest-match');
+  });
+
+  it('uses GH/KH balance when percentile coverage is effectively tied', () => {
+    const route = {} as WatermancerRouteCandidate;
+    const matched = { status: 'matched' } as WatermancerSolverResult;
+    const makeCandidate = (
+      strategy: WatermancerBestMatchCandidate['strategy'],
+      ghKhBalanceDeviation: number,
+      practicalDeviation: number,
+    ): WatermancerBestMatchCandidate => ({
+      strategy,
+      deviationMode: 'strict',
+      saltObjective: 'balanced',
+      priorityPreset: 'mineral-first',
+      priority: [],
+      result: matched,
+      route,
+      totalDeviation: 0.2,
+      percentileDeviation: 0.2,
+      ghKhBalanceDeviation,
+      practicalDeviation,
+    });
+
+    const winner = selectBestWatermancerMatchCandidate([
+      makeCandidate('closest-match', 0.8, 0),
+      makeCandidate('water-first', 0.1, 0.5),
+    ], 'closest-match');
+
+    expect(winner?.strategy).toBe('water-first');
+  });
+
+  it('applies the absolute 0.65 ppm practical margin only after GH/KH', () => {
+    expect(watermancerPracticalIonDeviation(
+      { calcium: 10.65 },
+      { calcium: 10 },
+      { calcium: 'dont-care' },
+    )).toBeCloseTo(0, 8);
+    expect(watermancerPracticalIonDeviation(
+      { calcium: 10.651 },
+      { calcium: 10 },
+      { calcium: 'dont-care' },
+    )).toBeCloseTo(0.001, 8);
+
+    const targetIons = { calcium: 10, magnesium: 5 };
+    expect(watermancerGhKhBalanceDeviation(
+      { calcium: 10, magnesium: 5 },
+      targetIons,
+    )).toBeCloseTo(0, 8);
+    expect(watermancerGhKhBalanceDeviation(
+      { calcium: 10, magnesium: 5, bicarbonate: 2 },
+      { ...targetIons, bicarbonate: 5 },
+    )).toBeGreaterThan(0);
+
+    const practicalWinner = selectBestWatermancerMatchCandidate([
+      {
+        strategy: 'closest-match',
+        deviationMode: 'strict',
+        saltObjective: 'balanced',
+        priorityPreset: 'mineral-first',
+        priority: [],
+        result: { status: 'matched' } as WatermancerSolverResult,
+        route: {} as WatermancerRouteCandidate,
+        totalDeviation: 0.2,
+        percentileDeviation: 0.2,
+        ghKhBalanceDeviation: 0.1,
+        practicalDeviation: 0.5,
+      },
+      {
+        strategy: 'water-first',
+        deviationMode: 'strict',
+        saltObjective: 'balanced',
+        priorityPreset: 'mineral-first',
+        priority: [],
+        result: { status: 'matched' } as WatermancerSolverResult,
+        route: {} as WatermancerRouteCandidate,
+        totalDeviation: 0.2,
+        percentileDeviation: 0.2,
+        ghKhBalanceDeviation: 0.1,
+        practicalDeviation: 0.1,
+      },
+    ], 'closest-match');
+
+    expect(practicalWinner?.strategy).toBe('water-first');
+  });
+
   it('returns a primary route and real alternatives with complete result data', () => {
     const result = solveWatermancerRoutes({
       plan: {
@@ -1370,6 +1458,35 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(targets.kcl).toBeGreaterThan(0);
     expect(potassium).toBeCloseTo(3, 1);
     expect(chloride).toBeCloseTo(2.7, 1);
+  });
+
+  it('does not overshoot a coupled salt when percentile coverage is better at target', () => {
+    const kcl = SALTS.find(salt => salt.id === 'kcl')!;
+    const targets = autoCraftSaltTargets(
+      ['kcl'],
+      { potassium: 0.2 },
+      { potassium: 0.8, chloride: 1 },
+      {},
+      'closest-match',
+      'balanced',
+      {
+        enabled: false,
+        allowedIons: [],
+        maxPpm: {},
+        priorityOrder: ['potassium', 'chloride'],
+        ionSourcePreferences: {
+          potassium: 'dont-care',
+          chloride: 'dont-care',
+        },
+      },
+    );
+    const potassium = 0.2 + (targets.kcl ?? 0)
+      * (kcl.ions.find(contribution => contribution.ionId === 'potassium')?.fraction ?? 0);
+    const chloride = (targets.kcl ?? 0)
+      * (kcl.ions.find(contribution => contribution.ionId === 'chloride')?.fraction ?? 0);
+
+    expect(potassium).toBeCloseTo(0.8, 2);
+    expect(chloride).toBeCloseTo(0.54, 2);
   });
 
   it('allows a practical salt dose starting at 1 mg', () => {

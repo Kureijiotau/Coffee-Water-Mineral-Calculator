@@ -28,7 +28,7 @@
 - [Shared water fallback catalog](shared-water-fallback-catalog.md) — keep bundled public waters synchronized when production may lack a database
 - [Attention animation dismissal](attention-animation-dismissal.md) — stop first-action nudges after interaction or completion, and honor reduced-motion preferences
 - [Watermancer single-flight actions](watermancer-single-flight-actions.md) — matching actions reject duplicates and commit one captured input snapshot at a time
-- [Watermancer best-match dimensions](watermancer-best-match-dimensions.md) — sweep strategy, salt objective, priority preset, and tolerance while fixing added-water volumes
+ - [Watermancer best-match dimensions](watermancer-best-match-dimensions.md) — sweep strategy, salt objective, priority preset, and tolerance while fixing added-water volumes
 - [Mode switch reset boundary](mode-switch-reset-boundary.md) — Brewer resets to a lightweight default recipe and pauses Watermancer work without deleting saved preferences
 - [Watermancer result card default](watermancer-result-default.md) — keep automatic-match results in document flow by default; following remains an explicit toggle
 - [Community water share feedback](community-water-share-feedback.md) — show share request state and refresh the community catalog after success
@@ -67,6 +67,7 @@
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
 - [Coffee-water amounts and balance](coffee-water-amounts-boundary.md) — treat ion thresholds and ratios as context-dependent guidance, not universal solver rules
+- [Optimized practical coverage](optimized-practical-coverage.md) — rank percentile coverage first, GH/KH second, then use a ±0.65 ppm practical margin
 - [Ion guidance profile toggle](ion-guidance-profile-toggle.md) — keep Aiki and Watermancer Sensory ranges selectable without changing chemistry behavior
 - [Windows Rollup dependency](windows-rollup-optional-dependency.md) — frozen pnpm installs need the Windows Rollup binary explicitly locked for cross-platform CI
 - [Vite worker ES format](vite-worker-es-format.md) — code-split browser workers require Vite’s ES worker output format

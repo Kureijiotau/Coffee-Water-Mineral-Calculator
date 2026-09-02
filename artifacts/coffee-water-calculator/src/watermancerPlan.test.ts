@@ -20,6 +20,7 @@ const basePlan = (): WatermancerPlan => ({
   fixedSaltDoses: {},
   strategy: 'water-first',
   saltObjective: 'balanced',
+    matchingMode: 'target-values',
   ionPriority: ['calcium', 'magnesium', 'sodium'],
   allowOvershoot: false,
   allowedOvershootIons: [],
@@ -55,6 +56,16 @@ describe('Watermancer plan', () => {
 
     expect(strategyChanged).not.toBe(first);
     expect(fixedDoseChanged).not.toBe(first);
+  });
+
+  it('changes when matching mode changes', () => {
+    const targetValues = createWatermancerPlanSignature(basePlan());
+    const ratios = createWatermancerPlanSignature({
+      ...basePlan(),
+      matchingMode: 'ratios',
+    });
+
+    expect(ratios).not.toBe(targetValues);
   });
 
   it('captures fixed water volumes independently from water identity', () => {

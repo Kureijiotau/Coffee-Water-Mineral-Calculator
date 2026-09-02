@@ -1,5 +1,6 @@
 import type { NerdLevel } from './profiles';
 import type { SaltRecipeEntry } from './waterData';
+import type { WatermancerMatchingMode } from './watermancerPlan';
 
 export type WaterPlanVolumeUnit = 'liters' | 'gallons';
 
@@ -67,6 +68,8 @@ export type WaterPlanSnapshot = {
   watermancerUsedSaltIds: string[];
   autoCraftPreset: string;
   watermancerSaltObjective: string;
+  /** Optional for compatibility with version-1 sessions created before ratio mode. */
+  watermancerMatchingMode?: WatermancerMatchingMode;
   watermancerBestMatchDeviationMode: 'strict' | 'permissive' | null;
   watermancerIonSourcePreferences: Record<string, string>;
   watermancerDoseOverridesMg: Record<string, number>;
@@ -162,6 +165,8 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
   if (!isStringArray(value.autoFillCustomPriority) || !isStringArray(value.watermancerUsedSaltIds)) return false;
   if (!['closest-match', 'water-first', 'gh-kh-harmony', 'added-water-mineral-first'].includes(String(value.autoCraftPreset))) return false;
   if (!['balanced', 'coverage'].includes(String(value.watermancerSaltObjective))) return false;
+  if (value.watermancerMatchingMode !== undefined
+    && !['target-values', 'ratios'].includes(String(value.watermancerMatchingMode))) return false;
   if (value.watermancerBestMatchDeviationMode !== null
     && !['strict', 'permissive'].includes(String(value.watermancerBestMatchDeviationMode))) return false;
   if (!isStringRecord(value.watermancerIonSourcePreferences) || !isNumberRecord(value.watermancerDoseOverridesMg)) return false;
