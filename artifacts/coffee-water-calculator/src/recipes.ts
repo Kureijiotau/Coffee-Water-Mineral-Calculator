@@ -8,6 +8,20 @@ const SALT_IDS = new Set(SALTS.map(s => s.id));
 export const newRecipeId = (): string =>
   `saved-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 
+export function recipeFilenameSlug(name: string, fallback = 'coffee-water-recipe'): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || fallback;
+}
+
+export type FinishedWaterRecipeExtras = {
+  finishedWaterIons?: Record<string, number>;
+  finishedWaterMetadata?: Record<string, number>;
+};
+
 export function isValidRecipe(r: unknown): r is SaltRecipe {
   if (!r || typeof r !== 'object') return false;
   const o = r as Record<string, unknown>;
@@ -54,7 +68,9 @@ export interface SplitSettings {
 
 /** Serialize a recipe into a shareable JSON file body. */
 export function serializeRecipeFile(
-  recipe: { name: string; salts: Record<string, SaltRecipeEntry> } & Partial<SplitSettings>,
+  recipe: { name: string; salts: Record<string, SaltRecipeEntry> }
+    & Partial<SplitSettings>
+    & FinishedWaterRecipeExtras,
 ): string {
   const payload: Record<string, unknown> = {
     kind: RECIPE_FILE_KIND,
@@ -66,6 +82,18 @@ export function serializeRecipeFile(
     payload.splitMode = recipe.splitMode;
     payload.splitStrengths = recipe.splitStrengths;
     payload.splitMls = recipe.splitMls;
+  }
+  if (recipe.finishedWaterIons) {
+    payload.finishedWaterIons = Object.fromEntries(
+      Object.entries(recipe.finishedWaterIons)
+        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value) && value >= 0),
+    );
+  }
+  if (recipe.finishedWaterMetadata) {
+    payload.finishedWaterMetadata = Object.fromEntries(
+      Object.entries(recipe.finishedWaterMetadata)
+        .filter(([, value]) => typeof value === 'number' && Number.isFinite(value) && value >= 0),
+    );
   }
   return JSON.stringify(payload, null, 2);
 }

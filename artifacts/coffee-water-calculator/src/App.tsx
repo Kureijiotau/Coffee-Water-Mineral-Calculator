@@ -16,7 +16,7 @@ import {
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
 import {
-  loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId,
+  loadSavedRecipes, saveSavedRecipes, serializeRecipeFile, parseRecipeFile, newRecipeId, recipeFilenameSlug,
 } from '@/recipes';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
@@ -73,6 +73,8 @@ import {
   type LotusDropperStyle,
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
+import WaterMixer, { type WaterMixerSavedSource } from './WaterMixer';
+import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
 import {
   normalizeWatermancerIonOrder,
   normalizeWatermancerIonSourcePreferences,
@@ -512,7 +514,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate' | 'ion-ratios';
+type AppTab = 'calculator' | 'guide' | 'concentrate' | 'ion-ratios' | 'mixer';
 type ConcentrateMode = 'builder' | 'lotus';
 
 // Ratio matching remains implemented for saved/imported sessions, but the
@@ -884,6 +886,30 @@ export function volumeToLiters(value: string | number, unit: VolumeUnit): number
   const parsed = typeof value === 'number' ? value : parseFloat(value);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return unit === 'gallons' ? parsed * US_GALLON_IN_LITERS : parsed;
+}
+
+function waterPlanToMixerSource(plan: WaterPlan): WaterMixerSavedSource {
+  const snapshot = plan.snapshot;
+  const batchMl = volumeToLiters(snapshot.liters, snapshot.volumeUnit) * 1000;
+  const entries: MineralWaterEntry[] = [...snapshot.mineralWaters, ...snapshot.additionWaters].map(entry => ({
+    id: entry.id,
+    name: entry.name,
+    ions: entry.ions,
+    metadata: entry.metadata,
+    volumeMl: entry.volumeMl,
+    sourceLocalId: entry.sourceLocalId,
+  }));
+  const savedSaltTargets = Object.fromEntries(
+    SALTS.map((salt, index) => [salt.id, num(snapshot.rows[index]?.target ?? '')]),
+  );
+  return {
+    id: `plan:${plan.id}`,
+    name: plan.name,
+    sourceKind: 'saved-recipe',
+    sourceId: `plan:${plan.id}`,
+    ions: computeWatermancerFinalIons(entries, batchMl, savedSaltTargets),
+    provenance: snapshot.nerdLevel === 'watermancer' ? 'Saved Watermancer session' : 'Saved Alchemist session',
+  };
 }
 
 export function litersToVolumeInput(liters: string | number, unit: VolumeUnit): string {
@@ -2328,6 +2354,7 @@ function App() {
   const [communityModalOpen, setCommunityModalOpen] = useState(false);
   const [communityWaters, setCommunityWaters] = useState<CommunityWater[]>([]);
   const [communityLoading, setCommunityLoading] = useState(false);
+  const [communityLoadError, setCommunityLoadError] = useState<string | null>(null);
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
   const communityWatersRequestRef = useRef<Promise<void> | null>(null);
   const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
@@ -2343,11 +2370,13 @@ function App() {
       setCommunityLoading(true);
       try {
         const resp = await fetch(`${API_BASE}/api/waters`);
-        if (resp.ok) {
-          const data = await resp.json();
-          setCommunityWaters(data.waters ?? []);
-        }
-      } catch { /* server may be down */ }
+        if (!resp.ok) throw new Error(`Water catalog request failed (${resp.status})`);
+        const data = await resp.json();
+        setCommunityWaters(data.waters ?? []);
+        setCommunityLoadError(null);
+      } catch {
+        setCommunityLoadError('The community water catalog is unavailable right now.');
+      }
       finally {
         setCommunityWatersLoaded(true);
         setCommunityLoading(false);
@@ -2431,11 +2460,6 @@ function App() {
    const [watermancerDoseInputDrafts, setWatermancerDoseInputDrafts] = useState<Record<string, string>>({});
    const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
-  const [watermancerWorkflowRailPinned, setWatermancerWorkflowRailPinned] = useState(false);
-  const watermancerWorkflowRailRef = useRef<HTMLDivElement>(null);
-  const watermancerWorkflowRailPinnedRef = useRef(false);
-  const watermancerWorkflowRailHeightRef = useRef(0);
-  const watermancerWorkflowRailTriggerRef = useRef<number | null>(null);
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -2680,62 +2704,6 @@ function App() {
       formIdx: recipe.formIdx[salt.id] ?? salt.defaultFormIdx ?? 0,
     })));
   };
-  const scrollToWatermancerStage = (
-    stage: 'target' | 'waters' | 'salts' | 'match' | 'closest-match' | 'final-mixture',
-  ) => {
-    const section = document.querySelector<HTMLElement>(`[data-watermancer-stage="${stage}"]`);
-    if (!section) return;
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.setTimeout(() => section.focus({ preventScroll: true }), 450);
-  };
-  useEffect(() => {
-    const rail = watermancerWorkflowRailRef.current;
-    if (!showWatermancer || !rail) {
-      watermancerWorkflowRailPinnedRef.current = false;
-      setWatermancerWorkflowRailPinned(false);
-      watermancerWorkflowRailHeightRef.current = 0;
-      watermancerWorkflowRailTriggerRef.current = null;
-      return;
-    }
-
-    let frame = 0;
-    const updateRailPosition = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        const isWideScreen = window.matchMedia('(min-width: 1280px)').matches;
-        if (!isWideScreen) {
-          watermancerWorkflowRailPinnedRef.current = false;
-          watermancerWorkflowRailTriggerRef.current = null;
-          watermancerWorkflowRailHeightRef.current = 0;
-          setWatermancerWorkflowRailPinned(false);
-          return;
-        }
-
-        const rect = rail.getBoundingClientRect();
-        if (!watermancerWorkflowRailPinnedRef.current && rect.height > 0) {
-          watermancerWorkflowRailHeightRef.current = rect.height;
-          watermancerWorkflowRailTriggerRef.current = window.scrollY + rect.bottom;
-        }
-        const shouldPin = watermancerWorkflowRailPinnedRef.current
-          ? window.scrollY >= (watermancerWorkflowRailTriggerRef.current ?? window.scrollY)
-          : rect.bottom <= 0;
-        if (watermancerWorkflowRailPinnedRef.current !== shouldPin) {
-          watermancerWorkflowRailPinnedRef.current = shouldPin;
-          setWatermancerWorkflowRailPinned(shouldPin);
-        }
-      });
-    };
-
-    updateRailPosition();
-    window.addEventListener('scroll', updateRailPosition, { passive: true });
-    window.addEventListener('resize', updateRailPosition);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', updateRailPosition);
-      window.removeEventListener('resize', updateRailPosition);
-    };
-  }, [showWatermancer]);
-
   // Weighted-average concentrations across all bottled water sources. Base
   // water and addition water are both part of the final batch composition.
   const combinedBottledIons = useMemo(() => {
@@ -2790,6 +2758,17 @@ function App() {
     () => computeIonTotals(saltTargets, {}, 1),
     [saltTargets],
   );
+  const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(() => (
+    savedPlans
+      .filter(plan => !isAutoSavedWaterPlan(plan))
+      .map(waterPlanToMixerSource)
+  ), [savedPlans]);
+  const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
+    const parsed = await readWaterMixerImportFile(file);
+    if (parsed.kind === 'error') return { error: parsed.message };
+    if (parsed.kind === 'source') return { source: parsed.source, provenance: parsed.provenance };
+    return { source: waterPlanToMixerSource(parsed.plan) };
+  }, []);
   const allRecipesForWatermancer = useMemo(
     () => [...RECIPES, ...savedRecipes],
     [savedRecipes],
@@ -5049,6 +5028,16 @@ function App() {
             <button
               type="button"
               role="tab"
+              aria-selected={appTab === 'mixer'}
+              onClick={() => setAppTab('mixer')}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'mixer' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <Beaker className="h-3.5 w-3.5" aria-hidden="true" />
+              Mixer
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={appTab === 'guide'}
               onClick={() => setAppTab('guide')}
               className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
@@ -5061,6 +5050,27 @@ function App() {
          </div>
        </div>
   );
+
+  if (appTab === 'mixer') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-7xl flex-col">
+            {appHeader}
+            <WaterMixer
+              savedSources={mixerSavedSources}
+              localWaters={localWaters}
+              communityWaters={communityWaters.filter(water => water.shared === 'yes')}
+              databaseLoading={communityLoading}
+              databaseError={communityLoadError}
+              onLoadCommunityWaters={loadCommunityWaters}
+              onImportRecipeFile={handleImportMixerRecipeFile}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (appTab === 'ion-ratios') {
     return (
@@ -5244,61 +5254,6 @@ function App() {
              </div>
           </div>
         </div>
-
-          {showWatermancer && (
-            <div
-              ref={watermancerWorkflowRailRef}
-              className="relative"
-              style={{
-                minHeight: watermancerWorkflowRailPinned && watermancerWorkflowRailHeightRef.current > 0
-                  ? `${watermancerWorkflowRailHeightRef.current}px`
-                  : undefined,
-              }}
-            >
-              <nav
-                aria-label="Watermancer workflow"
-                className={`workflow-rail rounded-2xl border border-indigo-400/20 bg-slate-950/90 px-3 py-3 shadow-sm backdrop-blur-xl ${
-                  watermancerWorkflowRailPinned
-                    ? 'xl:fixed xl:right-5 xl:top-1/2 xl:z-40 xl:w-48 xl:-translate-y-1/2'
-                    : ''
-                }`}
-              >
-                <ol className={`grid grid-cols-2 gap-2 sm:grid-cols-6 ${watermancerWorkflowRailPinned ? 'xl:grid-cols-1' : ''}`}>
-                  {[
-                    { number: '1', label: 'Set target', stage: 'target' as const, complete: true },
-                    { number: '2', label: 'Add waters', stage: 'waters' as const, complete: mineralWaters.length + additionWaters.length > 0 },
-                    { number: '3', label: 'Add salts', stage: 'salts' as const, complete: watermancerUsedSaltIds.length > 0 },
-                    { number: '4', label: 'Choose route', stage: 'match' as const, complete: batchMl > 0 },
-                    { number: '5', label: 'Closest match', stage: 'closest-match' as const, complete: batchMl > 0 },
-                    { number: '6', label: 'Final mixture', stage: 'final-mixture' as const, complete: batchMl > 0 },
-                  ].map(step => (
-                    <li
-                      key={step.number}
-                      className={`rounded-xl border text-[11px] ${
-                        step.complete
-                          ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
-                          : 'border-slate-700/60 bg-slate-900/35 text-slate-500'
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => scrollToWatermancerStage(step.stage)}
-                         className="flex min-h-10 w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60"
-                        aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
-                      >
-                        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                          step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
-                        }`}>
-                          {step.number}
-                        </span>
-                        <span className="truncate">{step.label}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </nav>
-            </div>
-          )}
 
           {showWatermancer && (
            <div className="order-1 scroll-mt-4 outline-none" data-watermancer-stage="target" tabIndex={-1}>
@@ -5998,7 +5953,7 @@ function App() {
                  title="Find the closest database water by ion profile"
                >
                  <Gauge className="w-3.5 h-3.5" />
-                 Compare ions
+              Compare water
                </button>
              )}
             </div>}
@@ -6344,128 +6299,6 @@ function App() {
                 </div>
               </div>
             ))}
-
-             {/* Coverage bars — recipe targets or active profile safe limits */}
-            {batchMl > 0 && (
-              <details className="group/coverage border-t border-slate-700/40 pt-4">
-                <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:text-slate-200 [&::-webkit-details-marker]:hidden">
-                  <span className="text-slate-600 transition-transform group-open/coverage:rotate-90">▶</span>
-                  <span>
-                    {noRecipeSelected
-                      ? `Mineral water coverage of ${activeProfile.name} safe limits`
-                      : `Mineral water coverage of ${activeRecipe?.name ?? 'Custom'}`}
-                  </span>
-                </summary>
-                <div className="mt-2.5 space-y-2.5">
-                {ACTIVE_ION_IDS.map(id => {
-                  const ion = ION_MAP[id];
-                   const target = autoFillTargets[id] ?? 0;
-                  const covered = bottledIons[id] ?? 0;
-                  const pct = target > 0 ? Math.min((covered / target) * 100, 100) : 0;
-                   const profileRange = activeProfile.ranges[id];
-                   const profileGreenMax = profileRange.greenMax;
-                   const profileYellowPercent = profileGreenMax > 0
-                     ? (profileRange.yellowMax / profileGreenMax) * 100
-                     : 100;
-                   const profilePercent = profileGreenMax > 0
-                     ? (covered / profileGreenMax) * 100
-                     : 0;
-                   // Keep enough track beyond the green ceiling to show
-                   // over-100% values while preserving both profile markers.
-                   const profileScalePercent = Math.max(100, profileYellowPercent, profilePercent);
-                   const profileFillPercent = profileScalePercent > 0
-                     ? Math.min((profilePercent / profileScalePercent) * 100, 100)
-                     : 0;
-                   const profileGreenMarkerPercent = profileScalePercent > 0
-                     ? Math.min((100 / profileScalePercent) * 100, 100)
-                     : 100;
-                   const profileYellowMarkerPercent = profileScalePercent > 0
-                     ? Math.min((profileYellowPercent / profileScalePercent) * 100, 100)
-                     : 100;
-                  // Coverage is displayed to one decimal place, so classify
-                  // against that same precision instead of exposing tiny
-                  // floating-point differences (e.g. 3.9999 / 4.0) as partial.
-                  const coverageTolerance = 0.05;
-                  const overshoot = target > 0 && covered > target + coverageTolerance;
-                  const level: 'none' | 'partial' | 'full' | 'overshoot' =
-                    overshoot ? 'overshoot' :
-                    target > 0 && covered >= target - coverageTolerance ? 'full' :
-                    covered > 0 ? 'partial' : 'none';
-                  const textColor = level === 'overshoot' ? 'text-rose-300' : level === 'full' ? 'text-emerald-300' : level === 'partial' ? 'text-sky-300' : 'text-slate-500';
-                  const label = level === 'overshoot'
-                    ? `Mineral water overshoots by ${(covered - target).toFixed(1)} ppm`
-                    : level === 'full'
-                     ? `${covered.toFixed(1)} ppm — ${noRecipeSelected ? 'safe limit' : 'salt target'} of ${target.toFixed(1)} reached`
-                    : level === 'partial'
-                     ? `${covered.toFixed(1)} ppm of ${target.toFixed(1)} ${noRecipeSelected ? 'safe limit' : 'target'} covered from mineral water`
-                    : target > 0
-                     ? noRecipeSelected
-                       ? `Safe limit: ${target.toFixed(1)} ppm — none from mineral water`
-                       : `Needs ${target.toFixed(1)} ppm from salts — none from mineral water`
-                     : noRecipeSelected ? 'No safe limit set' : 'No salt target set';
-                  return (
-                     <div
-                       key={id}
-                       className="flex items-center gap-3"
-                        style={ionVisualStyle(id)}
-                     >
-                       <span className="w-20 shrink-0 text-xs font-semibold text-[color:var(--ion-fg)]" title={ion.name}>{ion.formula}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                           <div
-                            className="group/profile-coverage-bar relative min-w-0 flex-1 cursor-help outline-none"
-                             tabIndex={0}
-                             role="img"
-                            aria-label={`${ion.name}: hover comparison with ${activeProfile.name} range`}
-                            title={`Hover to compare ${ion.name} with ${activeProfile.name} range`}
-                           >
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-700/60 transition-opacity group-hover/profile-coverage-bar:hidden group-focus/profile-coverage-bar:hidden">
-                               <div
-                                 className="h-full rounded-full transition-all"
-                                 style={{ width: `${pct}%`, backgroundColor: 'var(--ion-bar)', boxShadow: '0 0 10px var(--ion-shadow)' }}
-                               />
-                             </div>
-                             <div
-                               className="relative hidden h-3 overflow-hidden rounded-full bg-slate-700/60 ring-1 ring-indigo-300/20 group-hover/profile-coverage-bar:block group-focus/profile-coverage-bar:block"
-                               aria-hidden="true"
-                             >
-                               <div
-                                 className="relative h-full rounded-full bg-emerald-400 transition-all"
-                                 style={{ width: `${profileFillPercent}%` }}
-                               />
-                               <div
-                                 className="absolute inset-y-0 w-[2px] bg-emerald-100 shadow-[0_0_7px_1px_rgba(167,243,208,0.95)]"
-                                 style={{ left: `${profileGreenMarkerPercent}%` }}
-                               />
-                               <div
-                                 className="absolute inset-y-0 w-[2px] bg-rose-200 shadow-[0_0_7px_1px_rgba(253,164,175,0.95)]"
-                                 style={{ left: `${profileYellowMarkerPercent}%` }}
-                               />
-                               <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tabular-nums text-slate-950">
-                                 {Math.round(profilePercent)}%
-                               </span>
-                             </div>
-                          </div>
-                           <span className="w-12 shrink-0 text-right text-xs font-medium tabular-nums text-slate-100">
-                            {covered.toFixed(1)}
-                          </span>
-                          <span className="text-xs text-slate-500 shrink-0">/ {target.toFixed(1)} ppm</span>
-                        </div>
-                        <div className={`text-[11px] mt-0.5 ${textColor}`}>
-                          {label}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                </div>
-              </details>
-            )}
-            {mineralWaters.length > 0 && batchMl <= 0 && (
-              <div className="border-t border-slate-700/40 pt-4">
-                <p className="text-xs text-slate-500 italic">Set a batch volume above to see coverage.</p>
-              </div>
-            )}
 
              {/* Alchemist recommendation — simple recipe completion view */}
              {showAlchemist && batchMl > 0 && (
@@ -13348,6 +13181,8 @@ function BrewerRecipeStepsModal({
         })
         .filter((entry): entry is readonly [string, { target: string; formIdx: number }] => entry !== null),
     ),
+    finishedWaterIons: finalProfileIons,
+    finishedWaterMetadata: { tds: finalProfileTds },
   });
   const waterStepStyles = [
     'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',
@@ -13412,7 +13247,10 @@ function BrewerRecipeStepsModal({
       const rendered = buildRecipeShareCardSvg(shareCardModel);
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
-      downloadBlob(new Blob([packagedPng], { type: 'image/png' }), 'coffee-water-recipe.WATER.png');
+       downloadBlob(
+         new Blob([packagedPng], { type: 'image/png' }),
+         `${recipeFilenameSlug(recipeName !== 'Custom' ? recipeName : 'Mineral recipe')}.WATER.png`,
+       );
     } catch {
       setSaveImageError(true);
     } finally {

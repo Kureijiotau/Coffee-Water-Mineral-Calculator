@@ -36,7 +36,7 @@ function readPngDimensions(bytes: Buffer): { width: number; height: number } {
 }
 
 async function captureDownload(download: Download): Promise<Buffer> {
-  expect(download.suggestedFilename()).toBe('coffee-water-recipe.png');
+  expect(download.suggestedFilename()).toBe('mineral-recipe.WATER.png');
   const failure = await download.failure();
   expect(failure).toBeNull();
   const path = await download.path();

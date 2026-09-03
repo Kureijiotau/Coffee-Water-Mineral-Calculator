@@ -30,6 +30,7 @@ Object.defineProperty(globalThis, 'localStorage', {
 import {
   serializeRecipeFile,
   parseRecipeFile,
+  recipeFilenameSlug,
   RECIPE_FILE_KIND,
 } from './recipes';
 
@@ -128,6 +129,16 @@ describe('serializeRecipeFile', () => {
     });
     const parsed = JSON.parse(json);
     expect(parsed.splitMls).toEqual(splitMls);
+  });
+});
+
+describe('recipeFilenameSlug', () => {
+  it('turns a saved recipe name into a readable safe filename slug', () => {
+    expect(recipeFilenameSlug('  Bright & Juicy / Espresso  ')).toBe('bright-juicy-espresso');
+  });
+
+  it('uses the fallback when the recipe has no filename-safe name', () => {
+    expect(recipeFilenameSlug('---', 'water-recipe')).toBe('water-recipe');
   });
 });
 

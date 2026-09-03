@@ -122,12 +122,6 @@ body {
     0 0 0 1px rgb(255 255 255 / 0.035) inset;
 }
 
-.workflow-rail {
-  box-shadow:
-    0 16px 32px -26px rgb(2 6 23 / 0.9),
-    0 0 0 1px rgb(129 140 248 / 0.06) inset;
-}
-
 .recipe-steps-fab {
   bottom: max(1rem, env(safe-area-inset-bottom));
 }
@@ -288,6 +282,12 @@ body {
   min-width: 0;
 }
 
+.watermancer-salt-table__use {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .watermancer-salt-table__hydration select {
   min-height: 2rem;
   text-align: center;
@@ -401,6 +401,10 @@ body {
     text-align: left;
   }
 
+  .watermancer-salt-table__header > :first-child {
+    padding-left: 2.25rem;
+  }
+
   .watermancer-salt-table__hydration,
   .watermancer-salt-table__dose,
   .watermancer-salt-table__use {
@@ -436,16 +440,6 @@ body {
     min-height: 2.75rem;
   }
 
-  .workflow-rail {
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: 1rem;
-    mask-image: linear-gradient(to right, black 84%, transparent 100%);
-  }
-
-  .workflow-rail ol > li {
-    scroll-snap-align: start;
-  }
-
   .app-header__bar {
     align-items: flex-start;
   }
@@ -464,17 +458,6 @@ body {
 
   .app-header__tabs > button {
     flex: 1 1 0;
-  }
-
-  .workflow-rail {
-    overflow-x: auto;
-    scrollbar-color: rgb(99 102 241 / 0.55) transparent;
-    scrollbar-width: thin;
-  }
-
-  .workflow-rail ol {
-    grid-template-columns: repeat(6, minmax(6.5rem, 1fr));
-    min-width: 42rem;
   }
 
   .concentrate-workspace {

@@ -610,7 +610,9 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     });
   });
   cursor = metricTop + 96;
-  const ratio = model.analysis.kh > 0 ? `${(model.analysis.gh / model.analysis.kh).toFixed(2)}:1` : '—';
+  const ratio = model.analysis.kh > 0
+    ? `${(model.analysis.gh / model.analysis.kh).toFixed(2)}:1`
+    : model.analysis.gh > 0 ? '∞:1' : '—';
   svg += svgText(innerX, cursor + 4, `Estimated final TDS: ${model.analysis.tds.toFixed(0)} ppm`, {
     fill: '#47737a',
     size: 11,
