@@ -912,6 +912,21 @@ function waterPlanToMixerSource(plan: WaterPlan): WaterMixerSavedSource {
   };
 }
 
+function watermancerProfileToMixerSource(profile: WatermancerProfile): WaterMixerSavedSource {
+  return {
+    id: `watermancer-profile:${profile.id}`,
+    name: profile.name,
+    sourceKind: 'saved-recipe',
+    sourceId: `watermancer-profile:${profile.id}`,
+    ions: Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, Math.max(Number(profile.targets[id] ?? 0), 0)]),
+    ) as Record<IonId, number>,
+    provenance: profile.source
+      ? `Watermancer saved profile · ${profile.source}`
+      : 'Watermancer saved profile',
+  };
+}
+
 export function litersToVolumeInput(liters: string | number, unit: VolumeUnit): string {
   const parsed = typeof liters === 'number' ? liters : parseFloat(liters);
   if (!Number.isFinite(parsed) || parsed < 0) return '';
@@ -2759,10 +2774,13 @@ function App() {
     [saltTargets],
   );
   const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(() => (
-    savedPlans
-      .filter(plan => !isAutoSavedWaterPlan(plan))
-      .map(waterPlanToMixerSource)
-  ), [savedPlans]);
+    [
+      ...savedPlans
+        .filter(plan => !isAutoSavedWaterPlan(plan))
+        .map(waterPlanToMixerSource),
+      ...wmProfiles.map(watermancerProfileToMixerSource),
+    ]
+  ), [savedPlans, wmProfiles]);
   const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
     const parsed = await readWaterMixerImportFile(file);
     if (parsed.kind === 'error') return { error: parsed.message };
