@@ -28,6 +28,10 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await completeManualSource(page, 'a');
   await completeManualSource(page, 'b');
   await expect(page.getByTestId('status-mixer-result')).toHaveText('Calculated');
+  for (const ionId of activeIonIds) {
+    await expect(page.getByTestId(`text-mixer-source-ion-a-${ionId}`)).toBeVisible();
+    await expect(page.getByTestId(`text-mixer-source-ion-b-${ionId}`)).toBeVisible();
+  }
 
   const sodiumReading = page.getByTestId('text-mixer-final-ion-sodium');
   await expect(sodiumReading).toContainText('0.00');
