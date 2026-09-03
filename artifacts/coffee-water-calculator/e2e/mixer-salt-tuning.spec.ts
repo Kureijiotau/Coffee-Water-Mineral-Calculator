@@ -49,3 +49,32 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await expect(page.getByTestId('text-mixer-final-ion-magnesium')).not.toContainText('0.00');
   await expect(page.getByTestId('list-mixer-recipe-steps')).toContainText('Add final-blend salts');
 });
+
+test('offers saved Watermancer ion profiles in the finished-source picker', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('cwm.watermancerProfiles', JSON.stringify([{
+      id: 'saved-profile-for-mixer',
+      name: 'Saved Light Roast Profile',
+      targets: {
+        calcium: 12,
+        magnesium: 4,
+        sodium: 3,
+        potassium: 1,
+        bicarbonate: 18,
+        sulfate: 6,
+        chloride: 9,
+        citrates: 0,
+        silica: 2,
+      },
+      source: 'Browser regression',
+    }]));
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Mixer', exact: true }).click();
+
+  const picker = page.getByTestId('select-mixer-saved-source-a');
+  await expect(picker.locator('option')).toContainText('Saved Light Roast Profile · Watermancer saved profile · Browser regression');
+  await picker.selectOption('watermancer-profile:saved-profile-for-mixer');
+  await expect(page.getByTestId('text-mixer-source-name-a')).toHaveText('Saved Light Roast Profile');
+  await expect(page.getByTestId('text-mixer-source-ion-a-calcium')).toContainText('12.00');
+});
