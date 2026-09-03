@@ -1,4 +1,12 @@
-import { ACTIVE_ION_IDS, IONS, computeGH, computeKH, type IonId } from '@/waterData';
+import {
+  ACTIVE_ION_IDS,
+  IONS,
+  SALTS,
+  computeGH,
+  computeIonTotals,
+  computeKH,
+  type IonId,
+} from '@/waterData';
 import type { WaterMetadata } from '@/localWaters';
 
 export type WaterMixSourceKind = 'saved-recipe' | 'database' | 'manual';
@@ -17,6 +25,10 @@ export type WaterMixInput = {
   sourceB: WaterMixSourceSnapshot;
   volumeAMl: number;
   volumeBMl: number;
+  /** Anhydrous-equivalent salt targets in ppm for the final blended volume. */
+  saltTargets?: Record<string, number>;
+  /** Hydration form indexes used to convert canonical targets to physical doses. */
+  formIdxBySaltId?: Record<string, number>;
 };
 
 export type WaterMixValidationCode =
@@ -63,6 +75,8 @@ export type WaterMixRecipe = {
   volumeBMl: number;
   finalIons: Record<IonId, number>;
   finalMetadata?: WaterMetadata;
+  saltTargets?: Record<string, number>;
+  formIdxBySaltId?: Record<string, number>;
 };
 
 export const WATER_MIXER_STORAGE_KEY = 'cwm.waterMixerRecipes';
@@ -80,6 +94,28 @@ function emptyIonMap(): Record<IonId, number> {
 
 function finiteNonNegative(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+function normalizeSaltTargets(value: unknown): Record<string, number> {
+  if (!isRecord(value)) return {};
+  const knownSaltIds = new Set(SALTS.map(salt => salt.id));
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([saltId, target]) => knownSaltIds.has(saltId) && finiteNonNegative(target))
+      .map(([saltId, target]) => [saltId, target as number]),
+  ) as Record<string, number>;
+}
+
+function normalizeSaltFormIndexes(value: unknown): Record<string, number> {
+  if (!isRecord(value)) return {};
+  const saltById = new Map(SALTS.map(salt => [salt.id, salt]));
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([saltId, formIdx]) => {
+      const salt = saltById.get(saltId);
+      if (!salt || !Number.isInteger(formIdx) || Number(formIdx) < 0 || Number(formIdx) >= salt.hydrationForms.length) return [];
+      return [[saltId, Number(formIdx)]];
+    }),
+  );
 }
 
 /**
@@ -189,6 +225,8 @@ export function calculateWaterMix(input: Partial<WaterMixInput>): WaterMixResult
         finalIons[id] = (safeA * a + safeB * b) / total;
       }
     }
+    const saltIons = computeIonTotals(normalizeSaltTargets(input.saltTargets), {}, 1);
+    for (const id of allIonIds()) finalIons[id] += saltIons[id] ?? 0;
   }
   const tds = allIonIds().reduce((sum, id) => sum + finalIons[id], 0);
   const valid = errors.length === 0;
@@ -269,6 +307,18 @@ export function isValidWaterMixRecipe(value: unknown): value is WaterMixRecipe {
     || !isRecord(value.finalIons)) return false;
   const finalIons = value.finalIons;
   if (!allIonIds().every(id => finiteNonNegative(finalIons[id]))) return false;
+  if (value.saltTargets !== undefined && !isRecord(value.saltTargets)) return false;
+  if (value.saltTargets !== undefined && Object.entries(value.saltTargets).some(([saltId, target]) => (
+    !SALTS.some(salt => salt.id === saltId) || !finiteNonNegative(target)
+  ))) return false;
+  if (value.formIdxBySaltId !== undefined && !isRecord(value.formIdxBySaltId)) return false;
+  if (value.formIdxBySaltId !== undefined && Object.entries(value.formIdxBySaltId).some(([saltId, formIdx]) => {
+    const salt = SALTS.find(item => item.id === saltId);
+    return !salt
+      || !Number.isInteger(formIdx)
+      || Number(formIdx) < 0
+      || Number(formIdx) >= salt.hydrationForms.length;
+  })) return false;
   return !value.finalMetadata || (
     isRecord(value.finalMetadata)
     && Object.values(value.finalMetadata).every(item => typeof item === 'number' && Number.isFinite(item) && item >= 0)
@@ -283,6 +333,8 @@ export function createWaterMixRecipe(
 ): WaterMixRecipe | null {
   const cleanName = name.trim();
   if (!cleanName || !result.valid) return null;
+  const saltTargets = normalizeSaltTargets(input.saltTargets);
+  const formIdxBySaltId = normalizeSaltFormIndexes(input.formIdxBySaltId);
   return {
     id: newWaterMixRecipeId(),
     name: cleanName,
@@ -294,6 +346,12 @@ export function createWaterMixRecipe(
     volumeBMl: input.volumeBMl,
     finalIons: { ...result.finalIons },
     ...(result.finalMetadata ? { finalMetadata: { ...result.finalMetadata } } : {}),
+    ...(Object.keys(saltTargets).length > 0
+      ? { saltTargets }
+      : {}),
+    ...(Object.keys(formIdxBySaltId).length > 0
+      ? { formIdxBySaltId }
+      : {}),
   };
 }
 
@@ -305,7 +363,11 @@ export function serializeWaterMixRecipeFile(input: {
   volumeBMl: number;
   finalIons: Record<IonId, number>;
   finalMetadata?: WaterMetadata;
+  saltTargets?: Record<string, number>;
+  formIdxBySaltId?: Record<string, number>;
 }): string {
+  const saltTargets = normalizeSaltTargets(input.saltTargets);
+  const formIdxBySaltId = normalizeSaltFormIndexes(input.formIdxBySaltId);
   return JSON.stringify({
     kind: WATER_MIX_FILE_KIND,
     version: WATER_MIX_FILE_VERSION,
@@ -316,6 +378,12 @@ export function serializeWaterMixRecipeFile(input: {
     volumeBMl: input.volumeBMl,
     finalIons: { ...input.finalIons },
     ...(input.finalMetadata ? { finalMetadata: { ...input.finalMetadata } } : {}),
+    ...(Object.keys(saltTargets).length > 0
+      ? { saltTargets }
+      : {}),
+    ...(Object.keys(formIdxBySaltId).length > 0
+      ? { formIdxBySaltId }
+      : {}),
   }, null, 2);
 }
 
