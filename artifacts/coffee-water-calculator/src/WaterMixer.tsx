@@ -1,6 +1,14 @@
 import { useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, Database, Download, FlaskConical, RotateCcw, Save, Search, SlidersHorizontal, Trash2, Upload, Waves, X } from 'lucide-react';
-import { ACTIVE_ION_IDS, ION_MAP, type IonId } from '@/waterData';
+import { Check, ChevronDown, Database, Download, FlaskConical, Minus, Plus, RotateCcw, Save, Search, SlidersHorizontal, Trash2, Upload, Waves, X } from 'lucide-react';
+import {
+  ACTIVE_ION_IDS,
+  ION_MAP,
+  SALTS,
+  computeSaltIonPpmTotal,
+  computeSaltMg,
+  computeSaltTargetPpm,
+  type IonId,
+} from '@/waterData';
 import type { LocalWater, WaterMetadata } from '@/localWaters';
 import {
   calculateWaterMix,
@@ -71,10 +79,46 @@ const blankSnapshot = (name: string, sourceKind: WaterMixSourceKind, ions: Parti
 
 const formatReading = (value: number): string => value < 10 ? value.toFixed(2) : value.toFixed(1);
 const formatVolume = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(1);
+const formatSaltDose = (value: number): string => value < 10 ? value.toFixed(2) : value.toFixed(1);
 const formatGhKhRatio = (gh: number, kh: number): string => {
   if (kh > 0 && Number.isFinite(gh / kh)) return `${(gh / kh).toFixed(2)}:1`;
   return gh > 0 ? '∞:1' : '—';
 };
+
+const MIXER_MEME_SALT_IDS = new Set(['calact', 'mggly']);
+
+type MixerSaltStep = {
+  name: string;
+  formula: string;
+  form: string;
+  amount: string;
+  contributionPpm: number;
+};
+
+function buildMixerSaltSteps(
+  saltTargets: Record<string, number>,
+  formIdxBySaltId: Record<string, number>,
+  totalVolumeMl: number,
+): MixerSaltStep[] {
+  return SALTS.flatMap(salt => {
+    const target = Number(saltTargets[salt.id] ?? 0);
+    if (!Number.isFinite(target) || target <= 0 || totalVolumeMl <= 0) return [];
+    const formIdx = Math.min(
+      Math.max(0, formIdxBySaltId[salt.id] ?? salt.defaultFormIdx ?? 0),
+      Math.max(0, salt.hydrationForms.length - 1),
+    );
+    const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[0];
+    if (!form) return [];
+    const amount = computeSaltMg(target, totalVolumeMl / 1000, form.molarMass, salt.anhydrousMass);
+    return [{
+      name: salt.name,
+      formula: salt.formula,
+      form: form.label,
+      amount: `${formatSaltDose(amount)} mg`,
+      contributionPpm: computeSaltIonPpmTotal(salt.id, target),
+    }];
+  });
+}
 
 function manualIsComplete(card: CardState): boolean {
   return ACTIVE_ION_IDS.every(id => {
@@ -413,20 +457,213 @@ function SourceCard({
   );
 }
 
+function MixerSaltTable({
+  saltTargets,
+  formIdxBySaltId,
+  doseDrafts,
+  totalVolumeMl,
+  showMemeSalts,
+  onToggleSalt,
+  onFormChange,
+  onDoseChange,
+  onDoseBlur,
+  onReset,
+  onToggleMemeSalts,
+}: {
+  saltTargets: Record<string, number>;
+  formIdxBySaltId: Record<string, number>;
+  doseDrafts: Record<string, string>;
+  totalVolumeMl: number;
+  showMemeSalts: boolean;
+  onToggleSalt: (saltId: string) => void;
+  onFormChange: (saltId: string, formIdx: number) => void;
+  onDoseChange: (saltId: string, value: string) => void;
+  onDoseBlur: (saltId: string) => void;
+  onReset: () => void;
+  onToggleMemeSalts: () => void;
+}) {
+  const liters = totalVolumeMl / 1000;
+  const visibleSalts = SALTS.filter(salt => showMemeSalts || !MIXER_MEME_SALT_IDS.has(salt.id));
+
+  return (
+    <section className="rounded-2xl border border-indigo-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6" data-testid="panel-mixer-salts">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-indigo-200">
+            <FlaskConical className="h-4 w-4" aria-hidden="true" /> Final blend adjustment
+          </div>
+          <h2 className="mt-1 text-lg font-bold text-slate-100">Add salts to the final mixture</h2>
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-slate-400">
+            Fine-tune the blended water with manual final-batch doses. These salts are added after Water A and Water B are combined.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="rounded-lg border border-slate-600/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 transition hover:border-indigo-300/50 hover:bg-indigo-500/15 hover:text-indigo-200"
+          aria-label="Reset Mixer salt doses"
+          data-testid="button-reset-mixer-salts"
+        >
+          Reset salts
+        </button>
+      </div>
+
+      <div className="watermancer-salt-table mt-4 overflow-hidden rounded-xl border border-slate-700/60">
+        <div className="watermancer-salt-table__header hidden bg-slate-950/50 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+          <span className="text-left">Salt</span>
+          <span>Hydration form</span>
+          <span className="text-center">Final dose</span>
+          <span className="text-center">Use</span>
+        </div>
+        <div className="divide-y divide-slate-700/50">
+          {visibleSalts.map(salt => {
+            const formIdx = Math.min(
+              Math.max(0, formIdxBySaltId[salt.id] ?? salt.defaultFormIdx ?? 0),
+              Math.max(0, salt.hydrationForms.length - 1),
+            );
+            const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[0];
+            const target = Math.max(0, Number(saltTargets[salt.id] ?? 0));
+            const used = Object.prototype.hasOwnProperty.call(saltTargets, salt.id);
+            const activeMg = liters > 0 && target > 0 && form
+              ? computeSaltMg(target, liters, form.molarMass, salt.anhydrousMass)
+              : 0;
+            const doseValue = Object.prototype.hasOwnProperty.call(doseDrafts, salt.id)
+              ? doseDrafts[salt.id]
+              : (used ? formatSaltDose(activeMg) : '0');
+            return (
+              <div
+                key={salt.id}
+                className={`watermancer-salt-table__row bg-slate-900/25 ${used ? 'watermancer-salt-table__row--used' : ''}`}
+                data-testid={`row-mixer-salt-${salt.id}`}
+              >
+                <div className="watermancer-salt-table__salt flex items-center gap-2 text-left sm:justify-start">
+                  <span className={`h-2 w-2 shrink-0 rounded-full transition ${used ? 'bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]' : 'bg-slate-700'}`} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-100">{salt.name}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                      <span>{salt.formula}</span>
+                      <span>·</span>
+                      <span>{salt.ions.map(contribution => ION_MAP[contribution.ionId]?.name).filter(Boolean).join(' + ')}</span>
+                    </div>
+                  </div>
+                </div>
+                <label className="watermancer-salt-table__hydration flex items-center gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Hydration form</span>
+                  <select
+                    value={formIdx}
+                    onChange={event => onFormChange(salt.id, Number(event.target.value))}
+                    className="min-w-0 flex-1 cursor-pointer rounded-lg border border-cyan-300/20 bg-slate-950/70 px-2 py-1.5 text-[11px] font-medium text-slate-200 outline-none transition hover:border-cyan-300/45 focus:border-cyan-300/70 focus:ring-2 focus:ring-cyan-400/20"
+                    aria-label={`${salt.name} hydration form for Mixer`}
+                    data-testid={`select-mixer-salt-form-${salt.id}`}
+                  >
+                    {salt.hydrationForms.map((hydration, index) => (
+                      <option key={`${salt.id}-${index}`} value={index}>{hydration.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="watermancer-salt-table__dose">
+                  <span className="watermancer-salt-table__dose-label text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">Final dose</span>
+                  <div className="watermancer-salt-table__dose-controls">
+                    <button
+                      type="button"
+                      onClick={() => onDoseChange(salt.id, String(Math.max(0, activeMg - 1)))}
+                      disabled={!used || activeMg <= 0}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={`Decrease ${salt.name} Mixer dose by 1 mg`}
+                      data-testid={`button-decrease-mixer-salt-${salt.id}`}
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <div className="watermancer-salt-table__dose-value">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={doseValue}
+                        onFocus={() => onDoseChange(salt.id, doseValue)}
+                        onChange={event => onDoseChange(salt.id, event.target.value)}
+                        onBlur={() => onDoseBlur(salt.id)}
+                        onKeyDown={event => {
+                          if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E') event.preventDefault();
+                        }}
+                        disabled={!used}
+                        placeholder="0"
+                        className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`${salt.name} final dose in milligrams`}
+                        data-testid={`input-mixer-salt-dose-${salt.id}`}
+                      />
+                      <span className="watermancer-salt-table__dose-status text-[9px] font-semibold uppercase tracking-wider text-amber-300">
+                        {used ? 'Final blend' : ''}
+                      </span>
+                    </div>
+                    <span className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500">mg</span>
+                    <button
+                      type="button"
+                      onClick={() => onDoseChange(salt.id, String(activeMg + 1))}
+                      disabled={!used}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={`Increase ${salt.name} Mixer dose by 1 mg`}
+                      data-testid={`button-increase-mixer-salt-${salt.id}`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="watermancer-salt-table__use">
+                  <button
+                    type="button"
+                    onClick={() => onToggleSalt(salt.id)}
+                    aria-pressed={used}
+                    className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold shadow-sm transition active:scale-95 ${used ? 'border-emerald-400/60 bg-emerald-500/15 text-emerald-200 hover:bg-emerald-500/25' : 'border-slate-700 bg-slate-950/40 text-slate-500 hover:border-indigo-300/50 hover:bg-indigo-500/10 hover:text-indigo-200'}`}
+                    data-testid={`button-toggle-mixer-salt-${salt.id}`}
+                  >
+                    {used ? 'Use' : 'Not used'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[10px] leading-relaxed text-slate-500">
+          Dose is the physical salt mass for the current {formatVolume(totalVolumeMl)} mL final blend. Changing volume keeps the mineral target constant and updates the required mass.
+        </p>
+        <button
+          type="button"
+          onClick={onToggleMemeSalts}
+          className="rounded-lg border border-fuchsia-300/25 bg-fuchsia-500/10 px-3 py-1.5 text-[10px] font-semibold text-fuchsia-200 transition hover:border-fuchsia-200/60 hover:bg-fuchsia-500/20"
+          aria-pressed={showMemeSalts}
+          data-testid="button-toggle-mixer-meme-salts"
+        >
+          {showMemeSalts ? 'Hide specialty salts' : 'Show specialty salts'}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function MixerRecipeCardModal({
   name,
   sourceA,
   sourceB,
   result,
+  saltTargets,
+  formIdxBySaltId,
   onClose,
 }: {
   name: string;
   sourceA: WaterMixSourceSnapshot;
   sourceB: WaterMixSourceSnapshot;
   result: WaterMixResult;
+  saltTargets: Record<string, number>;
+  formIdxBySaltId: Record<string, number>;
   onClose: () => void;
 }) {
   const recipeName = name.trim() || 'Mixer blend';
+  const saltSteps = useMemo(
+    () => buildMixerSaltSteps(saltTargets, formIdxBySaltId, result.totalVolumeMl),
+    [formIdxBySaltId, result.totalVolumeMl, saltTargets],
+  );
   const model = useMemo(() => buildRecipeShareCardSvg({
     recipeName,
     batchLabel: `${formatVolume(result.totalVolumeMl)} mL finished-water blend`,
@@ -434,10 +671,14 @@ function MixerRecipeCardModal({
       { label: 'Water A', name: sourceA.name, amount: `${formatVolume(result.volumeAMl)} mL` },
       { label: 'Water B', name: sourceB.name, amount: `${formatVolume(result.volumeBMl)} mL` },
     ],
-    saltTitle: 'Combine the finished waters',
-    saltIntro: 'Measure both finished waters by volume and combine them. The Mixer uses volume-weighted final-ion averages only.',
-    saltSteps: [],
-    finalStep: `Verify the final volume is ${formatVolume(result.totalVolumeMl)} mL, confirm the blend is clear, and proceed with your brew method.`,
+    saltTitle: saltSteps.length > 0 ? 'Add final-blend salts' : 'Combine the finished waters',
+    saltIntro: saltSteps.length > 0
+      ? 'After combining both waters, add these physical salt doses to tune the final mixture.'
+      : 'Measure both finished waters by volume and combine them. The Mixer uses volume-weighted final-ion averages only.',
+    saltSteps,
+    finalStep: saltSteps.length > 0
+      ? `Verify the final volume is ${formatVolume(result.totalVolumeMl)} mL, dissolve all salts completely, and proceed with your brew method.`
+      : `Verify the final volume is ${formatVolume(result.totalVolumeMl)} mL, confirm the blend is clear, and proceed with your brew method.`,
     tdsTarget: 0,
     analysis: {
       ions: ACTIVE_ION_IDS.map(id => ({
@@ -455,7 +696,7 @@ function MixerRecipeCardModal({
       gh: result.gh,
       kh: result.kh,
     },
-  }), [recipeName, result, sourceA.name, sourceB.name]);
+  }), [recipeName, result, saltSteps, sourceA.name, sourceB.name]);
   const previewUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(model.svg)}`;
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -474,6 +715,8 @@ function MixerRecipeCardModal({
         volumeBMl: result.volumeBMl,
         finalIons: result.finalIons,
         finalMetadata: result.finalMetadata,
+         saltTargets,
+         formIdxBySaltId,
       }));
       const url = URL.createObjectURL(new Blob([packagedPng], { type: 'image/png' }));
       const link = document.createElement('a');
@@ -532,6 +775,22 @@ function MixerRecipeCardModal({
                     <div className="mt-2 font-mono text-sm font-bold text-emerald-200">{formatVolume(result.totalVolumeMl)} mL total</div>
                   </div>
                 </li>
+                {saltSteps.length > 0 && (
+                  <li className="flex gap-3 rounded-xl border border-indigo-400/20 bg-indigo-500/[0.06] p-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-400/20 text-xs font-bold text-indigo-100 ring-1 ring-indigo-300/20">4</span>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium text-slate-200">Add final-blend salts</div>
+                      <div className="mt-2 space-y-2">
+                        {saltSteps.map(step => (
+                          <div key={step.name} className="flex items-center justify-between gap-2 rounded-lg border border-indigo-300/20 bg-indigo-400/[0.08] px-2 py-1.5">
+                            <span className="min-w-0 truncate text-xs font-semibold text-indigo-100">{step.name} <span className="font-normal text-indigo-200/70">· {step.form}</span></span>
+                            <span className="shrink-0 font-mono text-sm font-bold text-indigo-100">{step.amount}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </li>
+                )}
               </ol>
               <button type="button" onClick={handleSave} disabled={isSaving} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-sky-200/70 bg-sky-400 px-4 py-3.5 text-sm font-bold text-slate-950 shadow-lg shadow-sky-950/30 transition hover:-translate-y-0.5 hover:bg-sky-300 disabled:cursor-wait disabled:opacity-60" data-testid="button-save-mixer-recipe-image">
                 <Download className="h-5 w-5" aria-hidden="true" /> {isSaving ? 'Saving share card…' : 'Save Recipe Image'}
@@ -565,6 +824,10 @@ export default function WaterMixer({
   const [volumeA, setVolumeA] = useState('250');
   const [volumeB, setVolumeB] = useState('250');
   const [recipeName, setRecipeName] = useState('');
+  const [saltTargets, setSaltTargets] = useState<Record<string, number>>({});
+  const [formIdxBySaltId, setFormIdxBySaltId] = useState<Record<string, number>>({});
+  const [saltDoseDrafts, setSaltDoseDrafts] = useState<Record<string, string>>({});
+  const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [storedRecipes, setStoredRecipes] = useState<WaterMixRecipe[]>(() => savedMixerRecipes ?? loadWaterMixRecipes());
@@ -592,7 +855,13 @@ export default function WaterMixer({
     sourceB: effectiveSourceB ?? undefined,
     volumeAMl: Number(volumeA),
     volumeBMl: Number(volumeB),
-  }), [effectiveSourceA, effectiveSourceB, volumeA, volumeB]);
+    saltTargets,
+    formIdxBySaltId,
+  }), [effectiveSourceA, effectiveSourceB, formIdxBySaltId, saltTargets, volumeA, volumeB]);
+  const mixerSaltSteps = useMemo(
+    () => buildMixerSaltSteps(saltTargets, formIdxBySaltId, result.totalVolumeMl),
+    [formIdxBySaltId, result.totalVolumeMl, saltTargets],
+  );
   const eligibleSources = useMemo<WaterMixerSavedSource[]>(() => [
     ...savedSources,
     ...importedSources,
@@ -667,6 +936,8 @@ export default function WaterMixer({
       sourceB: effectiveSourceB,
       volumeAMl: Number(volumeA),
       volumeBMl: Number(volumeB),
+      saltTargets,
+      formIdxBySaltId,
     }, result);
     if (!recipe) {
       setSaveMessage('Add a name before saving this blend.');
@@ -686,7 +957,52 @@ export default function WaterMixer({
     setVolumeA(String(recipe.volumeAMl));
     setVolumeB(String(recipe.volumeBMl));
     setRecipeName(recipe.name);
+    setSaltTargets(recipe.saltTargets ?? {});
+    setFormIdxBySaltId(recipe.formIdxBySaltId ?? {});
+    setSaltDoseDrafts({});
     setSaveMessage(`Reopened "${recipe.name}"`);
+  };
+
+  const updateMixerSaltDose = (saltId: string, value: string) => {
+    setSaltDoseDrafts(current => ({ ...current, [saltId]: value }));
+    const salt = SALTS.find(item => item.id === saltId);
+    if (!salt) return;
+    const formIdx = Math.min(
+      Math.max(0, formIdxBySaltId[saltId] ?? salt.defaultFormIdx ?? 0),
+      Math.max(0, salt.hydrationForms.length - 1),
+    );
+    const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[0];
+    const parsed = value.trim() === '' ? 0 : Number(value);
+    const liters = result.totalVolumeMl / 1000;
+    const target = form && Number.isFinite(parsed) && parsed >= 0
+      ? computeSaltTargetPpm(parsed, liters, form.molarMass, salt.anhydrousMass)
+      : 0;
+    setSaltTargets(current => ({ ...current, [saltId]: target }));
+  };
+
+  const toggleMixerSalt = (saltId: string) => {
+    setSaltTargets(current => {
+      if (Object.prototype.hasOwnProperty.call(current, saltId)) {
+        const next = { ...current };
+        delete next[saltId];
+        return next;
+      }
+      return { ...current, [saltId]: 0 };
+    });
+    setSaltDoseDrafts(current => {
+      const next = { ...current };
+      delete next[saltId];
+      return next;
+    });
+  };
+
+  const updateMixerSaltForm = (saltId: string, formIdx: number) => {
+    setFormIdxBySaltId(current => ({ ...current, [saltId]: formIdx }));
+    setSaltDoseDrafts(current => {
+      const next = { ...current };
+      delete next[saltId];
+      return next;
+    });
   };
 
   const statusMessage = result.errors[0]?.message ?? 'Ready to calculate.';
@@ -706,7 +1022,7 @@ export default function WaterMixer({
           </div>
            <div className="flex max-w-xs flex-col items-stretch gap-3 border-l border-slate-700 pl-4">
              <div className="text-[11px] leading-relaxed text-slate-500">
-               Volume-weighted composition only. No salt solver, no target matching, no hidden chemistry.
+                Volume-weighted composition with explicit final-batch salt adjustments. No target matching or hidden chemistry.
              </div>
              <button
                type="button"
@@ -772,6 +1088,22 @@ export default function WaterMixer({
               <ol className="space-y-3" data-testid="list-mixer-recipe-steps">
                 <li className="flex items-center gap-3"><span className="font-mono text-xs text-cyan-300">01</span><span className="text-sm text-slate-300">Add <strong className="font-mono text-slate-100">{formatVolume(result.volumeAMl)} mL</strong> Water A</span></li>
                 <li className="flex items-center gap-3"><span className="font-mono text-xs text-violet-300">02</span><span className="text-sm text-slate-300">Add <strong className="font-mono text-slate-100">{formatVolume(result.volumeBMl)} mL</strong> Water B</span></li>
+                {mixerSaltSteps.length > 0 && (
+                  <li className="flex items-start gap-3 border-t border-slate-700/60 pt-3">
+                    <span className="font-mono text-xs text-indigo-300">03</span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm text-slate-300">Add final-blend salts</span>
+                      <div className="mt-2 space-y-1.5">
+                        {mixerSaltSteps.map(step => (
+                          <div key={step.name} className="flex items-center justify-between gap-2 rounded-lg border border-indigo-300/20 bg-indigo-400/[0.06] px-2 py-1.5">
+                            <span className="min-w-0 truncate text-xs text-indigo-100">{step.name} <span className="text-indigo-200/60">· {step.form}</span></span>
+                            <strong className="shrink-0 font-mono text-xs text-indigo-100" data-testid={`text-mixer-step-salt-${step.name.toLowerCase().replaceAll(' ', '-')}`}>{step.amount}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </li>
+                )}
                 <li className="mt-4 flex items-center justify-between border-t border-slate-700/60 pt-3"><span className="text-sm font-semibold text-slate-200">Final volume</span><strong className="font-mono text-lg text-cyan-200" data-testid="text-mixer-final-volume">{formatVolume(result.totalVolumeMl)} mL</strong></li>
               </ol>
             ) : (
@@ -832,6 +1164,28 @@ export default function WaterMixer({
         </section>
       </div>
 
+      <MixerSaltTable
+        saltTargets={saltTargets}
+        formIdxBySaltId={formIdxBySaltId}
+        doseDrafts={saltDoseDrafts}
+        totalVolumeMl={result.totalVolumeMl}
+        showMemeSalts={showMemeSalts}
+        onToggleSalt={toggleMixerSalt}
+        onFormChange={updateMixerSaltForm}
+        onDoseChange={updateMixerSaltDose}
+        onDoseBlur={saltId => setSaltDoseDrafts(current => {
+          const next = { ...current };
+          delete next[saltId];
+          return next;
+        })}
+        onReset={() => {
+          setSaltTargets({});
+          setFormIdxBySaltId({});
+          setSaltDoseDrafts({});
+        }}
+        onToggleMemeSalts={() => setShowMemeSalts(value => !value)}
+      />
+
       {storedRecipes.length > 0 && (
         <section className="rounded-2xl border border-slate-700/70 bg-slate-900/60 p-4" data-testid="panel-mixer-saved-recipes">
           <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
@@ -854,6 +1208,8 @@ export default function WaterMixer({
            sourceA={effectiveSourceA}
            sourceB={effectiveSourceB}
            result={result}
+            saltTargets={saltTargets}
+            formIdxBySaltId={formIdxBySaltId}
            onClose={() => setShareCardOpen(false)}
          />
        )}
