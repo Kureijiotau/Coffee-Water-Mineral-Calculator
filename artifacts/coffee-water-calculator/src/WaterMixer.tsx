@@ -443,9 +443,9 @@ function SourceCard({
               <span className="shrink-0 text-[10px] text-slate-500">{displayedSource.metadata?.tds !== undefined ? `reported TDS ${formatReading(displayedSource.metadata.tds)}` : 'ion snapshot'}</span>
             </div>
             <div className="grid grid-cols-2 gap-x-4">
-              {ACTIVE_ION_IDS.slice(0, 4).map(id => <IonReading key={id} id={id} value={displayedSource.ions[id] ?? 0} compact testId={`text-mixer-source-ion-${side}-${id}`} />)}
+              {ACTIVE_ION_IDS.map(id => <IonReading key={id} id={id} value={displayedSource.ions[id] ?? 0} compact testId={`text-mixer-source-ion-${side}-${id}`} />)}
             </div>
-            <p className="py-2 text-[10px] text-slate-600">Preview shows core cations. Final result includes all active ions.</p>
+            <p className="py-2 text-[10px] text-slate-600">All modeled ions are shown in this source snapshot.</p>
           </>
         ) : (
           <div className="flex items-center gap-2 py-4 text-xs text-slate-500" data-testid={`status-mixer-source-incomplete-${side}`}>
