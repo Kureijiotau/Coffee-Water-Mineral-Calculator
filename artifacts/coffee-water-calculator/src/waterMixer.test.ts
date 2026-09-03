@@ -9,6 +9,7 @@ import {
   normalizeWaterMixSourceSnapshot,
   saveImportedWaterMixSources,
   saveWaterMixRecipes,
+  serializeWaterMixRecipeFile,
   type WaterMixSourceSnapshot,
 } from './waterMixer';
 
@@ -112,6 +113,23 @@ describe('water mixer calculation', () => {
     expect(result.kh).toBe(0);
     expect(result.ghKhRatio).toBeNull();
   });
+
+  it('adds final-batch salt ions after volume-weighting the sources', () => {
+    const result = calculateWaterMix({
+      sourceA: source('A', { calcium: 10 }),
+      sourceB: source('B', { calcium: 30 }),
+      volumeAMl: 100,
+      volumeBMl: 300,
+      saltTargets: { nacl: 10 },
+    });
+
+    expect(result.finalIons.calcium).toBe(25);
+    expect(result.finalIons.sodium).toBeCloseTo(10 * (22.99 / 58.44));
+    expect(result.finalIons.chloride).toBeCloseTo(10 * (35.45 / 58.44));
+    expect(result.tds).toBeCloseTo(
+      25 + 10 * ((22.99 + 35.45) / 58.44),
+    );
+  });
 });
 
 describe('water mixer persistence', () => {
@@ -143,6 +161,37 @@ describe('water mixer persistence', () => {
     expect(loaded[0].sourceA.sourceKind).toBe('saved-recipe');
     expect(loaded[0].sourceB.ions.magnesium).toBe(5);
     expect(isValidWaterMixRecipe(loaded[0])).toBe(true);
+  });
+
+  it('persists Mixer salt targets and hydration forms in saved recipes and exports', () => {
+    const input = {
+      sourceA: source('Saved A', { calcium: 15 }, 'saved-recipe'),
+      sourceB: source('Database B', { magnesium: 5 }, 'database'),
+      volumeAMl: 200,
+      volumeBMl: 300,
+      saltTargets: { mgso4: 12.5, nacl: 4 },
+      formIdxBySaltId: { mgso4: 0, nacl: 0 },
+    };
+    const recipe = createWaterMixRecipe('Salt-tuned blend', input);
+    expect(recipe?.saltTargets).toEqual(input.saltTargets);
+    expect(recipe?.formIdxBySaltId).toEqual(input.formIdxBySaltId);
+    saveWaterMixRecipes([recipe!]);
+    const loaded = loadWaterMixRecipes()[0];
+    expect(loaded.saltTargets).toEqual(input.saltTargets);
+    expect(loaded.formIdxBySaltId).toEqual(input.formIdxBySaltId);
+
+    const exported = JSON.parse(serializeWaterMixRecipeFile({
+      name: recipe!.name,
+      sourceA: recipe!.sourceA,
+      sourceB: recipe!.sourceB,
+      volumeAMl: recipe!.volumeAMl,
+      volumeBMl: recipe!.volumeBMl,
+      finalIons: recipe!.finalIons,
+      saltTargets: recipe!.saltTargets,
+      formIdxBySaltId: recipe!.formIdxBySaltId,
+    })) as Record<string, unknown>;
+    expect(exported.saltTargets).toEqual(input.saltTargets);
+    expect(exported.formIdxBySaltId).toEqual(input.formIdxBySaltId);
   });
 
   it('skips malformed records', () => {
