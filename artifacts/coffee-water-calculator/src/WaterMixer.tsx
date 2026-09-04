@@ -85,6 +85,11 @@ const blankSnapshot = (name: string, sourceKind: WaterMixSourceKind, ions: Parti
 const formatReading = (value: number): string => value < 10 ? value.toFixed(2) : value.toFixed(1);
 const formatVolume = (value: number): string => Number.isInteger(value) ? String(value) : value.toFixed(1);
 const formatSaltDose = (value: number): string => value < 10 ? value.toFixed(2) : value.toFixed(1);
+const formatSteppedSaltDose = (value: number): string => {
+  const formatted = formatSaltDose(value);
+  const numeric = Number(formatted);
+  return Number.isInteger(numeric) ? String(numeric) : formatted;
+};
 const formatGhKhRatio = (gh: number, kh: number): string => {
   if (kh > 0 && Number.isFinite(gh / kh)) return `${(gh / kh).toFixed(2)}:1`;
   return gh > 0 ? '∞:1' : '—';
@@ -635,7 +640,7 @@ function MixerSaltTable({
                   <div className="watermancer-salt-table__dose-controls">
                     <button
                       type="button"
-                      onClick={() => onDoseChange(salt.id, String(Math.max(0, activeMg - 1)))}
+                      onClick={() => onDoseChange(salt.id, formatSteppedSaltDose(Math.max(0, activeMg - 1)))}
                       disabled={!used || activeMg <= 0}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={`Decrease ${salt.name} Mixer dose by 1 mg`}
@@ -667,7 +672,7 @@ function MixerSaltTable({
                     <span className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500">mg</span>
                     <button
                       type="button"
-                      onClick={() => onDoseChange(salt.id, String(activeMg + 1))}
+                      onClick={() => onDoseChange(salt.id, formatSteppedSaltDose(activeMg + 1))}
                       disabled={!used}
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={`Increase ${salt.name} Mixer dose by 1 mg`}

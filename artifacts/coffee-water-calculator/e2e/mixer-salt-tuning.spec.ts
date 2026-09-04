@@ -65,6 +65,10 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await expect(page.getByTestId('input-mixer-salt-dose-nacl')).toHaveValue('1');
   await expect(sodiumReading).not.toContainText('0.00');
   await expect(page.getByTestId('text-mixer-step-salt-sodium-chloride')).toHaveText('1.00 mg');
+  await page.getByTestId('input-mixer-salt-dose-nacl').fill('3');
+  await page.getByTestId('input-mixer-salt-dose-nacl').blur();
+  await page.getByTestId('button-increase-mixer-salt-nacl').click();
+  await expect(page.getByTestId('input-mixer-salt-dose-nacl')).toHaveValue('4');
 
   await page.getByTestId('button-toggle-mixer-salt-mgso4').click();
   await page.getByTestId('select-mixer-salt-form-mgso4').selectOption('0');
