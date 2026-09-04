@@ -1,0 +1,169 @@
+<style>
+  .layout-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .layout-option {
+    min-width: 0;
+    cursor: pointer;
+  }
+  .layout-option:hover .layout-mockup {
+    border-color: rgba(103, 232, 249, .55);
+    transform: translateY(-2px);
+  }
+  .layout-mockup {
+    overflow: hidden;
+    border: 1px solid rgba(100, 116, 139, .34);
+    border-radius: 16px;
+    background: #0b1225;
+    box-shadow: 0 20px 50px rgba(2, 6, 23, .34);
+    transition: border-color .2s ease, transform .2s ease;
+  }
+  .mockup-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 13px;
+    border-bottom: 1px solid rgba(100, 116, 139, .25);
+    background: linear-gradient(90deg, rgba(34, 211, 238, .1), rgba(139, 92, 246, .09));
+  }
+  .mockup-titlebar strong { color: #e2e8f0; font-size: 12px; }
+  .mockup-titlebar span { color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: .14em; }
+  .mockup-body { padding: 13px; }
+  .mockup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .source-card, .salt-card, .readings-card, .saved-card {
+    border: 1px solid rgba(100, 116, 139, .28);
+    border-radius: 10px;
+    background: rgba(15, 23, 42, .72);
+  }
+  .source-card { height: 94px; padding: 10px; }
+  .source-card .source-label { color: #94a3b8; font-size: 9px; text-transform: uppercase; letter-spacing: .12em; }
+  .source-card .source-name { margin-top: 8px; color: #e2e8f0; font-size: 11px; font-weight: 700; }
+  .source-card .source-meta { margin-top: 5px; color: #64748b; font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .salt-card { margin-top: 10px; padding: 11px; }
+  .salt-heading { display: flex; justify-content: space-between; gap: 8px; color: #c7d2fe; font-size: 10px; font-weight: 700; }
+  .salt-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0 0; color: #94a3b8; font-size: 10px; }
+  .salt-row b { color: #c4b5fd; font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .summary-bar {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: 1.25fr repeat(3, 1fr);
+    gap: 6px;
+    margin: 10px -1px -1px;
+    padding: 9px;
+    border: 1px solid rgba(34, 211, 238, .38);
+    border-radius: 12px 12px 0 0;
+    background: rgba(8, 20, 39, .97);
+    box-shadow: 0 -12px 25px rgba(2, 6, 23, .45);
+  }
+  .summary-bar span, .rail-stat span { display: block; color: #64748b; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+  .summary-bar b, .rail-stat b { display: block; margin-top: 3px; color: #a5f3fc; font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .summary-bar .summary-main b { color: #f8fafc; font-family: inherit; }
+  .rail-option .mockup-body { display: grid; grid-template-columns: minmax(0, 1fr) 128px; gap: 10px; }
+  .rail {
+    position: sticky;
+    top: 8px;
+    align-self: start;
+    padding: 10px;
+    border: 1px solid rgba(139, 92, 246, .4);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(30, 27, 75, .96), rgba(15, 23, 42, .96));
+    box-shadow: 0 14px 30px rgba(2, 6, 23, .34);
+  }
+  .rail-kicker { color: #c4b5fd; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; }
+  .rail h4 { margin: 4px 0 9px; color: #f8fafc; font-size: 12px; }
+  .rail-stat { padding: 7px 0; border-top: 1px solid rgba(100, 116, 139, .22); }
+  .rail-stat b { color: #ddd6fe; }
+  .saved-card { margin-top: 10px; padding: 10px; }
+  .saved-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .saved-card header strong { color: #e2e8f0; font-size: 10px; }
+  .saved-card header span { color: #64748b; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .saved-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-top: 9px; color: #cbd5e1; font-size: 10px; }
+  .saved-item small { display: block; margin-top: 3px; color: #64748b; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .saved-actions { display: flex; gap: 4px; }
+  .saved-actions button { border: 1px solid rgba(100, 116, 139, .36); border-radius: 5px; padding: 4px 5px; color: #a5f3fc; background: rgba(34, 211, 238, .08); font-size: 8px; font-weight: 700; text-transform: uppercase; }
+  .saved-actions .delete { color: #fda4af; background: rgba(244, 63, 94, .08); }
+  @media (max-width: 760px) {
+    .layout-options { grid-template-columns: 1fr; }
+    .rail-option .mockup-body { grid-template-columns: 1fr; }
+    .rail { position: static; }
+  }
+</style>
+
+<h2>Which Mixer layout feels right?</h2>
+<p class="subtitle">Both options add delete controls for personal saved recipes and keep final readings visible while salts are edited.</p>
+
+<div class="layout-options">
+  <div class="layout-option" data-choice="compact-live-summary" onclick="toggleSelect(this)">
+    <div class="mockup">
+      <div class="mockup-header">A · Compact live summary</div>
+      <div class="layout-mockup">
+        <div class="mockup-titlebar"><strong>Mixer</strong><span>finished-water instrument</span></div>
+        <div class="mockup-body">
+          <div class="mockup-grid">
+            <div class="source-card"><div class="source-label">Water A</div><div class="source-name">bb and hild</div><div class="source-meta">250 mL · snapshot</div></div>
+            <div class="source-card"><div class="source-label">Water B</div><div class="source-name">big batch</div><div class="source-meta">250 mL · snapshot</div></div>
+          </div>
+          <div class="salt-card">
+            <div class="salt-heading"><span>Final blend adjustment</span><span>2 salts used</span></div>
+            <div class="salt-row"><span>Magnesium chloride</span><b>15.0 mg</b></div>
+            <div class="salt-row"><span>Calcium chloride</span><b>8.5 mg</b></div>
+          </div>
+          <div class="summary-bar">
+            <div class="summary-main"><span>Live final readings</span><b>updates as you edit</b></div>
+            <div><span>Ca</span><b>18.4</b></div>
+            <div><span>Mg</span><b>7.2</b></div>
+            <div><span>Na</span><b>11.0</b></div>
+          </div>
+          <div class="saved-card">
+            <header><strong>Saved Mixer recipes</strong><span>2 saved</span></header>
+            <div class="saved-item"><div>bb and hild<small>500 + 15 mL</small></div><div class="saved-actions"><button>Open</button><button class="delete">Delete</button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="card-body"><strong>Best for:</strong> keeping the current structure and adding a small live “instrument strip” that follows the salt table.</p>
+  </div>
+
+  <div class="layout-option rail-option" data-choice="persistent-results-rail" onclick="toggleSelect(this)">
+    <div class="mockup">
+      <div class="mockup-header">B · Persistent results rail</div>
+      <div class="layout-mockup">
+        <div class="mockup-titlebar"><strong>Mixer</strong><span>results always in view</span></div>
+        <div class="mockup-body">
+          <div>
+            <div class="mockup-grid">
+              <div class="source-card"><div class="source-label">Water A</div><div class="source-name">bb and hild</div><div class="source-meta">250 mL · snapshot</div></div>
+              <div class="source-card"><div class="source-label">Water B</div><div class="source-name">big batch</div><div class="source-meta">250 mL · snapshot</div></div>
+            </div>
+            <div class="salt-card">
+              <div class="salt-heading"><span>Final blend adjustment</span><span>edit below</span></div>
+              <div class="salt-row"><span>Magnesium chloride</span><b>15.0 mg</b></div>
+              <div class="salt-row"><span>Calcium chloride</span><b>8.5 mg</b></div>
+              <div class="salt-row"><span>Sodium chloride</span><b>0 mg</b></div>
+            </div>
+            <div class="saved-card">
+              <header><strong>Saved Mixer recipes</strong><span>2 saved</span></header>
+              <div class="saved-item"><div>big batch + magnesia blend<small>400 + 200 mL</small></div><div class="saved-actions"><button>Open</button><button class="delete">Delete</button></div></div>
+            </div>
+          </div>
+          <aside class="rail">
+            <div class="rail-kicker">Blend output</div>
+            <h4>Live final readings</h4>
+            <div class="rail-stat"><span>Calcium</span><b>18.4 mg/L</b></div>
+            <div class="rail-stat"><span>Magnesium</span><b>7.2 mg/L</b></div>
+            <div class="rail-stat"><span>Sodium</span><b>11.0 mg/L</b></div>
+            <div class="rail-stat"><span>Chloride</span><b>28.6 mg/L</b></div>
+            <div class="rail-stat"><span>Modeled TDS</span><b>96.1 ppm</b></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+    <p class="card-body"><strong>Best for:</strong> desktop editing where the full ion picture should remain pinned beside the salt controls; collapses above the table on mobile.</p>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:18px">Click a direction to select it. The delete action is personal-only: catalog and published sources remain read-only.</p>
