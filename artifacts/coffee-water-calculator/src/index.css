@@ -186,6 +186,73 @@ body {
   min-height: 100%;
 }
 
+.mineral-recipe-table {
+  --mineral-table-line: rgb(148 163 184 / 0.11);
+  --mineral-table-muted: rgb(148 163 184 / 0.72);
+  background:
+    linear-gradient(180deg, rgb(15 23 42 / 0.24), transparent 22rem),
+    rgb(2 6 23 / 0.08);
+}
+
+.mineral-recipe-table__intro {
+  border-color: rgb(52 211 153 / 0.12);
+  background: linear-gradient(90deg, rgb(16 185 129 / 0.045), transparent 46%, rgb(56 189 248 / 0.035));
+}
+
+.mineral-recipe-table__header {
+  border-color: var(--mineral-table-line);
+  background:
+    linear-gradient(90deg, rgb(30 41 59 / 0.64), rgb(15 23 42 / 0.44)),
+    rgb(2 6 23 / 0.16);
+  color: var(--mineral-table-muted);
+  letter-spacing: 0.16em;
+  text-shadow: 0 1px 12px rgb(2 6 23 / 0.8);
+}
+
+.mineral-recipe-table__row {
+  border-color: var(--mineral-table-line);
+  background-color: rgb(15 23 42 / 0.12);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mineral-recipe-table__row--stripe {
+  background-color: rgb(30 41 59 / 0.17);
+}
+
+.mineral-recipe-table__row:hover {
+  background-color: rgb(30 41 59 / 0.38);
+  box-shadow: inset 0 1px 0 rgb(125 211 252 / 0.05);
+}
+
+.mineral-recipe-table__input {
+  border-color: rgb(100 116 139 / 0.42);
+  background:
+    linear-gradient(135deg, rgb(15 23 42 / 0.88), rgb(2 6 23 / 0.58)),
+    rgb(2 6 23 / 0.55);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.035) inset,
+    0 8px 18px -16px rgb(2 6 23 / 0.95);
+}
+
+.mineral-recipe-table__input--target {
+  border-color: rgb(100 116 139 / 0.48);
+}
+
+.mineral-recipe-table__input--dose {
+  border-color: rgb(52 211 153 / 0.3);
+  background:
+    linear-gradient(135deg, rgb(6 78 59 / 0.2), rgb(2 6 23 / 0.62)),
+    rgb(2 6 23 / 0.55);
+}
+
+.mineral-recipe-table__input:hover {
+  border-color: rgb(125 211 252 / 0.48);
+}
+
+.mineral-recipe-table__input--dose:hover {
+  border-color: rgb(110 231 183 / 0.5);
+}
+
 .water-plan-card {
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }

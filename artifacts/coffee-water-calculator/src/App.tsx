@@ -5493,8 +5493,8 @@ function App() {
               />
             </div>
           </div>
-            <>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-400/10 bg-emerald-500/[0.03] px-4 py-3 text-[11px] leading-relaxed text-slate-400 sm:px-6">
+             <div className="mineral-recipe-table">
+             <div className="mineral-recipe-table__intro flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 text-[11px] leading-relaxed sm:px-6">
                <span>Enter salt amounts in PPM or milligrams; Direct dose shows the amount to add for the selected final batch volume.</span>
                <button
                  type="button"
@@ -5507,7 +5507,7 @@ function App() {
                </button>
             </div>
          <>
-          <div className="hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-700/40">
+           <div className="mineral-recipe-table__header hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider">
             <span>Salt</span>
             <span>
               {publishedTargetLabel === 'Salt target (ppm)' ? (
@@ -5598,7 +5598,9 @@ function App() {
              return (
                <div
                  key={`${salt.id}-${isMemeSalt ? memeSaltFlashNonce : 0}`}
-                 className={`grid grid-cols-2 sm:grid-cols-[1.7fr_1fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b border-slate-700/30 last:border-b-0 hover:bg-slate-700/20 transition-colors ${
+                  className={`mineral-recipe-table__row grid grid-cols-2 sm:grid-cols-[1.7fr_1fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b last:border-b-0 hover:bg-slate-700/20 transition-colors ${
+                    i % 2 === 0 ? 'mineral-recipe-table__row--stripe' : ''
+                  } ${
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                  }`}
                >
@@ -5651,7 +5653,7 @@ function App() {
                        if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                     }}
                     placeholder="0"
-                    className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                     className="mineral-recipe-table__input mineral-recipe-table__input--target w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                   />
                 </div>
                 <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
@@ -5684,7 +5686,7 @@ function App() {
                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                         }}
                         placeholder="0"
-                        className="min-w-0 w-full bg-slate-900/60 border border-emerald-400/30 rounded-lg px-3 py-2 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
+                         className="mineral-recipe-table__input mineral-recipe-table__input--dose min-w-0 w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
                       />
                       <span className="shrink-0 text-[10px] text-slate-500">mg</span>
                     </div>
@@ -5697,7 +5699,7 @@ function App() {
                 </div>
             );
           })}
-          </>
+           </div>
              {showAlchemist && (
                <IonWatchDisclosure
                  ions={saltOnlyIons}
