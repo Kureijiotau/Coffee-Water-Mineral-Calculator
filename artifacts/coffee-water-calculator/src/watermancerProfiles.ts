@@ -15,49 +15,6 @@ export interface WatermancerProfile {
 }
 
 const STORAGE_KEY = 'cwm.watermancerProfiles';
-const GIZE_STILL_SEED_KEY = 'cwm.watermancerProfileSeeds.gizeStill';
-const KAROO_SEED_KEY = 'cwm.watermancerProfileSeeds.karoo';
-const GIZE_STILL_SOURCE_URL = 'https://fine-liquids.com/en-us/collections/newcomer/products/gize-still-mhd?variant=49404645933393';
-
-export const GIZE_STILL_PROFILE: WatermancerProfile = {
-  id: 'watermancer-gize-still',
-  name: 'Gize Still',
-  targets: {
-    sodium: 36.1,
-    potassium: 1.9,
-    magnesium: 9.5,
-    calcium: 286,
-    chloride: 9.9,
-    sulfate: 692,
-    bicarbonate: 115,
-    citrates: 0,
-  },
-  source: 'Fine Liquids',
-  sourceUrl: GIZE_STILL_SOURCE_URL,
-  details: 'Published profile: TDS 1,170 mg/L, pH 8.1, silica 15 mg/L.',
-};
-
-export const KAROO_PROFILE: WatermancerProfile = {
-  id: 'watermancer-karoo',
-  name: 'Karoo',
-  targets: {
-    sodium: 27.6,
-    potassium: 1.7,
-    magnesium: 2.4,
-    calcium: 14.7,
-    chloride: 44.1,
-    sulfate: 6,
-    bicarbonate: 31,
-    citrates: 0,
-  },
-  source: 'User-provided label profile',
-  details: 'Label profile: TDS 190 mg/L, pH 7.2, hardness 19.25 mg/L, nitrates 0.96 mg/L; silica not listed.',
-};
-
-const SEEDED_PROFILES = [
-  { key: GIZE_STILL_SEED_KEY, profile: GIZE_STILL_PROFILE },
-  { key: KAROO_SEED_KEY, profile: KAROO_PROFILE },
-];
 
 function readProfiles(): WatermancerProfile[] {
   try {
@@ -89,22 +46,7 @@ function readProfiles(): WatermancerProfile[] {
         ...(typeof profile.details === 'string' && profile.details.trim() ? { details: profile.details.trim() } : {}),
       }];
     });
-    let seededProfiles = profiles;
-    const pendingSeeds = SEEDED_PROFILES.filter(({ key }) => localStorage.getItem(key) !== '1');
-    for (const { profile } of pendingSeeds) {
-      if (!seededProfiles.some(existing => existing.id === profile.id)) {
-        seededProfiles = [...seededProfiles, profile];
-      }
-    }
-    if (pendingSeeds.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(seededProfiles));
-        for (const { key } of pendingSeeds) localStorage.setItem(key, '1');
-      } catch {
-        /* Ignore storage quota and privacy-mode failures. */
-      }
-    }
-    return seededProfiles;
+    return profiles;
   } catch {
     return [];
   }
