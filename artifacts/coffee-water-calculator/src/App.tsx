@@ -10,7 +10,7 @@ import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Che
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, classifyIon, computeSaltMg, computeSaltTargetPpm,
+  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
@@ -260,19 +260,6 @@ async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Pr
 
 export type SaltRow = { target: string; formIdx: number };
 const MEME_SALT_IDS = new Set(['calact', 'mggly']);
-const WATERMANCER_SALT_ORDER = [
-  'mgcl2',
-  'cacl2',
-  'nacl',
-  'kcl',
-  'mgso4',
-  'nahco3',
-  'khco3',
-  'calact',
-  'mggly',
-  'mgcit',
-  'cacit',
-] as const;
 export type ConcentrateRecipeHandoff = {
   name: string;
   salts: Record<string, SaltRecipeEntry>;

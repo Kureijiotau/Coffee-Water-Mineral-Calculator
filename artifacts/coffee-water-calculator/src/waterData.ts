@@ -530,6 +530,20 @@ export const SALTS: SaltInfo[] = [
   },
 ];
 
+export const WATERMANCER_SALT_ORDER = [
+  'mgcl2',
+  'cacl2',
+  'nacl',
+  'kcl',
+  'mgso4',
+  'nahco3',
+  'khco3',
+  'calact',
+  'mggly',
+  'mgcit',
+  'cacit',
+] as const;
+
 export const ACTIVE_ION_IDS: IonId[] = [
   'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate', 'citrates',
 ];

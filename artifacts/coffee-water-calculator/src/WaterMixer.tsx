@@ -4,10 +4,12 @@ import {
   ACTIVE_ION_IDS,
   ION_MAP,
   SALTS,
+  WATERMANCER_SALT_ORDER,
   computeSaltIonPpmTotal,
   computeSaltMg,
   computeSaltTargetPpm,
   type IonId,
+  type SaltInfo,
 } from '@/waterData';
 import type { LocalWater, WaterMetadata } from '@/localWaters';
 import {
@@ -178,28 +180,40 @@ function MixerLiveReadings({ result, sideRail = false }: { result: WaterMixResul
       className={`overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/90 shadow-xl shadow-slate-950/30 backdrop-blur-xl ${sideRail ? 'xl:flex xl:h-full xl:flex-col' : ''}`}
       data-testid="panel-mixer-live-readings"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-300/10 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 bg-slate-950/35 px-3 py-2.5">
         <div className="flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_9px_rgba(103,232,249,0.9)]" aria-hidden="true" />
           <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100">Live final readings</h2>
         </div>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">updates with salt edits · mg/L</span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">live · mg/L</span>
       </div>
       {result.valid ? (
         <div className={sideRail ? 'grid grid-cols-2 gap-x-2 px-2 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col' : 'flex min-w-max divide-x divide-slate-800/80 overflow-x-auto'} data-testid="list-mixer-live-ions">
           {ACTIVE_ION_IDS.map(id => (
             <div key={id} className={sideRail ? 'min-w-0 border-b border-slate-800/80 px-2 py-2.5 xl:flex xl:flex-1 xl:flex-col xl:justify-center xl:py-4' : 'min-w-[6.4rem] px-3 py-2.5 first:pl-4 last:pr-4'}>
-              <span className="block truncate text-[9px] uppercase tracking-wider text-slate-500">{ION_MAP[id].name}</span>
-              <strong className="mt-1 block font-mono text-sm tabular-nums text-cyan-100" data-testid={`text-mixer-live-ion-${id}`}>
-                {formatReading(result.finalIons[id])}
-              </strong>
+              <div className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ION_MAP[id].color.foreground }} aria-hidden="true" />
+                <span className="truncate text-[9px] uppercase tracking-wider text-slate-500">{ION_MAP[id].name}</span>
+              </div>
+              <div className="mt-1 flex items-baseline gap-1">
+                <strong className="font-mono text-sm tabular-nums text-cyan-100" data-testid={`text-mixer-live-ion-${id}`}>
+                  {formatReading(result.finalIons[id])}
+                </strong>
+                <span className="text-[9px] font-medium uppercase tracking-wider text-slate-600">mg/L</span>
+              </div>
             </div>
           ))}
           <div className={sideRail ? 'min-w-0 border-b border-slate-800/80 px-2 py-2.5 xl:flex xl:flex-1 xl:flex-col xl:justify-center xl:py-4' : 'min-w-[6.4rem] px-3 py-2.5 last:pr-4'}>
-            <span className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Modeled TDS</span>
-            <strong className="mt-1 block font-mono text-sm tabular-nums text-emerald-200" data-testid="text-mixer-live-tds">
-              {formatReading(result.tds)}
-            </strong>
+            <div className="flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-300" aria-hidden="true" />
+              <span className="truncate text-[9px] uppercase tracking-wider text-slate-500">Modeled TDS</span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-1">
+              <strong className="font-mono text-sm tabular-nums text-emerald-200" data-testid="text-mixer-live-tds">
+                {formatReading(result.tds)}
+              </strong>
+              <span className="text-[9px] font-medium uppercase tracking-wider text-slate-600">mg/L</span>
+            </div>
           </div>
         </div>
       ) : (
@@ -525,7 +539,10 @@ function MixerSaltTable({
   onToggleMemeSalts: () => void;
 }) {
   const liters = totalVolumeMl / 1000;
-  const visibleSalts = SALTS.filter(salt => showMemeSalts || !MIXER_MEME_SALT_IDS.has(salt.id));
+  const visibleSalts = WATERMANCER_SALT_ORDER
+    .map(saltId => SALTS.find(salt => salt.id === saltId))
+    .filter((salt): salt is SaltInfo => Boolean(salt))
+    .filter(salt => showMemeSalts || !MIXER_MEME_SALT_IDS.has(salt.id));
 
   return (
     <section className="rounded-2xl border border-indigo-400/25 bg-slate-800/70 p-4 shadow-xl sm:p-6" data-testid="panel-mixer-salts">
@@ -550,7 +567,7 @@ function MixerSaltTable({
         </button>
       </div>
 
-      <div className="watermancer-salt-table mt-4 overflow-hidden rounded-xl border border-slate-700/60">
+      <div className="watermancer-salt-table watermancer-salt-table--mixer mt-4 overflow-hidden rounded-xl border border-slate-700/60">
         <div className="watermancer-salt-table__header hidden bg-slate-950/50 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
           <span className="text-left">Salt</span>
           <span>Hydration form</span>
