@@ -38,7 +38,7 @@ If local storage fails, preserve the current in-memory list only if the existing
 
 Keep the existing full **Final readings** section in the Blend output panel.
 
-Add a compact sticky **Live final readings** strip immediately above the salt table. It uses the already-computed `result.finalIons` and derived values, so it updates on every existing Mixer calculation change:
+Add a compact sticky **Live final readings** rail beside the salt table on wide screens. The salt table remains the main editing surface on the left, while the readings rail stays pinned in the right column during salt editing. On smaller screens, the rail stacks above the salt table. It uses the already-computed `result.finalIons` and derived values, so it updates on every existing Mixer calculation change:
 
 - Water A or Water B source changes
 - Water A or Water B volume changes
@@ -46,7 +46,7 @@ Add a compact sticky **Live final readings** strip immediately above the salt ta
 - Salt dose changes
 - Hydration-form changes
 
-The strip displays all modeled active ions plus modeled TDS in a compact instrument-console treatment. On wide screens, values are arranged in a single compact row. On smaller screens, the strip remains usable with horizontal overflow rather than hiding readings or changing the calculation.
+The rail displays all modeled active ions plus modeled TDS in a compact two-column instrument-console treatment. The mobile layout preserves the same values without hiding readings or changing the calculation.
 
 The strip must communicate incomplete state clearly. Before the blend is valid, it shows the live-readings label and a concise prompt to choose both finished sources and valid volumes instead of showing stale values.
 
@@ -66,7 +66,7 @@ When a confirmed deletion matches either active saved-recipe source, clear only 
 
 ### Readings presentation
 
-Create a small presentational component for the sticky strip rather than duplicating ion formatting in the page body. It receives:
+Create a small presentational component for the sticky readings rail rather than duplicating ion formatting in the page body. It receives:
 
 - `result.valid`
 - `result.finalIons`
@@ -75,7 +75,7 @@ Create a small presentational component for the sticky strip rather than duplica
 
 The component has no calculation or persistence behavior. It reuses the same values and formatting rules as the full result panel.
 
-The sticky container should remain within the Mixer document flow and use a restrained z-index/background so it can follow the salt editing area without covering controls permanently. The full output panel remains available near the top for users who want the detailed result view.
+The sticky rail should remain within the Mixer document flow and use a restrained z-index/background so it can follow the salt editing area without covering controls permanently. The full output panel remains available near the top for users who want the detailed result view.
 
 ## Accessibility and interaction details
 
@@ -83,7 +83,7 @@ The sticky container should remain within the Mixer document flow and use a rest
 - The confirmation dialog uses `role="dialog"` and `aria-modal="true"`, has a programmatic name, and supports Escape to cancel.
 - Focus moves to the dialog’s safe action on open and returns to the triggering delete button on close when possible.
 - The live strip is informational, not a live-region announcement for every numeric keystroke; frequent numeric updates should not interrupt screen-reader users.
-- Sticky readings remain keyboard-readable and horizontally scrollable on narrow screens.
+- Sticky readings remain keyboard-readable and are presented above the salt table on narrow screens.
 - Personal deletion controls are not rendered for catalog or shared sources.
 
 ## Error and empty states
@@ -110,7 +110,7 @@ The sticky container should remain within the Mixer document flow and use a rest
 - Confirming deletion removes the card and picker option.
 - Deleting the active Water A or Water B saved recipe clears that source and makes the result incomplete.
 - Catalog and imported sources do not expose the saved-recipe Delete control.
-- The live strip is visible above the salt table for a valid blend.
+- The live readings rail is visible beside the salt table for a valid desktop blend.
 - Toggling a salt, changing its dose, and changing its hydration form updates the live final readings.
 - The strip shows the incomplete state when a source or volume becomes invalid.
 - The strip remains usable at a narrow viewport.
