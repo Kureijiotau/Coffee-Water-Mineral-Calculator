@@ -41,7 +41,9 @@ _Describe the high-level user-facing capabilities of this app once they exist._
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Before syncing or pushing, run `git fetch origin --prune` followed by `pnpm run audit:sync`. The audit requires a clean tree, no merge conflicts, no unsupported lockfiles, and an exact match between local `main` and `origin/main`.
+- The full workspace build requires `PORT=8081 BASE_PATH=/ pnpm run build` because the mockup preview artifact validates both values during Vite builds.
+- Keep `origin/main` as the canonical upstream for local `main`; avoid rebasing or force-pushing a diverged branch without preserving a recovery ref first.
 
 ## Pointers
 
