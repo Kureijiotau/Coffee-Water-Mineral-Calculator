@@ -46,3 +46,17 @@ mtime_ms = 1788235048888
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/1cfcd320-2bd3-4a34-abd2-e5916a32c6b1/c191eb9e-0622-4618-9a2e-222953d2e889"
 storage_version_token = "1788235061835897"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "X-43E3NrmfoCV3zEK-YVo"
+uri = "file://.superpowers/brainstorm/7493-1788494979/content/mixer-layout-preview.html"
+type = "text"
+title = "Mixer layout options preview"
+description = "Two visual directions for deleting saved Mixer recipes and keeping live final readings visible while editing salts."
+logical_id = "948739af-3a2c-49a1-9e5e-86206a25655e"
+content_hash = "sha256:9dd25c433682913d004c3d95d586678b8fce6597319ea16c84293af98b39fc7f"
+size = 9372
+mtime_ms = 1788495337877
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/948739af-3a2c-49a1-9e5e-86206a25655e/5084ef14-9bb9-44f9-97e7-f1af2faab26b"
+storage_version_token = "1788495339255757"
+content_type = "text/html"
