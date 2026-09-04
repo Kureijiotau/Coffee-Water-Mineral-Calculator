@@ -62,6 +62,7 @@
 - [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison
 - [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [WATER recipe files](water-recipe-files.md) — use image-backed `.WATER.png` recipe exports while keeping embedded payloads standard JSON and legacy JSON imports valid
+- [Finished-water export readings](finished-water-export-readings.md) — salt targets alone cannot reconstruct a mineral-water card; exports must carry final readings for exact Mixer imports
 - [Watermancer direct downloads](watermancer-direct-downloads.md) — profile export actions should download directly instead of opening the native Web Share sheet
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
@@ -81,3 +82,4 @@
 - [Browser smoke harness](browser-smoke-cdp.md) — use explicit CDP interactively; align Playwright, browser builds, and Node for automated cross-browser checks
 - [React-free Watermancer solver](watermancer-react-free-solver.md) — keep route computation isolated from App.tsx so development and production can share the worker path
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
+- [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
