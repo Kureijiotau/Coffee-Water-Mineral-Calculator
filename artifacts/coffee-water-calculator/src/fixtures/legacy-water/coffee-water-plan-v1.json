@@ -1,0 +1,24 @@
+{
+  "kind": "coffee-water-plan",
+  "version": 1,
+  "name": "Magnesia (MgCl₂ MgSO₄ NaCl)",
+  "saltTargets": {
+    "mgso4": 4.883476553307854,
+    "mgcl2": 11.2390986763469,
+    "nacl": 13
+  },
+  "expectedFinishedIons": {
+    "sodium": 5.17653415468857,
+    "potassium": 0,
+    "magnesium": 5.91935121013605,
+    "calcium": 0.42840000000000006,
+    "chloride": 16.25572137971609,
+    "sulfate": 4.0197684851140485,
+    "bicarbonate": 11.4,
+    "carbonate": 0,
+    "citrates": 0,
+    "bicitrates": 0,
+    "biphosphates": 0,
+    "phosphates": 0
+  }
+}

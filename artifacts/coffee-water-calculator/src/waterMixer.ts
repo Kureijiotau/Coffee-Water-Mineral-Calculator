@@ -8,6 +8,11 @@ import {
   type IonId,
 } from '@/waterData';
 import type { WaterMetadata } from '@/localWaters';
+import {
+  LEGACY_MAGNESIA_PROVENANCE,
+  LEGACY_WATER_PAYLOAD_VERSION,
+  migrateLegacyWaterPayload,
+} from './legacyWaterRecovery';
 
 export type WaterMixSourceKind = 'saved-recipe' | 'database' | 'manual';
 
@@ -143,6 +148,59 @@ export function normalizeWaterMixSourceSnapshot(
   };
 }
 
+export function waterMixSourceSnapshotKey(source: Pick<WaterMixSourceSnapshot, 'name' | 'ions'>): string {
+  const name = source.name.trim().toLocaleLowerCase();
+  const readings = allIonIds().map(id => {
+    const value = source.ions[id];
+    return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(6) : '0';
+  });
+  return `${name}|${readings.join(',')}`;
+}
+
+export function dedupeWaterMixSourceSnapshots<T extends WaterMixSourceSnapshot>(sources: T[]): T[] {
+  const seenIds = new Set<string>();
+  const seenSnapshots = new Set<string>();
+  return sources.filter(source => {
+    const sourceId = source.sourceId?.trim();
+    const snapshotKey = waterMixSourceSnapshotKey(source);
+    if ((sourceId && seenIds.has(sourceId)) || seenSnapshots.has(snapshotKey)) return false;
+    if (sourceId) seenIds.add(sourceId);
+    seenSnapshots.add(snapshotKey);
+    return true;
+  });
+}
+
+export function migrateWaterMixSourceSnapshot<T extends WaterMixSourceSnapshot>(source: T): T {
+  const migration = migrateLegacyWaterPayload({
+    kind: 'coffee-water-mix-source',
+    version: LEGACY_WATER_PAYLOAD_VERSION,
+    name: source.name,
+    ions: source.ions,
+  });
+  return migration
+    ? {
+      ...source,
+      ions: migration.ions,
+      provenance: LEGACY_MAGNESIA_PROVENANCE,
+    }
+    : source;
+}
+
+export function migrateWaterMixRecipe<T extends WaterMixRecipe>(recipe: T): T {
+  const finalIonsMigration = migrateLegacyWaterPayload({
+    kind: WATER_MIX_FILE_KIND,
+    version: LEGACY_WATER_PAYLOAD_VERSION,
+    name: recipe.name,
+    ions: recipe.finalIons,
+  });
+  return {
+    ...recipe,
+    ...(finalIonsMigration ? { finalIons: finalIonsMigration.ions } : {}),
+    sourceA: migrateWaterMixSourceSnapshot(recipe.sourceA),
+    sourceB: migrateWaterMixSourceSnapshot(recipe.sourceB),
+  };
+}
+
 function normalizeMetadata(metadata: WaterMetadata): WaterMetadata {
   const normalized: WaterMetadata = {};
   for (const key of ['silica', 'ph', 'tds', 'alkalinity'] as const) {
@@ -261,7 +319,11 @@ export function loadImportedWaterMixSources(): WaterMixSourceSnapshot[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     return Array.isArray(parsed)
-      ? parsed.filter(isValidWaterMixSourceSnapshot).map(source => normalizeWaterMixSourceSnapshot(source))
+      ? dedupeWaterMixSourceSnapshots(
+        parsed
+          .filter(isValidWaterMixSourceSnapshot)
+          .map(source => migrateWaterMixSourceSnapshot(normalizeWaterMixSourceSnapshot(source))),
+      )
       : [];
   } catch {
     return [];
@@ -270,9 +332,14 @@ export function loadImportedWaterMixSources(): WaterMixSourceSnapshot[] {
 
 export function saveImportedWaterMixSources(sources: WaterMixSourceSnapshot[]): void {
   try {
+    const normalized = dedupeWaterMixSourceSnapshots(
+      sources
+        .filter(isValidWaterMixSourceSnapshot)
+        .map(source => migrateWaterMixSourceSnapshot(normalizeWaterMixSourceSnapshot(source))),
+    );
     localStorage.setItem(
       WATER_MIXER_IMPORTED_SOURCES_STORAGE_KEY,
-      JSON.stringify(sources.filter(isValidWaterMixSourceSnapshot).map(source => normalizeWaterMixSourceSnapshot(source))),
+      JSON.stringify(normalized),
     );
   } catch {
     // Local storage is best effort in private browsing and embedded previews.
@@ -392,7 +459,9 @@ export function loadWaterMixRecipes(): WaterMixRecipe[] {
     const raw = localStorage.getItem(WATER_MIXER_STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isValidWaterMixRecipe) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter(isValidWaterMixRecipe).map(recipe => migrateWaterMixRecipe(recipe))
+      : [];
   } catch {
     return [];
   }
@@ -400,7 +469,10 @@ export function loadWaterMixRecipes(): WaterMixRecipe[] {
 
 export function saveWaterMixRecipes(recipes: WaterMixRecipe[]): void {
   try {
-    localStorage.setItem(WATER_MIXER_STORAGE_KEY, JSON.stringify(recipes.filter(isValidWaterMixRecipe)));
+    localStorage.setItem(
+      WATER_MIXER_STORAGE_KEY,
+      JSON.stringify(recipes.filter(isValidWaterMixRecipe).map(recipe => migrateWaterMixRecipe(recipe))),
+    );
   } catch {
     // Local storage is best effort in private browsing and embedded previews.
   }

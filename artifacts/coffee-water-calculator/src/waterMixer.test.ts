@@ -1,8 +1,9 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { ACTIVE_ION_IDS } from '@/waterData';
+import { ACTIVE_ION_IDS, computeIonTotals } from '@/waterData';
 import {
   calculateWaterMix,
   createWaterMixRecipe,
+  dedupeWaterMixSourceSnapshots,
   isValidWaterMixRecipe,
   loadImportedWaterMixSources,
   loadWaterMixRecipes,
@@ -12,6 +13,12 @@ import {
   serializeWaterMixRecipeFile,
   type WaterMixSourceSnapshot,
 } from './waterMixer';
+
+import { migrateLegacyWaterPayload } from './legacyWaterRecovery';
+import legacyPlanFixture from './fixtures/legacy-water/coffee-water-plan-v1.json';
+import legacyProfileFixture from './fixtures/legacy-water/watermancer-profile-v1.json';
+import legacySourceFixture from './fixtures/legacy-water/coffee-water-mix-source-v1.json';
+import legacyMixFixture from './fixtures/legacy-water/coffee-water-mix-v1.json';
 
 const source = (name: string, values: Partial<Record<(typeof ACTIVE_ION_IDS)[number], number>>, sourceKind: WaterMixSourceSnapshot['sourceKind'] = 'manual'): WaterMixSourceSnapshot =>
   normalizeWaterMixSourceSnapshot({ name, sourceKind, ions: values });
@@ -209,5 +216,131 @@ describe('water mixer persistence', () => {
     saveImportedWaterMixSources([imported]);
 
     expect(loadImportedWaterMixSources()).toEqual([imported]);
+  });
+
+  it('collapses repeated imports with different transient ids', () => {
+    const first = {
+      ...source('Magnesia (MgCl2 MgSO4 NaCl)', { calcium: 0.4, bicarbonate: 11.4 }, 'saved-recipe'),
+      sourceId: 'imported-card-a',
+    };
+    const repeated = {
+      ...first,
+      sourceId: 'imported-card-b',
+    };
+
+    saveImportedWaterMixSources([first, repeated]);
+
+    expect(loadImportedWaterMixSources()).toEqual([first]);
+  });
+
+  it('keeps same-name sources when their ion snapshots differ', () => {
+    const low = source('Magnesia', { calcium: 0.4, bicarbonate: 11.4 }, 'saved-recipe');
+    const high = source('Magnesia', { calcium: 35.7, bicarbonate: 950 }, 'database');
+
+    expect(dedupeWaterMixSourceSnapshots([low, high])).toEqual([low, high]);
+  });
+
+  it('migrates an already-stored salt-only Magnesia snapshot on load', () => {
+    const saltOnly = computeIonTotals({
+      mgso4: 4.883476553307854,
+      mgcl2: 11.2390986763469,
+      nacl: 13,
+    }, {}, 1);
+    saveImportedWaterMixSources([
+      {
+        ...source('Magnesia (MgCl₂ MgSO₄ NaCl)', saltOnly, 'saved-recipe'),
+        sourceId: 'legacy-magnesia',
+      },
+    ]);
+
+    const migrated = loadImportedWaterMixSources();
+    expect(migrated[0]?.ions.calcium).toBeCloseTo(0.4284, 4);
+    expect(migrated[0]?.ions.bicarbonate).toBeCloseTo(11.4, 4);
+  });
+
+  it('recovers exact finished readings for saved plan and profile payloads', () => {
+    const planMigration = migrateLegacyWaterPayload({
+      kind: legacyPlanFixture.kind,
+      version: legacyPlanFixture.version,
+      name: legacyPlanFixture.name,
+      saltTargets: legacyPlanFixture.saltTargets,
+    });
+    const profileMigration = migrateLegacyWaterPayload({
+      kind: legacyProfileFixture.kind,
+      version: legacyProfileFixture.version,
+      name: legacyProfileFixture.name,
+      ions: legacyProfileFixture.ions,
+    });
+
+    expect(planMigration?.ions).toEqual(legacyPlanFixture.expectedFinishedIons);
+    expect(profileMigration?.ions).toEqual(legacyProfileFixture.expectedFinishedIons);
+  });
+
+  it('recovers exact finished readings for saved source and Mixer snapshots', () => {
+    const sourceMigration = migrateLegacyWaterPayload({
+      kind: legacySourceFixture.kind,
+      version: legacySourceFixture.version,
+      name: legacySourceFixture.name,
+      ions: legacySourceFixture.ions,
+    });
+    const mixMigration = migrateLegacyWaterPayload({
+      kind: legacyMixFixture.kind,
+      version: legacyMixFixture.version,
+      name: legacyMixFixture.name,
+      ions: legacyMixFixture.finalIons,
+    });
+
+    expect(sourceMigration?.ions).toEqual(legacySourceFixture.expectedFinishedIons);
+    expect(mixMigration?.ions).toEqual(legacyMixFixture.expectedFinishedIons);
+  });
+
+  it('migrates stored Mixer recipes, including their source snapshots', () => {
+    const saltOnly = computeIonTotals({
+      mgso4: 4.883476553307854,
+      mgcl2: 11.2390986763469,
+      nacl: 13,
+    }, {}, 1);
+    localStorage.setItem('cwm.waterMixerRecipes', JSON.stringify([{
+      id: 'legacy-mixer-recipe',
+      name: 'Magnesia (MgCl₂ MgSO₄ NaCl)',
+      createdAt: '2026-08-01T00:00:00.000Z',
+      updatedAt: '2026-08-01T00:00:00.000Z',
+      sourceA: source('Magnesia (MgCl₂ MgSO₄ NaCl)', saltOnly, 'saved-recipe'),
+      sourceB: source('RO', {}, 'manual'),
+      volumeAMl: 500,
+      volumeBMl: 500,
+      finalIons: saltOnly,
+    }]));
+
+    const migrated = loadWaterMixRecipes()[0];
+    expect(migrated.finalIons.calcium).toBeCloseTo(0.4284, 4);
+    expect(migrated.sourceA.ions.bicarbonate).toBeCloseTo(11.4, 4);
+  });
+
+  it('migrates the representative stored Mixer fixture without changing its shape', () => {
+    localStorage.setItem('cwm.waterMixerRecipes', JSON.stringify([legacyMixFixture]));
+
+    const migrated = loadWaterMixRecipes()[0];
+    expect(migrated).toMatchObject({
+      id: legacyMixFixture.id,
+      name: legacyMixFixture.name,
+      volumeAMl: legacyMixFixture.volumeAMl,
+      volumeBMl: legacyMixFixture.volumeBMl,
+    });
+    expect(migrated.finalIons).toEqual(legacyMixFixture.expectedFinishedIons);
+    expect(migrated.sourceA.ions).toEqual(legacyMixFixture.expectedFinishedIons);
+  });
+
+  it('does not repair a merely similar name or an unrelated ion snapshot', () => {
+    const saltOnly = computeIonTotals({
+      mgso4: 4.883476553307854,
+      mgcl2: 11.2390986763469,
+      nacl: 13,
+    }, {}, 1);
+    const similar = source('Magnesia custom', saltOnly, 'saved-recipe');
+
+    saveImportedWaterMixSources([similar]);
+
+    expect(loadImportedWaterMixSources()[0]).toEqual(similar);
   });
 });

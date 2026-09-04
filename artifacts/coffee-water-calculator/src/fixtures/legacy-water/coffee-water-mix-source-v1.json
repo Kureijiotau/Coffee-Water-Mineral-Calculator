@@ -1,0 +1,33 @@
+{
+  "kind": "coffee-water-mix-source",
+  "version": 1,
+  "name": "Magnesia (MgCl₂ MgSO₄ NaCl)",
+  "ions": {
+    "sodium": 5.1141341546885695,
+    "potassium": 0,
+    "magnesium": 3.85535121013605,
+    "calcium": 0,
+    "chloride": 16.25572137971609,
+    "sulfate": 3.8973684851140487,
+    "bicarbonate": 0,
+    "carbonate": 0,
+    "citrates": 0,
+    "bicitrates": 0,
+    "biphosphates": 0,
+    "phosphates": 0
+  },
+  "expectedFinishedIons": {
+    "sodium": 5.17653415468857,
+    "potassium": 0,
+    "magnesium": 5.91935121013605,
+    "calcium": 0.42840000000000006,
+    "chloride": 16.25572137971609,
+    "sulfate": 4.0197684851140485,
+    "bicarbonate": 11.4,
+    "carbonate": 0,
+    "citrates": 0,
+    "bicitrates": 0,
+    "biphosphates": 0,
+    "phosphates": 0
+  }
+}

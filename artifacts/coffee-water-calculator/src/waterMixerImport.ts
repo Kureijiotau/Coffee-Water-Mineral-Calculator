@@ -13,16 +13,29 @@ import {
   WATER_MIX_FILE_VERSION,
   type WaterMixSourceSnapshot,
 } from './waterMixer';
+import {
+  LEGACY_WATER_PAYLOAD_VERSION,
+  migrateLegacyWaterPayload,
+} from './legacyWaterRecovery';
 
 type RecordValue = Record<string, unknown>;
 
 export type ParsedWaterMixerImport =
-  | { kind: 'source'; source: WaterMixSourceSnapshot; provenance?: string }
+  | {
+      kind: 'source';
+      source: WaterMixSourceSnapshot;
+      provenance?: string;
+      legacySaltTargets?: Record<string, number>;
+    }
   | { kind: 'plan'; plan: WaterPlan }
   | { kind: 'error'; message: string };
 
 export type WaterMixerImportResult =
-  | { source: WaterMixSourceSnapshot; provenance?: string }
+  | {
+      source: WaterMixSourceSnapshot;
+      provenance?: string;
+      legacySaltTargets?: Record<string, number>;
+    }
   | { error: string };
 
 const isRecord = (value: unknown): value is RecordValue =>
@@ -55,19 +68,29 @@ function parseMetadata(value: unknown): WaterMetadata | undefined {
 
 function importedSourceFromPayload(payload: RecordValue): WaterMixSourceSnapshot | null {
   if (typeof payload.name !== 'string' || !payload.name.trim()) return null;
-  if (isRecord(payload.profile)) return null;
   const ions = parseIonRecord(payload.finishedWaterIons) ?? parseIonRecord(payload.ions);
   if (!ions) return null;
+  const migration = migrateLegacyWaterPayload({
+    kind: 'coffee-water-recipe',
+    version: Number(payload.version),
+    name: payload.name,
+    ions,
+  });
   return normalizeWaterMixSourceSnapshot({
     name: payload.name,
     sourceKind: 'saved-recipe',
     sourceId: `import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    ions: ions as Record<IonId, number>,
+    ions: migration?.ions ?? ions as Record<IonId, number>,
     metadata: parseMetadata(payload.finishedWaterMetadata),
+    provenance: migration?.provenance ?? (isRecord(payload.profile)
+      ? 'Imported Watermancer profile snapshot'
+      : undefined),
   });
 }
 
-function importedLegacySaltRecipeFromPayload(payload: RecordValue): WaterMixSourceSnapshot | null {
+function importedLegacySaltRecipeFromPayload(
+  payload: RecordValue,
+): { source: WaterMixSourceSnapshot; saltTargets: Record<string, number>; provenance: string } | null {
   if (typeof payload.name !== 'string' || !payload.name.trim() || !isRecord(payload.salts)) return null;
   if (isRecord(payload.profile)) return null;
 
@@ -82,27 +105,51 @@ function importedLegacySaltRecipeFromPayload(payload: RecordValue): WaterMixSour
   }
   if (Object.keys(saltTargets).length === 0) return null;
 
-  const ions = computeIonTotals(saltTargets, {}, 1);
-  return normalizeWaterMixSourceSnapshot({
+  const migration = migrateLegacyWaterPayload({
+    kind: 'coffee-water-recipe',
+    version: Number(payload.version),
     name: payload.name,
-    sourceKind: 'saved-recipe',
-    sourceId: `legacy-import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    ions,
+    saltTargets,
   });
+  const ions = migration?.ions ?? computeIonTotals(saltTargets, {}, 1);
+  return {
+    source: normalizeWaterMixSourceSnapshot({
+      name: payload.name,
+      sourceKind: 'saved-recipe',
+      sourceId: `legacy-import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      ions,
+    }),
+    saltTargets,
+    provenance: migration
+      ? migration.provenance
+      : 'Legacy recipe · zero-mineral RO estimate',
+  };
 }
 
-function importedMixerRecipeFromPayload(payload: RecordValue): WaterMixSourceSnapshot | null {
+function importedMixerRecipeFromPayload(
+  payload: RecordValue,
+): { source: WaterMixSourceSnapshot; provenance?: string } | null {
   if (payload.kind !== WATER_MIX_FILE_KIND || payload.version !== WATER_MIX_FILE_VERSION) return null;
   if (typeof payload.name !== 'string' || !payload.name.trim()) return null;
   const ions = parseIonRecord(payload.finalIons);
   if (!ions) return null;
-  return normalizeWaterMixSourceSnapshot({
+  const migration = migrateLegacyWaterPayload({
+    kind: WATER_MIX_FILE_KIND,
+    version: WATER_MIX_FILE_VERSION,
     name: payload.name,
-    sourceKind: 'saved-recipe',
-    sourceId: `mixer-import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    ions: ions as Record<IonId, number>,
-    metadata: parseMetadata(payload.finalMetadata),
+    ions,
   });
+  return {
+    source: normalizeWaterMixSourceSnapshot({
+      name: payload.name,
+      sourceKind: 'saved-recipe',
+      sourceId: `mixer-import-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      ions: migration?.ions ?? ions as Record<IonId, number>,
+      metadata: parseMetadata(payload.finalMetadata),
+      provenance: migration?.provenance,
+    }),
+    ...(migration ? { provenance: migration.provenance } : {}),
+  };
 }
 
 export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport {
@@ -118,19 +165,32 @@ export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport 
     return { kind: 'error', message: 'That file does not contain a supported finished-water recipe.' };
   }
   const mixerSource = importedMixerRecipeFromPayload(payload);
-  if (mixerSource) return { kind: 'source', source: mixerSource, provenance: 'Mixer blend snapshot' };
+  if (mixerSource) {
+    return {
+      kind: 'source',
+      source: mixerSource.source,
+      provenance: mixerSource.provenance ?? 'Mixer blend snapshot',
+    };
+  }
   if (payload.kind !== 'coffee-water-recipe' || payload.version !== 1) {
     return { kind: 'error', message: 'That file is not a supported coffee-water recipe or session.' };
   }
   const source = importedSourceFromPayload(payload);
-  if (source) return { kind: 'source', source };
+  if (source) {
+    return {
+      kind: 'source',
+      source,
+      ...(source.provenance ? { provenance: source.provenance } : {}),
+    };
+  }
   if (isRecord(payload.salts)) {
-    const legacySource = importedLegacySaltRecipeFromPayload(payload);
-    if (legacySource) {
+    const legacyImport = importedLegacySaltRecipeFromPayload(payload);
+    if (legacyImport) {
       return {
         kind: 'source',
-        source: legacySource,
-        provenance: 'Legacy recipe · zero-mineral RO estimate',
+        source: legacyImport.source,
+        provenance: legacyImport.provenance,
+        legacySaltTargets: legacyImport.saltTargets,
       };
     }
     return {

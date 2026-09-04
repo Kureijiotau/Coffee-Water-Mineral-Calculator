@@ -7,6 +7,40 @@ import {
   readWaterMixerImportFile,
 } from './waterMixerImport';
 import { serializeWaterMixRecipeFile } from './waterMixer';
+import {
+  LEGACY_WATER_MIGRATIONS,
+  migrateLegacyWaterPayload,
+} from './legacyWaterRecovery';
+import legacyRecipeFixture from './fixtures/legacy-water/coffee-water-recipe-v1.json';
+import legacyPlanFixture from './fixtures/legacy-water/coffee-water-plan-v1.json';
+import legacyProfileFixture from './fixtures/legacy-water/watermancer-profile-v1.json';
+import legacySourceFixture from './fixtures/legacy-water/coffee-water-mix-source-v1.json';
+import legacyMixFixture from './fixtures/legacy-water/coffee-water-mix-v1.json';
+
+const legacyFixtures = [
+  legacyRecipeFixture,
+  legacyPlanFixture,
+  legacyProfileFixture,
+  legacySourceFixture,
+  legacyMixFixture,
+];
+
+function registryPayloadFromFixture(fixture: (typeof legacyFixtures)[number], version = fixture.version) {
+  const saltTargets = fixture.saltTargets
+    ?? (fixture.salts
+      ? Object.fromEntries(
+        Object.entries(fixture.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
+      )
+      : undefined);
+  const ions = fixture.finalIons ?? fixture.ions;
+  return {
+    kind: fixture.kind,
+    version,
+    name: fixture.name,
+    ...(saltTargets ? { saltTargets } : {}),
+    ...(ions ? { ions } : {}),
+  };
+}
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
@@ -14,6 +48,65 @@ const ONE_PIXEL_PNG = Uint8Array.from(
 );
 
 describe('Mixer recipe imports', () => {
+  it('keeps the fixture matrix aligned with every registered kind and version', () => {
+    expect(legacyFixtures.map(fixture => `${fixture.kind}:${fixture.version}`)).toEqual(
+      LEGACY_WATER_MIGRATIONS.map(migration => `${migration.kind}:${migration.version}`),
+    );
+
+    for (const fixture of legacyFixtures) {
+      const migration = migrateLegacyWaterPayload(registryPayloadFromFixture(fixture));
+
+      expect(migration?.ions, `${fixture.kind} v${fixture.version}`).toEqual(
+        fixture.expectedFinishedIons,
+      );
+    }
+  });
+
+  it('recovers the exact finished readings from the legacy recipe file fixture', () => {
+    const result = parseWaterMixerImportText(JSON.stringify(legacyRecipeFixture));
+
+    expect(result.kind).toBe('source');
+    if (result.kind !== 'source') return;
+    expect(result.source.ions).toEqual(legacyRecipeFixture.expectedFinishedIons);
+    expect(result.provenance).toContain('Recovered legacy Magnesia baseline');
+  });
+
+  it('recovers the exact finished readings from the legacy Mixer file fixture', () => {
+    const result = parseWaterMixerImportText(JSON.stringify(legacyMixFixture));
+
+    expect(result.kind).toBe('source');
+    if (result.kind !== 'source') return;
+    expect(result.source.ions).toEqual(legacyMixFixture.expectedFinishedIons);
+    expect(result.provenance).toContain('Recovered legacy Magnesia baseline');
+  });
+
+  it('does not migrate unsupported versions or same-name custom recipes', () => {
+    for (const fixture of legacyFixtures) {
+      const unsupported = migrateLegacyWaterPayload(
+        registryPayloadFromFixture(fixture, fixture.version + 1),
+      );
+      expect(unsupported, `${fixture.kind} unsupported version`).toBeNull();
+    }
+
+    const customRecipe = {
+      ...legacyRecipeFixture,
+      salts: {
+        ...legacyRecipeFixture.salts,
+        mgso4: { ...legacyRecipeFixture.salts.mgso4, target: '5' },
+      },
+    };
+    const customResult = parseWaterMixerImportText(JSON.stringify(customRecipe));
+
+    expect(customResult.kind).toBe('source');
+    if (customResult.kind !== 'source') return;
+    expect(customResult.provenance).toBe('Legacy recipe · zero-mineral RO estimate');
+    expect(customResult.source.ions).toEqual(computeIonTotals({
+      mgso4: 5,
+      mgcl2: 11.2390986763469,
+      nacl: 13.000000000000002,
+    }, {}, 1));
+  });
+
   it('imports legacy finished-water readings as a source snapshot', () => {
     const result = parseWaterMixerImportText(JSON.stringify({
       kind: 'coffee-water-recipe',
@@ -94,6 +187,36 @@ describe('Mixer recipe imports', () => {
     expect(result.source.metadata).toEqual({ tds: 44 });
   });
 
+  it('repairs a legacy salt-only Mixer snapshot through the versioned registry', () => {
+    const saltOnly = computeIonTotals({
+      mgso4: 4.883476553307854,
+      mgcl2: 11.2390986763469,
+      nacl: 13,
+    }, {}, 1);
+    const result = parseWaterMixerImportText(serializeWaterMixRecipeFile({
+      name: 'Magnesia (MgCl₂ MgSO₄ NaCl)',
+      sourceA: {
+        name: 'Water A',
+        sourceKind: 'saved-recipe',
+        ions: {},
+      },
+      sourceB: {
+        name: 'Water B',
+        sourceKind: 'manual',
+        ions: {},
+      },
+      volumeAMl: 500,
+      volumeBMl: 500,
+      finalIons: saltOnly,
+    }));
+
+    expect(result.kind).toBe('source');
+    if (result.kind !== 'source') return;
+    expect(result.provenance).toContain('Recovered legacy Magnesia baseline');
+    expect(result.source.ions.calcium).toBeCloseTo(0.4284, 4);
+    expect(result.source.ions.bicarbonate).toBeCloseTo(11.4, 4);
+  });
+
   it('imports legacy salt-only recipes over a zero-mineral RO baseline', () => {
     const result = parseWaterMixerImportText(serializeRecipeFile({
       name: 'Salt only',
@@ -134,16 +257,40 @@ describe('Mixer recipe imports', () => {
     }, {}, 1));
   });
 
-  it('rejects target profiles so they cannot become Mixer water sources', () => {
+  it('recovers the published Magnesia baseline for its older salt-only card', () => {
+    const result = parseWaterMixerImportText(JSON.stringify({
+      kind: 'coffee-water-recipe',
+      version: 1,
+      name: 'Magnesia (MgCl₂ MgSO₄ NaCl)',
+      salts: {
+        mgso4: { target: '4.883476553307854', formIdx: 1 },
+        mgcl2: { target: '11.2390986763469', formIdx: 1 },
+        nacl: { target: '13.000000000000002', formIdx: 0 },
+      },
+    }));
+
+    expect(result.kind).toBe('source');
+    if (result.kind !== 'source') return;
+    expect(result.provenance).toContain('Recovered legacy Magnesia baseline');
+    expect(result.source.ions.calcium).toBeCloseTo(0.4284, 4);
+    expect(result.source.ions.magnesium).toBeCloseTo(5.91935, 4);
+    expect(result.source.ions.sodium).toBeCloseTo(5.17653, 4);
+    expect(result.source.ions.bicarbonate).toBeCloseTo(11.4, 4);
+  });
+
+  it('imports Watermancer profile payloads using their ion snapshot', () => {
     const result = parseWaterMixerImportText(JSON.stringify({
       kind: 'coffee-water-recipe',
       version: 1,
       name: 'Target profile',
-      ions: { calcium: 40 },
+      ions: { calcium: 40, magnesium: 8, bicarbonate: 22 },
       profile: { name: 'Safe', source: 'Watermancer', targets: { calcium: 40 } },
     }));
 
-    expect(result.kind).toBe('error');
+    expect(result.kind).toBe('source');
+    if (result.kind !== 'source') return;
+    expect(result.provenance).toBe('Imported Watermancer profile snapshot');
+    expect(result.source.ions).toMatchObject({ calcium: 40, magnesium: 8, bicarbonate: 22 });
   });
 
   it('rejects recipe-card PNGs without embedded readings', async () => {

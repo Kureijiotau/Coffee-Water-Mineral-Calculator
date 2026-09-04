@@ -74,6 +74,8 @@ export type WaterPlanSnapshot = {
   watermancerIonSourcePreferences: Record<string, string>;
   watermancerDoseOverridesMg: Record<string, number>;
   sodiumCorrectionOn: boolean;
+  /** Exact final readings captured when the plan was saved, if available. */
+  finishedIons?: Record<string, number>;
   concentrateRecipeHandoff: {
     name: string;
     salts: Record<string, SaltRecipeEntry>;
