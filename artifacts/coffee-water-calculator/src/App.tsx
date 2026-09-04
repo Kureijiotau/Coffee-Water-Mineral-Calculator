@@ -5698,9 +5698,9 @@ function App() {
                 </div>
                 </div>
             );
-          })}
-           </div>
-             {showAlchemist && (
+           })}
+            </>
+              {showAlchemist && (
                <IonWatchDisclosure
                  ions={saltOnlyIons}
                  activeProfile={activeProfile}
@@ -5714,9 +5714,9 @@ function App() {
                    setShowMemeSalts(value => !value);
                  }}
                />
+              </div>
              </div>
-            </>
-           </div>}
+            </div>}
          {/* Water amount + Concentrate */}
               {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface ${showAlchemist ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />

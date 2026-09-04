@@ -83,3 +83,4 @@
 - [React-free Watermancer solver](watermancer-react-free-solver.md) — keep route computation isolated from App.tsx so development and production can share the worker path
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
+- [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
