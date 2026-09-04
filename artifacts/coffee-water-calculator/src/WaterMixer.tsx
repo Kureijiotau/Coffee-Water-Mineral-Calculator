@@ -13,8 +13,10 @@ import type { LocalWater, WaterMetadata } from '@/localWaters';
 import {
   calculateWaterMix,
   createWaterMixRecipe,
+  dedupeWaterMixSourceSnapshots,
   loadImportedWaterMixSources,
   loadWaterMixRecipes,
+  migrateWaterMixSourceSnapshot,
   saveImportedWaterMixSources,
   saveWaterMixRecipe,
   serializeWaterMixRecipeFile,
@@ -50,7 +52,7 @@ export type WaterMixerProps = {
   communityWaters?: WaterMixerDatabaseWater[];
   databaseLoading?: boolean;
   databaseError?: string | null;
-  onLoadCommunityWaters?: () => void | Promise<void>;
+  onLoadCommunityWaters?: () => void | Promise<unknown>;
   onSavedRecipe?: (recipe: WaterMixRecipe) => void;
   onImportRecipeFile?: (file: File) => Promise<WaterMixerImportResult>;
 };
@@ -188,7 +190,7 @@ function SourcePicker({
   databaseWaters: WaterMixerDatabaseWater[];
   databaseLoading: boolean;
   databaseError?: string | null;
-  onLoadCommunityWaters?: () => void | Promise<void>;
+  onLoadCommunityWaters?: () => void | Promise<unknown>;
   onMode: (mode: WaterMixSourceKind) => void;
   onSelectSaved: (source: WaterMixSourceSnapshot) => void;
   onSelectDatabase: (water: WaterMixerDatabaseWater) => void;
@@ -322,7 +324,7 @@ function SourceCard({
   databaseWaters: WaterMixerDatabaseWater[];
   databaseLoading: boolean;
   databaseError?: string | null;
-  onLoadCommunityWaters?: () => void | Promise<void>;
+  onLoadCommunityWaters?: () => void | Promise<unknown>;
   onChange: (next: CardState) => void;
   onVolume: (value: string) => void;
   onClear: () => void;
@@ -862,9 +864,9 @@ export default function WaterMixer({
     () => buildMixerSaltSteps(saltTargets, formIdxBySaltId, result.totalVolumeMl),
     [formIdxBySaltId, result.totalVolumeMl, saltTargets],
   );
-  const eligibleSources = useMemo<WaterMixerSavedSource[]>(() => [
-    ...savedSources,
-    ...importedSources,
+  const eligibleSources = useMemo<WaterMixerSavedSource[]>(() => dedupeWaterMixSourceSnapshots([
+    ...savedSources.map(migrateWaterMixSourceSnapshot),
+    ...importedSources.map(migrateWaterMixSourceSnapshot),
     ...storedRecipes.map(recipe => ({
       id: recipe.id,
       name: recipe.name,
@@ -873,12 +875,12 @@ export default function WaterMixer({
       ions: recipe.finalIons,
       metadata: recipe.finalMetadata,
       provenance: 'Mixer recipe',
-    })),
-  ], [importedSources, savedSources, storedRecipes]);
+    })).map(migrateWaterMixSourceSnapshot),
+  ]), [importedSources, savedSources, storedRecipes]);
 
   const rememberImportedSource = (source: WaterMixerSavedSource) => {
     setImportedSources(previous => {
-      const next = [source, ...previous.filter(item => item.sourceId !== source.sourceId)];
+      const next = dedupeWaterMixSourceSnapshots([source, ...previous]);
       saveImportedWaterMixSources(next);
       return next;
     });
@@ -913,12 +915,12 @@ export default function WaterMixer({
         sourceId: parsed.source.sourceId ?? `import-${Date.now().toString(36)}`,
         provenance: parsed.provenance ?? 'Imported recipe',
       };
-      rememberImportedSource(imported);
       if (!effectiveSourceA) {
         applyImportedSource(imported, 'a');
       } else if (!effectiveSourceB) {
         applyImportedSource(imported, 'b');
       } else {
+        rememberImportedSource(imported);
         setPendingImport(imported);
         setImportMessage('Both Mixer sources are in use. Choose a source to replace.');
       }
