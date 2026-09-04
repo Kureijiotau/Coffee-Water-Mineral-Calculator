@@ -91,6 +91,16 @@ const formatGhKhRatio = (gh: number, kh: number): string => {
 };
 
 const MIXER_MEME_SALT_IDS = new Set(['calact', 'mggly']);
+const MIXER_LIVE_ION_ORDER: IonId[] = [
+  'magnesium',
+  'chloride',
+  'calcium',
+  'sodium',
+  'potassium',
+  'sulfate',
+  'bicarbonate',
+  'citrates',
+];
 
 type MixerSaltStep = {
   name: string;
@@ -185,11 +195,11 @@ function MixerLiveReadings({ result, sideRail = false }: { result: WaterMixResul
           <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_9px_rgba(103,232,249,0.9)]" aria-hidden="true" />
           <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100">Live final readings</h2>
         </div>
-        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">live · mg/L</span>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">salt coupling · mg/L</span>
       </div>
       {result.valid ? (
         <div className={sideRail ? 'grid grid-cols-2 gap-x-2 px-2 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col' : 'flex min-w-max divide-x divide-slate-800/80 overflow-x-auto'} data-testid="list-mixer-live-ions">
-          {ACTIVE_ION_IDS.map(id => (
+          {MIXER_LIVE_ION_ORDER.map(id => (
             <div key={id} className={sideRail ? 'min-w-0 border-b border-slate-800/80 px-2 py-2.5 xl:flex xl:flex-1 xl:flex-col xl:justify-center xl:py-4' : 'min-w-[6.4rem] px-3 py-2.5 first:pl-4 last:pr-4'}>
               <div className="flex items-center gap-1.5">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: ION_MAP[id].color.foreground }} aria-hidden="true" />

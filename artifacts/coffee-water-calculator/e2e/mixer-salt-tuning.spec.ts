@@ -29,6 +29,17 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await expect(page.getByTestId('status-mixer-result')).toHaveText('Calculated');
   await expect(page.getByTestId('panel-mixer-live-readings')).toBeVisible();
   await expect(page.getByTestId('panel-mixer-live-readings-rail')).toBeVisible();
+  const liveIonOrder = await page.locator('[data-testid^="text-mixer-live-ion-"]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-testid')));
+  expect(liveIonOrder).toEqual([
+    'text-mixer-live-ion-magnesium',
+    'text-mixer-live-ion-chloride',
+    'text-mixer-live-ion-calcium',
+    'text-mixer-live-ion-sodium',
+    'text-mixer-live-ion-potassium',
+    'text-mixer-live-ion-sulfate',
+    'text-mixer-live-ion-bicarbonate',
+    'text-mixer-live-ion-citrates',
+  ]);
   const mixerSaltOrder = await page.locator('[data-testid^="row-mixer-salt-"]').evaluateAll(rows => rows.map(row => row.getAttribute('data-testid')));
   expect(mixerSaltOrder).toEqual([
     'row-mixer-salt-mgcl2',
