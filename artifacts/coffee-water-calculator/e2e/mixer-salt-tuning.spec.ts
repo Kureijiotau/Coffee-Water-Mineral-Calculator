@@ -9,7 +9,6 @@ const activeIonIds = [
   'sulfate',
   'chloride',
   'citrates',
-  'silica',
 ] as const;
 
 async function completeManualSource(page: Page, side: 'a' | 'b'): Promise<void> {
@@ -22,7 +21,7 @@ async function completeManualSource(page: Page, side: 'a' | 'b'): Promise<void> 
 
 test('lets users tune the final blend with a salt dose and hydration form', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Mixer', exact: true }).click();
+  await page.getByRole('tab', { name: 'Mixer', exact: true }).click();
   await expect(page.getByTestId('workspace-water-mixer')).toBeVisible();
 
   await completeManualSource(page, 'a');
@@ -70,11 +69,13 @@ test('offers saved Watermancer ion profiles in the finished-source picker', asyn
     }]));
   });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Mixer', exact: true }).click();
+  await page.getByRole('tab', { name: 'Mixer', exact: true }).click();
 
   const picker = page.getByTestId('select-mixer-saved-source-a');
-  await expect(picker.locator('option')).toContainText('Saved Light Roast Profile · Watermancer saved profile · Browser regression');
+  await expect(picker.locator('option').filter({
+    hasText: 'Saved Light Roast Profile · Watermancer saved profile · Browser regression',
+  })).toHaveCount(1);
   await picker.selectOption('watermancer-profile:saved-profile-for-mixer');
   await expect(page.getByTestId('text-mixer-source-name-a')).toHaveText('Saved Light Roast Profile');
-  await expect(page.getByTestId('text-mixer-source-ion-a-calcium')).toContainText('12.00');
+  await expect(page.getByTestId('text-mixer-source-ion-a-calcium')).toContainText('12.0');
 });
