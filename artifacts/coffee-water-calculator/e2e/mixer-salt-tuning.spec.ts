@@ -27,6 +27,7 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await completeManualSource(page, 'a');
   await completeManualSource(page, 'b');
   await expect(page.getByTestId('status-mixer-result')).toHaveText('Calculated');
+  await expect(page.getByTestId('panel-mixer-live-readings')).toBeVisible();
   for (const ionId of activeIonIds) {
     await expect(page.getByTestId(`text-mixer-source-ion-a-${ionId}`)).toBeVisible();
     await expect(page.getByTestId(`text-mixer-source-ion-b-${ionId}`)).toBeVisible();
@@ -47,6 +48,39 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
   await expect(page.getByTestId('select-mixer-salt-form-mgso4')).toHaveValue('0');
   await expect(page.getByTestId('text-mixer-final-ion-magnesium')).not.toContainText('0.00');
   await expect(page.getByTestId('list-mixer-recipe-steps')).toContainText('Add final-blend salts');
+});
+
+test('confirms saved Mixer recipe deletion and clears an active deleted source', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.removeItem('cwm.waterMixerRecipes');
+  });
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Mixer', exact: true }).click();
+  await completeManualSource(page, 'a');
+  await completeManualSource(page, 'b');
+
+  await page.getByTestId('button-open-save-mixer-recipe').click();
+  await page.getByTestId('input-mixer-recipe-name').fill('Delete me blend');
+  await page.getByTestId('button-save-mixer-recipe').click();
+
+  const recipeCard = page.getByTestId(/card-mixer-saved-recipe-/);
+  await expect(recipeCard).toContainText('Delete me blend');
+  const savedSourcePicker = page.getByTestId('select-mixer-saved-source-a');
+  await savedSourcePicker.selectOption({ label: 'Delete me blend · Mixer recipe' });
+  await expect(page.getByTestId('text-mixer-source-name-a')).toHaveText('Delete me blend');
+
+  const recipeId = await recipeCard.getAttribute('data-testid').then(value => value?.replace('card-mixer-saved-recipe-', '') ?? '');
+  await page.getByTestId(`button-delete-mixer-recipe-${recipeId}`).click();
+  await expect(page.getByRole('dialog', { name: 'Delete saved recipe?' })).toBeVisible();
+  await page.getByTestId('button-cancel-delete-mixer-recipe').click();
+  await expect(recipeCard).toBeVisible();
+
+  await page.getByTestId(`button-delete-mixer-recipe-${recipeId}`).click();
+  await page.getByTestId('button-confirm-delete-mixer-recipe').click();
+  await expect(page.getByTestId(`card-mixer-saved-recipe-${recipeId}`)).toHaveCount(0);
+  await expect(page.getByTestId('status-mixer-delete')).toHaveText('Deleted "Delete me blend".');
+  await expect(page.getByTestId('status-mixer-result')).toHaveText('Incomplete');
+  await expect(page.getByTestId('status-mixer-live-readings-incomplete')).toBeVisible();
 });
 
 test('offers saved Watermancer ion profiles in the finished-source picker', async ({ page }) => {

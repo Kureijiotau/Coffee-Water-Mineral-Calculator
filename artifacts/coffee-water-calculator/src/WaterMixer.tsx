@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Database, Download, FlaskConical, Minus, Plus, RotateCcw, Save, Search, SlidersHorizontal, Trash2, Upload, Waves, X } from 'lucide-react';
 import {
   ACTIVE_ION_IDS,
@@ -13,6 +13,7 @@ import type { LocalWater, WaterMetadata } from '@/localWaters';
 import {
   calculateWaterMix,
   createWaterMixRecipe,
+  deleteWaterMixRecipe,
   dedupeWaterMixSourceSnapshots,
   loadImportedWaterMixSources,
   loadWaterMixRecipes,
@@ -168,6 +169,45 @@ function IonReading({ id, value, compact = false, testId }: { id: IonId; value: 
       </span>
       <span className="shrink-0 font-mono tabular-nums text-slate-200">{formatReading(value)} <small className="text-[9px] text-slate-500">mg/L</small></span>
     </div>
+  );
+}
+
+function MixerLiveReadings({ result }: { result: WaterMixResult }) {
+  return (
+    <section
+      className="sticky top-3 z-20 mt-4 overflow-hidden rounded-xl border border-cyan-300/25 bg-slate-950/90 shadow-xl shadow-slate-950/30 backdrop-blur-xl"
+      data-testid="panel-mixer-live-readings"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-300/10 px-3 py-2">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_9px_rgba(103,232,249,0.9)]" aria-hidden="true" />
+          <h2 className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-100">Live final readings</h2>
+        </div>
+        <span className="font-mono text-[9px] uppercase tracking-wider text-slate-500">updates with salt edits · mg/L</span>
+      </div>
+      {result.valid ? (
+        <div className="flex min-w-max divide-x divide-slate-800/80 overflow-x-auto" data-testid="list-mixer-live-ions">
+          {ACTIVE_ION_IDS.map(id => (
+            <div key={id} className="min-w-[6.4rem] px-3 py-2.5 first:pl-4 last:pr-4">
+              <span className="block truncate text-[9px] uppercase tracking-wider text-slate-500">{ION_MAP[id].name}</span>
+              <strong className="mt-1 block font-mono text-sm tabular-nums text-cyan-100" data-testid={`text-mixer-live-ion-${id}`}>
+                {formatReading(result.finalIons[id])}
+              </strong>
+            </div>
+          ))}
+          <div className="min-w-[6.4rem] px-3 py-2.5 last:pr-4">
+            <span className="block truncate text-[9px] uppercase tracking-wider text-slate-500">Modeled TDS</span>
+            <strong className="mt-1 block font-mono text-sm tabular-nums text-emerald-200" data-testid="text-mixer-live-tds">
+              {formatReading(result.tds)}
+            </strong>
+          </div>
+        </div>
+      ) : (
+        <p className="px-4 py-3 text-xs text-slate-500" data-testid="status-mixer-live-readings-incomplete">
+          Choose two finished sources and enter a positive total volume to see live readings.
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -832,6 +872,9 @@ export default function WaterMixer({
   const [showMemeSalts, setShowMemeSalts] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [deleteMessage, setDeleteMessage] = useState('');
+  const [deleteMessageIsError, setDeleteMessageIsError] = useState(false);
+  const [pendingDeleteRecipe, setPendingDeleteRecipe] = useState<WaterMixRecipe | null>(null);
   const [storedRecipes, setStoredRecipes] = useState<WaterMixRecipe[]>(() => savedMixerRecipes ?? loadWaterMixRecipes());
   const [importedSources, setImportedSources] = useState<WaterMixerSavedSource[]>(() => loadImportedWaterMixSources());
   const [importMessage, setImportMessage] = useState('');
@@ -839,6 +882,17 @@ export default function WaterMixer({
   const [isImporting, setIsImporting] = useState(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const deleteConfirmRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!pendingDeleteRecipe) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPendingDeleteRecipe(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    deleteConfirmRef.current?.focus();
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pendingDeleteRecipe]);
 
   const databaseWaters = useMemo(() => {
     const byId = new Map<string, WaterMixerDatabaseWater>();
@@ -963,6 +1017,30 @@ export default function WaterMixer({
     setFormIdxBySaltId(recipe.formIdxBySaltId ?? {});
     setSaltDoseDrafts({});
     setSaveMessage(`Reopened "${recipe.name}"`);
+  };
+
+  const confirmDeleteRecipe = () => {
+    const recipe = pendingDeleteRecipe;
+    if (!recipe) return;
+
+    const outcome = deleteWaterMixRecipe(recipe.id, storedRecipes);
+    if (!outcome.persisted) {
+      setDeleteMessage(`Couldn’t delete "${recipe.name}" from saved storage.`);
+      setDeleteMessageIsError(true);
+      setPendingDeleteRecipe(null);
+      return;
+    }
+
+    setStoredRecipes(outcome.recipes);
+    if (cardA.source?.sourceKind === 'saved-recipe' && cardA.source.sourceId === recipe.id) {
+      setCardA(emptyCard());
+    }
+    if (cardB.source?.sourceKind === 'saved-recipe' && cardB.source.sourceId === recipe.id) {
+      setCardB(emptyCard());
+    }
+    setDeleteMessage(outcome.deleted ? `Deleted "${recipe.name}".` : `"${recipe.name}" was already deleted.`);
+    setDeleteMessageIsError(false);
+    setPendingDeleteRecipe(null);
   };
 
   const updateMixerSaltDose = (saltId: string, value: string) => {
@@ -1166,6 +1244,8 @@ export default function WaterMixer({
         </section>
       </div>
 
+      <MixerLiveReadings result={result} />
+
       <MixerSaltTable
         saltTargets={saltTargets}
         formIdxBySaltId={formIdxBySaltId}
@@ -1188,6 +1268,16 @@ export default function WaterMixer({
         onToggleMemeSalts={() => setShowMemeSalts(value => !value)}
       />
 
+      {deleteMessage && (
+        <p
+          className={`rounded-xl border px-4 py-3 text-xs ${deleteMessageIsError ? 'border-rose-300/30 bg-rose-300/10 text-rose-100' : 'border-emerald-300/30 bg-emerald-300/10 text-emerald-100'}`}
+          role="status"
+          data-testid="status-mixer-delete"
+        >
+          {deleteMessage}
+        </p>
+      )}
+
       {storedRecipes.length > 0 && (
         <section className="rounded-2xl border border-slate-700/70 bg-slate-900/60 p-4" data-testid="panel-mixer-saved-recipes">
           <div className="flex items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
@@ -1198,11 +1288,50 @@ export default function WaterMixer({
             {storedRecipes.map(recipe => (
               <div key={recipe.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-3" data-testid={`card-mixer-saved-recipe-${recipe.id}`}>
                 <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-200">{recipe.name}</p><p className="mt-1 font-mono text-[10px] text-slate-500">{formatVolume(recipe.volumeAMl)} + {formatVolume(recipe.volumeBMl)} mL</p></div>
-                <button type="button" onClick={() => reopen(recipe)} data-testid={`button-reopen-mixer-recipe-${recipe.id}`} className="shrink-0 rounded-md border border-violet-300/25 bg-violet-300/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-200 hover:border-violet-200/60" aria-label={`Reopen ${recipe.name}`}>Reopen</button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <button type="button" onClick={() => reopen(recipe)} data-testid={`button-reopen-mixer-recipe-${recipe.id}`} className="rounded-md border border-violet-300/25 bg-violet-300/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-200 hover:border-violet-200/60" aria-label={`Reopen ${recipe.name}`}>Reopen</button>
+                  <button type="button" onClick={() => { setDeleteMessage(''); setPendingDeleteRecipe(recipe); }} data-testid={`button-delete-mixer-recipe-${recipe.id}`} className="rounded-md border border-rose-300/25 bg-rose-300/10 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-200 hover:border-rose-200/60" aria-label={`Delete ${recipe.name}`}>Delete</button>
+                </div>
               </div>
             ))}
           </div>
         </section>
+      )}
+      {pendingDeleteRecipe && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setPendingDeleteRecipe(null);
+          }}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-rose-300/25 bg-slate-900 p-5 shadow-2xl shadow-slate-950/60"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mixer-delete-dialog-title"
+            aria-describedby="mixer-delete-dialog-description"
+            onMouseDown={event => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-rose-300/25 bg-rose-300/10">
+                <Trash2 className="h-4 w-4 text-rose-200" aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="mixer-delete-dialog-title" className="text-base font-bold text-slate-100">Delete saved recipe?</h2>
+                <p id="mixer-delete-dialog-description" className="mt-2 text-sm leading-relaxed text-slate-400">
+                  Delete <strong className="text-slate-200">{pendingDeleteRecipe.name}</strong> from your saved Mixer recipes? This will not remove any catalog or imported water sources.
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setPendingDeleteRecipe(null)} data-testid="button-cancel-delete-mixer-recipe" className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-300 hover:border-slate-500 hover:text-slate-100">Cancel</button>
+              <button ref={deleteConfirmRef} type="button" onClick={confirmDeleteRecipe} data-testid="button-confirm-delete-mixer-recipe" className="inline-flex items-center justify-center gap-2 rounded-lg border border-rose-300/40 bg-rose-400/15 px-3 py-2 text-xs font-bold text-rose-100 hover:border-rose-200/70 hover:bg-rose-400/25">
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Delete recipe
+              </button>
+            </div>
+          </div>
+        </div>
       )}
        {shareCardOpen && result.valid && effectiveSourceA && effectiveSourceB && (
          <MixerRecipeCardModal

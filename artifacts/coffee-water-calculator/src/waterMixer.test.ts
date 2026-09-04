@@ -3,6 +3,7 @@ import { ACTIVE_ION_IDS, computeIonTotals } from '@/waterData';
 import {
   calculateWaterMix,
   createWaterMixRecipe,
+  deleteWaterMixRecipe,
   dedupeWaterMixSourceSnapshots,
   isValidWaterMixRecipe,
   loadImportedWaterMixSources,
@@ -199,6 +200,39 @@ describe('water mixer persistence', () => {
     })) as Record<string, unknown>;
     expect(exported.saltTargets).toEqual(input.saltTargets);
     expect(exported.formIdxBySaltId).toEqual(input.formIdxBySaltId);
+  });
+
+  it('deletes only the saved Mixer recipe with the matching id', () => {
+    const input = {
+      sourceA: source('Saved A', { calcium: 15 }, 'saved-recipe'),
+      sourceB: source('Database B', { magnesium: 5 }, 'database'),
+      volumeAMl: 200,
+      volumeBMl: 300,
+    };
+    const first = createWaterMixRecipe('Same name', input)!;
+    const second = { ...createWaterMixRecipe('Same name', input)!, id: `${first.id}-second` };
+    saveWaterMixRecipes([first, second]);
+
+    const outcome = deleteWaterMixRecipe(first.id);
+
+    expect(outcome).toEqual({ recipes: [second], deleted: true, persisted: true });
+    expect(loadWaterMixRecipes()).toEqual([second]);
+  });
+
+  it('leaves saved recipes unchanged when the deletion id is missing', () => {
+    const input = {
+      sourceA: source('Saved A', { calcium: 15 }, 'saved-recipe'),
+      sourceB: source('Database B', { magnesium: 5 }, 'database'),
+      volumeAMl: 200,
+      volumeBMl: 300,
+    };
+    const recipe = createWaterMixRecipe('Quiet blend', input)!;
+    saveWaterMixRecipes([recipe]);
+
+    const outcome = deleteWaterMixRecipe('missing-recipe');
+
+    expect(outcome).toEqual({ recipes: [recipe], deleted: false, persisted: true });
+    expect(loadWaterMixRecipes()).toEqual([recipe]);
   });
 
   it('skips malformed records', () => {

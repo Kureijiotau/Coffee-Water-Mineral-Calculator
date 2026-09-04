@@ -478,6 +478,30 @@ export function saveWaterMixRecipes(recipes: WaterMixRecipe[]): void {
   }
 }
 
+export type WaterMixRecipeDeletionResult = {
+  recipes: WaterMixRecipe[];
+  deleted: boolean;
+  persisted: boolean;
+};
+
+export function deleteWaterMixRecipe(recipeId: string, currentRecipes?: WaterMixRecipe[]): WaterMixRecipeDeletionResult {
+  const recipes = currentRecipes ?? loadWaterMixRecipes();
+  const next = recipes.filter(recipe => recipe.id !== recipeId);
+  if (next.length === recipes.length) {
+    return { recipes, deleted: false, persisted: true };
+  }
+
+  try {
+    localStorage.setItem(
+      WATER_MIXER_STORAGE_KEY,
+      JSON.stringify(next.filter(isValidWaterMixRecipe).map(recipe => migrateWaterMixRecipe(recipe))),
+    );
+    return { recipes: next, deleted: true, persisted: true };
+  } catch {
+    return { recipes, deleted: false, persisted: false };
+  }
+}
+
 export function saveWaterMixRecipe(recipe: WaterMixRecipe): WaterMixRecipe[] {
   const recipes = loadWaterMixRecipes().filter(item => item.id !== recipe.id);
   const next = [recipe, ...recipes];
