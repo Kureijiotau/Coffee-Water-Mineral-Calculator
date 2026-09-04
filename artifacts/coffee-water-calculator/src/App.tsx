@@ -73,8 +73,12 @@ import {
   type LotusDropperStyle,
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
-import WaterMixer, { type WaterMixerSavedSource } from './WaterMixer';
+import WaterMixer, { type WaterMixerDatabaseWater, type WaterMixerSavedSource } from './WaterMixer';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
+import {
+  LEGACY_WATER_PAYLOAD_VERSION,
+  migrateLegacyWaterPayload,
+} from './legacyWaterRecovery';
 import {
   normalizeWatermancerIonOrder,
   normalizeWatermancerIonSourcePreferences,
@@ -888,38 +892,74 @@ export function volumeToLiters(value: string | number, unit: VolumeUnit): number
   return unit === 'gallons' ? parsed * US_GALLON_IN_LITERS : parsed;
 }
 
-function waterPlanToMixerSource(plan: WaterPlan): WaterMixerSavedSource {
+function waterPlanToMixerSource(
+  plan: WaterPlan,
+  catalogWaters: WaterMixerDatabaseWater[] = [],
+): WaterMixerSavedSource {
   const snapshot = plan.snapshot;
   const batchMl = volumeToLiters(snapshot.liters, snapshot.volumeUnit) * 1000;
   const entries: MineralWaterEntry[] = [...snapshot.mineralWaters, ...snapshot.additionWaters].map(entry => ({
     id: entry.id,
     name: entry.name,
-    ions: entry.ions,
-    metadata: entry.metadata,
+    ions: Object.keys(entry.ions).some(id => Number(entry.ions[id] ?? '') > 0)
+      ? entry.ions
+      : Object.fromEntries(
+        Object.entries(catalogWaters.find(water =>
+          (entry.sourceLocalId && String(water.id) === entry.sourceLocalId)
+          || water.name.trim().toLocaleLowerCase() === entry.name.trim().toLocaleLowerCase()
+        )?.ions ?? {}).map(([id, value]) => [id, String(value)]),
+      ),
+    metadata: Object.keys(entry.metadata).length > 0
+      ? entry.metadata
+      : Object.fromEntries(
+        Object.entries(catalogWaters.find(water =>
+          (entry.sourceLocalId && String(water.id) === entry.sourceLocalId)
+          || water.name.trim().toLocaleLowerCase() === entry.name.trim().toLocaleLowerCase()
+        )?.metadata ?? {}).map(([key, value]) => [key, String(value)]),
+      ),
     volumeMl: entry.volumeMl,
     sourceLocalId: entry.sourceLocalId,
   }));
   const savedSaltTargets = Object.fromEntries(
     SALTS.map((salt, index) => [salt.id, num(snapshot.rows[index]?.target ?? '')]),
   );
+  const legacyMigration = migrateLegacyWaterPayload({
+    kind: 'coffee-water-plan',
+    version: snapshot.version,
+    name: plan.name,
+    ...(snapshot.finishedIons
+      ? { ions: snapshot.finishedIons }
+      : { saltTargets: savedSaltTargets }),
+  });
   return {
     id: `plan:${plan.id}`,
     name: plan.name,
     sourceKind: 'saved-recipe',
     sourceId: `plan:${plan.id}`,
-    ions: computeWatermancerFinalIons(entries, batchMl, savedSaltTargets),
+    ions: legacyMigration?.ions
+      ?? (snapshot.finishedIons
+      ? Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [id, Math.max(Number(snapshot.finishedIons?.[id] ?? 0), 0)]),
+      ) as Record<IonId, number>
+      : computeWatermancerFinalIons(entries, batchMl, savedSaltTargets)),
     provenance: snapshot.nerdLevel === 'watermancer' ? 'Saved Watermancer session' : 'Saved Alchemist session',
   };
 }
 
 function watermancerProfileToMixerSource(profile: WatermancerProfile): WaterMixerSavedSource {
+  const legacyMigration = migrateLegacyWaterPayload({
+    kind: 'watermancer-profile',
+    version: LEGACY_WATER_PAYLOAD_VERSION,
+    name: profile.name,
+    ions: profile.finishedIons ?? profile.targets,
+  });
   return {
     id: `watermancer-profile:${profile.id}`,
     name: profile.name,
     sourceKind: 'saved-recipe',
     sourceId: `watermancer-profile:${profile.id}`,
-    ions: Object.fromEntries(
-      ACTIVE_ION_IDS.map(id => [id, Math.max(Number(profile.targets[id] ?? 0), 0)]),
+    ions: legacyMigration?.ions ?? Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, Math.max(Number(profile.finishedIons?.[id] ?? profile.targets[id] ?? 0), 0)]),
     ) as Record<IonId, number>,
     provenance: profile.source
       ? `Watermancer saved profile · ${profile.source}`
@@ -2371,7 +2411,7 @@ function App() {
   const [communityLoading, setCommunityLoading] = useState(false);
   const [communityLoadError, setCommunityLoadError] = useState<string | null>(null);
   const [communityWatersLoaded, setCommunityWatersLoaded] = useState(false);
-  const communityWatersRequestRef = useRef<Promise<void> | null>(null);
+  const communityWatersRequestRef = useRef<Promise<CommunityWater[]> | null>(null);
   const [communityShareStatus, setCommunityShareStatus] = useState<Record<string, 'sharing' | 'shared' | 'error'>>({});
   const [communitySearch, setCommunitySearch] = useState('');
   const [communitySortIon, setCommunitySortIon] = useState<IonId | 'name'>('magnesium');
@@ -2379,7 +2419,7 @@ function App() {
   const [waterComparisonOpen, setWaterComparisonOpen] = useState(false);
   const [alchemistMineralWaterOpen, setAlchemistMineralWaterOpen] = useState(false);
   const [selectedWaterComparisonKey, setSelectedWaterComparisonKey] = useState('');
-  const loadCommunityWaters = useCallback(() => {
+  const loadCommunityWaters = useCallback((): Promise<CommunityWater[]> => {
     if (communityWatersRequestRef.current) return communityWatersRequestRef.current;
     const request = (async () => {
       setCommunityLoading(true);
@@ -2387,10 +2427,13 @@ function App() {
         const resp = await fetch(`${API_BASE}/api/waters`);
         if (!resp.ok) throw new Error(`Water catalog request failed (${resp.status})`);
         const data = await resp.json();
-        setCommunityWaters(data.waters ?? []);
+        const waters = Array.isArray(data.waters) ? data.waters as CommunityWater[] : [];
+        setCommunityWaters(waters);
         setCommunityLoadError(null);
+        return waters;
       } catch {
         setCommunityLoadError('The community water catalog is unavailable right now.');
+        return [];
       }
       finally {
         setCommunityWatersLoaded(true);
@@ -2773,20 +2816,24 @@ function App() {
     () => computeIonTotals(saltTargets, {}, 1),
     [saltTargets],
   );
+  const mixerCatalogWaters = useMemo<WaterMixerDatabaseWater[]>(
+    () => [...localWaters, ...communityWaters],
+    [communityWaters, localWaters],
+  );
   const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(() => (
     [
       ...savedPlans
         .filter(plan => !isAutoSavedWaterPlan(plan))
-        .map(waterPlanToMixerSource),
+        .map(plan => waterPlanToMixerSource(plan, mixerCatalogWaters)),
       ...wmProfiles.map(watermancerProfileToMixerSource),
     ]
-  ), [savedPlans, wmProfiles]);
+  ), [mixerCatalogWaters, savedPlans, wmProfiles]);
   const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
     const parsed = await readWaterMixerImportFile(file);
     if (parsed.kind === 'error') return { error: parsed.message };
     if (parsed.kind === 'source') return { source: parsed.source, provenance: parsed.provenance };
-    return { source: waterPlanToMixerSource(parsed.plan) };
-  }, []);
+    return { source: waterPlanToMixerSource(parsed.plan, mixerCatalogWaters) };
+  }, [mixerCatalogWaters]);
   const allRecipesForWatermancer = useMemo(
     () => [...RECIPES, ...savedRecipes],
     [savedRecipes],
@@ -4306,6 +4353,10 @@ function App() {
     const text = serializeRecipeFile({
       name,
       salts,
+      finishedWaterIons: ionTotals,
+      finishedWaterMetadata: {
+        tds: Object.values(ionTotals).reduce((total, ppm) => total + ppm, 0),
+      },
       ...(splitMode && {
         splitMode: true,
         splitStrengths: { ...splitStrengths },
@@ -4358,6 +4409,7 @@ function App() {
           ? {
             source: waterRecipe.profile.source,
             details: waterRecipe.profile.details,
+            finishedIons: waterRecipe.ions as IonicTargetValues,
           }
           : undefined,
       );
@@ -4781,6 +4833,9 @@ function App() {
     watermancerIonSourcePreferences: Object.fromEntries(Object.entries(watermancerIonSourcePreferences)),
     watermancerDoseOverridesMg: { ...watermancerDoseOverridesMg },
     sodiumCorrectionOn,
+    finishedIons: Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, Math.max(Number(watermancerCurrentFinalIons[id] ?? 0), 0)]),
+    ),
     concentrateRecipeHandoff: concentrateRecipeHandoff
       ? {
           name: concentrateRecipeHandoff.name,
@@ -4811,7 +4866,7 @@ function App() {
         recipeShareProfile.targets.map(target => [target.id, target.value]),
       ),
     };
-    const json = serializeWaterRecipeFile(recipeName, watermancerIonTargets, profileMetadata);
+    const json = serializeWaterRecipeFile(recipeName, watermancerCurrentFinalIons, profileMetadata);
     const showShareStatus = (status: 'downloaded' | 'shared' | 'error') => {
       setWatermancerShareStatus(status);
       window.setTimeout(() => setWatermancerShareStatus('idle'), 2800);
