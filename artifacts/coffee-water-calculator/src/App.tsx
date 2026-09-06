@@ -26,7 +26,6 @@ import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
   TdsCard as SharedTdsCard,
-  WaterChemistryCard as SharedWaterChemistryCard,
 } from './components/MetricCards';
 import {
   loadProfiles, saveProfiles, saveActiveProfileId,
@@ -2149,6 +2148,16 @@ function App() {
     }),
     [rows],
   );
+  const mineralRecipeSaltRows = useMemo(
+    () => WATERMANCER_SALT_ORDER.map(saltId => {
+      const index = SALTS.findIndex(salt => salt.id === saltId);
+      return {
+        salt: SALTS[index],
+        index,
+      };
+    }),
+    [],
+  );
   const concentrateDiySaltForms = useMemo(
     () => Object.fromEntries(SALTS.map((salt, index) => [salt.id, safeRows[index].formIdx])),
     [safeRows],
@@ -3844,56 +3853,6 @@ function App() {
     );
     return Object.values(finalIons).reduce((total, ppm) => total + ppm, 0);
   }, [hasMineralWater, saltTargets, effectiveSuggestedSaltTargets, combinedBottledIons, dil]);
-  const waterChemistry = useMemo(() => {
-    let pHWeighted = 0;
-    let pHVolume = 0;
-    let alkalinityWeighted = 0;
-    let alkalinityVolume = 0;
-    for (const entry of [...mineralWaters, ...additionWaters]) {
-      const volume = num(entry.volumeMl) * sourceScale;
-      if (volume <= 0) continue;
-      const pH = num(entry.metadata.ph ?? '');
-      const alkalinity = num(entry.metadata.alkalinity ?? '');
-      if (pH > 0) {
-        pHWeighted += pH * volume;
-        pHVolume += volume;
-      }
-      if (alkalinity > 0) {
-        alkalinityWeighted += alkalinity * volume;
-        alkalinityVolume += volume;
-      }
-    }
-    const basePH = pHVolume > 0 ? pHWeighted / pHVolume : undefined;
-    const baseAlkalinity = alkalinityVolume > 0 ? alkalinityWeighted / alkalinityVolume : undefined;
-    const finalAlkalinity = Math.max(
-      (reviewFinalIons.bicarbonate ?? 0) + 2 * (reviewFinalIons.carbonate ?? 0),
-      0,
-    ) * 50 / 61;
-    const waterAlkalinity = Math.max(
-      (reviewWaterIons.bicarbonate ?? 0) + 2 * (reviewWaterIons.carbonate ?? 0),
-      0,
-    ) * 50 / 61;
-    const recipeAlkalinity = Math.max(finalAlkalinity - waterAlkalinity, 0);
-    const finalCitrate = Math.max(reviewFinalIons.citrates ?? 0, 0);
-    const finalBiphosphate = Math.max(reviewFinalIons.biphosphates ?? 0, 0);
-    const finalPhosphate = Math.max(reviewFinalIons.phosphates ?? 0, 0);
-    const finalBaseAlkalinity = Math.max((baseAlkalinity ?? 0) * Math.max(0, Math.min(1, dil)), 1);
-    const estimate = basePH !== undefined && baseAlkalinity !== undefined
-      ? Math.max(4, Math.min(10, basePH
-        + 0.12 * Math.log10(1 + recipeAlkalinity / finalBaseAlkalinity)
-        - 0.08 * Math.log10(1 + finalCitrate / finalBaseAlkalinity)
-        - 0.04 * Math.log10(1 + (finalBiphosphate + finalPhosphate) / finalBaseAlkalinity)))
-      : undefined;
-    return { basePH, baseAlkalinity, estimate };
-  }, [
-    additionWaters,
-    dil,
-    mineralWaters,
-    reviewFinalIons,
-    reviewWaterIons,
-    sourceScale,
-  ]);
-
   // ── Concentrate state ──────────────────────────────
   const [concentrateOn, setConcentrateOn] = useState(false);
   const [concentrateStrength, setConcentrateStrength] = useState(100);
@@ -5521,7 +5480,7 @@ function App() {
             </span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
-           {SALTS.map((salt, i) => {
+           {mineralRecipeSaltRows.map(({ salt, index: i }) => {
              const isMemeSalt = MEME_SALT_IDS.has(salt.id);
              if (isMemeSalt && !showMemeSalts) return null;
             const row = safeRows[i];
@@ -5972,16 +5931,6 @@ function App() {
             </div>
           </div>
         </div>}
-
-        {showWatermancer && (
-          <div className="order-7">
-             <SharedWaterChemistryCard
-              estimate={waterChemistry.estimate}
-              basePH={waterChemistry.basePH}
-              baseAlkalinity={waterChemistry.baseAlkalinity}
-            />
-          </div>
-        )}
 
         {/* Mineral Water Base */}
           {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
@@ -6857,24 +6806,6 @@ function App() {
                      </div>
                    </div>
                </div>
-                <div className={`watermancer-result-summary mt-4 rounded-2xl border ${watermancerStatusTone.border} ${watermancerStatusTone.background} p-3.5 sm:p-4`}>
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${watermancerStatusTone.dot}`} aria-hidden="true" />
-                      <div className="min-w-0">
-                        <div className={`text-[10px] font-semibold uppercase tracking-[0.18em] ${watermancerStatusTone.label}`}>
-                          Current route
-                        </div>
-                        <div className={`mt-1 text-xl font-semibold tracking-tight ${watermancerStatusTone.value}`}>
-                          {watermancerStatusLabel}
-                        </div>
-                        <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-slate-300/75">
-                          {watermancerStatusDescription}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
                  {false && (<details
                    className="mt-3 rounded-xl border border-slate-700/70 bg-slate-950/20"
                    open={false}
