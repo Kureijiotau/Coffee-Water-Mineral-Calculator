@@ -9992,10 +9992,10 @@ function RecipeConcentrateBuilder({
                 setStrengthInput(String(maxSafeStrengthByStrategy['all-in-one']));
               }
             }}
-            className={`flex-1 rounded-lg px-2 py-2 text-[10px] font-semibold transition sm:text-xs ${
+            className={`flex-1 rounded-lg border px-2.5 py-2.5 text-[10px] font-semibold transition sm:text-xs ${
               stockStrategy === value
-                ? 'bg-fuchsia-400/15 text-fuchsia-100 ring-1 ring-fuchsia-300/25'
-                : 'text-slate-500 hover:bg-slate-800/70 hover:text-slate-300'
+                ? 'border-fuchsia-200/70 bg-fuchsia-400/30 text-fuchsia-50 shadow-[0_0_18px_-8px_rgba(232,121,249,0.95)] ring-1 ring-fuchsia-200/40'
+                : 'border-slate-700/70 bg-slate-900/55 text-slate-300 hover:border-slate-500/80 hover:bg-slate-800/80 hover:text-white'
             }`}
           >
             {label}
