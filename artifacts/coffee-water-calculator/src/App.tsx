@@ -10326,7 +10326,7 @@ function WatermancerIonProfileCard({
           (Number(comparisonLeft?.targets[id] ?? 0) / comparisonLeftIonLoad)
           - (Number(comparisonRight?.targets[id] ?? 0) / comparisonRightIonLoad),
         )
-      ), 0) / 2))
+      ), 0) / 2)))
     : null;
   const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => [{
     label: 'Watermancer profiles',
@@ -10761,7 +10761,7 @@ function WatermancerIonProfileCard({
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/80">Profile comparison</div>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-                  Compare target values side by side. Differences are calculated as <span className="font-semibold text-slate-300">Profile B − Profile A</span>.
+                  Compare absolute targets and scale-normalized mineral balance side by side. Differences are calculated as <span className="font-semibold text-slate-300">Profile B − Profile A</span>.
                 </p>
               </div>
               <span className="rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-cyan-200/70">
@@ -10789,62 +10789,147 @@ function WatermancerIonProfileCard({
                   </div>
                 </div>
                 {comparisonLeft && comparisonRight && (
-                  <div className="mt-3 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/25">
-                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] border-b border-slate-700/60 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500 sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]">
-                      <span>Ion</span>
-                      <span className="text-right">Profile A</span>
-                      <span className="text-right">Profile B</span>
-                      <span className="text-right">Difference</span>
-                    </div>
-                    <div className="divide-y divide-slate-800/80">
-                       <div
-                         className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 border-b border-indigo-400/15 bg-indigo-500/[0.06] px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]"
-                       >
-                         <span className="font-semibold text-indigo-200">GH : KH ratio</span>
-                         <span className="text-right tabular-nums text-slate-400">
-                           {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
-                         </span>
-                         <span className="text-right tabular-nums text-slate-200">
-                           {comparisonRightGhKh === null ? '—' : `${comparisonRightGhKh.toFixed(2)}:1`}
-                         </span>
-                         <span className={`text-right font-semibold tabular-nums ${
-                           comparisonGhKhDifference === null
-                             ? 'text-slate-500'
-                             : Math.abs(comparisonGhKhDifference) <= 0.05
-                               ? 'text-slate-500'
-                               : comparisonGhKhDifference > 0
-                                 ? 'text-emerald-300'
-                                 : 'text-amber-300'
-                         }`}>
-                           {comparisonGhKhDifference === null
-                             ? '—'
-                             : `${comparisonGhKhDifference > 0.05 ? '+' : ''}${comparisonGhKhDifference.toFixed(2)}`}
-                         </span>
-                       </div>
-                      {ACTIVE_ION_IDS.map(id => {
-                        const leftValue = Number(comparisonLeft.targets[id] ?? 0);
-                        const rightValue = Number(comparisonRight.targets[id] ?? 0);
-                        const difference = rightValue - leftValue;
-                        const differenceTone = Math.abs(difference) <= 0.05
-                          ? 'text-slate-500'
-                          : difference > 0
-                            ? 'text-emerald-300'
-                            : 'text-amber-300';
-                        return (
-                          <div
-                            key={id}
-                            className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]"
-                            style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
-                          >
-                            <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
-                            <span className="text-right tabular-nums text-slate-400">{leftValue.toFixed(1)} ppm</span>
-                            <span className="text-right tabular-nums text-slate-200">{rightValue.toFixed(1)} ppm</span>
-                            <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
-                              {difference > 0.05 ? '+' : ''}{difference.toFixed(1)} ppm
-                            </span>
+                  <div className="mt-3 grid gap-3 xl:grid-cols-2">
+                    <div className="min-w-0 overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/25">
+                      <div className="border-b border-slate-700/60 bg-slate-900/45 px-3 py-2.5">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">Numerical difference</div>
+                        <div className="mt-0.5 text-[10px] text-slate-500">Absolute target values in ppm.</div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[31rem]">
+                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-slate-700/60 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                            <span>Ion</span>
+                            <span className="text-right">Profile A</span>
+                            <span className="text-right">Profile B</span>
+                            <span className="text-right">Difference</span>
                           </div>
-                        );
-                      })}
+                          <div className="divide-y divide-slate-800/80">
+                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                              <span className="font-semibold text-indigo-200">GH : KH ratio</span>
+                              <span className="text-right tabular-nums text-slate-400">
+                                {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
+                              </span>
+                              <span className="text-right tabular-nums text-slate-200">
+                                {comparisonRightGhKh === null ? '—' : `${comparisonRightGhKh.toFixed(2)}:1`}
+                              </span>
+                              <span className={`text-right font-semibold tabular-nums ${
+                                comparisonGhKhDifference === null || Math.abs(comparisonGhKhDifference) <= 0.05
+                                  ? 'text-slate-500'
+                                  : comparisonGhKhDifference > 0
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                              }`}>
+                                {comparisonGhKhDifference === null
+                                  ? '—'
+                                  : `${comparisonGhKhDifference > 0.05 ? '+' : ''}${comparisonGhKhDifference.toFixed(2)}`}
+                              </span>
+                            </div>
+                            {ACTIVE_ION_IDS.map(id => {
+                              const leftValue = Number(comparisonLeft.targets[id] ?? 0);
+                              const rightValue = Number(comparisonRight.targets[id] ?? 0);
+                              const difference = rightValue - leftValue;
+                              const differenceTone = Math.abs(difference) <= 0.05
+                                ? 'text-slate-500'
+                                : difference > 0
+                                  ? 'text-emerald-300'
+                                  : 'text-amber-300';
+                              return (
+                                <div
+                                  key={`absolute-${id}`}
+                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[11px]"
+                                  style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                                >
+                                  <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
+                                  <span className="text-right tabular-nums text-slate-400">{leftValue.toFixed(1)} ppm</span>
+                                  <span className="text-right tabular-nums text-slate-200">{rightValue.toFixed(1)} ppm</span>
+                                  <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
+                                    {difference > 0.05 ? '+' : ''}{difference.toFixed(1)} ppm
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="min-w-0 overflow-hidden rounded-lg border border-cyan-400/25 bg-cyan-950/10">
+                      <div className="flex items-center justify-between gap-3 border-b border-cyan-400/20 bg-cyan-500/[0.06] px-3 py-2.5">
+                        <div>
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100">Relational balance</div>
+                          <div className="mt-0.5 text-[10px] text-slate-500">Each ion as a share of that profile’s total ion load.</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-[8px] font-semibold uppercase tracking-wider text-cyan-200/60">Shape match</div>
+                          <div className="text-lg font-semibold tabular-nums text-cyan-100">
+                            {comparisonShapeMatch === null ? '—' : `${Math.round(comparisonShapeMatch * 100)}%`}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-[31rem]">
+                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-cyan-400/15 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                            <span>Ion</span>
+                            <span className="text-right">Profile A</span>
+                            <span className="text-right">Profile B</span>
+                            <span className="text-right">Share shift</span>
+                          </div>
+                          <div className="divide-y divide-slate-800/80">
+                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                              <span className="font-semibold text-indigo-200">GH : KH ratio</span>
+                              <span className="text-right tabular-nums text-slate-400">
+                                {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
+                              </span>
+                              <span className="text-right tabular-nums text-slate-200">
+                                {comparisonRightGhKh === null ? '—' : `${comparisonRightGhKh.toFixed(2)}:1`}
+                              </span>
+                              <span className={`text-right font-semibold tabular-nums ${
+                                comparisonGhKhDifference === null || Math.abs(comparisonGhKhDifference) <= 0.05
+                                  ? 'text-slate-500'
+                                  : comparisonGhKhDifference > 0
+                                    ? 'text-emerald-300'
+                                    : 'text-amber-300'
+                              }`}>
+                                {comparisonGhKhDifference === null
+                                  ? '—'
+                                  : `${comparisonGhKhDifference > 0.05 ? '+' : ''}${comparisonGhKhDifference.toFixed(2)}`}
+                              </span>
+                            </div>
+                            {ACTIVE_ION_IDS.map(id => {
+                              const leftShare = comparisonLeftIonLoad > 0
+                                ? (Number(comparisonLeft.targets[id] ?? 0) / comparisonLeftIonLoad) * 100
+                                : null;
+                              const rightShare = comparisonRightIonLoad > 0
+                                ? (Number(comparisonRight.targets[id] ?? 0) / comparisonRightIonLoad) * 100
+                                : null;
+                              const shareDifference = leftShare !== null && rightShare !== null
+                                ? rightShare - leftShare
+                                : null;
+                              const differenceTone = shareDifference === null || Math.abs(shareDifference) <= 0.1
+                                ? 'text-slate-500'
+                                : shareDifference > 0
+                                  ? 'text-emerald-300'
+                                  : 'text-amber-300';
+                              return (
+                                <div
+                                  key={`relative-${id}`}
+                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[11px]"
+                                  style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
+                                >
+                                  <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
+                                  <span className="text-right tabular-nums text-slate-400">{leftShare === null ? '—' : `${leftShare.toFixed(1)}%`}</span>
+                                  <span className="text-right tabular-nums text-slate-200">{rightShare === null ? '—' : `${rightShare.toFixed(1)}%`}</span>
+                                  <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
+                                    {shareDifference === null
+                                      ? '—'
+                                      : `${shareDifference > 0.1 ? '+' : ''}${shareDifference.toFixed(1)} pp`}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
