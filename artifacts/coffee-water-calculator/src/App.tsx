@@ -10302,7 +10302,7 @@ function WatermancerIonProfileCard({
   const comparisonGhKhRatio = (profile: WatermancerComparisonProfile | undefined): number | null => {
     if (!profile) return null;
     const totals = Object.fromEntries(
-      ACTIVE_ION_IDS.map(id => [id, Number(profile.targets[id] ?? 0)]),
+      IONS.map(ion => [ion.id, Number(profile.targets[ion.id] ?? 0)]),
     ) as Record<IonId, number>;
     const kh = computeKH(totals);
     return kh > 0 ? computeGH(totals) / kh : null;
@@ -10796,14 +10796,14 @@ function WatermancerIonProfileCard({
                         <div className="mt-0.5 text-[10px] text-slate-500">Absolute target values in ppm.</div>
                       </div>
                       <div>
-                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-slate-700/60 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-slate-700/60 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                             <span>Ion</span>
                             <span className="text-right">Profile A</span>
                             <span className="text-right">Profile B</span>
                             <span className="text-right">Difference</span>
                           </div>
                           <div className="divide-y divide-slate-800/80">
-                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[12px]">
                               <span className="font-semibold text-indigo-200">GH : KH ratio</span>
                               <span className="text-right tabular-nums text-slate-400">
                                 {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
@@ -10835,7 +10835,7 @@ function WatermancerIonProfileCard({
                               return (
                                 <div
                                   key={`absolute-${id}`}
-                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[11px]"
+                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[12px]"
                                   style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
                                 >
                                   <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
@@ -10865,14 +10865,14 @@ function WatermancerIonProfileCard({
                         </div>
                       </div>
                       <div>
-                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-cyan-400/15 px-3 py-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                          <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-cyan-400/15 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                             <span>Ion</span>
                             <span className="text-right">Profile A</span>
                             <span className="text-right">Profile B</span>
                             <span className="text-right">Share shift</span>
                           </div>
                           <div className="divide-y divide-slate-800/80">
-                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[11px]">
+                            <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 bg-indigo-500/[0.06] px-3 py-2 text-[12px]">
                               <span className="font-semibold text-indigo-200">GH : KH ratio</span>
                               <span className="text-right tabular-nums text-slate-400">
                                 {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
@@ -10910,7 +10910,7 @@ function WatermancerIonProfileCard({
                               return (
                                 <div
                                   key={`relative-${id}`}
-                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[11px]"
+                                  className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] items-center gap-2 px-3 py-2 text-[12px]"
                                   style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
                                 >
                                   <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
