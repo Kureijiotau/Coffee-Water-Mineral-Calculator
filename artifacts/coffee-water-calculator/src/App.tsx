@@ -10299,6 +10299,19 @@ function WatermancerIonProfileCard({
 
   const comparisonLeft = comparisonProfiles.find(profile => profile.id === comparisonLeftId);
   const comparisonRight = comparisonProfiles.find(profile => profile.id === comparisonRightId);
+  const comparisonGhKhRatio = (profile: WatermancerComparisonProfile | undefined): number | null => {
+    if (!profile) return null;
+    const totals = Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, Number(profile.targets[id] ?? 0)]),
+    ) as Record<IonId, number>;
+    const kh = computeKH(totals);
+    return kh > 0 ? computeGH(totals) / kh : null;
+  };
+  const comparisonLeftGhKh = comparisonGhKhRatio(comparisonLeft);
+  const comparisonRightGhKh = comparisonGhKhRatio(comparisonRight);
+  const comparisonGhKhDifference = comparisonLeftGhKh !== null && comparisonRightGhKh !== null
+    ? comparisonRightGhKh - comparisonLeftGhKh
+    : null;
   const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => [{
     label: 'Watermancer profiles',
     accent: 'cyan',
@@ -10768,6 +10781,30 @@ function WatermancerIonProfileCard({
                       <span className="text-right">Difference</span>
                     </div>
                     <div className="divide-y divide-slate-800/80">
+                       <div
+                         className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 border-b border-indigo-400/15 bg-indigo-500/[0.06] px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]"
+                       >
+                         <span className="font-semibold text-indigo-200">GH : KH ratio</span>
+                         <span className="text-right tabular-nums text-slate-400">
+                           {comparisonLeftGhKh === null ? '—' : `${comparisonLeftGhKh.toFixed(2)}:1`}
+                         </span>
+                         <span className="text-right tabular-nums text-slate-200">
+                           {comparisonRightGhKh === null ? '—' : `${comparisonRightGhKh.toFixed(2)}:1`}
+                         </span>
+                         <span className={`text-right font-semibold tabular-nums ${
+                           comparisonGhKhDifference === null
+                             ? 'text-slate-500'
+                             : Math.abs(comparisonGhKhDifference) <= 0.05
+                               ? 'text-slate-500'
+                               : comparisonGhKhDifference > 0
+                                 ? 'text-emerald-300'
+                                 : 'text-amber-300'
+                         }`}>
+                           {comparisonGhKhDifference === null
+                             ? '—'
+                             : `${comparisonGhKhDifference > 0.05 ? '+' : ''}${comparisonGhKhDifference.toFixed(2)}`}
+                         </span>
+                       </div>
                       {ACTIVE_ION_IDS.map(id => {
                         const leftValue = Number(comparisonLeft.targets[id] ?? 0);
                         const rightValue = Number(comparisonRight.targets[id] ?? 0);
