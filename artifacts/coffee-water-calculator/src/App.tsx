@@ -562,6 +562,7 @@ const WATERMANCER_ION_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-ion-source-
 const WATERMANCER_TARGET_SOURCE_STORAGE_KEY = 'coffee-water-watermancer-target-source';
 const WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-ion-feedback-enabled';
 const WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-follow-enabled';
+const WATERMANCER_RESULT_DOCK_STORAGE_KEY = 'coffee-water-watermancer-result-dock';
 const WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY = 'coffee-water-watermancer-feedback-before-follow';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
@@ -630,6 +631,16 @@ function loadWatermancerBooleanPreference(key: string, fallback: boolean): boole
     // Use the default when localStorage is unavailable.
   }
   return fallback;
+}
+
+function loadWatermancerResultDock(): 'center' | 'left' | 'right' {
+  try {
+    const stored = localStorage.getItem(WATERMANCER_RESULT_DOCK_STORAGE_KEY);
+    if (stored === 'left' || stored === 'right' || stored === 'center') return stored;
+  } catch {
+    // Use the default position when localStorage is unavailable.
+  }
+  return 'center';
 }
 
 function watermancerSourcePreferencePenalty(
@@ -2167,7 +2178,9 @@ function App() {
   const [watermancerFollowEnabled, setWatermancerFollowEnabled] = useState(
     () => loadWatermancerBooleanPreference(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, false),
   );
-  const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>('center');
+  const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>(
+    () => loadWatermancerResultDock(),
+  );
   const [watermancerFeedbackEnabled, setWatermancerFeedbackEnabled] = useState(
     () => watermancerFollowEnabled
       ? false
@@ -2384,6 +2397,7 @@ function App() {
   useDebouncedPersistence(() => {
     localStorage.setItem(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, String(watermancerFeedbackEnabled));
     localStorage.setItem(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, String(watermancerFollowEnabled));
+    localStorage.setItem(WATERMANCER_RESULT_DOCK_STORAGE_KEY, watermancerResultDock);
     if (watermancerFollowEnabled && watermancerFeedbackBeforeFollowRef.current !== null) {
       localStorage.setItem(
         WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY,
@@ -2392,7 +2406,7 @@ function App() {
     } else {
       localStorage.removeItem(WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY);
     }
-  }, [watermancerFeedbackEnabled, watermancerFollowEnabled]);
+  }, [watermancerFeedbackEnabled, watermancerFollowEnabled, watermancerResultDock]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
