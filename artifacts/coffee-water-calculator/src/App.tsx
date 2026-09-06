@@ -5420,7 +5420,7 @@ function App() {
                   title="Open this recipe in the Concentrate workspace"
                 >
                   <FlaskConical className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Make concentrate</span>
+                  <span className="hidden sm:inline">Make Concentrate</span>
                 </button>
               )}
               <button
