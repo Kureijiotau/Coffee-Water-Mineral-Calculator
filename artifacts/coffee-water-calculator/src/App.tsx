@@ -10790,12 +10790,12 @@ function WatermancerIonProfileCard({
                 </div>
                 {comparisonLeft && comparisonRight && (
                   <div className="mt-3 space-y-3">
-                    <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/25">
+                    <div className="w-full overflow-hidden rounded-lg border border-slate-700/60 bg-slate-950/25">
                       <div className="border-b border-slate-700/60 bg-slate-900/45 px-3 py-2.5">
                         <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">Numerical difference</div>
                         <div className="mt-0.5 text-[10px] text-slate-500">Absolute target values in ppm.</div>
                       </div>
-                      <div className="mx-auto max-w-3xl">
+                      <div>
                           <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-slate-700/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                             <span>Ion</span>
                             <span className="text-right">Profile A</span>
@@ -10851,7 +10851,7 @@ function WatermancerIonProfileCard({
                       </div>
                     </div>
 
-                    <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-lg border border-cyan-400/25 bg-cyan-950/10">
+                    <div className="w-full overflow-hidden rounded-lg border border-cyan-400/25 bg-cyan-950/10">
                       <div className="flex items-center justify-between gap-3 border-b border-cyan-400/20 bg-cyan-500/[0.06] px-3 py-2.5">
                         <div>
                           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-cyan-100">Relational balance</div>
@@ -10864,7 +10864,7 @@ function WatermancerIonProfileCard({
                           </div>
                         </div>
                       </div>
-                      <div className="mx-auto max-w-3xl">
+                      <div>
                           <div className="grid grid-cols-[minmax(7rem,1fr)_repeat(3,minmax(4.5rem,0.7fr))] border-b border-cyan-400/15 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                             <span>Ion</span>
                             <span className="text-right">Profile A</span>
