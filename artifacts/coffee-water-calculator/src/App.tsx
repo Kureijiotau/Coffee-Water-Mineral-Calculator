@@ -5604,7 +5604,7 @@ function App() {
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
                  }`}
                >
-                <div className="col-span-2 sm:col-span-1 flex min-w-0 flex-col items-start gap-1">
+                 <div className="mineral-recipe-table__salt-cell col-span-2 sm:col-span-1 flex min-w-0 flex-col items-center gap-1 text-center">
                     <span className="text-sm font-semibold text-slate-100">
                      {salt.name}
                    </span>
@@ -5630,8 +5630,8 @@ function App() {
                      </span>
                    )}
                 </div>
-                <div>
-                  <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
+                 <div className="mineral-recipe-table__target-cell">
+                   <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
                   <input
                     id={`salt-target-${salt.id}`}
                      type="text"
@@ -5656,10 +5656,10 @@ function App() {
                      className="mineral-recipe-table__input mineral-recipe-table__input--target w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                   />
                 </div>
-                <div className="col-span-2 sm:col-span-1 flex items-baseline gap-2 sm:block">
+                 <div className="mineral-recipe-table__dose-cell col-span-2 sm:col-span-1 flex items-center justify-center gap-2">
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
                   {showAlchemist ? (
-                    <div className="flex items-center gap-2">
+                     <div className="mineral-recipe-table__dose-entry flex items-center justify-center gap-2">
                       <input
                          ref={input => { directDoseInputRefs.current[salt.id] = input; }}
                          type="text"
