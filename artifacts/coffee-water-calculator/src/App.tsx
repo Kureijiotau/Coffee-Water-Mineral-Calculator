@@ -10312,6 +10312,22 @@ function WatermancerIonProfileCard({
   const comparisonGhKhDifference = comparisonLeftGhKh !== null && comparisonRightGhKh !== null
     ? comparisonRightGhKh - comparisonLeftGhKh
     : null;
+  const comparisonIonLoad = (profile: WatermancerComparisonProfile | undefined): number => (
+    profile
+      ? ACTIVE_ION_IDS.reduce((total, id) => total + Math.max(Number(profile.targets[id] ?? 0), 0), 0)
+      : 0
+  );
+  const comparisonLeftIonLoad = comparisonIonLoad(comparisonLeft);
+  const comparisonRightIonLoad = comparisonIonLoad(comparisonRight);
+  const comparisonShapeMatch = comparisonLeftIonLoad > 0 && comparisonRightIonLoad > 0
+    ? Math.max(0, Math.min(1, 1 - (
+      ACTIVE_ION_IDS.reduce((total, id) => (
+        total + Math.abs(
+          (Number(comparisonLeft?.targets[id] ?? 0) / comparisonLeftIonLoad)
+          - (Number(comparisonRight?.targets[id] ?? 0) / comparisonRightIonLoad),
+        )
+      ), 0) / 2))
+    : null;
   const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => [{
     label: 'Watermancer profiles',
     accent: 'cyan',
