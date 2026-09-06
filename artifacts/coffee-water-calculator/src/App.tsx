@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, Pencil } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -9574,7 +9574,15 @@ function RecipeConcentrateBottleCard({
               <div className="mt-1 text-[11px]">for {recipeConcentrateNumber(finalLiters > 0 ? Number(finalVolumeInput) : 0, 2)} {unitLabel} final water</div>
             </div>
             <div className={`recipe-concentrate-dose-metric rounded-lg border px-2.5 py-2 text-right ${colors.border} ${colors.soft}`}>
-              <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
+              <div className="flex items-center justify-end gap-2">
+                <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
+                {onPhysicalSaltPpmPerDropChange && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-slate-950/25 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-300/80">
+                    <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
+                    Edit
+                  </span>
+                )}
+              </div>
               {onPhysicalSaltPpmPerDropChange ? (
                 <StableNumberInput
                   min="0.01"
@@ -9583,7 +9591,7 @@ function RecipeConcentrateBottleCard({
                   onChange={event => onPhysicalSaltPpmPerDropChange(event.target.value)}
                   aria-label={`${cardName} physical salt ppm added by one drop`}
                   title="Set the physical salt ppm added by one drop; stock strength adjusts to match"
-                  className="recipe-concentrate-input mt-1 w-full bg-transparent text-right text-lg font-semibold tabular-nums text-white outline-none"
+                  className="recipe-concentrate-input mt-1 w-full cursor-text rounded-md border border-white/15 bg-slate-950/25 px-2 py-1 text-right text-lg font-semibold tabular-nums text-white outline-none transition hover:border-white/30 focus:border-cyan-200/70 focus:bg-slate-950/45 focus:ring-2 focus:ring-cyan-300/20"
                 />
               ) : (
                 <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
