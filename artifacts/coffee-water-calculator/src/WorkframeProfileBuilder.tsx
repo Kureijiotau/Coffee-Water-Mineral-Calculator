@@ -23,6 +23,7 @@ import {
   type WorkframeDraft,
 } from './workframe';
 import { ION_MAP, type IonId } from './waterData';
+import { StableNumberInput } from './components/StableNumberInput';
 
 type StageId = 1 | 2 | 3 | 4 | 5;
 
@@ -69,8 +70,7 @@ function NumberField({
         <em className="not-italic font-normal normal-case tracking-normal text-slate-600">{hint}</em>
       </span>
       <span className="mt-1 flex items-center gap-2">
-        <input
-          type="number"
+        <StableNumberInput
           min="0"
           step="0.1"
           value={value}

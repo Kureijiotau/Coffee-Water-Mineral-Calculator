@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeftRight, Check, RotateCcw, Send } from 'lucide-react';
 import { computeGH, computeKH, ION_MAP, type IonId } from './waterData';
 import { completeIonTotals } from './watermancerSolver';
+import { StableNumberInput } from './components/StableNumberInput';
 import {
   DEFAULT_ION_RATIO_DRAFT,
   ION_RATIO_DEFINITIONS,
@@ -243,8 +244,7 @@ export function IonRatioTable({
                   <label className="block min-w-0">
                     <span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">{row.firstLabel}</span>
                     <div className="relative">
-                      <input
-                        type="number"
+                      <StableNumberInput
                         min="0"
                         step="0.1"
                         value={values.first}
@@ -268,8 +268,7 @@ export function IonRatioTable({
                   <label className="block min-w-0">
                     <span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">{row.secondLabel}</span>
                     <div className="relative">
-                      <input
-                        type="number"
+                      <StableNumberInput
                         min="0"
                         step="0.1"
                         value={values.second}
@@ -286,8 +285,7 @@ export function IonRatioTable({
                 <label className="block min-w-0">
                   <span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-[0.14em] text-cyan-200/70">Relationship</span>
                   <div className="relative">
-                    <input
-                      type="number"
+                    <StableNumberInput
                       min="0"
                       step="0.1"
                       value={relationshipInputs[row.id]}

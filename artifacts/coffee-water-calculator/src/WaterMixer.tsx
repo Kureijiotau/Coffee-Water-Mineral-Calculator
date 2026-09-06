@@ -31,6 +31,7 @@ import {
 import type { WaterMixerImportResult } from './waterMixerImport';
 import { buildRecipeShareCardSvg, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
+import { StableNumberInput } from './components/StableNumberInput';
 
 export type WaterMixerDatabaseWater = {
   id: string | number;
@@ -464,9 +465,8 @@ function SourceCard({
                 <span className="flex items-center justify-between gap-1">
                   <span className="truncate">{ION_MAP[id].name}</span><span className="font-mono text-[9px] text-slate-600">mg/L</span>
                 </span>
-                <input
+                <StableNumberInput
                   inputMode="decimal"
-                  type="number"
                   min="0"
                   step="0.01"
                   value={card.manualIons[id] ?? ''}
@@ -486,9 +486,8 @@ function SourceCard({
           <label className="block flex-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500" htmlFor={`input-mixer-volume-${side}`}>
             Volume
             <div className="mt-1 flex items-center gap-2">
-              <input
+              <StableNumberInput
                 id={`input-mixer-volume-${side}`}
-                type="number"
                 min="0"
                 step="1"
                 value={volume}
@@ -649,8 +648,7 @@ function MixerSaltTable({
                       <Minus className="h-3.5 w-3.5" />
                     </button>
                     <div className="watermancer-salt-table__dose-value">
-                      <input
-                        type="text"
+                      <StableNumberInput
                         inputMode="decimal"
                         value={doseValue}
                         onFocus={() => onDoseChange(salt.id, doseValue)}

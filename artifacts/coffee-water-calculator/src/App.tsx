@@ -22,6 +22,7 @@ import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, typ
 import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
+import { StableNumberInput } from './components/StableNumberInput';
 import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
@@ -1029,9 +1030,8 @@ function VolumeInput({
   };
 
   const input = (
-    <input
+    <StableNumberInput
       ref={inputRef}
-      type="text"
       inputMode="decimal"
       min="0"
       step="0.1"
@@ -5420,7 +5420,7 @@ function App() {
                   title="Open this recipe in the Concentrate workspace"
                 >
                   <FlaskConical className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Use in Concentrate</span>
+                  <span className="hidden sm:inline">Make concentrate</span>
                 </button>
               )}
               <button
@@ -5591,9 +5591,8 @@ function App() {
                 </div>
                  <div className="mineral-recipe-table__target-cell">
                    <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
-                  <input
+                   <StableNumberInput
                     id={`salt-target-${salt.id}`}
-                     type="text"
                     inputMode="decimal"
                     min="0"
                     aria-label={`${salt.name} target ppm`}
@@ -5619,9 +5618,8 @@ function App() {
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
                   {showAlchemist ? (
                      <div className="mineral-recipe-table__dose-entry flex items-center justify-center gap-2">
-                      <input
+                       <StableNumberInput
                          ref={input => { directDoseInputRefs.current[salt.id] = input; }}
-                         type="text"
                          inputMode="decimal"
                         min="0"
                         step="0.01"
@@ -5749,8 +5747,7 @@ function App() {
                         <option value="custom">Custom</option>
                       </select>
                       {!STRENGTH_OPTIONS.includes(concentrateStrength) && (
-                        <input
-                          type="number"
+                        <StableNumberInput
                           inputMode="numeric"
                           min={2}
                           value={concentrateStrength || ''}
@@ -5763,8 +5760,7 @@ function App() {
                     </div>
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-300">Stock volume:</label>
-                      <input
-                        type="number"
+                      <StableNumberInput
                         inputMode="decimal"
                         value={concentrateMl}
                         onChange={e => setConcentrateMl(e.target.value)}
@@ -6150,8 +6146,7 @@ function App() {
                       className="flex-1 min-w-0 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                     />
                     <div className="flex items-center gap-2">
-                      <input
-                        type="number"
+                     <StableNumberInput
                         inputMode="decimal"
                         value={entry.volumeMl}
                         onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
@@ -6190,8 +6185,7 @@ function App() {
                    {ACTIVE_ION_IDS.map(id => (
                      <div key={id} style={ionVisualStyle(id)}>
                        <label className="mb-0.5 block text-[10px] font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</label>
-                      <input
-                        type="number"
+                       <StableNumberInput
                         inputMode="decimal"
                         value={entry.ions[id] ?? ''}
                         onChange={e => updateMineralWater(entry.id, {
@@ -6686,9 +6680,8 @@ function App() {
                               <Minus className="h-3.5 w-3.5" />
                             </HoldStepperButton>
                             <div className="watermancer-salt-table__dose-value">
-                              <input
+                              <StableNumberInput
                                 ref={input => { watermancerDoseInputRefs.current[salt.id] = input; }}
-                                type="text"
                                 inputMode="decimal"
                                 min="0"
                                 step="0.1"
@@ -7966,8 +7959,7 @@ function ConcentrateWorkspace({
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate strength</span>
             <div className="mt-1 flex items-center gap-2">
-              <input
-                type="number"
+              <StableNumberInput
                 min="1"
                 step="0.1"
                 value={strengthInput}
@@ -7981,8 +7973,7 @@ function ConcentrateWorkspace({
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total concentrate weight</span>
             <div className="mt-1 flex items-center gap-2">
-              <input
-                type="number"
+              <StableNumberInput
                 min="1"
                 step="1"
                 value={totalStockMassInput}
@@ -8229,8 +8220,7 @@ function LotusDropsSection({
             <label>
               <span className="text-[10px] uppercase tracking-wider text-slate-500">Concentrate volume</span>
               <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
-                <input
-                  type="number"
+                <StableNumberInput
                   min="1"
                   step="1"
                   value={stockVolumeInput}
@@ -8244,8 +8234,7 @@ function LotusDropsSection({
             <label>
               <span className="text-[10px] uppercase tracking-wider text-slate-500">Straight drops/mL</span>
               <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
-                <input
-                  type="number"
+                <StableNumberInput
                   min="0.1"
                   step="0.1"
                   value={straightDropsPerMlInput}
@@ -8822,9 +8811,8 @@ function LegacyRecipeConcentrateBuilder({
                   )}
                 </div>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
+                  <StableNumberInput
                     id="recipe-stock-strength"
-                    type="number"
                     min="1"
                     step="10"
                     value={strengthInput}
@@ -8864,9 +8852,8 @@ function LegacyRecipeConcentrateBuilder({
                       </button>
                     </div>
                     <div className="mt-1 flex items-center gap-2">
-                      <input
+                      <StableNumberInput
                         id={`recipe-stock-strength-${group.id}`}
-                        type="number"
                         min="1"
                         step="10"
                         value={stockStrengthInputs[group.id] ?? '500'}
@@ -8899,8 +8886,7 @@ function LegacyRecipeConcentrateBuilder({
                   <label key={group.id} className="rounded-lg border border-slate-700/60 bg-slate-950/25 px-3 py-2">
                     <span className="block truncate text-[10px] font-semibold text-slate-300">{groupName}</span>
                     <span className="mt-1 flex items-center gap-1.5">
-                      <input
-                        type="number"
+                      <StableNumberInput
                         min="1"
                         step="10"
                         value={stockVolumeInput}
@@ -8993,8 +8979,7 @@ function LegacyRecipeConcentrateBuilder({
                   <span className="normal-case tracking-normal">optional</span>
                 </span>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
+                  <StableNumberInput
                     min="0.1"
                     step="0.1"
                     value={measuredDropsPerMlInput}
@@ -9021,8 +9006,7 @@ function LegacyRecipeConcentrateBuilder({
                   />
                 </span>
                 <div className="mt-1 flex items-center gap-2">
-                  <input
-                    type="number"
+                  <StableNumberInput
                     min="0.001"
                     step="0.1"
                     value={finalVolumeInput}
@@ -9461,10 +9445,9 @@ function RecipeConcentrateBottleCard({
             <label className="block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
               <div className="mt-1 flex items-baseline gap-2">
-                <input
+                <StableNumberInput
                   value={strengthInput}
                   onChange={event => onStrengthChange(event.target.value)}
-                  type="number"
                   min="1"
                   max={maxSafeStrength}
                   step="1"
@@ -9478,10 +9461,9 @@ function RecipeConcentrateBottleCard({
             <label className="block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
               <div className="mt-1 flex items-baseline gap-2">
-                <input
+                <StableNumberInput
                   value={volumeInput}
                   onChange={event => onVolumeChange(event.target.value)}
-                  type="number"
                   min="1"
                   step="10"
                   aria-label={`${cardName} bottle volume in milliliters`}
@@ -9559,8 +9541,7 @@ function RecipeConcentrateBottleCard({
                 <span>optional</span>
               </span>
               <span className="mt-1 flex items-center gap-2">
-                <input
-                  type="number"
+                <StableNumberInput
                   min="0.1"
                   step="0.1"
                   value={measuredDropsPerMlInput}
@@ -9595,8 +9576,7 @@ function RecipeConcentrateBottleCard({
             <div className={`recipe-concentrate-dose-metric rounded-lg border px-2.5 py-2 text-right ${colors.border} ${colors.soft}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
               {onPhysicalSaltPpmPerDropChange ? (
-                <input
-                  type="number"
+                <StableNumberInput
                   min="0.01"
                   step="0.01"
                   value={physicalSaltPpmPerDropInput ?? recipeConcentrateNumber(ppmPerDrop, 2)}
@@ -9624,8 +9604,7 @@ function RecipeConcentrateBottleCard({
               </button>
             </span>
             <span className={`mt-1.5 flex items-center gap-2 rounded-lg border px-3 py-2 ${colors.border} bg-slate-950/30`}>
-              <input
-                type="number"
+              <StableNumberInput
                 min={volumeUnit === 'gallons' ? '0.01' : '0.1'}
                 step={volumeUnit === 'gallons' ? '0.01' : '0.1'}
                 value={finalVolumeInput}
@@ -10210,8 +10189,7 @@ function CalibrationInput({
   return (
     <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
       <span className="block text-[10px] text-slate-500">{label}</span>
-      <input
-        type="number"
+      <StableNumberInput
         min="0.01"
         step="0.01"
         value={value}
@@ -10847,8 +10825,7 @@ function WatermancerIonProfileCard({
                {cardEditing ? (
                 <div className="mt-1.5">
                   <label className="text-[10px] text-slate-500 block mb-0.5">Ceiling</label>
-                  <input
-                    type="number"
+                  <StableNumberInput
                     value={draftTargets[id] ?? '0'}
                     onChange={e => updateDraft(id, e.target.value)}
                     min="0"
@@ -11742,8 +11719,7 @@ function BrewerDropperCalibrationCard({
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Drops dispensed</span>
-            <input
-              type="number"
+            <StableNumberInput
               min="1"
               step="1"
               inputMode="numeric"
@@ -11755,8 +11731,7 @@ function BrewerDropperCalibrationCard({
           </label>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Measured volume (mL)</span>
-            <input
-              type="number"
+            <StableNumberInput
               min="0.01"
               step="0.01"
               inputMode="decimal"
@@ -11802,8 +11777,7 @@ function BrewerDropperCalibrationCard({
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
               <span className="block text-[10px] text-slate-500">Stock concentration (mg/mL)</span>
-              <input
-                type="number"
+              <StableNumberInput
                 min="0.01"
                 step="0.1"
                 inputMode="decimal"
@@ -11815,8 +11789,7 @@ function BrewerDropperCalibrationCard({
             </label>
             <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
               <span className="block text-[10px] text-slate-500">Drops</span>
-              <input
-                type="number"
+              <StableNumberInput
                 min="0"
                 step="1"
                 inputMode="numeric"
@@ -12197,8 +12170,7 @@ function BrewerSimpleRecipeCard({
                 <label className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-violet-400/20 bg-slate-950/20 px-3 py-2">
                   <span className="text-[11px] text-slate-400">Capacity</span>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="number"
+                    <StableNumberInput
                       inputMode="numeric"
                       min="1"
                       max="5000"
@@ -13705,9 +13677,8 @@ function BrewStationMode({
               Scale reading · running total
             </label>
             <div className="mt-5 flex items-center gap-3 sm:mt-6 sm:gap-5">
-              <input
+              <StableNumberInput
                 id="brew-station-scale"
-                type="number"
                 inputMode="decimal"
                 min="0"
                 step="0.001"
@@ -14334,8 +14305,7 @@ function WaterMetadataFields({
             <span className="mb-1 block text-[10px] text-slate-500">
               {field.label}{field.unit ? ` (${field.unit})` : ''}
             </span>
-            <input
-              type="number"
+            <StableNumberInput
               inputMode="decimal"
               min="0"
               step={field.key === 'ph' ? '0.01' : 'any'}
@@ -14622,8 +14592,7 @@ function SplitStockCard({
             <option value="custom">Custom</option>
           </select>
           {!STRENGTH_OPTIONS.includes(strength) && (
-            <input
-              type="number"
+            <StableNumberInput
               inputMode="numeric"
               min={2}
               value={strength || ''}
@@ -14636,8 +14605,7 @@ function SplitStockCard({
         </div>
         <div className="flex items-center gap-2">
           <label className="text-xs text-slate-300">Volume:</label>
-          <input
-            type="number"
+          <StableNumberInput
             inputMode="decimal"
             value={volumeMl}
             onChange={e => onVolumeChange(e.target.value)}

@@ -5,6 +5,7 @@ import {
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
 import { createProfile, emptyRangeSet } from '@/profiles';
+import { StableNumberInput } from './components/StableNumberInput';
 
 interface Props {
   profiles: WaterProfile[];
@@ -266,8 +267,7 @@ function RangeInput({
 }) {
   return (
     <div className="group relative">
-      <input
-        type="number"
+      <StableNumberInput
         value={value}
         disabled={disabled}
         readOnly={readOnly}
