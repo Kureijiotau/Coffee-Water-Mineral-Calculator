@@ -224,6 +224,28 @@ body {
   box-shadow: inset 0 1px 0 rgb(125 211 252 / 0.05);
 }
 
+.mineral-recipe-table__salt-cell {
+  width: 100%;
+}
+
+.mineral-recipe-table__target-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mineral-recipe-table__target-cell > input {
+  width: min(100%, 15rem);
+}
+
+.mineral-recipe-table__dose-entry {
+  width: min(100%, 15rem);
+}
+
+.mineral-recipe-table__dose-entry input {
+  width: 100%;
+}
+
 .mineral-recipe-table__input {
   border-color: rgb(100 116 139 / 0.42);
   background:
