@@ -10820,7 +10820,7 @@ function WatermancerIonProfileCard({
                             className="grid grid-cols-[minmax(0,1fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)_minmax(5.5rem,0.7fr)] items-center gap-2 px-3 py-2 text-[11px] sm:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(6rem,0.7fr))]"
                             style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
                           >
-                            <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span>
+                            <span className="truncate font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].formula}>{ION_MAP[id].name}</span>
                             <span className="text-right tabular-nums text-slate-400">{leftValue.toFixed(1)} ppm</span>
                             <span className="text-right tabular-nums text-slate-200">{rightValue.toFixed(1)} ppm</span>
                             <span className={`text-right font-semibold tabular-nums ${differenceTone}`}>
