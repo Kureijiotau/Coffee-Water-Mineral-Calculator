@@ -2622,10 +2622,12 @@ function App() {
     });
     return request;
   }, []);
-  const openCommunityModal = async () => {
+  const openCommunityModal = () => {
     setCommunityModalOpen(true);
-    if (!communityWatersLoaded) await loadCommunityWaters();
   };
+  useEffect(() => {
+    if (communityModalOpen) void loadCommunityWaters();
+  }, [communityModalOpen, loadCommunityWaters]);
   const communityVisibleWaters = useMemo(() => {
     const query = communitySearch.trim().toLowerCase();
     return communityWaters
