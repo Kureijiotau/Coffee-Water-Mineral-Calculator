@@ -7218,7 +7218,7 @@ function App() {
                  )}
                     </div>
                   </details>)}
-                 <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15" open>
+                  <details className="mt-3 rounded-xl border border-indigo-400/25 bg-indigo-950/15">
                   <summary className="cursor-pointer list-none px-3 py-2.5 text-xs font-semibold text-indigo-100">
                     Guide the match
                     <span className="ml-2 text-[10px] font-normal text-slate-400">
