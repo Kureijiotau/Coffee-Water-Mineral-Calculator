@@ -64,7 +64,7 @@ export interface IonContribution {
   fraction: number;
 }
 
-export type SupplementalIonId = 'lactate' | 'glycinate';
+export type SupplementalIonId = 'lactate' | 'glycinate' | 'malate';
 
 export interface SupplementalIonInfo {
   id: SupplementalIonId;
@@ -384,6 +384,12 @@ export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
     formula: 'C₂H₄NO₂⁻',
     note: 'Label-derived carrier mass for Magnesium Glycinate. Displayed separately from elemental magnesium and kept outside the core water-ion target and overshoot model.',
   },
+  {
+    id: 'malate',
+    name: 'Malate',
+    formula: 'C₄H₄O₅²⁻',
+    note: 'The malate portion of Magnesium Malate. Displayed separately from elemental magnesium and kept outside the core water-ion target and overshoot model.',
+  },
 ];
 
 export const SUPPLEMENTAL_ION_MAP = Object.fromEntries(
@@ -528,6 +534,23 @@ export const SALTS: SaltInfo[] = [
       { ionId: 'glycinate', fraction: MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierFraction },
     ],
   },
+  {
+    id: 'mgmalate',
+    name: 'Magnesium Malate',
+    formula: 'MgC₄H₄O₅',
+    // Placeholder reference basis: one magnesium ion paired with one malate
+    // anion. Hydration variants can be added once the product label is known.
+    anhydrousMass: 156.376,
+    hydrationForms: [
+      { label: 'Anhydrous · reference basis', molarMass: 156.376 },
+    ],
+    ions: [
+      { ionId: 'magnesium', fraction: 24.305 / 156.376 },
+    ],
+    supplementalIons: [
+      { ionId: 'malate', fraction: 132.071 / 156.376 },
+    ],
+  },
 ];
 
 export const WATERMANCER_SALT_ORDER = [
@@ -540,6 +563,7 @@ export const WATERMANCER_SALT_ORDER = [
   'khco3',
   'calact',
   'mggly',
+  'mgmalate',
   'mgcit',
   'cacit',
 ] as const;

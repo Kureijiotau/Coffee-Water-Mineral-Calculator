@@ -330,6 +330,20 @@ describe('computeIonTotals', () => {
       + MAGNESIUM_GLYCINATE_LABEL.glycinateCarrierMg,
     ).toBe(MAGNESIUM_GLYCINATE_LABEL.servingMassMg);
   });
+
+  it('models Magnesium Malate magnesium and malate from the reference stoichiometry', () => {
+    const magnesiumMalate = SALTS.find(s => s.id === 'mgmalate')!;
+    const saltTarget = 100;
+    const coreTotals = computeIonTotals({ mgmalate: saltTarget }, {}, 0);
+    const supplementalTotals = computeSupplementalIonTotals({ mgmalate: saltTarget });
+
+    expect(magnesiumMalate.hydrationForms[0].label).toContain('reference basis');
+    expect(coreTotals.magnesium).toBeCloseTo(saltTarget * (24.305 / 156.376), 8);
+    expect(coreTotals.chloride).toBe(0);
+    expect(coreTotals.sulfate).toBe(0);
+    expect(supplementalTotals.malate).toBeCloseTo(saltTarget * (132.071 / 156.376), 8);
+    expect(coreTotals.magnesium + supplementalTotals.malate).toBeCloseTo(saltTarget, 8);
+  });
 });
 
 describe('computeSaltIonPpmTotal', () => {

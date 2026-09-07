@@ -259,7 +259,7 @@ async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Pr
 }
 
 export type SaltRow = { target: string; formIdx: number };
-const MEME_SALT_IDS = new Set(['calact', 'mggly']);
+const MEME_SALT_IDS = new Set(['calact', 'mggly', 'mgmalate']);
 export type ConcentrateRecipeHandoff = {
   name: string;
   salts: Record<string, SaltRecipeEntry>;
