@@ -298,12 +298,24 @@ describe('computeIonTotals', () => {
     const calciumLactate = SALTS.find(s => s.id === 'calact')!;
     const totals = computeIonTotals({ calact: 10 }, {}, 0);
 
-    expect(SALTS[SALTS.findIndex(s => s.id === 'cacl2') + 1].id).toBe('calact');
+    expect(SALTS.some(salt => salt.id === calciumLactate.id)).toBe(true);
     expect(calciumLactate.defaultFormIdx).toBe(1);
     expect(calciumLactate.hydrationForms[1].label).toBe('Pentahydrate');
     expect(totals.calcium).toBeCloseTo(10 * (40.078 / 218.22), 5);
     expect(Object.prototype.hasOwnProperty.call(totals, 'lactate')).toBe(false);
     expect(ACTIVE_ION_IDS.includes('lactate' as never)).toBe(false);
+  });
+
+  it('models Calcium Sulfate calcium and sulfate from either hydration form', () => {
+    const calciumSulfate = SALTS.find(s => s.id === 'caso4')!;
+    const saltTarget = 100;
+    const totals = computeIonTotals({ caso4: saltTarget }, {}, 0);
+
+    expect(calciumSulfate.defaultFormIdx).toBe(1);
+    expect(calciumSulfate.hydrationForms[1].label).toBe('Dihydrate (Gypsum)');
+    expect(totals.calcium).toBeCloseTo(saltTarget * (40.078 / 136.138), 5);
+    expect(totals.sulfate).toBeCloseTo(saltTarget * (96.06 / 136.138), 5);
+    expect(totals.chloride).toBe(0);
   });
 
   it('calculates Calcium Lactate lactate as a supplemental display-only ion', () => {

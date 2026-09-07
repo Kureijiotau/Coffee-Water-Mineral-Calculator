@@ -460,6 +460,18 @@ export const SALTS: SaltInfo[] = [
     ],
   },
   {
+    id: 'caso4', name: 'Calcium Sulfate', formula: 'CaSO₄', anhydrousMass: 136.138,
+    hydrationForms: [
+      { label: 'Anhydrous', molarMass: 136.138 },
+      { label: 'Dihydrate (Gypsum)', molarMass: 172.171 },
+    ],
+    defaultFormIdx: 1,
+    ions: [
+      { ionId: 'calcium', fraction: 40.078 / 136.138 },
+      { ionId: 'sulfate', fraction: 96.06 / 136.138 },
+    ],
+  },
+  {
     id: 'calact', name: 'Calcium Lactate', formula: 'Ca(C₃H₅O₃)₂', anhydrousMass: 218.22,
     hydrationForms: [
       { label: 'Anhydrous', molarMass: 218.22 },
@@ -559,6 +571,7 @@ export const WATERMANCER_SALT_ORDER = [
   'nacl',
   'kcl',
   'mgso4',
+  'caso4',
   'nahco3',
   'khco3',
   'calact',
