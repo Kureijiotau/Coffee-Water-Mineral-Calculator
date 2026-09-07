@@ -84,3 +84,4 @@
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
 - [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
+- [Profile picker ordering](profile-picker-order.md) — keep user-saved profiles and recipes manually reorderable across tabs while built-in entries remain fixed

@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, Pencil } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -1884,14 +1884,73 @@ type RecipePickerGroup = {
   accent: 'cyan' | 'violet' | 'emerald' | 'amber';
 };
 
+const PROFILE_PICKER_ORDER_STORAGE_KEY = 'coffee-water-profile-picker-order';
+
+function loadProfilePickerOrder(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PROFILE_PICKER_ORDER_STORAGE_KEY) ?? '[]') as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return [...new Set(parsed.filter((value): value is string => typeof value === 'string' && value.length > 0))];
+  } catch {
+    return [];
+  }
+}
+
+function saveProfilePickerOrder(order: string[]): void {
+  try {
+    localStorage.setItem(PROFILE_PICKER_ORDER_STORAGE_KEY, JSON.stringify(order));
+  } catch {
+    // Keep the in-memory order when localStorage is unavailable.
+  }
+}
+
+function orderProfilePickerGroups(
+  groups: RecipePickerGroup[],
+  profileOrder: string[],
+  reorderableValues: string[],
+): RecipePickerGroup[] {
+  const orderIndex = new Map(profileOrder.map((value, index) => [value, index]));
+  const reorderable = new Set(reorderableValues);
+
+  return groups.map(group => ({
+    ...group,
+    options: group.options
+      .map((option, index) => ({ option, index }))
+      .sort((a, b) => {
+        const aOrder = reorderable.has(a.option.value)
+          ? (orderIndex.get(a.option.value) ?? Number.MAX_SAFE_INTEGER)
+          : null;
+        const bOrder = reorderable.has(b.option.value)
+          ? (orderIndex.get(b.option.value) ?? Number.MAX_SAFE_INTEGER)
+          : null;
+        if (aOrder !== null || bOrder !== null) {
+          if (aOrder === null) return 1;
+          if (bOrder === null) return -1;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+        }
+        if (a.option.value.startsWith('profile:') && b.option.value.startsWith('profile:')) {
+          return a.option.label.localeCompare(b.option.label);
+        }
+        return a.index - b.index;
+      })
+      .map(({ option }) => option),
+  }));
+}
+
 function MineralRecipePicker({
   value,
   groups,
   onChange,
+  profileOrder = [],
+  reorderableValues = [],
+  onProfileOrderChange,
 }: {
   value: string;
   groups: RecipePickerGroup[];
   onChange: (value: string) => void;
+  profileOrder?: string[];
+  reorderableValues?: string[];
+  onProfileOrderChange?: (order: string[]) => void;
 }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -1907,6 +1966,17 @@ function MineralRecipePicker({
   });
   const options = useMemo(() => groups.flatMap(group => group.options), [groups]);
   const selectedOption = options.find(option => option.value === value) ?? options[0];
+  const [reordering, setReordering] = useState(false);
+  const reorderableOptions = useMemo(() => {
+    const orderIndex = new Map(profileOrder.map((entry, index) => [entry, index]));
+    return options
+      .filter(option => reorderableValues.includes(option.value))
+      .sort((a, b) => (
+        (orderIndex.get(a.value) ?? Number.MAX_SAFE_INTEGER)
+        - (orderIndex.get(b.value) ?? Number.MAX_SAFE_INTEGER)
+      ));
+  }, [options, profileOrder, reorderableValues]);
+  const canReorder = Boolean(onProfileOrderChange) && reorderableOptions.length > 1;
 
   const updatePosition = () => {
     const trigger = triggerRef.current;
@@ -1958,10 +2028,40 @@ function MineralRecipePicker({
     if (open) optionRefs.current[activeIndex]?.scrollIntoView({ block: 'nearest' });
   }, [activeIndex, open]);
 
+  useEffect(() => {
+    if (!open) setReordering(false);
+  }, [open]);
+
   const selectOption = (option: RecipePickerOption) => {
     onChange(option.value);
+    setReordering(false);
     setOpen(false);
     triggerRef.current?.focus();
+  };
+
+  const moveReorderableOption = (valueToMove: string, direction: -1 | 1) => {
+    if (!onProfileOrderChange) return;
+    const currentIndex = reorderableOptions.findIndex(option => option.value === valueToMove);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= reorderableOptions.length) return;
+    const nextVisibleOrder = reorderableOptions.map(option => option.value);
+    [nextVisibleOrder[currentIndex], nextVisibleOrder[nextIndex]] = [nextVisibleOrder[nextIndex], nextVisibleOrder[currentIndex]];
+    const visibleValues = new Set(nextVisibleOrder);
+    let visibleIndex = 0;
+    const nextOrder = profileOrder.map(value => (
+      visibleValues.has(value) ? nextVisibleOrder[visibleIndex++] : value
+    ));
+    onProfileOrderChange(nextOrder);
+  };
+
+  const resetReorderableOptions = () => {
+    if (!onProfileOrderChange) return;
+    const defaultOrder = reorderableValues.filter(value => profileOrder.includes(value));
+    const reorderableSet = new Set(defaultOrder);
+    let defaultIndex = 0;
+    onProfileOrderChange(profileOrder.map(value => (
+      reorderableSet.has(value) ? defaultOrder[defaultIndex++] : value
+    )));
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -2027,8 +2127,8 @@ function MineralRecipePicker({
       {open && createPortal(
         <div
           ref={menuRef}
-          role="listbox"
-          aria-label="Mineral recipes"
+          role={reordering ? 'dialog' : 'listbox'}
+          aria-label={reordering ? 'Change profile order' : 'Mineral recipes'}
           className="fixed z-[100] overflow-y-auto rounded-2xl border border-cyan-300/30 bg-slate-950/95 p-1.5 shadow-2xl shadow-indigo-950/60 ring-1 ring-white/10 backdrop-blur-xl"
           style={{
             top: menuPosition.top,
@@ -2037,7 +2137,66 @@ function MineralRecipePicker({
             maxHeight: menuPosition.maxHeight,
           }}
         >
-          {groups.map(group => (
+          {canReorder && (
+            <button
+              type="button"
+              onClick={() => setReordering(true)}
+              className="mb-1 flex w-full items-center gap-2 rounded-xl border border-indigo-300/20 bg-indigo-500/10 px-2.5 py-2 text-left text-[11px] font-semibold text-indigo-100 transition hover:border-cyan-300/40 hover:bg-cyan-500/10 hover:text-white"
+            >
+              <Menu className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
+              <span>Change order</span>
+            </button>
+          )}
+          {reordering ? (
+            <div className="rounded-xl border border-cyan-300/20 bg-cyan-500/[0.06] p-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200">
+                  <Menu className="h-3.5 w-3.5" aria-hidden="true" />
+                  Profile order
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={resetReorderableOptions}
+                    className="rounded-md px-1.5 py-1 text-[10px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReordering(false)}
+                    className="rounded-md px-1.5 py-1 text-[10px] font-semibold text-slate-400 hover:bg-white/10 hover:text-white"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+              {reorderableOptions.map((option, index) => (
+                <div key={option.value} className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 text-[11px] text-slate-200">
+                  <Menu className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate">{option.label}</span>
+                  <button
+                    type="button"
+                    onClick={() => moveReorderableOption(option.value, -1)}
+                    disabled={index === 0}
+                    aria-label={`Move ${option.label} up`}
+                    className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+                  >
+                    <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveReorderableOption(option.value, 1)}
+                    disabled={index === reorderableOptions.length - 1}
+                    aria-label={`Move ${option.label} down`}
+                    className="rounded-md p-1 text-slate-400 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+                  >
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : groups.map(group => (
             <div key={group.label} role="group" aria-label={group.label} className="mb-1.5 last:mb-0">
               <div className={`flex items-center gap-2 px-2.5 pb-1 pt-2 text-[9px] font-bold uppercase tracking-[0.18em] ${accentStyles[group.accent]}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]" aria-hidden="true" />
@@ -2532,8 +2691,26 @@ function App() {
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
+  const [profilePickerOrder, setProfilePickerOrder] = useState<string[]>(() => loadProfilePickerOrder());
+  const reorderableProfileValues = useMemo(
+    () => [
+      ...wmProfiles.map(profile => `saved:${profile.id}`),
+      ...savedRecipes.map(recipe => `recipe:${recipe.id}`),
+    ],
+    [savedRecipes, wmProfiles],
+  );
+  const effectiveProfilePickerOrder = useMemo(() => {
+    const knownValues = new Set(reorderableProfileValues);
+    const savedOrder = profilePickerOrder.filter(value => knownValues.has(value));
+    const newValues = reorderableProfileValues.filter(value => !savedOrder.includes(value));
+    return [...savedOrder, ...newValues];
+  }, [profilePickerOrder, reorderableProfileValues]);
   useDebouncedPersistence(() => saveSavedRecipes(savedRecipes), [savedRecipes]);
   useDebouncedPersistence(() => saveWaterPlans(savedPlans), [savedPlans]);
+  useDebouncedPersistence(
+    () => saveProfilePickerOrder(effectiveProfilePickerOrder),
+    [effectiveProfilePickerOrder],
+  );
   const sessionBaselineRef = useRef<string | null>(null);
   const lastAutoSavedSignatureRef = useRef<string | null>(null);
   const autoSaveTimerRef = useRef<number | null>(null);
@@ -4019,7 +4196,7 @@ function App() {
     : externalRecipeId !== 'custom'
     ? `external:${externalRecipeId}`
     : 'custom';
-  const mineralRecipePickerGroups: RecipePickerGroup[] = [
+  const mineralRecipePickerGroups: RecipePickerGroup[] = orderProfilePickerGroups([
     {
       label: 'Current setup',
       accent: 'emerald',
@@ -4064,7 +4241,7 @@ function App() {
         .filter(recipe => recipe.method === 'Espresso')
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
-  ];
+  ], effectiveProfilePickerOrder, reorderableProfileValues);
   const noRecipeSelected = activeRecipeId === 'custom' && externalRecipeId === 'custom';
   const hasSaltRecipeTargets = Object.values(saltTargets).some(target => target > 0);
   useEffect(() => {
@@ -5338,6 +5515,9 @@ function App() {
               lotusRecipes={LOTUS_RECIPES}
               referenceWaters={EMPIRICAL_WATERS}
                comparisonProfiles={watermancerComparisonProfiles}
+               profilePickerOrder={effectiveProfilePickerOrder}
+               reorderableProfileValues={reorderableProfileValues}
+               onProfilePickerOrderChange={setProfilePickerOrder}
               watermancerTargetSource={watermancerTargetSource}
               onTargetSourceChange={handleWatermancerTargetSourceChange}
               onTargetOverrideChange={handleWatermancerTargetOverrideChange}
@@ -5398,6 +5578,9 @@ function App() {
                 value={mineralRecipeSelectorValue}
                 groups={mineralRecipePickerGroups}
                 onChange={handleMineralRecipeChange}
+                profileOrder={effectiveProfilePickerOrder}
+                reorderableValues={reorderableProfileValues}
+                onProfileOrderChange={setProfilePickerOrder}
               />
               {activeRecipeId === 'custom' && (
                 <button
@@ -10237,6 +10420,9 @@ function WatermancerIonProfileCard({
   lotusRecipes,
   referenceWaters,
   comparisonProfiles,
+  profilePickerOrder,
+  reorderableProfileValues,
+  onProfilePickerOrderChange,
   watermancerTargetSource,
   onTargetSourceChange,
   onTargetOverrideChange,
@@ -10264,6 +10450,9 @@ function WatermancerIonProfileCard({
   lotusRecipes: LotusRecipe[];
   referenceWaters: typeof EMPIRICAL_WATERS;
   comparisonProfiles: WatermancerComparisonProfile[];
+  profilePickerOrder: string[];
+  reorderableProfileValues: string[];
+  onProfilePickerOrderChange: (order: string[]) => void;
   watermancerTargetSource: WatermancerTargetSourceId;
   onTargetSourceChange: (source: WatermancerTargetSourceId) => void;
   onTargetOverrideChange: (targets: IonicTargetValues | null) => void;
@@ -10328,14 +10517,18 @@ function WatermancerIonProfileCard({
         )
       ), 0) / 2)))
     : null;
-  const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => [{
+  const comparisonPickerGroups = useMemo<RecipePickerGroup[]>(() => orderProfilePickerGroups([{
     label: 'Watermancer profiles',
     accent: 'cyan',
     options: comparisonProfiles.map(profile => ({
       value: profile.id,
       label: profile.name,
     })),
-  }], [comparisonProfiles]);
+  }], profilePickerOrder, reorderableProfileValues), [
+    comparisonProfiles,
+    profilePickerOrder,
+    reorderableProfileValues,
+  ]);
 
   const currentDropdownValue = watermancerTargetSource === 'safe-profile'
     ? `profile:${AIKI_DEFAULT_PROFILE.id}`
@@ -10514,7 +10707,7 @@ function WatermancerIonProfileCard({
 
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
-  const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => [
+  const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => orderProfilePickerGroups([
     ...(wmProfiles.length > 0 || savedRecipes.length > 0
       ? [{
           label: 'My saved profiles',
@@ -10581,7 +10774,15 @@ function WatermancerIonProfileCard({
         .filter(recipe => recipe.method === 'Espresso')
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
-  ], [externalRecipes, lotusRecipes, profiles, savedRecipes, wmProfiles]);
+  ], profilePickerOrder, reorderableProfileValues), [
+    externalRecipes,
+    lotusRecipes,
+    profilePickerOrder,
+    profiles,
+    reorderableProfileValues,
+    savedRecipes,
+    wmProfiles,
+  ]);
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
@@ -10608,6 +10809,9 @@ function WatermancerIonProfileCard({
              value={currentDropdownValue}
              groups={targetSourcePickerGroups}
              onChange={handleDropdownChange}
+             profileOrder={profilePickerOrder}
+             reorderableValues={reorderableProfileValues}
+             onProfileOrderChange={onProfilePickerOrderChange}
            />
            <div className="flex items-center gap-2">
              {!isEditingAny ? (
@@ -10777,6 +10981,9 @@ function WatermancerIonProfileCard({
                       value={comparisonLeftId}
                       groups={comparisonPickerGroups}
                       onChange={setComparisonLeftId}
+                      profileOrder={profilePickerOrder}
+                      reorderableValues={reorderableProfileValues}
+                      onProfileOrderChange={onProfilePickerOrderChange}
                     />
                   </div>
                   <div className="rounded-lg border border-slate-700/60 bg-slate-950/30 p-2.5">
@@ -10785,6 +10992,9 @@ function WatermancerIonProfileCard({
                       value={comparisonRightId}
                       groups={comparisonPickerGroups}
                       onChange={setComparisonRightId}
+                      profileOrder={profilePickerOrder}
+                      reorderableValues={reorderableProfileValues}
+                      onProfileOrderChange={onProfilePickerOrderChange}
                     />
                   </div>
                 </div>
