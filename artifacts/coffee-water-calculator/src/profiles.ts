@@ -86,7 +86,11 @@ export function saveProfiles(profiles: WaterProfile[]): void {
 }
 
 export function loadActiveProfileId(): string {
-  return localStorage.getItem(ACTIVE_KEY) || AIKI_DEFAULT_PROFILE.id;
+  try {
+    return localStorage.getItem(ACTIVE_KEY) || AIKI_DEFAULT_PROFILE.id;
+  } catch {
+    return AIKI_DEFAULT_PROFILE.id;
+  }
 }
 
 export function saveActiveProfileId(id: string): void {
@@ -98,9 +102,13 @@ export function saveActiveProfileId(id: string): void {
 }
 
 export function loadIndicatorOn(): boolean {
-  const raw = localStorage.getItem(INDICATOR_KEY);
-  if (raw === null) return true;
-  return raw === 'true';
+  try {
+    const raw = localStorage.getItem(INDICATOR_KEY);
+    if (raw === null) return true;
+    return raw === 'true';
+  } catch {
+    return true;
+  }
 }
 
 export function saveIndicatorOn(on: boolean): void {
@@ -112,8 +120,12 @@ export function saveIndicatorOn(on: boolean): void {
 }
 
 export function loadNerdLevel(): NerdLevel {
-  const raw = localStorage.getItem(NERD_LEVEL_KEY);
-  return raw === 'alchemist' || raw === 'watermancer' ? raw : 'brewer';
+  try {
+    const raw = localStorage.getItem(NERD_LEVEL_KEY);
+    return raw === 'alchemist' || raw === 'watermancer' ? raw : 'brewer';
+  } catch {
+    return 'brewer';
+  }
 }
 
 export function saveNerdLevel(level: NerdLevel): void {

@@ -173,6 +173,36 @@ describe('parseRecipeFile', () => {
     expect(parseRecipeFile(payload)).toBeNull();
   });
 
+  it('rejects missing and unsupported recipe file versions', () => {
+    expect(parseRecipeFile(JSON.stringify({
+      kind: RECIPE_FILE_KIND,
+      name: 'Missing version',
+      salts: makeSalts(),
+    }))).toBeNull();
+    expect(parseRecipeFile(JSON.stringify({
+      kind: RECIPE_FILE_KIND,
+      version: 2,
+      name: 'Future version',
+      salts: makeSalts(),
+    }))).toBeNull();
+  });
+
+  it('rejects fractional form indexes and non-finite salt targets', () => {
+    const { id } = firstSalt();
+    expect(parseRecipeFile(JSON.stringify({
+      kind: RECIPE_FILE_KIND,
+      version: 1,
+      name: 'Fractional form',
+      salts: { [id]: { target: '10', formIdx: 0.5 } },
+    }))).toBeNull();
+    expect(parseRecipeFile(JSON.stringify({
+      kind: RECIPE_FILE_KIND,
+      version: 1,
+      name: 'Infinite target',
+      salts: { [id]: { target: 'Infinity', formIdx: 0 } },
+    }))).toBeNull();
+  });
+
   it('returns null for an otherwise correct file with invalid salts', () => {
     const payload = JSON.stringify({
       kind: RECIPE_FILE_KIND,

@@ -33,7 +33,9 @@ export function isValidRecipe(r: unknown): r is SaltRecipe {
     if (!SALT_IDS.has(saltId)) return false;
     if (!v || typeof v !== 'object') return false;
     const e = v as Record<string, unknown>;
-    if (typeof e.target !== 'string' || typeof e.formIdx !== 'number') return false;
+    if (typeof e.target !== 'string' || typeof e.formIdx !== 'number' || !Number.isInteger(e.formIdx)) return false;
+    const parsedTarget = Number(e.target);
+    if (!Number.isFinite(parsedTarget) || parsedTarget < 0) return false;
     const salt = SALTS.find(s => s.id === saltId)!;
     if (e.formIdx < 0 || e.formIdx >= salt.hydrationForms.length) return false;
   }
@@ -120,7 +122,7 @@ function parseSplitSettings(o: Record<string, unknown>): Partial<SplitSettings> 
 export function parseRecipeFile(text: string): SaltRecipe | null {
   try {
     const o = JSON.parse(text);
-    if (!o || typeof o !== 'object' || o.kind !== RECIPE_FILE_KIND) return null;
+    if (!o || typeof o !== 'object' || o.kind !== RECIPE_FILE_KIND || o.version !== 1) return null;
     const candidate: SaltRecipe = {
       id: newRecipeId(),
       name: String(o.name ?? '').trim(),

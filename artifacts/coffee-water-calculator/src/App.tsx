@@ -2252,7 +2252,12 @@ function useDebouncedPersistence(
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    persistRef.current();
+    try {
+      persistRef.current();
+    } catch {
+      // Storage can throw in privacy mode or when quota is exhausted. A
+      // persistence failure must never interrupt calculator interaction.
+    }
   }, []);
 
   useEffect(() => {
@@ -3249,6 +3254,7 @@ function App() {
   const watermancerInputSignatureRef = useRef(watermancerInputSignature);
   watermancerInputSignatureRef.current = watermancerInputSignature;
   const watermancerWorkerRef = useRef<WatermancerWorkerClient | null>(null);
+  const watermancerBestMatchWorkerRef = useRef<WatermancerWorkerClient | null>(null);
   const watermancerWorkerLatestRequestRef = useRef(0);
   const watermancerWorkerFailedRef = useRef(false);
   const [watermancerWorkerResult, setWatermancerWorkerResult] = useState<{
@@ -3256,18 +3262,27 @@ function App() {
     result: WatermancerSolverResult;
   } | null>(null);
   const [watermancerWorkerGeneration, setWatermancerWorkerGeneration] = useState(0);
+  const markWatermancerWorkerFailed = useCallback(() => {
+    if (watermancerWorkerFailedRef.current) return;
+    watermancerWorkerFailedRef.current = true;
+    const failedClient = watermancerWorkerRef.current;
+    watermancerWorkerRef.current = null;
+    failedClient?.dispose();
+    setWatermancerWorkerGeneration(generation => generation + 1);
+  }, []);
 
   useEffect(() => {
     if (!showWatermancer || watermancerMatchMode !== 'automatic') return;
+    // A failed worker gets one clean recreation when matching inputs change.
+    // Avoid immediate retry loops for persistent browser/worker failures.
+    if (watermancerWorkerFailedRef.current && !watermancerWorkerRef.current) {
+      watermancerWorkerFailedRef.current = false;
+    }
     if (!watermancerWorkerRef.current) {
       try {
-        watermancerWorkerRef.current = createWatermancerWorkerClient(() => {
-          watermancerWorkerFailedRef.current = true;
-          setWatermancerWorkerGeneration(generation => generation + 1);
-        });
+        watermancerWorkerRef.current = createWatermancerWorkerClient(markWatermancerWorkerFailed);
       } catch {
-        watermancerWorkerFailedRef.current = true;
-        setWatermancerWorkerGeneration(generation => generation + 1);
+        markWatermancerWorkerFailed();
       }
     }
     const workerClient = watermancerWorkerRef.current;
@@ -3277,6 +3292,9 @@ function App() {
     watermancerWorkerLatestRequestRef.current = requestId;
     const requestSignature = watermancerInputSignature;
     const requestStartedAt = performance.now();
+    setWatermancerWorkerResult(current => (
+      current?.inputSignature === requestSignature ? current : null
+    ));
     void workerClient.solve({
       plan: cloneWatermancerPlan(watermancerPlan),
       batchMl,
@@ -3299,8 +3317,7 @@ function App() {
     }).catch(error => {
       if (error instanceof Error && error.message === 'Watermancer solve superseded.') return;
       if (requestSignature !== watermancerInputSignatureRef.current) return;
-      watermancerWorkerFailedRef.current = true;
-      setWatermancerWorkerGeneration(generation => generation + 1);
+      markWatermancerWorkerFailed();
     });
     return undefined;
   }, [
@@ -3312,11 +3329,14 @@ function App() {
     watermancerMatchMode,
     watermancerPlan,
     watermancerRecalculationNonce,
+    markWatermancerWorkerFailed,
   ]);
 
   useEffect(() => () => {
     watermancerWorkerRef.current?.dispose();
     watermancerWorkerRef.current = null;
+    watermancerBestMatchWorkerRef.current?.dispose();
+    watermancerBestMatchWorkerRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -3355,7 +3375,7 @@ function App() {
     if (watermancerWorkerResult?.inputSignature === watermancerInputSignature) {
       return watermancerWorkerResult.result;
     }
-    return watermancerWorkerResult?.result ?? createInactiveWatermancerResult(watermancerPlan);
+    return createInactiveWatermancerResult(watermancerPlan);
   }, [
     showWatermancer,
     watermancerInputSignature,
@@ -3469,30 +3489,42 @@ function App() {
       additionWaters: cloneWatermancerWaters(additionWaters),
       inputSignature: watermancerInputSignature,
     };
-    const runSweep = () => {
-      try {
-        const isSnapshotCurrent = () => (
-          isWatermancerActionSnapshotCurrent(
-            actionGeneration,
-            watermancerActionGenerationRef.current,
-            snapshot.inputSignature,
-            watermancerInputSignatureRef.current,
-          )
-        );
-        if (!isSnapshotCurrent()) {
-          if (actionGeneration === watermancerActionGenerationRef.current) {
-            setWatermancerBestMatchMessage('Matching inputs changed before the sweep finished. Nothing was applied.');
-          }
-          return;
-        }
-        const sweep = findBestWatermancerMatch(snapshot);
+    const isSnapshotCurrent = () => (
+      isWatermancerActionSnapshotCurrent(
+        actionGeneration,
+        watermancerActionGenerationRef.current,
+        snapshot.inputSignature,
+        watermancerInputSignatureRef.current,
+      )
+    );
+    if (!isSnapshotCurrent()) {
+      setWatermancerBestMatchMessage('Matching inputs changed before the sweep started. Nothing was applied.');
+      setWatermancerBestMatchRunning(false);
+      finishWatermancerActionAfterPaint();
+      return;
+    }
+    try {
+      watermancerBestMatchWorkerRef.current ??= createWatermancerWorkerClient(() => {
+        watermancerBestMatchWorkerRef.current?.dispose();
+        watermancerBestMatchWorkerRef.current = null;
+      });
+    } catch {
+      watermancerBestMatchWorkerRef.current = null;
+    }
+    const workerClient = watermancerBestMatchWorkerRef.current;
+    if (!workerClient) {
+      setWatermancerBestMatchMessage('The best-match worker could not start. Please try again.');
+      setWatermancerBestMatchRunning(false);
+      finishWatermancerActionAfterPaint();
+      return;
+    }
+    void workerClient.findBestMatch(snapshot).then(({ winner }) => {
         if (!isSnapshotCurrent()) {
           if (actionGeneration === watermancerActionGenerationRef.current) {
             setWatermancerBestMatchMessage('Matching inputs changed during the sweep. Nothing was applied.');
           }
           return;
         }
-        const winner = sweep.winner;
         if (!winner) {
           setWatermancerBestMatchPreview(null);
           setWatermancerBestMatchMessage('No usable match was found with the current waters, salts, and target settings.');
@@ -3513,17 +3545,14 @@ function App() {
           inputSignature: snapshot.inputSignature,
         };
         handleUseWatermancerBestMatch(bestMatchPreview);
-      } catch {
+      }).catch(error => {
+        if (error instanceof Error && error.message === 'Watermancer solve superseded.') return;
         setWatermancerBestMatchPreview(null);
         setWatermancerBestMatchMessage('The best-match search could not finish. Please try again.');
-      } finally {
+      }).finally(() => {
         setWatermancerBestMatchRunning(false);
         finishWatermancerActionAfterPaint();
-      }
-    };
-    // Give touch browsers one paint to show the busy state before the
-    // synchronous 48-route sweep starts.
-    window.requestAnimationFrame(() => window.setTimeout(runSweep, 0));
+      });
   };
   const handleUseWatermancerBestMatch = (
     previewOverride?: WatermancerBestMatchPreview,
@@ -4092,6 +4121,13 @@ function App() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showWatermancerResetConfirm, setShowWatermancerResetConfirm] = useState(false);
   const handleReset = () => {
+    watermancerActionGenerationRef.current += 1;
+    watermancerActionBusyRef.current = false;
+    watermancerBestMatchWorkerRef.current?.dispose();
+    watermancerBestMatchWorkerRef.current = null;
+    setWatermancerWorkerResult(null);
+    setWatermancerActionRunning(false);
+    setWatermancerActionMessage(null);
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
     setBrewerFlavor(DEFAULT_BREWER_FLAVOR);
     setBrewerRecipeOverride(null);
@@ -4127,6 +4163,9 @@ function App() {
     // in-flight match cannot write stale results back into the reset state.
     watermancerActionGenerationRef.current += 1;
     watermancerActionBusyRef.current = false;
+    watermancerBestMatchWorkerRef.current?.dispose();
+    watermancerBestMatchWorkerRef.current = null;
+    setWatermancerWorkerResult(null);
     setRows(SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })));
     setMineralWaters([]);
     setAdditionWaters([]);
@@ -5173,7 +5212,39 @@ function App() {
         autoSaveTimerRef.current = null;
       }
     };
-  });
+  }, [
+    activeProfileId,
+    activeRecipeId,
+    additionWaters,
+    appTab,
+    autoCraftPreset,
+    autoFillCustomPriority,
+    autoFillDeviationPpm,
+    autoFillPriorityPreset,
+    brewerDropsPerMl,
+    brewerFlavor,
+    brewerRecipeOverride,
+    concentrateRecipeHandoff,
+    concentrateSnapshot,
+    externalRecipeId,
+    liters,
+    magnesiumPreference,
+    mineralWaters,
+    nerdLevel,
+    overshootSettings,
+    safeRows,
+    sodiumCorrectionOn,
+    volumeUnit,
+    watermancerBestMatchDeviationMode,
+    watermancerCurrentFinalIons,
+    watermancerDoseOverridesMg,
+    watermancerIonSourcePreferences,
+    watermancerMatchingMode,
+    watermancerSaltObjective,
+    watermancerTargetOverride,
+    watermancerTargetSource,
+    watermancerUsedSaltIds,
+  ]);
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">

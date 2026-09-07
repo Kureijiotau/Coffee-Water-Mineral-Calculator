@@ -43,6 +43,8 @@ import {
   loadProfiles,
   saveProfiles,
   loadActiveProfileId,
+  loadIndicatorOn,
+  loadNerdLevel,
   saveActiveProfileId,
   createProfile,
   emptyRangeSet,
@@ -165,6 +167,20 @@ describe('loadActiveProfileId / saveActiveProfileId', () => {
     const custom = makeCustomProfile('Espresso');
     saveActiveProfileId(custom.id);
     expect(loadActiveProfileId()).toBe(custom.id);
+  });
+
+  it('uses safe defaults when storage reads are blocked', () => {
+    const originalGetItem = localStorageMock.getItem;
+    localStorageMock.getItem = () => {
+      throw new Error('storage unavailable');
+    };
+    try {
+      expect(loadActiveProfileId()).toBe(AIKI_DEFAULT_PROFILE.id);
+      expect(loadIndicatorOn()).toBe(true);
+      expect(loadNerdLevel()).toBe('brewer');
+    } finally {
+      localStorageMock.getItem = originalGetItem;
+    }
   });
 });
 
