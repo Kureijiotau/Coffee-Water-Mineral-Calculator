@@ -9,6 +9,10 @@ export const COMMERCIAL_WATERS: SharedWater[] = [
   { id: 75, name: "St. Yorre", ions: { sodium: 1708, potassium: 110, magnesium: 11, calcium: 90, chloride: 322, sulfate: 174, bicarbonate: 4368 }, metadata: { tds: 4774 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
   // Source: Sources ALMA, https://www.sources-alma.com/en/our-brands/mineral-water/vichy-celestins/
   { id: 76, name: "Vichy Célestins", ions: { sodium: 1172, potassium: 66, magnesium: 10, calcium: 103, chloride: 235, sulfate: 138, bicarbonate: 2989 }, metadata: { tds: 3325 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
+  // Source: Tŷ Nant, https://tynant.com/water-analysis/; bicarbonate cross-checked against the published analysis at https://finewaters.com/bottled-waters-of-the-world/uk/ty-nant
+  { id: 77, name: "Ty Nant", ions: { sodium: 22, potassium: 1, magnesium: 11.5, calcium: 22.5, chloride: 14, sulfate: 3.7, bicarbonate: 116 }, metadata: { tds: 165 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
+  // Source: Brecon Carreg, https://www.breconwater.co.uk/; composition published on the product label at https://aqua-amore.com/products/brecon-carreg-still-plastic-bottle-121-5l
+  { id: 78, name: "Brecon Carreg", ions: { sodium: 5, potassium: 0.5, magnesium: 15, calcium: 55, chloride: 9, sulfate: 9, bicarbonate: 225 }, metadata: { tds: 210 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
   { id: 49, name: "Contrex", ions: { calcium: 468, magnesium: 74, sodium: 9.4, potassium: 2.8, bicarbonate: 372, chloride: 7.6, sulfate: 1121 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 50, name: "Courmayeur", ions: { calcium: 576, magnesium: 53, sodium: 1.2, bicarbonate: 151, chloride: 0.5, sulfate: 1420 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 51, name: "Aqua Carpatica (Naturally Sparkling)", ions: { calcium: 286, magnesium: 89, sodium: 5.3, potassium: 1, bicarbonate: 1281, chloride: 19, sulfate: 20 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
