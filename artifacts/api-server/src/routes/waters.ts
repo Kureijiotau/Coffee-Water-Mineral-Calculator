@@ -134,7 +134,14 @@ router.get("/waters", async (_req: Request, res: Response) => {
       const ions = normalizeWaterIons(row.ions);
       return metadata ? { ...row, ions, metadata } : { ...row, ions };
     });
-    res.status(200).json({ waters: deduplicatePublicWaters(enrichedRows) });
+    const bundledWaters = SHARED_WATERS.filter(water => water.shared === "yes");
+    // Keep curated public waters available in production even when its
+    // database is newly provisioned and has not been seeded from development.
+    // Database rows come first so the live catalog remains authoritative for
+    // user-submitted entries; identical bundled rows are removed below.
+    res.status(200).json({
+      waters: deduplicatePublicWaters([...enrichedRows, ...bundledWaters]),
+    });
   } catch (err: any) {
     console.error("Error fetching waters:", err);
     console.error("Water database failure:", classifyDatabaseError(err), getSafeDatabaseError(err));
