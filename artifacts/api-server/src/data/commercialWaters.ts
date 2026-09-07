@@ -5,6 +5,10 @@ import type { SharedWater } from "./sharedWaters";
  * Keep this list separate from the older community/imported fallback entries.
  */
 export const COMMERCIAL_WATERS: SharedWater[] = [
+  // Source: Sources ALMA, https://www.sources-alma.com/en/our-brands/mineral-water/brand-st-yorre/
+  { id: 75, name: "St. Yorre", ions: { sodium: 1708, potassium: 110, magnesium: 11, calcium: 90, chloride: 322, sulfate: 174, bicarbonate: 4368 }, metadata: { tds: 4774 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
+  // Source: Sources ALMA, https://www.sources-alma.com/en/our-brands/mineral-water/vichy-celestins/
+  { id: 76, name: "Vichy Célestins", ions: { sodium: 1172, potassium: 66, magnesium: 10, calcium: 103, chloride: 235, sulfate: 138, bicarbonate: 2989 }, metadata: { tds: 3325 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
   { id: 49, name: "Contrex", ions: { calcium: 468, magnesium: 74, sodium: 9.4, potassium: 2.8, bicarbonate: 372, chloride: 7.6, sulfate: 1121 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 50, name: "Courmayeur", ions: { calcium: 576, magnesium: 53, sodium: 1.2, bicarbonate: 151, chloride: 0.5, sulfate: 1420 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
   { id: 51, name: "Aqua Carpatica (Naturally Sparkling)", ions: { calcium: 286, magnesium: 89, sodium: 5.3, potassium: 1, bicarbonate: 1281, chloride: 19, sulfate: 20 }, shared: "yes", createdAt: "2026-08-25T00:00:00.000Z" },
