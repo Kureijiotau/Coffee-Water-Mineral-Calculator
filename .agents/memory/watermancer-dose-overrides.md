@@ -9,6 +9,12 @@ Watermancer shows one Dose control per salt: the solver supplies the initial sug
 
 **How to apply:** Keep Dose and Use separate; convert edited physical mg to fixed ppm in the plan, exclude fixed salts from automatic solving, and use the resulting route for review and ion totals.
 
+Downstream recipe handoffs must use that same active route rather than the editable base salt rows, or edited Watermancer doses become stale when translated into concentrate grams.
+
+**Why:** The base rows describe the calculator recipe inputs, while Watermancer’s active route includes selected salts, current-volume recalculation, and physical-dose overrides.
+
+**How to apply:** When exporting or sending a Watermancer recipe to another preparation workflow, serialize `activeWatermancerSaltTargets` with the current row hydration forms.
+
 For the salt table, keep the visible dose controls together while rendering Suggested/Adjusted status directly beneath the numeric dose field.
 
 **Why:** Auxiliary labels have different widths and otherwise shift the − / value / mg / + controls away from the column center; the status is most legible when tied to the number it describes.

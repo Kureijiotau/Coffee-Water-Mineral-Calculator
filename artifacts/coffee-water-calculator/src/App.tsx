@@ -278,6 +278,26 @@ export type ConcentrateRecipeHandoff = {
   salts: Record<string, SaltRecipeEntry>;
   finalLiters: number;
 };
+
+export function buildSaltRecipeEntries(
+  rows: SaltRow[],
+  liveTargets?: Record<string, number>,
+): Record<string, SaltRecipeEntry> {
+  const entries: Record<string, SaltRecipeEntry> = {};
+  SALTS.forEach((salt, index) => {
+    const row = rows[index];
+    const target = liveTargets
+      ? Math.max(0, Number(liveTargets[salt.id] ?? 0))
+      : Math.max(0, Number(row?.target ?? 0) || 0);
+    if (target <= 0) return;
+    entries[salt.id] = {
+      target: String(target),
+      formIdx: row?.formIdx ?? salt.defaultFormIdx ?? 0,
+    };
+  });
+  return entries;
+}
+
 type ConcentrateStrategy = 'gh-kh' | 'all-in-one' | 'individual';
 type ConcentratePlanSnapshot = {
   strategy: ConcentrateStrategy;
@@ -4490,16 +4510,11 @@ function App() {
     applyRecipe(value.startsWith('recipe:') ? value.slice('recipe:'.length) : value);
   };
 
-  const buildCurrentSalts = (): Record<string, SaltRecipeEntry> => {
-    const m: Record<string, SaltRecipeEntry> = {};
-    SALTS.forEach((s, i) => {
-      if (num(safeRows[i].target) > 0) m[s.id] = { target: safeRows[i].target, formIdx: safeRows[i].formIdx };
-    });
-    return m;
-  };
+  const buildCurrentSalts = (liveTargets?: Record<string, number>) =>
+    buildSaltRecipeEntries(safeRows, liveTargets);
 
   const handleSendRecipeToConcentrate = () => {
-    const salts = buildCurrentSalts();
+    const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
     if (Object.keys(salts).length === 0) {
       window.alert('Enter at least one salt target before sending a recipe to Concentrate.');
       return;
@@ -9928,10 +9943,10 @@ function RecipeConcentrateBottleCard({
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
-            <span>safe ceiling ×{maxSafeStrength}</span>
+            <span>safe ceiling ×{recipeConcentrateNumber(maxSafeStrength, 2)}</span>
             <button
               type="button"
-              onClick={() => onStrengthChange(String(maxSafeStrength))}
+              onClick={() => onStrengthChange(recipeConcentrateNumber(maxSafeStrength, 2))}
               className="font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
             >
               Apply maximum
@@ -9949,7 +9964,7 @@ function RecipeConcentrateBottleCard({
           <div className="mt-2 flex justify-between text-[9px] tabular-nums text-slate-600">
             <span>×1</span>
             <span>lower strength = more drops</span>
-            <span>×{maxSafeStrength}</span>
+            <span>×{recipeConcentrateNumber(maxSafeStrength, 2)}</span>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
@@ -10309,7 +10324,11 @@ function RecipeConcentrateBuilder({
       compatibleStockGroups.map(group => [group.id, String(groupMaxSafeStrengthFor(group))]),
     );
     const restored = restoredPlan && restoredPlan.strategy ? restoredPlan : null;
-    setStrengthInput(restored && !singleSaltOnly ? String(restored.strength) : String(initialAllInOneStrength));
+    setStrengthInput(
+      restored && !singleSaltOnly
+        ? String(restored.strength)
+        : recipeConcentrateNumber(initialAllInOneStrength, 2),
+    );
     setPhysicalSaltPpmPerDropInput(restored?.physicalSaltPpmPerDropInput ?? null);
     setStockStrategy(singleSaltOnly ? 'all-in-one' : restored?.strategy ?? 'gh-kh');
     setStockStrengthInputs(restored
@@ -10319,7 +10338,7 @@ function RecipeConcentrateBuilder({
           hardness: initialStockStrengths.hardness ?? '1',
           alkalinity: initialStockStrengths.alkalinity ?? '1',
           citrate: initialStockStrengths.citrate ?? '1',
-          'all-in-one': String(initialAllInOneStrength),
+          'all-in-one': recipeConcentrateNumber(initialAllInOneStrength, 2),
         });
     setStockVolumeInputs(restored
       && !singleSaltOnly
@@ -10441,7 +10460,7 @@ function RecipeConcentrateBuilder({
               setStockStrategy(value);
               if (value === 'all-in-one' && maxSafeStrengthByStrategy['all-in-one'] != null) {
                 setPhysicalSaltPpmPerDropInput(null);
-                setStrengthInput(String(maxSafeStrengthByStrategy['all-in-one']));
+                setStrengthInput(recipeConcentrateNumber(maxSafeStrengthByStrategy['all-in-one'], 2));
               }
             }}
             className={`flex-1 rounded-lg border px-2.5 py-2.5 text-[10px] font-semibold transition sm:text-xs ${
@@ -10466,7 +10485,9 @@ function RecipeConcentrateBuilder({
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/75">
                 {maxSafeStrength != null && strength > maxSafeStrength ? 'Above safe ceiling' : 'Modeled ceiling'}
               </div>
-              <div className="mt-1 text-sm font-semibold tabular-nums text-emerald-100">Max ×{maxSafeStrength ?? 0}</div>
+              <div className="mt-1 text-sm font-semibold tabular-nums text-emerald-100">
+                Max ×{recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}
+              </div>
             </div>
           </div>
         </div>
@@ -10560,7 +10581,9 @@ function RecipeConcentrateBuilder({
                 <AlertTriangle className="h-4 w-4 text-amber-200" aria-hidden="true" />
                 <span>
                   <span className="block text-xs font-semibold text-amber-100">
-                    {allInOneStrengthIsSafe ? `Why ×${maxSafeStrength ?? 0}?` : 'Strength is above the modeled chemical ceiling'}
+                    {allInOneStrengthIsSafe
+                      ? `Why ×${recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}?`
+                      : 'Strength is above the modeled chemical ceiling'}
                   </span>
                   <span className="mt-0.5 block text-[10px] text-amber-100/55">Modeled ceiling · not a laboratory guarantee</span>
                 </span>
@@ -13343,12 +13366,14 @@ function ConcentrateRecipeStepsModal({
                     </div>
                     <div className="mt-1 space-y-0.5 text-sm font-semibold tabular-nums text-fuchsia-100">
                       {planGroups.map(group => (
-                        <div key={group.id}>{group.name.replace(/ Concentrate$/, '')} ×{group.strength}</div>
+                        <div key={group.id}>
+                          {group.name.replace(/ Concentrate$/, '')} ×{recipeConcentrateNumber(group.strength, 2)}
+                        </div>
                       ))}
                     </div>
                     {isAllInOnePlan && plan.maxSafeStrength != null && (
                       <div className={`mt-1 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
-                        Max ×{plan.maxSafeStrength} · whole-drop rule included
+                        Max ×{recipeConcentrateNumber(plan.maxSafeStrength, 2)} · whole-drop rule included
                       </div>
                     )}
                   </div>
@@ -13360,7 +13385,9 @@ function ConcentrateRecipeStepsModal({
                       <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
                         <div className="min-w-0">
                           <div className="truncate text-[11px] font-semibold text-slate-200">{group.name}</div>
-                          <div className="mt-0.5 text-[9px] text-slate-500">stock strength ×{group.strength}</div>
+                          <div className="mt-0.5 text-[9px] text-slate-500">
+                            stock strength ×{recipeConcentrateNumber(group.strength, 2)}
+                          </div>
                         </div>
                         <div className="shrink-0 text-right">
                           <div className="text-sm font-semibold tabular-nums text-sky-100">{group.volumeMl.toFixed(0)} mL</div>
@@ -13393,7 +13420,7 @@ function ConcentrateRecipeStepsModal({
                           <div>
                             <div className="text-[11px] font-semibold text-fuchsia-100">{group.name}</div>
                             <div className="mt-0.5 text-[10px] text-slate-400">
-                              Make {group.volumeMl.toFixed(0)} mL at ×{group.strength}.
+                              Make {group.volumeMl.toFixed(0)} mL at ×{recipeConcentrateNumber(group.strength, 2)}.
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-2 text-right">
@@ -13494,7 +13521,9 @@ function ConcentrateRecipeStepsModal({
                         <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-violet-300/15 bg-violet-400/10 px-2.5 py-2">
                           <div className="min-w-0">
                             <div className="text-[10px] font-semibold text-violet-100">{group.name}</div>
-                            <div className="mt-0.5 text-[9px] text-slate-400">Dose this bottle · ×{group.strength}</div>
+                            <div className="mt-0.5 text-[9px] text-slate-400">
+                              Dose this bottle · ×{recipeConcentrateNumber(group.strength, 2)}
+                            </div>
                           </div>
                           <div className="shrink-0 text-right">
                             <div className="text-sm font-semibold tabular-nums text-violet-100">{dose.milliliters.toFixed(2)} mL</div>

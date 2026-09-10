@@ -28,6 +28,7 @@ import {
   watermancerBestMatchPreviewIsCurrent,
   mergeRecipeStepTargets,
   selectRecipePreparationTargets,
+  buildSaltRecipeEntries,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
 } from './App';
@@ -51,6 +52,19 @@ const water = (
 });
 
 describe('autoFillWaterVolumes', () => {
+  it('builds concentrate handoffs from live targets while retaining hydration forms', () => {
+    const rows = SALTS.map(salt => ({
+      target: salt.id === 'mgso4' ? '12' : salt.id === 'mgcl2' ? '34' : '',
+      formIdx: salt.id === 'mgcl2' ? 1 : 0,
+    }));
+
+    expect(buildSaltRecipeEntries(rows, { mgso4: 56, mgcl2: 78 }))
+      .toMatchObject({
+        mgso4: { target: '56', formIdx: 0 },
+        mgcl2: { target: '78', formIdx: 1 },
+      });
+  });
+
   it('uses each tab’s active preparation targets in Recipe steps', () => {
     const brewer = { mgso4: 8 };
     const alchemist = { mgso4: 6, cacl2: 4 };
