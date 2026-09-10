@@ -88,7 +88,9 @@ import {
   createWaterRecipeSharePayload,
   createWaterRecipeShareUrl,
   decodeWaterRecipeSharePayload,
+  encodeWaterRecipeSharePayload,
   WATER_RECIPE_SHARE_PARAM,
+  type WaterRecipeSharePayload,
 } from './waterRecipeShare';
 import {
   normalizeWatermancerIonOrder,
@@ -4600,6 +4602,21 @@ function App() {
     const text = await extractWaterRecipeJsonFromQrPng(fileBytes)
       ?? embeddedMetadata
       ?? new TextDecoder().decode(fileBytes);
+    let sharedPayloadFromQr = decodeWaterRecipeSharePayload(text);
+    if (!sharedPayloadFromQr) {
+      try {
+        const qrPayload = JSON.parse(text) as { sharePayload?: unknown };
+        if (typeof qrPayload.sharePayload === 'string') {
+          sharedPayloadFromQr = decodeWaterRecipeSharePayload(qrPayload.sharePayload);
+        }
+      } catch {
+        // Continue with the legacy recipe formats below.
+      }
+    }
+    if (sharedPayloadFromQr) {
+      applyImportedSharePayload(sharedPayloadFromQr);
+      return;
+    }
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
       if (!showWatermancer && !waterRecipe.profile) {
@@ -5209,23 +5226,7 @@ function App() {
     commitSessionBaseline(snapshot);
   };
 
-  useEffect(() => {
-    if (sharedRecipeHandledRef.current) return;
-    sharedRecipeHandledRef.current = true;
-    const encoded = new URLSearchParams(window.location.search).get(WATER_RECIPE_SHARE_PARAM);
-    if (!encoded) return;
-    const clearShareLink = () => {
-      const cleanUrl = `${window.location.pathname}${window.location.hash}`;
-      window.history.replaceState(null, '', cleanUrl);
-    };
-    const payload = decodeWaterRecipeSharePayload(encoded);
-    if (!payload) {
-      clearShareLink();
-      setSharedRecipeNotice('This shared recipe link is invalid or out of date.');
-      window.setTimeout(() => setSharedRecipeNotice(null), 5200);
-      return;
-    }
-
+  const applyImportedSharePayload = (payload: WaterRecipeSharePayload) => {
     const restoredRows = SALTS.map((salt, index) => {
       const row = payload.rows[index];
       const formIdx = Math.min(
@@ -5311,13 +5312,32 @@ function App() {
       setWatermancerTargetOverride(null);
       setWatermancerTargetSource('salt-table');
     }
-    clearShareLink();
     setSharedRecipeNotice(
       hasSourceWaters
         ? `Imported “${payload.name}” into Watermancer and saved it to your profiles.`
         : `Imported “${payload.name}” into Alchemist and saved it to your profiles.`,
     );
     window.setTimeout(() => setSharedRecipeNotice(null), 5200);
+  };
+
+  useEffect(() => {
+    if (sharedRecipeHandledRef.current) return;
+    sharedRecipeHandledRef.current = true;
+    const encoded = new URLSearchParams(window.location.search).get(WATER_RECIPE_SHARE_PARAM);
+    if (!encoded) return;
+    const clearShareLink = () => {
+      const cleanUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState(null, '', cleanUrl);
+    };
+    const payload = decodeWaterRecipeSharePayload(encoded);
+    if (!payload) {
+      clearShareLink();
+      setSharedRecipeNotice('This shared recipe link is invalid or out of date.');
+      window.setTimeout(() => setSharedRecipeNotice(null), 5200);
+      return;
+    }
+    applyImportedSharePayload(payload);
+    clearShareLink();
   }, [savedRecipes, wmProfiles]);
 
   useEffect(() => {
@@ -7753,6 +7773,10 @@ function App() {
            dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
            profile={recipeShareProfile}
+           sharePayload={createWaterRecipeSharePayload(
+             captureWaterPlanSnapshot(),
+             recipeStepsProfileName,
+           )}
            shareUrl={createWaterRecipeShareUrl(
              createWaterRecipeSharePayload(
                captureWaterPlanSnapshot(),
@@ -13516,6 +13540,7 @@ function BrewerRecipeStepsModal({
   dropsPerMl,
   dosingMethod,
   profile,
+  sharePayload,
   shareUrl,
   onClose,
 }: {
@@ -13538,6 +13563,7 @@ function BrewerRecipeStepsModal({
   dropsPerMl: number;
   dosingMethod: 'dry' | 'dropper';
   profile: NonNullable<ReturnType<typeof createRecipeShareCardModel>['profile']>;
+  sharePayload: WaterRecipeSharePayload;
   shareUrl: string;
   onClose: () => void;
 }) {
@@ -13822,7 +13848,11 @@ function BrewerRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      const qrDataUrl = await createWaterRecipeQrDataUrl(recipeCardPayload);
+      const recoveryQrPayload = JSON.stringify({
+        ...JSON.parse(recipeCardPayload) as Record<string, unknown>,
+        sharePayload: encodeWaterRecipeSharePayload(sharePayload),
+      });
+      const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
       const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
       const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl, shareQrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);

@@ -32,7 +32,7 @@ import type { WaterMixerImportResult } from './waterMixerImport';
 import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, createWaterRecipeShareQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
 import { StableNumberInput } from './components/StableNumberInput';
-import { createWaterRecipeSharePayload, createWaterRecipeShareUrl } from './waterRecipeShare';
+import { createWaterRecipeSharePayload, createWaterRecipeShareUrl, encodeWaterRecipeSharePayload } from './waterRecipeShare';
 
 export type WaterMixerDatabaseWater = {
   id: string | number;
@@ -828,7 +828,11 @@ function MixerRecipeCardModal({
          saltTargets,
          formIdxBySaltId,
        });
-      const qrDataUrl = await createWaterRecipeQrDataUrl(recipePayload);
+      const recoveryQrPayload = JSON.stringify({
+        ...JSON.parse(recipePayload) as Record<string, unknown>,
+        sharePayload: encodeWaterRecipeSharePayload(sharePayload),
+      });
+      const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
       const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
       const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl, shareQrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
