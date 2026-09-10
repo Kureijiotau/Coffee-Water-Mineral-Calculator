@@ -210,8 +210,8 @@ export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterM
   const bytes = await file.arrayBuffer();
   const isPng = isPngImageBytes(bytes);
   try {
-    const importedText = (isPng ? extractWaterRecipeJsonFromPng(bytes) : null)
-      ?? await extractWaterRecipeJsonFromQrPng(bytes)
+    const importedText = await extractWaterRecipeJsonFromQrPng(bytes)
+      ?? (isPng ? extractWaterRecipeJsonFromPng(bytes) : null)
       ?? (isPng ? null : new TextDecoder().decode(bytes));
     if (!importedText) {
       return {

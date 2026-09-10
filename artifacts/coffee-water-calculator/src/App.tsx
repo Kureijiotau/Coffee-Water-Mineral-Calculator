@@ -4597,8 +4597,8 @@ function App() {
     const fileBytes = await file.arrayBuffer();
     const isPng = isPngImageBytes(fileBytes);
     const embeddedMetadata = isPng ? extractWaterRecipeJsonFromPng(fileBytes) : null;
-    const text = embeddedMetadata
-      ?? await extractWaterRecipeJsonFromQrPng(fileBytes)
+    const text = await extractWaterRecipeJsonFromQrPng(fileBytes)
+      ?? embeddedMetadata
       ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {

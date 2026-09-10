@@ -86,4 +86,4 @@
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
 - [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
 - [Profile picker ordering](profile-picker-order.md) — keep user-saved profiles and recipes manually reorderable across tabs while built-in entries remain fixed
-- [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before metadata unless bytes are actually PNG
+- [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before PNG metadata
