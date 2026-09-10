@@ -49,9 +49,10 @@ On application startup, the app checks for the share-link query parameter:
 3. Restore the included base and addition waters.
 4. Restore salt targets and hydration forms.
 5. Restore final-ion target data for Watermancer when present.
-6. Open in **Alchemist** when the payload includes both recipe salts and source
-   waters.
-7. Open in **Watermancer** for water-only or final-ion-only payloads.
+6. Open in **Alchemist** only when the payload contains recipe salts and no
+   source-water data.
+7. Open in **Watermancer** whenever the payload contains source waters, whether
+   it also contains salts or final-ion readings.
 8. Show a temporary imported-recipe highlight/confirmation.
 9. Remove the payload from browser history so refresh does not import it again.
 
