@@ -29,7 +29,7 @@ import {
   type WaterMixSourceSnapshot,
 } from './waterMixer';
 import type { WaterMixerImportResult } from './waterMixerImport';
-import { buildRecipeShareCardSvg, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
+import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
 import { StableNumberInput } from './components/StableNumberInput';
 
@@ -736,7 +736,7 @@ function MixerRecipeCardModal({
     () => buildMixerSaltSteps(saltTargets, formIdxBySaltId, result.totalVolumeMl),
     [formIdxBySaltId, result.totalVolumeMl, saltTargets],
   );
-  const model = useMemo(() => buildRecipeShareCardSvg({
+  const cardInput = useMemo(() => ({
     recipeName,
     batchLabel: `${formatVolume(result.totalVolumeMl)} mL finished-water blend`,
     waterSteps: [
@@ -769,6 +769,7 @@ function MixerRecipeCardModal({
       kh: result.kh,
     },
   }), [recipeName, result, saltSteps, sourceA.name, sourceB.name]);
+  const model = useMemo(() => buildRecipeShareCardSvg(cardInput), [cardInput]);
   const previewUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(model.svg)}`;
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -778,8 +779,7 @@ function MixerRecipeCardModal({
     setIsSaving(true);
     setSaveError(false);
     try {
-      const blob = await rasterizeRecipeShareCard(model.svg, model.width, model.height, 'png', 2);
-      const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), serializeWaterMixRecipeFile({
+      const recipePayload = serializeWaterMixRecipeFile({
         name: recipeName,
         sourceA,
         sourceB,
@@ -789,7 +789,11 @@ function MixerRecipeCardModal({
         finalMetadata: result.finalMetadata,
          saltTargets,
          formIdxBySaltId,
-      }));
+       });
+      const qrDataUrl = await createWaterRecipeQrDataUrl(recipePayload);
+      const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl });
+      const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
+      const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipePayload);
       const url = URL.createObjectURL(new Blob([packagedPng], { type: 'image/png' }));
       const link = document.createElement('a');
       link.href = url;

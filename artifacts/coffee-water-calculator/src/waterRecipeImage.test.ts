@@ -4,6 +4,7 @@ import {
   createRecipeShareCardModel,
   embedWaterRecipeJsonInPng,
   extractWaterRecipeJsonFromPng,
+  extractWaterRecipeJsonFromQrText,
   rasterizeRecipeShareCard,
   wrapRecipeShareCardText,
 } from './waterRecipeImage';
@@ -48,6 +49,13 @@ describe('Watermancer image recipe metadata', () => {
 
   it('returns null for non-PNG input', () => {
     expect(extractWaterRecipeJsonFromPng(new TextEncoder().encode('{}'))).toBeNull();
+  });
+
+  it('extracts the exact recipe payload from the QR envelope', () => {
+    const json = JSON.stringify({ kind: 'coffee-water-recipe', version: 1, name: 'QR card' });
+
+    expect(extractWaterRecipeJsonFromQrText(`WMQR1:${json}`)).toBe(json);
+    expect(extractWaterRecipeJsonFromQrText(json)).toBeNull();
   });
 });
 

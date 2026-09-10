@@ -1,7 +1,11 @@
+import jsQR from 'jsqr';
+import QRCode from 'qrcode';
+
 const PNG_SIGNATURE = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 ]);
 const WATERMANCER_METADATA_KEY = 'Watermancer-Recipe';
+export const WATERMANCER_QR_PREFIX = 'WMQR1:';
 
 function matchesPngSignature(bytes: Uint8Array): boolean {
   return PNG_SIGNATURE.every((value, index) => bytes[index] === value);
@@ -150,6 +154,62 @@ export function extractWaterRecipeJsonFromPng(
   return null;
 }
 
+export function extractWaterRecipeJsonFromQrText(text: string): string | null {
+  return text.startsWith(WATERMANCER_QR_PREFIX)
+    ? text.slice(WATERMANCER_QR_PREFIX.length)
+    : null;
+}
+
+export async function createWaterRecipeQrDataUrl(
+  json: string,
+  width = 460,
+): Promise<string> {
+  return QRCode.toDataURL(`${WATERMANCER_QR_PREFIX}${json}`, {
+    errorCorrectionLevel: 'H',
+    margin: 4,
+    width,
+    color: {
+      dark: '#071a2a',
+      light: '#ffffff',
+    },
+  });
+}
+
+export async function extractWaterRecipeJsonFromQrPng(
+  pngBytes: ArrayBuffer | Uint8Array,
+): Promise<string | null> {
+  if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
+  const bytes = pngBytes instanceof Uint8Array ? pngBytes : new Uint8Array(pngBytes);
+  const pngBuffer = bytes.buffer.slice(
+    bytes.byteOffset,
+    bytes.byteOffset + bytes.byteLength,
+  ) as ArrayBuffer;
+  const sourceUrl = URL.createObjectURL(new Blob([pngBuffer], { type: 'image/png' }));
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error('Could not decode the recipe card image.'));
+      element.src = sourceUrl;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
+    if (!context || canvas.width <= 0 || canvas.height <= 0) return null;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'attemptBoth',
+    });
+    return decoded ? extractWaterRecipeJsonFromQrText(decoded.data) : null;
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export const RECIPE_SHARE_CARD_WIDTH = 1200;
 const RECIPE_SHARE_CARD_PADDING = 56;
 
@@ -213,6 +273,7 @@ export type RecipeShareCardModel = {
     doses: Array<{ label: string; milliliters: number; drops: number }>;
     dropsPerMl: number;
   };
+  qrDataUrl?: string;
 };
 
 export type RecipeShareCardInput = RecipeShareCardModel;
@@ -325,6 +386,7 @@ export function createRecipeShareCardModel(input: RecipeShareCardInput): RecipeS
         dropsPerMl: finiteNumber(input.concentrateGuide.dropsPerMl),
       }
       : undefined,
+    qrDataUrl: input.qrDataUrl,
   };
 }
 
@@ -671,6 +733,29 @@ function renderConcentrateGuide(model: RecipeShareCardModel, x: number, y: numbe
   return { svg, height };
 }
 
+function renderQrSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
+  if (!model.qrDataUrl) return { svg: '', height: 0 };
+  const innerX = x + 22;
+  const qrSize = Math.min(190, Math.max(150, width - 230));
+  const height = 236;
+  let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
+  svg += svgText(innerX, y + 27, 'SCAN TO IMPORT', {
+    fill: '#47737a',
+    size: 11,
+    weight: 700,
+    letterSpacing: 1.5,
+  });
+  svg += `<rect x="${innerX}" y="${y + 42}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
+  svg += `<image href="${escapeXml(model.qrDataUrl)}" x="${innerX}" y="${y + 42}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
+  const textX = innerX + qrSize + 20;
+  svg += svgText(textX, y + 76, 'WATERMANCER', { fill: '#0d6170', size: 12, weight: 700 });
+  svg += svgText(textX, y + 101, 'Import this card', { fill: '#173f49', size: 13, weight: 700 });
+  svg += svgText(textX, y + 124, 'even if an image', { fill: '#47737a', size: 11, weight: 600 });
+  svg += svgText(textX, y + 143, 'sharing service strips', { fill: '#47737a', size: 11, weight: 600 });
+  svg += svgText(textX, y + 162, 'PNG metadata.', { fill: '#47737a', size: 11, weight: 600 });
+  return { svg, height };
+}
+
 /**
  * Creates a content-only SVG. Its height is calculated from wrapped content,
  * so the same recipe has the same pixels regardless of browser viewport.
@@ -689,10 +774,12 @@ export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: str
   const salt = renderSaltSection(model, RECIPE_SHARE_CARD_PADDING, saltTop, leftWidth);
   const guideTop = top + analysis.height + 20;
   const guide = renderConcentrateGuide(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, guideTop, rightWidth);
+  const qrTop = guideTop + guide.height + (guide.height > 0 ? 20 : 0);
+  const qr = renderQrSection(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, qrTop, rightWidth);
   const finalTop = saltTop + salt.height + 20;
   const finalLines = wrapRecipeShareCardText(model.finalStep, 76);
   const finalHeight = Math.max(92, finalLines.length * 21 + 50);
-  const contentBottom = Math.max(finalTop + finalHeight, guideTop + guide.height);
+  const contentBottom = Math.max(finalTop + finalHeight, guideTop + guide.height, qrTop + qr.height);
   const height = contentBottom + RECIPE_SHARE_CARD_PADDING;
   const headerX = RECIPE_SHARE_CARD_PADDING;
   let body = `<rect width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" fill="#071a2a"/>`;
@@ -725,7 +812,7 @@ export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: str
     weight: 700,
     family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
   });
-  body += water.svg + salt.svg + analysis.svg + guide.svg;
+  body += water.svg + salt.svg + analysis.svg + guide.svg + qr.svg;
   body += roundedRect(RECIPE_SHARE_CARD_PADDING, finalTop, leftWidth, finalHeight, '#12382f', '#3d8f78');
   body += sectionLabel(RECIPE_SHARE_CARD_PADDING + 26, finalTop + 31, 'Final · Verify and brew', '#8ce1b1');
   body += finalLines.map((line, index) => svgText(

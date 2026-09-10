@@ -60,6 +60,8 @@ import {
   extractWaterRecipeJsonFromPng,
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
+  createWaterRecipeQrDataUrl,
+  extractWaterRecipeJsonFromQrPng,
   rasterizeRecipeShareCard,
 } from './waterRecipeImage';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
@@ -4584,6 +4586,7 @@ function App() {
   const handleImportFile = async (file: File) => {
     const fileBytes = await file.arrayBuffer();
     const text = extractWaterRecipeJsonFromPng(fileBytes)
+      ?? await extractWaterRecipeJsonFromQrPng(fileBytes)
       ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
@@ -13680,7 +13683,8 @@ function BrewerRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      const rendered = buildRecipeShareCardSvg(shareCardModel);
+      const qrDataUrl = await createWaterRecipeQrDataUrl(recipeCardPayload);
+      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
        downloadBlob(

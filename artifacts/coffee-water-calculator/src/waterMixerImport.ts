@@ -2,6 +2,7 @@ import { ACTIVE_ION_IDS, SALTS, computeIonTotals, type IonId } from '@/waterData
 import type { WaterMetadata } from '@/localWaters';
 import {
   extractWaterRecipeJsonFromPng,
+  extractWaterRecipeJsonFromQrPng,
 } from './waterRecipeImage';
 import {
   parseWaterPlanFile,
@@ -209,7 +210,8 @@ export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterM
   const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
   if (isPng) {
     try {
-      const embedded = extractWaterRecipeJsonFromPng(bytes);
+      const embedded = extractWaterRecipeJsonFromPng(bytes)
+        ?? await extractWaterRecipeJsonFromQrPng(bytes);
       if (!embedded) {
         return { kind: 'error', message: 'That PNG does not contain embedded recipe readings for the Mixer.' };
       }
