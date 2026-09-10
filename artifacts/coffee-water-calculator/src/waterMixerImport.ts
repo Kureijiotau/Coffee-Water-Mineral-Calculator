@@ -208,17 +208,23 @@ export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport 
 export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterMixerImport> {
   const bytes = await file.arrayBuffer();
   const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
-  if (isPng) {
-    try {
-      const embedded = extractWaterRecipeJsonFromPng(bytes)
-        ?? await extractWaterRecipeJsonFromQrPng(bytes);
-      if (!embedded) {
-        return { kind: 'error', message: 'That PNG does not contain embedded recipe readings for the Mixer.' };
-      }
-      return parseWaterMixerImportText(embedded);
-    } catch {
-      return { kind: 'error', message: 'That PNG is not a readable recipe card.' };
+  try {
+    const importedText = (isPng ? extractWaterRecipeJsonFromPng(bytes) : null)
+      ?? await extractWaterRecipeJsonFromQrPng(bytes)
+      ?? (isPng ? null : new TextDecoder().decode(bytes));
+    if (!importedText) {
+      return {
+        kind: 'error',
+        message: isPng
+          ? 'That PNG does not contain embedded recipe readings for the Mixer.'
+          : 'That image does not contain a readable recipe QR code.',
+      };
     }
+    return parseWaterMixerImportText(importedText);
+  } catch {
+    return {
+      kind: 'error',
+      message: isPng ? 'That PNG is not a readable recipe card.' : 'That image is not a readable recipe card.',
+    };
   }
-  return parseWaterMixerImportText(new TextDecoder().decode(bytes));
 }

@@ -61,6 +61,7 @@ import {
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
   createWaterRecipeQrDataUrl,
+  createWaterRecipeShareQrDataUrl,
   extractWaterRecipeJsonFromQrPng,
   rasterizeRecipeShareCard,
 } from './waterRecipeImage';
@@ -82,6 +83,12 @@ import {
   LEGACY_WATER_PAYLOAD_VERSION,
   migrateLegacyWaterPayload,
 } from './legacyWaterRecovery';
+import {
+  createWaterRecipeSharePayload,
+  createWaterRecipeShareUrl,
+  decodeWaterRecipeSharePayload,
+  WATER_RECIPE_SHARE_PARAM,
+} from './waterRecipeShare';
 import {
   normalizeWatermancerIonOrder,
   normalizeWatermancerIonSourcePreferences,
@@ -2702,6 +2709,8 @@ function App() {
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
+  const [sharedRecipeNotice, setSharedRecipeNotice] = useState<string | null>(null);
+  const sharedRecipeHandledRef = useRef(false);
   const [profilePickerOrder, setProfilePickerOrder] = useState<string[]>(() => loadProfilePickerOrder());
   const reorderableProfileValues = useMemo(
     () => [
@@ -4585,8 +4594,11 @@ function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const handleImportFile = async (file: File) => {
     const fileBytes = await file.arrayBuffer();
-    const text = extractWaterRecipeJsonFromPng(fileBytes)
+    const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
+    const embeddedMetadata = isPng ? extractWaterRecipeJsonFromPng(fileBytes) : null;
+    const text = embeddedMetadata
       ?? await extractWaterRecipeJsonFromQrPng(fileBytes)
+      ?? (isPng ? new TextDecoder().decode(fileBytes) : new TextDecoder().decode(fileBytes));
       ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
@@ -5196,6 +5208,117 @@ function App() {
     setPlansOpen(false);
     commitSessionBaseline(snapshot);
   };
+
+  useEffect(() => {
+    if (sharedRecipeHandledRef.current) return;
+    sharedRecipeHandledRef.current = true;
+    const encoded = new URLSearchParams(window.location.search).get(WATER_RECIPE_SHARE_PARAM);
+    if (!encoded) return;
+    const clearShareLink = () => {
+      const cleanUrl = `${window.location.pathname}${window.location.hash}`;
+      window.history.replaceState(null, '', cleanUrl);
+    };
+    const payload = decodeWaterRecipeSharePayload(encoded);
+    if (!payload) {
+      clearShareLink();
+      setSharedRecipeNotice('This shared recipe link is invalid or out of date.');
+      window.setTimeout(() => setSharedRecipeNotice(null), 5200);
+      return;
+    }
+
+    const restoredRows = SALTS.map((salt, index) => {
+      const row = payload.rows[index];
+      const formIdx = Math.min(
+        Math.max(Number(row?.formIdx ?? salt.defaultFormIdx ?? 0), 0),
+        Math.max(salt.hydrationForms.length - 1, 0),
+      );
+      return {
+        target: row && Number.isFinite(Number(row.target)) ? normalizeSaltTarget(row.target) : '',
+        formIdx,
+      };
+    });
+    const recipeSalts = Object.fromEntries(
+      SALTS.flatMap((salt, index) => {
+        const row = restoredRows[index];
+        return row.target && num(row.target) > 0
+          ? [[salt.id, { target: row.target, formIdx: row.formIdx }]]
+          : [];
+      }),
+    ) as Record<string, SaltRecipe['salts'][string]>;
+    const recipeSignature = JSON.stringify(recipeSalts);
+    const existingRecipe = Object.keys(recipeSalts).length > 0
+      ? savedRecipes.find(recipe => recipe.name === payload.name && JSON.stringify(recipe.salts) === recipeSignature)
+      : undefined;
+    const importedRecipe = existingRecipe ?? (Object.keys(recipeSalts).length > 0
+      ? {
+        id: newRecipeId(),
+        name: payload.name,
+        salts: recipeSalts,
+      } satisfies SaltRecipe
+      : null);
+    if (importedRecipe && !existingRecipe) {
+      setSavedRecipes(previous => [...previous, importedRecipe]);
+    }
+
+    const hasSourceWaters = payload.mineralWaters.length > 0 || payload.additionWaters.length > 0;
+    const existingWaterProfile = payload.finishedIons && hasSourceWaters
+      ? wmProfiles.find(profile => profile.name === payload.name
+        && ACTIVE_ION_IDS.every(id => Math.abs(Number(profile.targets[id] ?? 0) - Number(payload.finishedIons?.[id] ?? 0)) < 0.01))
+      : undefined;
+    const importedWaterProfile = payload.finishedIons && hasSourceWaters
+      ? existingWaterProfile ?? createWatermancerProfile(
+        payload.name,
+        payload.finishedIons as IonicTargetValues,
+        {
+          source: 'Shared recipe',
+          details: 'Imported from a shared water recipe link.',
+          finishedIons: payload.finishedIons as IonicTargetValues,
+        },
+      )
+      : undefined;
+    if (importedWaterProfile && !existingWaterProfile) {
+      setWmProfiles(previous => [...previous, importedWaterProfile]);
+    }
+
+    setLiters(payload.liters);
+    setVolumeUnit(payload.volumeUnit);
+    setRows(restoredRows);
+    setMineralWaters(payload.mineralWaters.map(water => ({ ...water })));
+    setAdditionWaters(payload.additionWaters.map(water => ({ ...water })));
+    setActiveRecipeId(importedRecipe?.id ?? 'custom');
+    setExternalRecipeId('custom');
+    setBrewerRecipeOverride(null);
+    setAppTab('calculator');
+    setWatermancerMatchMode('automatic');
+    watermancerMatchModeRef.current = 'automatic';
+    setWatermancerUsedSaltIds(
+      SALTS.filter((_, index) => num(restoredRows[index]?.target ?? '') > 0).map(salt => salt.id),
+    );
+    if (hasSourceWaters) {
+      setNerdLevel('watermancer');
+      setWatermancerTargetOverride(null);
+      setWatermancerImportedRecipeName(payload.name);
+      setWatermancerTargetSource(
+        importedWaterProfile
+          ? `saved:${importedWaterProfile.id}`
+          : importedRecipe
+            ? `recipe:${importedRecipe.id}`
+            : 'salt-table',
+      );
+    } else {
+      setNerdLevel('alchemist');
+      setWatermancerImportedRecipeName(null);
+      setWatermancerTargetOverride(null);
+      setWatermancerTargetSource('salt-table');
+    }
+    clearShareLink();
+    setSharedRecipeNotice(
+      hasSourceWaters
+        ? `Imported “${payload.name}” into Watermancer and saved it to your profiles.`
+        : `Imported “${payload.name}” into Alchemist and saved it to your profiles.`,
+    );
+    window.setTimeout(() => setSharedRecipeNotice(null), 5200);
+  }, [savedRecipes, wmProfiles]);
 
   useEffect(() => {
     const snapshot = captureWaterPlanSnapshot();
@@ -7622,6 +7745,12 @@ function App() {
            dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
            profile={recipeShareProfile}
+           shareUrl={createWaterRecipeShareUrl(
+             createWaterRecipeSharePayload(
+               captureWaterPlanSnapshot(),
+               recipeStepsProfileName,
+             ),
+           )}
           onClose={() => setShowBrewerSteps(null)}
         />
       )}
@@ -13379,6 +13508,7 @@ function BrewerRecipeStepsModal({
   dropsPerMl,
   dosingMethod,
   profile,
+  shareUrl,
   onClose,
 }: {
   recipeName: string;
@@ -13400,6 +13530,7 @@ function BrewerRecipeStepsModal({
   dropsPerMl: number;
   dosingMethod: 'dry' | 'dropper';
   profile: NonNullable<ReturnType<typeof createRecipeShareCardModel>['profile']>;
+  shareUrl: string;
   onClose: () => void;
 }) {
   const configuredBaseWaters = baseWaters
@@ -13684,7 +13815,8 @@ function BrewerRecipeStepsModal({
     };
     try {
       const qrDataUrl = await createWaterRecipeQrDataUrl(recipeCardPayload);
-      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl });
+      const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
+      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl, shareQrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
        downloadBlob(

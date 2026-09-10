@@ -175,6 +175,21 @@ export async function createWaterRecipeQrDataUrl(
   });
 }
 
+export async function createWaterRecipeShareQrDataUrl(
+  url: string,
+  width = 460,
+): Promise<string> {
+  return QRCode.toDataURL(url, {
+    errorCorrectionLevel: 'H',
+    margin: 4,
+    width,
+    color: {
+      dark: '#071a2a',
+      light: '#ffffff',
+    },
+  });
+}
+
 export async function extractWaterRecipeJsonFromQrPng(
   pngBytes: ArrayBuffer | Uint8Array,
 ): Promise<string | null> {
@@ -274,6 +289,7 @@ export type RecipeShareCardModel = {
     dropsPerMl: number;
   };
   qrDataUrl?: string;
+  shareQrDataUrl?: string;
 };
 
 export type RecipeShareCardInput = RecipeShareCardModel;
@@ -734,25 +750,42 @@ function renderConcentrateGuide(model: RecipeShareCardModel, x: number, y: numbe
 }
 
 function renderQrSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
-  if (!model.qrDataUrl) return { svg: '', height: 0 };
+  if (!model.qrDataUrl && !model.shareQrDataUrl) return { svg: '', height: 0 };
   const innerX = x + 22;
-  const qrSize = Math.min(190, Math.max(150, width - 230));
-  const height = 236;
+  const gap = 16;
+  const qrSize = Math.min(165, Math.max(126, Math.floor((width - 66 - gap) / 2)));
+  const height = 244;
   let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
-  svg += svgText(innerX, y + 27, 'SCAN TO IMPORT', {
+  svg += svgText(innerX, y + 27, 'QR OPTIONS', {
     fill: '#47737a',
     size: 11,
     weight: 700,
     letterSpacing: 1.5,
   });
-  svg += `<rect x="${innerX}" y="${y + 42}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
-  svg += `<image href="${escapeXml(model.qrDataUrl)}" x="${innerX}" y="${y + 42}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
-  const textX = innerX + qrSize + 20;
-  svg += svgText(textX, y + 76, 'WATERMANCER', { fill: '#0d6170', size: 12, weight: 700 });
-  svg += svgText(textX, y + 101, 'Import this card', { fill: '#173f49', size: 13, weight: 700 });
-  svg += svgText(textX, y + 124, 'even if an image', { fill: '#47737a', size: 11, weight: 600 });
-  svg += svgText(textX, y + 143, 'sharing service strips', { fill: '#47737a', size: 11, weight: 600 });
-  svg += svgText(textX, y + 162, 'PNG metadata.', { fill: '#47737a', size: 11, weight: 600 });
+  const qrItems = [
+    model.qrDataUrl
+      ? { label: 'RECOVERY', detail: 'Import image', dataUrl: model.qrDataUrl }
+      : null,
+    model.shareQrDataUrl
+      ? { label: 'OPEN + SAVE', detail: 'Open website', dataUrl: model.shareQrDataUrl }
+      : null,
+  ].filter((item): item is { label: string; detail: string; dataUrl: string } => item !== null);
+  qrItems.forEach((item, index) => {
+    const itemX = innerX + index * (qrSize + gap);
+    svg += svgText(itemX, y + 48, item.label, {
+      fill: '#0d6170',
+      size: 10,
+      weight: 700,
+      letterSpacing: 1.1,
+    });
+    svg += `<rect x="${itemX}" y="${y + 59}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
+    svg += `<image href="${escapeXml(item.dataUrl)}" x="${itemX}" y="${y + 59}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
+    svg += svgText(itemX, y + 59 + qrSize + 22, item.detail, {
+      fill: '#47737a',
+      size: 10,
+      weight: 600,
+    });
+  });
   return { svg, height };
 }
 
