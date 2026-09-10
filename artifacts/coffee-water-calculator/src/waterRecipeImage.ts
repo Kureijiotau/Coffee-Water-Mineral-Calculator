@@ -11,6 +11,10 @@ function matchesPngSignature(bytes: Uint8Array): boolean {
   return PNG_SIGNATURE.every((value, index) => bytes[index] === value);
 }
 
+export function isPngImageBytes(input: ArrayBuffer | Uint8Array): boolean {
+  return matchesPngSignature(input instanceof Uint8Array ? input : new Uint8Array(input));
+}
+
 function readUint32(bytes: Uint8Array, offset: number): number {
   return (
     ((bytes[offset] ?? 0) << 24)

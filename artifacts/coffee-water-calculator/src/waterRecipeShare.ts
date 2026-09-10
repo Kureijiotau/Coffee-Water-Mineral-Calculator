@@ -104,7 +104,7 @@ export function decodeWaterRecipeSharePayload(encoded: string): WaterRecipeShare
       || parsed.rows.some(row => !isRecord(row)
         || typeof row.target !== 'string'
         || !Number.isInteger(row.formIdx)
-        || row.formIdx < 0)
+        || Number(row.formIdx) < 0)
       || !Array.isArray(parsed.mineralWaters)
       || parsed.mineralWaters.some(water => !isShareWater(water))
       || !Array.isArray(parsed.additionWaters)

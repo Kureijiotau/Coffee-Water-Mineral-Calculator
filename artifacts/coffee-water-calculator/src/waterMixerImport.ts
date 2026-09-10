@@ -3,6 +3,7 @@ import type { WaterMetadata } from '@/localWaters';
 import {
   extractWaterRecipeJsonFromPng,
   extractWaterRecipeJsonFromQrPng,
+  isPngImageBytes,
 } from './waterRecipeImage';
 import {
   parseWaterPlanFile,
@@ -207,7 +208,7 @@ export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport 
 
 export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterMixerImport> {
   const bytes = await file.arrayBuffer();
-  const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
+  const isPng = isPngImageBytes(bytes);
   try {
     const importedText = (isPng ? extractWaterRecipeJsonFromPng(bytes) : null)
       ?? await extractWaterRecipeJsonFromQrPng(bytes)

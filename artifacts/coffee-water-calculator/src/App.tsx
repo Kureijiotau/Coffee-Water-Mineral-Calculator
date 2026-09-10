@@ -63,6 +63,7 @@ import {
   createWaterRecipeQrDataUrl,
   createWaterRecipeShareQrDataUrl,
   extractWaterRecipeJsonFromQrPng,
+  isPngImageBytes,
   rasterizeRecipeShareCard,
 } from './waterRecipeImage';
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
@@ -4594,11 +4595,10 @@ function App() {
   const importInputRef = useRef<HTMLInputElement | null>(null);
   const handleImportFile = async (file: File) => {
     const fileBytes = await file.arrayBuffer();
-    const isPng = file.type === 'image/png' || /\.png$/i.test(file.name);
+    const isPng = isPngImageBytes(fileBytes);
     const embeddedMetadata = isPng ? extractWaterRecipeJsonFromPng(fileBytes) : null;
     const text = embeddedMetadata
       ?? await extractWaterRecipeJsonFromQrPng(fileBytes)
-      ?? (isPng ? new TextDecoder().decode(fileBytes) : new TextDecoder().decode(fileBytes));
       ?? new TextDecoder().decode(fileBytes);
     const waterRecipe = parseWaterRecipeFile(text);
     if (waterRecipe) {
@@ -5625,6 +5625,14 @@ function App() {
       <div className="app-page-stack flex w-full max-w-5xl flex-col">
         {/* Header */}
         {appHeader}
+         {sharedRecipeNotice && (
+           <div
+             className="mb-3 rounded-xl border border-cyan-300/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100 shadow-lg shadow-cyan-950/20"
+             role="status"
+           >
+             {sharedRecipeNotice}
+           </div>
+         )}
 
         {/* Experience level */}
          <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
