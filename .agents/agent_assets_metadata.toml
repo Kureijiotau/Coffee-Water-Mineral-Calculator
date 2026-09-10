@@ -60,3 +60,17 @@ mtime_ms = 1788495337877
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/948739af-3a2c-49a1-9e5e-86206a25655e/5084ef14-9bb9-44f9-97e7-f1af2faab26b"
 storage_version_token = "1788495339255757"
 content_type = "text/html"
+
+[[outputs]]
+id = "7tHCwWWOZ22M4_NVdrPyO"
+uri = "file://docs/superpowers/specs/2026-09-10-water-recipe-share-qr-design.md"
+type = "text"
+title = "Water Recipe Share QR Design"
+description = "Design specification for the recovery QR and website share-link QR behavior."
+logical_id = "ebdbfdce-b8bd-43b1-bd62-da073f02cb6c"
+content_hash = "sha256:383d7792127fe3099e845f072a8053f775d37a7b480154ef870d6cdafa40bdc0"
+size = 2992
+mtime_ms = 1789017091453
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/ebdbfdce-b8bd-43b1-bd62-da073f02cb6c/fd361c20-fa26-4f5b-b1ba-a198f80c9474"
+storage_version_token = "1789017310543267"
+content_type = "text/markdown"
