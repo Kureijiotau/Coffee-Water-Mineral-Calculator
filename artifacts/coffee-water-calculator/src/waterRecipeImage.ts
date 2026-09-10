@@ -768,27 +768,17 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
   });
   const qrItems = [
     model.qrDataUrl
-      ? { label: 'RECOVERY', detail: 'Import image', dataUrl: model.qrDataUrl }
+      ? { dataUrl: model.qrDataUrl }
       : null,
     model.shareQrDataUrl
-      ? { label: 'OPEN + SAVE', detail: 'Open website', dataUrl: model.shareQrDataUrl }
+      ? { dataUrl: model.shareQrDataUrl }
       : null,
-  ].filter((item): item is { label: string; detail: string; dataUrl: string } => item !== null);
+  ].filter((item): item is { dataUrl: string } => item !== null);
   qrItems.forEach((item, index) => {
     const itemX = innerX + index * (qrSize + gap);
-    svg += svgText(itemX, y + 48, item.label, {
-      fill: '#0d6170',
-      size: 10,
-      weight: 700,
-      letterSpacing: 1.1,
-    });
-    svg += `<rect x="${itemX}" y="${y + 59}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
-    svg += `<image href="${escapeXml(item.dataUrl)}" x="${itemX}" y="${y + 59}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
-    svg += svgText(itemX, y + 59 + qrSize + 22, item.detail, {
-      fill: '#47737a',
-      size: 10,
-      weight: 600,
-    });
+    const qrY = y + Math.max(12, Math.floor((height - qrSize) / 2));
+    svg += `<rect x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
+    svg += `<image href="${escapeXml(item.dataUrl)}" x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
   });
   return { svg, height };
 }
