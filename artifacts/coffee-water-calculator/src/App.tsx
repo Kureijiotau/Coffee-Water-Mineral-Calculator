@@ -13657,6 +13657,7 @@ function BrewerRecipeStepsModal({
   ];
   const [isSavingImage, setIsSavingImage] = useState(false);
   const [saveImageError, setSaveImageError] = useState(false);
+  const [recipeQrDataUrl, setRecipeQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -13665,6 +13666,19 @@ function BrewerRecipeStepsModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setRecipeQrDataUrl(null);
+    void createWaterRecipeQrDataUrl(recipeCardPayload).then(dataUrl => {
+      if (!cancelled) setRecipeQrDataUrl(dataUrl);
+    }).catch(() => {
+      if (!cancelled) setRecipeQrDataUrl(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recipeCardPayload]);
 
   const handleSaveImage = async () => {
     if (isSavingImage) return;
@@ -13683,7 +13697,7 @@ function BrewerRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      const qrDataUrl = await createWaterRecipeQrDataUrl(recipeCardPayload);
+      const qrDataUrl = recipeQrDataUrl ?? await createWaterRecipeQrDataUrl(recipeCardPayload);
       const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
@@ -13863,6 +13877,25 @@ function BrewerRecipeStepsModal({
                                 )}
                               </div>
                           </div>
+                {recipeQrDataUrl && (
+                  <div className="mt-3 rounded-xl border border-teal-300/30 bg-teal-400/[0.08] p-3">
+                    <div className="flex items-start gap-3">
+                      <img
+                        src={recipeQrDataUrl}
+                        alt="QR code for importing this recipe"
+                        className="h-32 w-32 shrink-0 rounded-lg bg-white p-1.5"
+                      />
+                      <div className="min-w-0 pt-1">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-100">
+                          QR import fallback
+                        </div>
+                        <p className="mt-1.5 text-[10px] leading-relaxed text-teal-100/75">
+                          This code is included in the saved recipe image. Scan it if a sharing service removes the PNG metadata.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                         </div>
                       );
                     })}
