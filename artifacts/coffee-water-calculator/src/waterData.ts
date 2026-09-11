@@ -840,11 +840,18 @@ export function checkConcentrate(
   strength: number,
   saltTargetsBySaltId: Record<string, number>,
   formIdxBySaltId: Record<string, number> = {},
+  stockVolumeMl = 1000,
 ): ConcentrateWarning[] {
   const warnings: ConcentrateWarning[] = [];
 
-  if (!Number.isFinite(strength) || strength <= 1) return warnings;
+  if (
+    !Number.isFinite(strength)
+    || strength <= 1
+    || !Number.isFinite(stockVolumeMl)
+    || stockVolumeMl <= 0
+  ) return warnings;
   if (Object.keys(saltTargetsBySaltId).length === 0) return warnings;
+  const stockVolumeScale = 1000 / stockVolumeMl;
 
   // ── 1. Per-salt solubility check ─────────────────────────
   for (const salt of SALTS) {
@@ -862,13 +869,13 @@ export function checkConcentrate(
       : 1;
     // Physical hydrated-salt mass per liter of stock (mg/L). When no form
     // map is supplied, preserve the legacy anhydrous-equivalent behavior.
-    const perLiterMg = target * strength * hydrationFactor; // ppm × strength → mg/L in stock
+    const perLiterMg = target * strength * stockVolumeScale * hydrationFactor; // physical mg/L in stock
     // Convert to g/100mL  (1 mg/L = 0.0001 g/100mL)
     const gPer100mL = perLiterMg / 10_000;
 
     if (gPer100mL > limit) {
       // Compute max safe strength from this salt alone
-      const maxForSalt = Math.floor((limit * 10_000) / (target * hydrationFactor));
+      const maxForSalt = Math.floor((limit * 10_000) / (target * stockVolumeScale * hydrationFactor));
       warnings.push({
         severity: 'error',
         saltNames: [salt.name],
@@ -892,7 +899,7 @@ export function checkConcentrate(
       // ÷ molar mass (g/mol) → mmol/L in stock
       const ionInfo = ION_MAP[c.ionId];
       if (!ionInfo) continue;
-      const mgPerL_Stock = target * strength * c.fraction;
+      const mgPerL_Stock = target * strength * stockVolumeScale * c.fraction;
       const mmolL = computeIonMmolPerL(c.ionId, mgPerL_Stock);
       if (mmolL <= 0) continue;
       ionMmolInStock[c.ionId] = (ionMmolInStock[c.ionId] ?? 0) + mmolL;
@@ -1067,13 +1074,15 @@ export type ConcentrateDosingOptions = {
   dropsPerMl?: number;
   /** Minimum whole drops required at the minimum final-water volume. */
   minimumDrops?: number;
+  /** Selected stock bottle volume used to convert strength into dose volume. */
+  stockVolumeMl?: number;
 };
 
 /**
  * Return the strongest multiplier that still allows a whole-drop dose at the
  * minimum supported final-water volume.
  *
- * A recipe stock uses 1000 / strength mL per liter of final water, so the
+ * A recipe stock uses stockVolumeMl / strength mL per liter of final water, so the
  * number of drops for a batch is:
  *   1000 / strength × finalLiters × dropsPerMl
  *
@@ -1094,12 +1103,14 @@ export function findWholeDropDosingStrengthCeiling(
     || dropsPerMl <= 0
     || !Number.isFinite(minimumDrops)
     || minimumDrops <= 0
+    || !Number.isFinite(stockVolumeMl)
+    || stockVolumeMl <= 0
   ) {
     return 1;
   }
   return Math.max(
     1,
-    Math.floor((1000 * minimumFinalLiters * dropsPerMl) / minimumDrops),
+    Math.floor((stockVolumeMl * minimumFinalLiters * dropsPerMl) / minimumDrops),
   );
 }
 
