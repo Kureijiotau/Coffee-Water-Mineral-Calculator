@@ -9957,24 +9957,24 @@ function RecipeConcentrateBottleCard({
     : `${recipeConcentrateNumber(assumedDropsPerMl, 1)} ${dropperStyle} drops/mL assumption`;
 
   return (
-    <article className={`recipe-concentrate-bottle aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+    <article className={`recipe-concentrate-bottle recipe-concentrate-bottle--polished aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
+      <div className="recipe-concentrate-bottle__header mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
+          <span className={`recipe-concentrate-bottle__icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
             <Beaker className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <div className={`text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>{cardName}</div>
-            <div className="mt-0.5 text-[10px] text-slate-500">{helper}</div>
+            <div className={`recipe-concentrate-bottle__title text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>{cardName}</div>
+            <div className="recipe-concentrate-bottle__helper mt-0.5 text-[10px] text-slate-500">{helper}</div>
           </div>
         </div>
-        <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold ${colors.badge}`}>one bottle</span>
+        <span className={`recipe-concentrate-bottle__badge rounded-full border px-2 py-1 text-[9px] font-semibold ${colors.badge}`}>one bottle</span>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-        <section>
+      <div className="recipe-concentrate-bottle__main grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+        <section className="recipe-concentrate-bottle__controls">
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <label className="block">
+            <label className="recipe-concentrate-control block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <StableNumberInput
@@ -9990,7 +9990,7 @@ function RecipeConcentrateBottleCard({
               </div>
               <div className="mt-1 text-[9px] text-slate-600">recipe target multiplier</div>
             </label>
-            <label className="block">
+            <label className="recipe-concentrate-control block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <StableNumberInput
@@ -10033,12 +10033,12 @@ function RecipeConcentrateBottleCard({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className={`rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
+            <div className={`recipe-concentrate-metric rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
               <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateMassLabel(totalSaltMassG)}</div>
               <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
             </div>
-            <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+            <div className="recipe-concentrate-metric rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
               <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{recipeConcentrateNumber(waterToAddG, 1)} g</div>
               <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
@@ -10092,7 +10092,7 @@ function RecipeConcentrateBottleCard({
           </div>
         </section>
 
-        <section className="recipe-concentrate-dose rounded-xl border p-4">
+        <section className="recipe-concentrate-dose recipe-concentrate-bottle__dose rounded-xl border p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className={`flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>
@@ -10158,11 +10158,12 @@ function RecipeConcentrateBottleCard({
         </section>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {stockRows.map(row => (
+      <div className="recipe-concentrate-salt-list mt-3 grid gap-2 sm:grid-cols-2">
+        {stockRows.map((row, index) => (
           <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={saltVisualStyle(row.salt)}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-2">
+                <span className="recipe-concentrate-salt-step" aria-hidden="true">{index + 1}</span>
                 <span className="recipe-concentrate-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getSaltColorTokens(row.salt).primary }} aria-hidden="true" />
                 <div className="min-w-0">
                   <div className="truncate text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
@@ -10182,7 +10183,7 @@ function RecipeConcentrateBottleCard({
       </div>
 
       {warnings.length > 0 && (
-        <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
+        <div className={`recipe-concentrate-warning mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
           warnings.some(warning => warning.severity === 'error')
             ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200'
             : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
