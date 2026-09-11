@@ -28,6 +28,7 @@ import {
   watermancerBestMatchPreviewIsCurrent,
   mergeRecipeStepTargets,
   selectRecipePreparationTargets,
+  computeModeledTds,
   buildSaltRecipeEntries,
   type MineralWaterEntry,
   type WatermancerRouteCandidate,
@@ -87,6 +88,17 @@ describe('autoFillWaterVolumes', () => {
       nacl: 34,
       mgso4: 58,
     });
+  });
+
+  it('calculates a non-zero recipe-card TDS from salts without bottled water', () => {
+    const tds = computeModeledTds({ mgcl2: 10 }, {}, 1);
+
+    expect(tds).toBeGreaterThan(0);
+    expect(tds).toBeCloseTo(
+      Object.values(computeIonTotals({ mgcl2: 10 }, {}, 1))
+        .reduce((total, ppm) => total + ppm, 0),
+      8,
+    );
   });
 
   it('reports the policy-adjusted total final ion deviation', () => {

@@ -525,6 +525,16 @@ export function selectRecipePreparationTargets(
   if (mode === 'watermancer') return watermancerTargets;
   return alchemistTargets;
 }
+
+export function computeModeledTds(
+  saltTargets: Record<string, number>,
+  baseIons: Partial<Record<IonId, number>> = {},
+  dilution = 1,
+): number {
+  const finalIons = computeIonTotals(saltTargets, baseIons, dilution);
+  return Object.values(finalIons).reduce((total, ppm) => total + ppm, 0);
+}
+
 type BrewerFlavorInput = {
   brightness: number;
   body: number;
@@ -4114,13 +4124,12 @@ function App() {
   const bicarbonateWaterOvershoot = hasMineralWater
     && bicarbonateFromWater > bicarbonateTarget + 0.05;
   const tdsForRecipeSteps = useMemo(() => {
-    const finalIons = computeIonTotals(
-      hasMineralWater ? effectiveSuggestedSaltTargets : saltTargets,
+    return computeModeledTds(
+      effectiveSuggestedSaltTargets,
       hasMineralWater ? combinedBottledIons : {},
       hasMineralWater ? dil : 1,
     );
-    return Object.values(finalIons).reduce((total, ppm) => total + ppm, 0);
-  }, [hasMineralWater, saltTargets, effectiveSuggestedSaltTargets, combinedBottledIons, dil]);
+  }, [hasMineralWater, effectiveSuggestedSaltTargets, combinedBottledIons, dil]);
   // ── Concentrate state ──────────────────────────────
   const [concentrateOn, setConcentrateOn] = useState(false);
   const [concentrateStrength, setConcentrateStrength] = useState(100);
@@ -13689,7 +13698,7 @@ function BrewerRecipeStepsModal({
     batchMl,
   );
   const finalProfileIons = computeIonTotals(stepSaltTargets, finalProfileWaterIons, 1);
-  const finalProfileTds = Object.values(finalProfileIons).reduce((total, ppm) => total + ppm, 0);
+  const finalProfileTds = computeModeledTds(stepSaltTargets, finalProfileWaterIons, 1);
   const finalProfileGh = computeGH(finalProfileIons);
   const finalProfileKh = computeKH(finalProfileIons);
   const saltGroup = (salt: typeof SALTS[number]) =>

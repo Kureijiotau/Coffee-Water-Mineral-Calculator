@@ -41,6 +41,7 @@
 - [Taste starting recipe boundary](taste-starting-recipe-boundary.md) — coffee preferences generate a tunable Brewer recipe starting point, not bottled-water or roaster-specific chemistry
 - [Taste profile mini triangle](taste-profile-mini-triangle.md) — Brewer Taste Profile can drive the shared flavor recipe; Alchemist and Watermancer remain static
 - [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts
+- [Watermancer recipe-card TDS](watermancer-recipe-card-tds.md) — recipe-card TDS must use effective Watermancer salt doses even when no bottled water is selected
 - [Watermancer whole-milligram doses](watermancer-whole-milligram-doses.md) — apply matched salt amounts as nearest whole mg and recompute final ions from those physical doses
 - [Recipe picker personal section](recipe-picker-personal-section.md) — keep saved recipes/profiles in one personal section and normalize legacy profile source prefixes
 - [Brewer Week 1 guide integration](brewer-week1-guide-integration.md) — keep sourced lesson recipes on the shared chemistry engine behind a temporary Brewer override
