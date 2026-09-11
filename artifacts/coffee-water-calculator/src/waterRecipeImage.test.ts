@@ -220,6 +220,8 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('Aiki safe profile');
     expect(long.svg).not.toContain('Published conservative ceilings');
     expect(long.svg).toContain('MIXING VESSEL');
+    expect(long.svg).toContain('Scan this 👇');
+    expect(long.svg).toContain('APP REFERENCE');
     expect(long.svg).not.toContain('…');
   });
 

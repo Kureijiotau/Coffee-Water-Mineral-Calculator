@@ -868,11 +868,23 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
       letterSpacing: 1.5,
     });
     const recoveryY = y + 54;
+    svg += svgText(innerX, recoveryY - 12, 'APP REFERENCE', {
+      fill: '#47737a',
+      size: 10,
+      weight: 700,
+      letterSpacing: 1.2,
+    });
     svg += `<rect x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" rx="8" fill="#ffffff"/>`;
     svg += `<image href="${escapeXml(model.qrDataUrl)}" x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" preserveAspectRatio="xMidYMid meet"/>`;
     if (model.shareQrDataUrl) {
       const shareX = innerX + recoverySize + gap;
       const shareY = y + 220;
+      svg += svgText(shareX + shareSize / 2, shareY - 18, 'Scan this 👇', {
+        fill: '#0d6170',
+        size: 14,
+        weight: 700,
+        anchor: 'middle',
+      });
       svg += `<rect x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" rx="8" fill="#ffffff"/>`;
       svg += `<image href="${escapeXml(model.shareQrDataUrl)}" x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" preserveAspectRatio="xMidYMid meet"/>`;
     }
@@ -889,15 +901,22 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
   });
   const qrItems = [
     model.qrDataUrl
-      ? { dataUrl: model.qrDataUrl }
+      ? { dataUrl: model.qrDataUrl, label: 'APP REFERENCE' }
       : null,
     model.shareQrDataUrl
-      ? { dataUrl: model.shareQrDataUrl }
+      ? { dataUrl: model.shareQrDataUrl, label: 'Scan this 👇' }
       : null,
-  ].filter((item): item is { dataUrl: string } => item !== null);
+  ].filter((item): item is { dataUrl: string; label: string } => item !== null);
   qrItems.forEach((item, index) => {
     const itemX = innerX + index * (qrSize + gap);
-    const qrY = y + Math.max(12, Math.floor((height - qrSize) / 2));
+    const qrY = y + Math.max(44, Math.floor((height - qrSize) / 2) + 10);
+    svg += svgText(itemX + qrSize / 2, qrY - 14, item.label, {
+      fill: item.label === 'Scan this 👇' ? '#0d6170' : '#47737a',
+      size: item.label === 'Scan this 👇' ? 12 : 10,
+      weight: 700,
+      anchor: 'middle',
+      letterSpacing: item.label === 'Scan this 👇' ? undefined : 1.1,
+    });
     svg += `<rect x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
     svg += `<image href="${escapeXml(item.dataUrl)}" x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
   });
