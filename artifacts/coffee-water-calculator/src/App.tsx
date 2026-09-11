@@ -13877,10 +13877,11 @@ function BrewerRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      const recoveryQrPayload = JSON.stringify({
-        ...JSON.parse(recipeCardPayload) as Record<string, unknown>,
-        sharePayload: encodeWaterRecipeSharePayload(sharePayload),
-      });
+      // The share payload already contains the complete waters, salt rows,
+      // hydration forms, volumes, and final readings. Do not wrap it in the
+      // legacy recipe payload as well: that duplicates most of the QR data
+      // and can exceed QR capacity for larger recipes.
+      const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
       const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
       const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
       const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl, shareQrDataUrl });
@@ -13890,7 +13891,8 @@ function BrewerRecipeStepsModal({
          new Blob([packagedPng], { type: 'image/png' }),
          `${recipeFilenameSlug(recipeName !== 'Custom' ? recipeName : 'Mineral recipe')}.WATER.png`,
        );
-    } catch {
+    } catch (error) {
+      console.error('[watermancer] recipe share-card export failed', error);
       setSaveImageError(true);
     } finally {
       setIsSavingImage(false);

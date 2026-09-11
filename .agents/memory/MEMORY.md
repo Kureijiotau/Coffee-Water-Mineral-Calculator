@@ -63,6 +63,7 @@
 - [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison
 - [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [WATER recipe files](water-recipe-files.md) — use image-backed `.WATER.png` recipe exports while keeping embedded payloads standard JSON and legacy JSON imports valid
+- [WATER QR capacity](water-recovery-qr-capacity.md) — complete recovery and share-link payloads need adaptive QR correction levels; duplicating the legacy envelope overflows large recipes
 - [Finished-water export readings](finished-water-export-readings.md) — salt targets alone cannot reconstruct a mineral-water card; exports must carry final readings for exact Mixer imports
 - [Watermancer direct downloads](watermancer-direct-downloads.md) — profile export actions should download directly instead of opening the native Web Share sheet
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root

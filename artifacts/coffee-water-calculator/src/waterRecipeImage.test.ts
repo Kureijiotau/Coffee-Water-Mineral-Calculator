@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
+  createWaterRecipeQrDataUrl,
+  createWaterRecipeShareQrDataUrl,
   embedWaterRecipeJsonInPng,
   extractWaterRecipeJsonFromPng,
   extractWaterRecipeJsonFromQrText,
@@ -9,6 +11,10 @@ import {
   wrapRecipeShareCardText,
 } from './waterRecipeImage';
 import { parseRecipeFile, serializeRecipeFile } from './recipes';
+import {
+  createWaterRecipeShareUrl,
+  encodeWaterRecipeSharePayload,
+} from './waterRecipeShare';
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
@@ -56,6 +62,63 @@ describe('Watermancer image recipe metadata', () => {
 
     expect(extractWaterRecipeJsonFromQrText(`WMQR1:${json}`)).toBe(json);
     expect(extractWaterRecipeJsonFromQrText(json)).toBeNull();
+  });
+
+  it('fits a large two-water multi-salt share payload in the recovery QR', async () => {
+    const water = {
+      id: 'water-a',
+      name: 'Ty Nant',
+      ions: {
+        sodium: '116',
+        potassium: '22',
+        magnesium: '22.5',
+        calcium: '3.7',
+        chloride: '14',
+        sulfate: '1',
+        bicarbonate: '10',
+      },
+      metadata: { tds: '11.5', country: 'United Kingdom' },
+      volumeMl: '650',
+      sourceLocalId: 'community-1',
+    };
+    const payload = {
+      kind: 'coffee-water-recipe-share' as const,
+      version: 1 as const,
+      name: 'Large QR regression',
+      liters: '1.75',
+      volumeUnit: 'liters' as const,
+      rows: ['mgcl2', 'cacl2', 'nacl', 'kcl', 'mgso4', 'caso4', 'nahco3', 'khco3', 'mgcit', 'cacit']
+        .map((target, index) => ({ target, formIdx: index % 2 })),
+      mineralWaters: [
+        water,
+        {
+          ...water,
+          id: 'water-b',
+          name: 'Vichy Célestins',
+          volumeMl: '350',
+          sourceLocalId: 'community-2',
+          ions: { ...water.ions, sodium: '2989', bicarbonate: '235' },
+        },
+      ],
+      additionWaters: [],
+      finishedIons: {
+        sodium: 900,
+        potassium: 10,
+        magnesium: 20,
+        calcium: 10,
+        chloride: 40,
+        sulfate: 30,
+        bicarbonate: 80,
+        citrate: 10,
+      },
+    };
+
+    await expect(
+      createWaterRecipeQrDataUrl(encodeWaterRecipeSharePayload(payload)),
+    ).resolves.toMatch(/^data:image\/png;base64,/);
+    await expect(
+      createWaterRecipeShareQrDataUrl(createWaterRecipeShareUrl(payload, 'https://example.com')),
+    ).resolves.toMatch(/^data:image\/png;base64,/);
   });
 });
 

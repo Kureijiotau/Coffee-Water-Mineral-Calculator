@@ -168,30 +168,39 @@ export async function createWaterRecipeQrDataUrl(
   json: string,
   width = 460,
 ): Promise<string> {
-  return QRCode.toDataURL(`${WATERMANCER_QR_PREFIX}${json}`, {
-    errorCorrectionLevel: 'H',
-    margin: 4,
-    width,
-    color: {
-      dark: '#071a2a',
-      light: '#ffffff',
-    },
-  });
+  return createAdaptiveQrDataUrl(`${WATERMANCER_QR_PREFIX}${json}`, width);
+}
+
+async function createAdaptiveQrDataUrl(data: string, width: number): Promise<string> {
+  // Prefer strong correction for small recipes, then step down only when the
+  // complete recovery payload approaches the QR capacity limit. This keeps
+  // large two-water recipes exportable without dropping their data.
+  let lastError: unknown;
+  for (const errorCorrectionLevel of ['H', 'Q', 'M', 'L'] as const) {
+    try {
+      return await QRCode.toDataURL(data, {
+        errorCorrectionLevel,
+        margin: 4,
+        width,
+        color: {
+          dark: '#071a2a',
+          light: '#ffffff',
+        },
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Could not fit the recipe recovery payload into a QR code.');
 }
 
 export async function createWaterRecipeShareQrDataUrl(
   url: string,
   width = 460,
 ): Promise<string> {
-  return QRCode.toDataURL(url, {
-    errorCorrectionLevel: 'H',
-    margin: 4,
-    width,
-    color: {
-      dark: '#071a2a',
-      light: '#ffffff',
-    },
-  });
+  return createAdaptiveQrDataUrl(url, width);
 }
 
 export async function extractWaterRecipeJsonFromQrPng(

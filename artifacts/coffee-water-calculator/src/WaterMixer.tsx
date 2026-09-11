@@ -828,10 +828,10 @@ function MixerRecipeCardModal({
          saltTargets,
          formIdxBySaltId,
        });
-      const recoveryQrPayload = JSON.stringify({
-        ...JSON.parse(recipePayload) as Record<string, unknown>,
-        sharePayload: encodeWaterRecipeSharePayload(sharePayload),
-      });
+      // The share payload is already complete. Keeping the legacy recipe
+      // payload out of the QR avoids duplicating the entire recipe and
+      // overflowing QR capacity for larger blends.
+      const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
       const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
       const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
       const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl, shareQrDataUrl });
@@ -843,7 +843,8 @@ function MixerRecipeCardModal({
       link.download = `${recipeFilenameSlug(recipeName)}.WATER.png`;
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
-    } catch {
+    } catch (error) {
+      console.error('[watermancer] mixer share-card export failed', error);
       setSaveError(true);
     } finally {
       setIsSaving(false);
