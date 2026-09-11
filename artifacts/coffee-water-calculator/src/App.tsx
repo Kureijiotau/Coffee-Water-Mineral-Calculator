@@ -62,7 +62,8 @@ import {
   createRecipeShareCardModel,
   createWaterRecipeQrDataUrl,
   createWaterRecipeShareQrDataUrl,
-  extractWaterRecipeJsonFromQrPng,
+  extractWaterRecipeJsonFromQrImage,
+  getRecipeImageMimeType,
   isPngImageBytes,
   rasterizeRecipeShareCard,
 } from './waterRecipeImage';
@@ -4622,8 +4623,12 @@ function App() {
   const handleImportFile = async (file: File) => {
     const fileBytes = await file.arrayBuffer();
     const isPng = isPngImageBytes(fileBytes);
+    const imageMimeType = getRecipeImageMimeType(file.name, file.type);
+    const qrText = imageMimeType
+      ? await extractWaterRecipeJsonFromQrImage(fileBytes, imageMimeType)
+      : null;
     const embeddedMetadata = isPng ? extractWaterRecipeJsonFromPng(fileBytes) : null;
-    const text = await extractWaterRecipeJsonFromQrPng(fileBytes)
+    const text = qrText
       ?? embeddedMetadata
       ?? new TextDecoder().decode(fileBytes);
     let sharedPayloadFromQr = decodeWaterRecipeSharePayload(text);
@@ -5908,7 +5913,7 @@ function App() {
               <input
                 ref={importInputRef}
                 type="file"
-                accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
+                 accept=".WATER,.water,.WATER.png,.water.png,.webp,.jpg,.jpeg,.json,.png,image/png,image/webp,image/jpeg,application/json"
                 className="hidden"
                 onChange={e => {
                   const f = e.target.files?.[0];
@@ -11222,7 +11227,7 @@ function WatermancerIonProfileCard({
            <input
              ref={importRecipeInputRef}
              type="file"
-             accept=".WATER,.water,.WATER.png,.water.png,.json,.png,image/png,application/json"
+              accept=".WATER,.water,.WATER.png,.water.png,.webp,.jpg,.jpeg,.json,.png,image/png,image/webp,image/jpeg,application/json"
              className="hidden"
              onChange={event => {
                const file = event.target.files?.[0];

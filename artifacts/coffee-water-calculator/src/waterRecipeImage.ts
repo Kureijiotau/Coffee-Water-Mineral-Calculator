@@ -6,6 +6,22 @@ const PNG_SIGNATURE = new Uint8Array([
 ]);
 const WATERMANCER_METADATA_KEY = 'Watermancer-Recipe';
 export const WATERMANCER_QR_PREFIX = 'WMQR1:';
+export type RecipeImageMimeType = 'image/png' | 'image/webp' | 'image/jpeg';
+
+export function getRecipeImageMimeType(
+  fileName: string,
+  declaredType = '',
+): RecipeImageMimeType | null {
+  const normalizedType = declaredType.toLowerCase().split(';', 1)[0];
+  if (normalizedType === 'image/png' || normalizedType === 'image/webp' || normalizedType === 'image/jpeg') {
+    return normalizedType;
+  }
+  const normalizedName = fileName.toLowerCase();
+  if (normalizedName.endsWith('.png')) return 'image/png';
+  if (normalizedName.endsWith('.webp')) return 'image/webp';
+  if (normalizedName.endsWith('.jpg') || normalizedName.endsWith('.jpeg')) return 'image/jpeg';
+  return null;
+}
 
 function matchesPngSignature(bytes: Uint8Array): boolean {
   return PNG_SIGNATURE.every((value, index) => bytes[index] === value);
@@ -203,16 +219,17 @@ export async function createWaterRecipeShareQrDataUrl(
   return createAdaptiveQrDataUrl(url, width);
 }
 
-export async function extractWaterRecipeJsonFromQrPng(
-  pngBytes: ArrayBuffer | Uint8Array,
+export async function extractWaterRecipeJsonFromQrImage(
+  imageBytes: ArrayBuffer | Uint8Array,
+  mimeType: RecipeImageMimeType = 'image/png',
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof Image === 'undefined') return null;
-  const bytes = pngBytes instanceof Uint8Array ? pngBytes : new Uint8Array(pngBytes);
-  const pngBuffer = bytes.buffer.slice(
+  const bytes = imageBytes instanceof Uint8Array ? imageBytes : new Uint8Array(imageBytes);
+  const imageBuffer = bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength,
   ) as ArrayBuffer;
-  const sourceUrl = URL.createObjectURL(new Blob([pngBuffer], { type: 'image/png' }));
+  const sourceUrl = URL.createObjectURL(new Blob([imageBuffer], { type: mimeType }));
   try {
     const image = await new Promise<HTMLImageElement>((resolve, reject) => {
       const element = new Image();
@@ -220,22 +237,58 @@ export async function extractWaterRecipeJsonFromQrPng(
       element.onerror = () => reject(new Error('Could not decode the recipe card image.'));
       element.src = sourceUrl;
     });
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
+    if (width <= 0 || height <= 0) return null;
     const canvas = document.createElement('canvas');
-    canvas.width = image.naturalWidth || image.width;
-    canvas.height = image.naturalHeight || image.height;
     const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context || canvas.width <= 0 || canvas.height <= 0) return null;
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-    const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'attemptBoth',
-    });
-    return decoded ? extractWaterRecipeJsonFromQrText(decoded.data) : null;
+    if (!context) return null;
+
+    const scanRegion = (x: number, y: number, regionWidth: number, regionHeight: number): string | null => {
+      canvas.width = regionWidth;
+      canvas.height = regionHeight;
+      context.drawImage(image, x, y, regionWidth, regionHeight, 0, 0, regionWidth, regionHeight);
+      const imageData = context.getImageData(0, 0, regionWidth, regionHeight);
+      const decoded = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: 'attemptBoth',
+      });
+      return decoded ? extractWaterRecipeJsonFromQrText(decoded.data) : null;
+    };
+
+    // Share cards contain both a recovery QR and a share-link QR. jsQR returns
+    // only one code for a full card, so scan overlapping tiles when the first
+    // code is the share link rather than the recovery payload.
+    const fullCard = scanRegion(0, 0, width, height);
+    if (fullCard) return fullCard;
+    const tileColumns = 3;
+    const tileRows = 3;
+    const overlap = 0.2;
+    for (let row = 0; row < tileRows; row += 1) {
+      for (let column = 0; column < tileColumns; column += 1) {
+        const baseX = Math.round((column * width) / tileColumns);
+        const baseY = Math.round((row * height) / tileRows);
+        const baseWidth = Math.ceil(width / tileColumns);
+        const baseHeight = Math.ceil(height / tileRows);
+        const x = Math.max(0, Math.round(baseX - baseWidth * overlap / 2));
+        const y = Math.max(0, Math.round(baseY - baseHeight * overlap / 2));
+        const right = Math.min(width, Math.round(baseX + baseWidth * (1 + overlap / 2)));
+        const bottom = Math.min(height, Math.round(baseY + baseHeight * (1 + overlap / 2)));
+        const tiled = scanRegion(x, y, right - x, bottom - y);
+        if (tiled) return tiled;
+      }
+    }
+    return null;
   } catch {
     return null;
   } finally {
     URL.revokeObjectURL(sourceUrl);
   }
+}
+
+export async function extractWaterRecipeJsonFromQrPng(
+  pngBytes: ArrayBuffer | Uint8Array,
+): Promise<string | null> {
+  return extractWaterRecipeJsonFromQrImage(pngBytes, 'image/png');
 }
 
 export const RECIPE_SHARE_CARD_WIDTH = 1200;
@@ -303,6 +356,7 @@ export type RecipeShareCardModel = {
   };
   qrDataUrl?: string;
   shareQrDataUrl?: string;
+  largeRecoveryQr?: boolean;
 };
 
 export type RecipeShareCardInput = RecipeShareCardModel;
@@ -416,6 +470,8 @@ export function createRecipeShareCardModel(input: RecipeShareCardInput): RecipeS
       }
       : undefined,
     qrDataUrl: input.qrDataUrl,
+    shareQrDataUrl: input.shareQrDataUrl,
+    largeRecoveryQr: input.largeRecoveryQr,
   };
 }
 
@@ -766,6 +822,28 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
   if (!model.qrDataUrl && !model.shareQrDataUrl) return { svg: '', height: 0 };
   const innerX = x + 22;
   const gap = 16;
+  if (model.largeRecoveryQr && model.qrDataUrl) {
+    const recoverySize = Math.min(760, width - 66 - gap - 220);
+    const shareSize = 220;
+    const height = 860;
+    let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
+    svg += svgText(innerX, y + 27, 'QR OPTIONS', {
+      fill: '#47737a',
+      size: 11,
+      weight: 700,
+      letterSpacing: 1.5,
+    });
+    const recoveryY = y + 54;
+    svg += `<rect x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" rx="8" fill="#ffffff"/>`;
+    svg += `<image href="${escapeXml(model.qrDataUrl)}" x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" preserveAspectRatio="xMidYMid meet"/>`;
+    if (model.shareQrDataUrl) {
+      const shareX = innerX + recoverySize + gap;
+      const shareY = y + 220;
+      svg += `<rect x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" rx="8" fill="#ffffff"/>`;
+      svg += `<image href="${escapeXml(model.shareQrDataUrl)}" x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
+    return { svg, height };
+  }
   const qrSize = Math.min(165, Math.max(126, Math.floor((width - 66 - gap) / 2)));
   const height = 244;
   let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
@@ -811,7 +889,12 @@ export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: str
   const guideTop = top + analysis.height + 20;
   const guide = renderConcentrateGuide(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, guideTop, rightWidth);
   const qrTop = guideTop + guide.height + (guide.height > 0 ? 20 : 0);
-  const qr = renderQrSection(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, qrTop, rightWidth);
+  const qr = renderQrSection(
+    model,
+    model.largeRecoveryQr ? RECIPE_SHARE_CARD_PADDING : RECIPE_SHARE_CARD_PADDING + leftWidth + 28,
+    qrTop,
+    model.largeRecoveryQr ? contentWidth : rightWidth,
+  );
   const finalTop = saltTop + salt.height + 20;
   const finalLines = wrapRecipeShareCardText(model.finalStep, 76);
   const finalHeight = Math.max(92, finalLines.length * 21 + 50);
@@ -891,6 +974,13 @@ export async function rasterizeRecipeShareCard(
     throw new Error('Recipe card images can only be created in a browser.');
   }
   const safeRatio = Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 2;
+  const embeddedImageUrls = [...svg.matchAll(/<image href="([^"]+)"/g)].map(match => match[1]);
+  await Promise.all(embeddedImageUrls.map(src => new Promise<void>((resolve, reject) => {
+    const embedded = new Image();
+    embedded.onload = () => resolve();
+    embedded.onerror = () => reject(new Error('Could not decode an embedded recipe-card image.'));
+    embedded.src = src;
+  })));
   const sourceBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
   const sourceUrl = URL.createObjectURL(sourceBlob);
   try {
@@ -900,6 +990,10 @@ export async function rasterizeRecipeShareCard(
       element.onerror = () => reject(new Error('Could not decode the recipe share card.'));
       element.src = sourceUrl;
     });
+    // Chromium can fire the outer SVG load event before nested data-URI QR
+    // images have painted. Give those embedded images a frame to settle before
+    // rasterizing the card.
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     const canvas = document.createElement('canvas');
     canvas.width = Math.ceil(width * safeRatio);
     canvas.height = Math.ceil(height * safeRatio);

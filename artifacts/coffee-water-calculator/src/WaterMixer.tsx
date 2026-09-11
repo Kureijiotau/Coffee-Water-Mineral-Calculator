@@ -769,6 +769,7 @@ function MixerRecipeCardModal({
       gh: result.gh,
       kh: result.kh,
     },
+    largeRecoveryQr: true,
   }), [recipeName, result, saltSteps, sourceA.name, sourceB.name]);
   const model = useMemo(() => buildRecipeShareCardSvg(cardInput), [cardInput]);
   const sharePayload = useMemo(() => createWaterRecipeSharePayload({
@@ -1196,7 +1197,7 @@ export default function WaterMixer({
                ref={importInputRef}
                type="file"
                className="hidden"
-               accept=".json,.WATER,.water,.WATER.png,.water.png,.png,application/json,image/png"
+                accept=".json,.WATER,.water,.WATER.png,.water.png,.png,.webp,.jpg,.jpeg,application/json,image/png,image/webp,image/jpeg"
                data-testid="input-import-mixer-recipe"
                onChange={event => {
                  const file = event.target.files?.[0];

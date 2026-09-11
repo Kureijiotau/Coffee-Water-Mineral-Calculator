@@ -2,7 +2,8 @@ import { ACTIVE_ION_IDS, SALTS, computeIonTotals, type IonId } from '@/waterData
 import type { WaterMetadata } from '@/localWaters';
 import {
   extractWaterRecipeJsonFromPng,
-  extractWaterRecipeJsonFromQrPng,
+  extractWaterRecipeJsonFromQrImage,
+  getRecipeImageMimeType,
   isPngImageBytes,
 } from './waterRecipeImage';
 import {
@@ -209,23 +210,32 @@ export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport 
 export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterMixerImport> {
   const bytes = await file.arrayBuffer();
   const isPng = isPngImageBytes(bytes);
+  const imageMimeType = getRecipeImageMimeType(file.name, file.type);
   try {
-    const importedText = await extractWaterRecipeJsonFromQrPng(bytes)
+    const importedText = (imageMimeType
+      ? await extractWaterRecipeJsonFromQrImage(bytes, imageMimeType)
+      : null)
       ?? (isPng ? extractWaterRecipeJsonFromPng(bytes) : null)
-      ?? (isPng ? null : new TextDecoder().decode(bytes));
+      ?? (imageMimeType ? null : new TextDecoder().decode(bytes));
     if (!importedText) {
       return {
         kind: 'error',
         message: isPng
           ? 'That PNG does not contain embedded recipe readings for the Mixer.'
-          : 'That image does not contain a readable recipe QR code.',
+          : imageMimeType
+            ? 'That image does not contain a readable recipe QR code.'
+            : 'That file does not contain a readable recipe.',
       };
     }
     return parseWaterMixerImportText(importedText);
   } catch {
     return {
       kind: 'error',
-      message: isPng ? 'That PNG is not a readable recipe card.' : 'That image is not a readable recipe card.',
+      message: isPng
+        ? 'That PNG is not a readable recipe card.'
+        : imageMimeType
+          ? 'That image is not a readable recipe card.'
+          : 'That file is not a readable recipe.',
     };
   }
 }
