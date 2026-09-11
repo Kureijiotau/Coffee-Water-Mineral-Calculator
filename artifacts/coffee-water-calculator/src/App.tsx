@@ -3078,6 +3078,9 @@ function App() {
   const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
     const parsed = await readWaterMixerImportFile(file);
     if (parsed.kind === 'error') return { error: parsed.message };
+    if (parsed.kind === 'recipe') {
+      return { recipe: parsed.recipe, provenance: parsed.provenance };
+    }
     if (parsed.kind === 'source') return { source: parsed.source, provenance: parsed.provenance };
     return { source: waterPlanToMixerSource(parsed.plan, mixerCatalogWaters) };
   }, [mixerCatalogWaters]);

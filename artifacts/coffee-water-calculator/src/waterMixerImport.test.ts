@@ -264,6 +264,52 @@ describe('Mixer recipe imports', () => {
     }
   });
 
+  it('applies the complete share-token QR through the direct Mixer upload boundary', async () => {
+    const qrPng = await createTwoWaterRecipeCardQrPng();
+    const qrReader = vi.spyOn(waterRecipeImage, 'extractWaterRecipeJsonFromQrImage')
+      .mockResolvedValue(TWO_WATER_RECIPE_CARD_SHARE_TOKEN);
+    const metadataReader = vi.spyOn(waterRecipeImage, 'extractWaterRecipeJsonFromPng');
+    const file = {
+      name: 'two-water.WATER.png',
+      type: 'image/png',
+      arrayBuffer: async () => qrPng.buffer,
+    } as unknown as File;
+
+    try {
+      // Share-token decoding belongs here, beside QR/image decoding. The
+      // Mixer UI should receive one complete recipe instead of reimplementing
+      // token parsing and losing the second source water.
+      const result = await readWaterMixerImportFile(file);
+
+      expect(qrReader).toHaveBeenCalledWith(qrPng.buffer, 'image/png');
+      expect(metadataReader).not.toHaveBeenCalled();
+      expect(result.kind).toBe('recipe');
+      if (result.kind !== 'recipe') return;
+
+      expect(result.recipe.name).toBe(TWO_WATER_RECIPE_CARD_FIXTURE.name);
+      expect(result.recipe.sourceA.name).toBe('North spring');
+      expect(result.recipe.sourceB.name).toBe('South spring');
+      expect(result.recipe.sourceA.ions).toMatchObject(
+        Object.fromEntries(Object.entries(TWO_WATER_RECIPE_CARD_FIXTURE.mineralWaters[0].ions)
+          .map(([id, value]) => [id, Number(value)])),
+      );
+      expect(result.recipe.sourceB.ions).toMatchObject(
+        Object.fromEntries(Object.entries(TWO_WATER_RECIPE_CARD_FIXTURE.additionWaters[0].ions)
+          .map(([id, value]) => [id, Number(value)])),
+      );
+      expect(result.recipe.volumeAMl).toBe(640);
+      expect(result.recipe.volumeBMl).toBe(360);
+      expect(result.recipe.formIdxBySaltId).toMatchObject({
+        mgso4: 0,
+        mgcl2: 1,
+      });
+      expect(result.recipe.finalIons).toMatchObject(TWO_WATER_RECIPE_CARD_FIXTURE.finishedIons);
+    } finally {
+      qrReader.mockRestore();
+      metadataReader.mockRestore();
+    }
+  });
+
   it('reopens a Mixer recipe card as a finished-water snapshot', () => {
     const result = parseWaterMixerImportText(serializeWaterMixRecipeFile({
       name: 'Bright blend',

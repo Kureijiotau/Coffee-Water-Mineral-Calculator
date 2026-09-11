@@ -20,6 +20,11 @@ import {
   LEGACY_WATER_PAYLOAD_VERSION,
   migrateLegacyWaterPayload,
 } from './legacyWaterRecovery';
+import {
+  decodeWaterRecipeSharePayload,
+  type WaterRecipeSharePayload,
+  type WaterRecipeShareWater,
+} from './waterRecipeShare';
 
 type RecordValue = Record<string, unknown>;
 
@@ -30,14 +35,34 @@ export type ParsedWaterMixerImport =
       provenance?: string;
       legacySaltTargets?: Record<string, number>;
     }
+  | {
+      kind: 'recipe';
+      recipe: WaterMixerImportedRecipe;
+      provenance?: string;
+    }
   | { kind: 'plan'; plan: WaterPlan }
   | { kind: 'error'; message: string };
+
+export type WaterMixerImportedRecipe = {
+  name: string;
+  sourceA: WaterMixSourceSnapshot;
+  sourceB: WaterMixSourceSnapshot;
+  volumeAMl: number;
+  volumeBMl: number;
+  finalIons: Record<IonId, number>;
+  saltTargets: Record<string, number>;
+  formIdxBySaltId: Record<string, number>;
+};
 
 export type WaterMixerImportResult =
   | {
       source: WaterMixSourceSnapshot;
       provenance?: string;
       legacySaltTargets?: Record<string, number>;
+    }
+  | {
+      recipe: WaterMixerImportedRecipe;
+      provenance?: string;
     }
   | { error: string };
 
@@ -67,6 +92,87 @@ function parseMetadata(value: unknown): WaterMetadata | undefined {
     if (isFiniteNonNegative(value[key])) metadata[key] = value[key];
   }
   return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
+function parseShareWaterMetadata(water: WaterRecipeShareWater): WaterMetadata | undefined {
+  return parseMetadata(Object.fromEntries(
+    Object.entries(water.metadata).map(([key, value]) => [key, Number(value)]),
+  ));
+}
+
+function importedSourceFromShareWater(
+  water: WaterRecipeShareWater,
+  sourceId: string,
+): WaterMixSourceSnapshot {
+  const ions = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => [id, Number(water.ions[id] ?? 0)]),
+  ) as Record<IonId, number>;
+  return normalizeWaterMixSourceSnapshot({
+    name: water.name,
+    sourceKind: 'saved-recipe',
+    sourceId: water.sourceLocalId?.trim() || sourceId,
+    ions,
+    metadata: parseShareWaterMetadata(water),
+  });
+}
+
+function importedMixerRecipeFromSharePayload(
+  payload: WaterRecipeSharePayload,
+): WaterMixerImportedRecipe | null {
+  const sourceAEntry = payload.mineralWaters[0];
+  const sourceBEntry = payload.additionWaters[0];
+  if (!sourceAEntry || !sourceBEntry) return null;
+
+  const sourceA = importedSourceFromShareWater(sourceAEntry, 'shared-source-a');
+  const sourceB = importedSourceFromShareWater(sourceBEntry, 'shared-source-b');
+  const volumeAMl = Number(sourceAEntry.volumeMl);
+  const volumeBMl = Number(sourceBEntry.volumeMl);
+  if (!Number.isFinite(volumeAMl) || volumeAMl < 0 || !Number.isFinite(volumeBMl) || volumeBMl < 0) {
+    return null;
+  }
+
+  const formIdxBySaltId: Record<string, number> = {};
+  const saltTargets: Record<string, number> = {};
+  payload.rows.forEach((row, index) => {
+    const salt = SALTS[index];
+    if (!salt) return;
+    const formIdx = Math.min(
+      Math.max(row.formIdx, 0),
+      Math.max(salt.hydrationForms.length - 1, 0),
+    );
+    formIdxBySaltId[salt.id] = formIdx;
+    const target = Number(row.target);
+    if (Number.isFinite(target) && target > 0) saltTargets[salt.id] = target;
+  });
+
+  const weightedFinishedIons = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => {
+      const totalVolume = volumeAMl + volumeBMl;
+      const weighted = totalVolume > 0
+        ? (sourceA.ions[id] * volumeAMl + sourceB.ions[id] * volumeBMl) / totalVolume
+        : 0;
+      return [id, weighted];
+    }),
+  ) as Partial<Record<IonId, number>>;
+  const finalIonInputs = payload.finishedIons ?? weightedFinishedIons;
+  const finalIons = normalizeWaterMixSourceSnapshot({
+    name: payload.name,
+    sourceKind: 'saved-recipe',
+    ions: Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, Number(finalIonInputs[id] ?? 0)]),
+    ) as Record<IonId, number>,
+  }).ions;
+
+  return {
+    name: payload.name,
+    sourceA,
+    sourceB,
+    volumeAMl,
+    volumeBMl,
+    finalIons,
+    saltTargets,
+    formIdxBySaltId,
+  };
 }
 
 function importedSourceFromPayload(payload: RecordValue): WaterMixSourceSnapshot | null {
@@ -156,6 +262,18 @@ function importedMixerRecipeFromPayload(
 }
 
 export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport {
+  const sharedPayload = decodeWaterRecipeSharePayload(text);
+  if (sharedPayload) {
+    const recipe = importedMixerRecipeFromSharePayload(sharedPayload);
+    if (recipe) {
+      return {
+        kind: 'recipe',
+        recipe,
+        provenance: 'Shared Mixer recipe',
+      };
+    }
+  }
+
   let payload: unknown;
   try {
     payload = JSON.parse(text);

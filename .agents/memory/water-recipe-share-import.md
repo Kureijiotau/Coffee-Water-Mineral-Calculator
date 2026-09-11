@@ -8,3 +8,9 @@ Use a versioned compact share payload for recipe links, carrying salt rows, sour
 **Why:** PNG metadata is unavailable or unreliable after image services re-encode cards, while the QR remains portable and is the most intentional import signal. Source-water state must travel with the link so an import can restore the finished-water workflow rather than only its salts.
 
 **How to apply:** Keep the raw `WMQR1:` recovery QR separate from the HTTPS share-link QR, but let new recovery QR payloads wrap the complete share token so either QR restores waters. Continue accepting older salt-only recovery payloads, and preserve browser-history cleanup after a successful or invalid share-link attempt.
+
+For direct Mixer uploads, decode a valid share token at the shared image/import boundary and return the complete two-source recipe to the Mixer rather than reducing it to one finished-water snapshot.
+
+**Why:** Mixer cards carry both source waters, volumes, salt forms, and finished readings; decoding only in the surrounding app flow loses the second source and duplicates token handling.
+
+**How to apply:** Keep legacy JSON and PNG-metadata imports on their existing source-snapshot path, while share-token QR imports use the complete-recipe path.

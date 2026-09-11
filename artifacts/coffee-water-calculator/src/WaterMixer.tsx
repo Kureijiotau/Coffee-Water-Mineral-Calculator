@@ -28,7 +28,7 @@ import {
   type WaterMixSourceKind,
   type WaterMixSourceSnapshot,
 } from './waterMixer';
-import type { WaterMixerImportResult } from './waterMixerImport';
+import type { WaterMixerImportResult, WaterMixerImportedRecipe } from './waterMixerImport';
 import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, createWaterRecipeShareQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
 import { StableNumberInput } from './components/StableNumberInput';
@@ -1031,6 +1031,23 @@ export default function WaterMixer({
     setImportMessage(`Imported "${source.name}" into Water ${side.toUpperCase()}.${legacyNote}`);
   };
 
+  const applyImportedRecipe = (recipe: WaterMixerImportedRecipe, provenance?: string) => {
+    const sourceA = { ...recipe.sourceA, sourceKind: 'saved-recipe' as const };
+    const sourceB = { ...recipe.sourceB, sourceKind: 'saved-recipe' as const };
+    rememberImportedSource(sourceA);
+    rememberImportedSource(sourceB);
+    setCardA({ ...emptyCard(), mode: 'saved-recipe', source: sourceA });
+    setCardB({ ...emptyCard(), mode: 'saved-recipe', source: sourceB });
+    setVolumeA(String(recipe.volumeAMl));
+    setVolumeB(String(recipe.volumeBMl));
+    setRecipeName(recipe.name);
+    setSaltTargets({ ...recipe.saltTargets });
+    setFormIdxBySaltId({ ...recipe.formIdxBySaltId });
+    setSaltDoseDrafts({});
+    setPendingImport(null);
+    setImportMessage(`${provenance ?? 'Imported recipe'} "${recipe.name}" into both Mixer waters.`);
+  };
+
   const handleImportFile = async (file: File) => {
     if (!onImportRecipeFile) return;
     setImportMessage('');
@@ -1040,6 +1057,10 @@ export default function WaterMixer({
       const parsed = await onImportRecipeFile(file);
       if ('error' in parsed) {
         setImportMessage(parsed.error);
+        return;
+      }
+      if ('recipe' in parsed) {
+        applyImportedRecipe(parsed.recipe, parsed.provenance);
         return;
       }
       const imported: WaterMixerSavedSource = {
