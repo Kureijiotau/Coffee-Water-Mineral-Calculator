@@ -83,6 +83,7 @@
 - [Workframe profile handoff](workframe-profile-handoff.md) — finalize relationship-first controls as explicit named ion targets, then let Watermancer translate them
 - [Ion ratio import boundary](ion-ratio-import-boundary.md) — ratio editing is a Watermancer control surface; GH/KH stays diagnostic and imports only six direct ion targets
 - [Browser smoke harness](browser-smoke-cdp.md) — use explicit CDP interactively; align Playwright, browser builds, and Node for automated cross-browser checks
+- [Playwright runner startup](playwright-runner-startup.md) — direct Playwright commands can time out before producing a report even when the app workflow is healthy
 - [React-free Watermancer solver](watermancer-react-free-solver.md) — keep route computation isolated from App.tsx so development and production can share the worker path
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints

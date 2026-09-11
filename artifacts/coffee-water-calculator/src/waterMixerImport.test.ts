@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import * as waterRecipeImage from './waterRecipeImage';
 import { embedWaterRecipeJsonInPng } from './waterRecipeImage';
 import { serializeRecipeFile } from './recipes';
 import { computeIonTotals } from './waterData';
@@ -16,6 +17,12 @@ import legacyPlanFixture from './fixtures/legacy-water/coffee-water-plan-v1.json
 import legacyProfileFixture from './fixtures/legacy-water/watermancer-profile-v1.json';
 import legacySourceFixture from './fixtures/legacy-water/coffee-water-mix-source-v1.json';
 import legacyMixFixture from './fixtures/legacy-water/coffee-water-mix-v1.json';
+import {
+  createTwoWaterRecipeCardQrPng,
+  TWO_WATER_RECIPE_CARD_FIXTURE,
+  TWO_WATER_RECIPE_CARD_QR_TEXT,
+  TWO_WATER_RECIPE_CARD_SHARE_TOKEN,
+} from './testFixtures/twoWaterRecipeCard';
 
 const legacyFixtures = [
   legacyRecipeFixture,
@@ -158,6 +165,64 @@ describe('Mixer recipe imports', () => {
     if (result.kind !== 'source') return;
     expect(result.source.name).toBe('Packaged card');
     expect(result.source.ions.bicarbonate).toBe(22);
+  });
+
+  it('uses QR first for deterministic PNG, WEBP, and JPEG card imports', async () => {
+    const qrPng = await createTwoWaterRecipeCardQrPng();
+    const mixerText = serializeWaterMixRecipeFile({
+      name: TWO_WATER_RECIPE_CARD_FIXTURE.name,
+      sourceA: {
+        name: TWO_WATER_RECIPE_CARD_FIXTURE.mineralWaters[0].name,
+        sourceKind: 'manual',
+        ions: Object.fromEntries(
+          Object.entries(TWO_WATER_RECIPE_CARD_FIXTURE.mineralWaters[0].ions)
+            .map(([id, value]) => [id, Number(value)]),
+        ),
+      },
+      sourceB: {
+        name: TWO_WATER_RECIPE_CARD_FIXTURE.additionWaters[0].name,
+        sourceKind: 'manual',
+        ions: Object.fromEntries(
+          Object.entries(TWO_WATER_RECIPE_CARD_FIXTURE.additionWaters[0].ions)
+            .map(([id, value]) => [id, Number(value)]),
+        ),
+      },
+      volumeAMl: Number(TWO_WATER_RECIPE_CARD_FIXTURE.mineralWaters[0].volumeMl),
+      volumeBMl: Number(TWO_WATER_RECIPE_CARD_FIXTURE.additionWaters[0].volumeMl),
+      finalIons: TWO_WATER_RECIPE_CARD_FIXTURE.finishedIons ?? {},
+    });
+    const qrReader = vi.spyOn(waterRecipeImage, 'extractWaterRecipeJsonFromQrImage')
+      .mockResolvedValue(mixerText);
+    const metadataReader = vi.spyOn(waterRecipeImage, 'extractWaterRecipeJsonFromPng');
+
+    try {
+      for (const [extension, type] of [
+        ['png', 'image/png'],
+        ['webp', 'image/webp'],
+        ['jpg', 'image/jpeg'],
+      ] as const) {
+        const file = {
+          name: `two-water.WATER.${extension}`,
+          type,
+          arrayBuffer: async () => qrPng.buffer,
+        } as unknown as File;
+
+        const result = await readWaterMixerImportFile(file);
+
+        expect(qrReader).toHaveBeenLastCalledWith(qrPng.buffer, type);
+        expect(result.kind).toBe('source');
+        if (result.kind !== 'source') continue;
+        expect(result.source.name).toBe(TWO_WATER_RECIPE_CARD_FIXTURE.name);
+        expect(result.source.ions).toMatchObject(TWO_WATER_RECIPE_CARD_FIXTURE.finishedIons);
+      }
+
+      expect(metadataReader).not.toHaveBeenCalled();
+      expect(qrReader).toHaveBeenCalledTimes(3);
+      expect(TWO_WATER_RECIPE_CARD_QR_TEXT).toContain(TWO_WATER_RECIPE_CARD_SHARE_TOKEN);
+    } finally {
+      qrReader.mockRestore();
+      metadataReader.mockRestore();
+    }
   });
 
   it('reopens a Mixer recipe card as a finished-water snapshot', () => {

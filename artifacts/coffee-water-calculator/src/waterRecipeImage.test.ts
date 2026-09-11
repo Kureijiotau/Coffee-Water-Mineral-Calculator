@@ -15,6 +15,11 @@ import {
   createWaterRecipeShareUrl,
   encodeWaterRecipeSharePayload,
 } from './waterRecipeShare';
+import {
+  createTwoWaterRecipeCardQrPng,
+  TWO_WATER_RECIPE_CARD_QR_TEXT,
+  TWO_WATER_RECIPE_CARD_SHARE_TOKEN,
+} from './testFixtures/twoWaterRecipeCard';
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
@@ -62,6 +67,19 @@ describe('Watermancer image recipe metadata', () => {
 
     expect(extractWaterRecipeJsonFromQrText(`WMQR1:${json}`)).toBe(json);
     expect(extractWaterRecipeJsonFromQrText(json)).toBeNull();
+  });
+
+  it('keeps a deterministic two-water recovery QR fixture available', async () => {
+    const first = await createTwoWaterRecipeCardQrPng();
+    const second = await createTwoWaterRecipeCardQrPng();
+
+    expect(first).toEqual(second);
+    expect(first.slice(0, 8)).toEqual(
+      Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    );
+    expect(extractWaterRecipeJsonFromQrText(TWO_WATER_RECIPE_CARD_QR_TEXT)).toBe(
+      TWO_WATER_RECIPE_CARD_SHARE_TOKEN,
+    );
   });
 
   it('fits a large two-water multi-salt share payload in the recovery QR', async () => {
