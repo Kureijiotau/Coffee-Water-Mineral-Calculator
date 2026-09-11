@@ -1,0 +1,163 @@
+STEP-BY-STEP
+13 actions
+1
+Prepare the water
+RO / DISTILLED WATER
+Add purified water
+750 mL
+BASE WATER
+Ty Nant
+650 mL
+BASE WATER
+Vichy Célestins
+350 mL
+2
+Add the minerals in order
+Add one salt at a time. Stir until fully dissolved before adding the next.
+1. Magnesium Sulfate
+Heptahydrate (Epsom) ·
+Mg²⁺
++
+SO₄²⁻
+61 mg
+17.0 ppm total
+2. Calcium Sulfate
+Dihydrate (Gypsum) ·
+Ca²⁺
++
+SO₄²⁻
+73 mg
+33.0 ppm total
+3. Magnesium Chloride
+Hexahydrate ·
+Mg²⁺
++
+Cl⁻
+37 mg
+9.9 ppm total
+4. Calcium Chloride
+Dihydrate ·
+Ca²⁺
++
+Cl⁻
+83 mg
+35.8 ppm total
+5. Sodium Chloride
+Anhydrous ·
+Na⁺
++
+Cl⁻
+29 mg
+16.6 ppm total
+6. Potassium Chloride
+Anhydrous ·
+K⁺
++
+Cl⁻
+17 mg
+9.7 ppm total
+7. Sodium Bicarbonate
+Anhydrous ·
+Na⁺
++
+HCO₃⁻
+43 mg
+24.6 ppm total
+8. Potassium Bicarbonate
+Anhydrous ·
+K⁺
++
+HCO₃⁻
+31 mg
+17.7 ppm total
+9. Magnesium Citrate
+Nonahydrate ·
+Mg²⁺
++
+C₆H₅O₇³⁻
+23 mg
+9.7 ppm total
+10. Calcium Citrate
+Tetrahydrate ·
+Ca²⁺
++
+C₆H₅O₇³⁻
+19 mg
+9.5 ppm total
+3
+Combine the salt concentrate
+Reserve 500 mL of the prepared water for the salt concentrate. Dissolve the salts completely, then add the concentrate to the remaining water, rinse the vessel into the batch, and stir thoroughly.
+4
+Verify and brew
+Check for approximately 1197 ppm TDS. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
+
+Small amounts are difficult to weigh accurately. For better consistency, multiply the recipe for a larger batch or use a concentrate.
+
+WATER PROFILE
+Mineral analysis
+CURRENT MIX
+final contribution
+Aiki's (Light Roast Pourover)
+per litre of finished water
+CATIONS
+Ca²⁺
+Calcium
+FINAL CONCENTRATION
+53.9
+MG/L
+Mg²⁺
+Magnesium
+FINAL CONCENTRATION
+13.8
+MG/L
+Na⁺
+Sodium
+FINAL CONCENTRATION
+255.8
+MG/L
+K⁺
+Potassium
+FINAL CONCENTRATION
+25.6
+MG/L
+ANIONS
+HCO₃⁻
+Bicarbonate
+FINAL CONCENTRATION
+669.5
+MG/L
+Cl⁻
+Chloride
+FINAL CONCENTRATION
+97.1
+MG/L
+SO₄²⁻
+Sulfate
+FINAL CONCENTRATION
+65.8
+MG/L
+OTHER MODELED IONS
+C₆H₅O₇³⁻
+Citrates
+FINAL CONCENTRATION
+15.3
+MG/L
+APPROX. TDS
+1197
+PPM
+GH
+191
+PPM
+KH
+549
+PPM
+ESTIMATED FINAL TDS: 1197 PPM
+GH:KH RATIO: 0.35:1
+MG/L = PPM
+Save Recipe Image
+
+Download a clean PNG share card with the recipe steps and mineral analysis.
+
+SHAREABLE + IMPORTABLE
+
+Send this recipe card to someone else. They can import the .WATER.png image to load the recipe.
