@@ -9968,7 +9968,7 @@ function RecipeConcentrateBottleCard({
     : `${recipeConcentrateNumber(assumedDropsPerMl, 1)} ${dropperStyle} drops/mL assumption`;
 
   return (
-    <article className={`recipe-concentrate-bottle recipe-concentrate-bottle--polished aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
+    <article className={`recipe-concentrate-bottle aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
       <div className="recipe-concentrate-bottle__header mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className={`recipe-concentrate-bottle__icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
@@ -10170,11 +10170,10 @@ function RecipeConcentrateBottleCard({
       </div>
 
       <div className="recipe-concentrate-salt-list mt-3 grid gap-2 sm:grid-cols-2">
-        {stockRows.map((row, index) => (
+        {stockRows.map(row => (
           <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={saltVisualStyle(row.salt)}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-2">
-                <span className="recipe-concentrate-salt-step" aria-hidden="true">{index + 1}</span>
                 <span className="recipe-concentrate-salt-dot mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getSaltColorTokens(row.salt).primary }} aria-hidden="true" />
                 <div className="min-w-0">
                   <div className="truncate text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
@@ -10573,7 +10572,7 @@ function RecipeConcentrateBuilder({
             </div>
           </div>
         </div>
-        <div className="space-y-3 p-3 sm:p-4">
+        <div className="space-y-3 p-3 sm:p-4" data-concentrate-preview-cards>
           {stockGroups.length > 0 ? stockGroups.map(group => (
             <RecipeConcentrateBottleCard
               key={group.id}
@@ -13282,7 +13281,7 @@ function ConcentrateRecipeStepsModal({
     .filter(row => row.liters > 0)
     .map(row => ({ ...row, groups: planGroups.map(group => ({ group, dose: doseForGroup(group, row.liters) })) }));
   const handleSaveJpg = async () => {
-    const source = exportCardRef.current;
+    const source = document.querySelector<HTMLElement>('[data-concentrate-preview-cards]') ?? exportCardRef.current;
     if (!source || isSavingJpg) return;
     setIsSavingJpg(true);
     setSaveJpgStatus('idle');
