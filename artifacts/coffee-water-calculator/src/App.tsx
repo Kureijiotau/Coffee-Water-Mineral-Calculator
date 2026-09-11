@@ -4164,8 +4164,10 @@ function App() {
   }, [dosingSaltTargets]);
 
   const concWarnings: ConcentrateWarning[] = useMemo(
-    () => concentrateOn ? checkConcentrate(concentrateStrength, concSaltTargets) : [],
-    [concentrateOn, concentrateStrength, concSaltTargets],
+    () => concentrateOn
+      ? checkConcentrate(concentrateStrength, concSaltTargets, {}, num(concentrateMl))
+      : [],
+    [concentrateOn, concentrateStrength, concSaltTargets, concentrateMl],
   );
 
   const concFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
@@ -4180,7 +4182,12 @@ function App() {
     setConcentrateOn(enabled);
     if (!enabled) return;
     setConcentrateMl('100');
-    setConcentrateStrength(findStrongestSafeConcentrateStrength(concSaltTargets));
+    setConcentrateStrength(findStrongestSafeConcentrateStrength(
+      concSaltTargets,
+      undefined,
+      {},
+      { stockVolumeMl: 100 },
+    ));
     setSplitMode(false);
   };
 
@@ -4275,10 +4282,15 @@ function App() {
     for (const group of stockGroups) {
       const groupTargets: Record<string, number> = {};
       for (const saltId of group.saltIds) groupTargets[saltId] = concSaltTargets[saltId] ?? 0;
-      result[group.id] = checkConcentrate(splitStrengths[group.id] ?? 100, groupTargets);
+      result[group.id] = checkConcentrate(
+        splitStrengths[group.id] ?? 100,
+        groupTargets,
+        {},
+        num(splitMls[group.id] ?? '500'),
+      );
     }
     return result;
-  }, [stockGroups, splitStrengths, concSaltTargets]);
+  }, [stockGroups, splitStrengths, splitMls, concSaltTargets]);
 
   const splitFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
     if (!splitMode || stockGroups.length === 0) return { level: 'green', label: 'Split OK' };
@@ -6253,7 +6265,12 @@ function App() {
                   <button
                     type="button"
                     disabled={!Object.values(concSaltTargets).some(target => Number.isFinite(target) && target > 0)}
-                    onClick={() => setConcentrateStrength(findStrongestSafeConcentrateStrength(concSaltTargets))}
+                    onClick={() => setConcentrateStrength(findStrongestSafeConcentrateStrength(
+                      concSaltTargets,
+                      undefined,
+                      {},
+                      { stockVolumeMl: num(concentrateMl) },
+                    ))}
                     className="ml-auto rounded-lg border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-semibold text-amber-100 transition hover:border-amber-200/60 hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600"
                   >
                     Max safe strength
@@ -8953,6 +8970,8 @@ function LegacyRecipeConcentrateBuilder({
 
   const strength = Math.max(0, Number(strengthInput) || 0);
   const allInOneStockVolumeMl = Math.max(0, Number(stockVolumeInputs['all-in-one'] ?? '100') || 0);
+  const groupVolumeMlFor = (group: { id: string }) =>
+    Math.max(0, Number(stockVolumeInputs[group.id] ?? '100') || 0);
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
   );
@@ -8993,12 +9012,13 @@ function LegacyRecipeConcentrateBuilder({
   const groupFormsFor = (group: { saltIds: string[] }) => Object.fromEntries(
     group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
   );
-  const maxSafeStrengthFor = (groups: Array<{ saltIds: string[] }>) =>
+  const maxSafeStrengthFor = (groups: Array<{ id: string; saltIds: string[] }>) =>
     groups.length > 0
       ? Math.min(...groups.map(group => findStrongestSafeConcentrateStrength(
         groupTargetsFor(group),
         undefined,
         groupFormsFor(group),
+        { stockVolumeMl: groupVolumeMlFor(group) },
       )))
       : null;
   const maxSafeStrengthByStrategy = {
@@ -9010,11 +9030,18 @@ function LegacyRecipeConcentrateBuilder({
   const groupStrengthFor = (group: { id: string }) => stockStrategy === 'all-in-one'
     ? strength
     : Math.max(0, Number(stockStrengthInputs[group.id] ?? '500') || 0);
-  const groupMaxSafeStrengthFor = (group: { saltIds: string[] }) =>
-    findStrongestSafeConcentrateStrength(groupTargetsFor(group), undefined, groupFormsFor(group));
+  const groupMaxSafeStrengthFor = (group: { id: string; saltIds: string[] }) =>
+    findStrongestSafeConcentrateStrength(
+      groupTargetsFor(group),
+      undefined,
+      groupFormsFor(group),
+      { stockVolumeMl: groupVolumeMlFor(group) },
+    );
   const limitingConstraint = findConcentrateLimitingConstraint(
     saltTargets,
     formIdxBySaltId,
+    undefined,
+    { stockVolumeMl: allInOneStockVolumeMl },
   );
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
@@ -9034,7 +9061,7 @@ function LegacyRecipeConcentrateBuilder({
     finalLiters,
   });
   const allInOneWarnings = stockStrategy === 'all-in-one' && strength > 0
-    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId, allInOneStockVolumeMl)
     : [];
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
@@ -9653,8 +9680,15 @@ function LegacyRecipeConcentrateBuilder({
           const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
           const groupTargets = groupTargetsFor(group);
           const groupStrength = groupStrengthFor(group);
-          const warnings = groupStrength > 0 ? checkConcentrate(groupStrength, groupTargets) : [];
-          const groupMaxSafeStrength = findStrongestSafeConcentrateStrength(groupTargets);
+          const warnings = groupStrength > 0
+            ? checkConcentrate(groupStrength, groupTargets, {}, stockVolumeMl)
+            : [];
+          const groupMaxSafeStrength = findStrongestSafeConcentrateStrength(
+            groupTargets,
+            undefined,
+            {},
+            { stockVolumeMl },
+          );
           const stockRows = group.saltIds.map(saltId => {
             const salt = SALTS.find(item => item.id === saltId);
             const entry = handoff.salts[saltId];
@@ -9827,7 +9861,7 @@ function RecipeConcentrateBottleCard({
   const strength = Math.max(0, Number(strengthInput) || 0);
   const stockVolumeMl = Math.max(0, Number(volumeInput) || 0);
   const warnings = strength > 0
-    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId, stockVolumeMl)
     : [];
   const assumedDropsPerMl = lotusDropsPerMl(dropperStyle, straightDropsPerMl);
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
@@ -9841,6 +9875,7 @@ function RecipeConcentrateBottleCard({
       minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
       minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
       dropsPerMl: activeDropsPerMl,
+      stockVolumeMl,
     },
   );
   const safeFinalLiters = Math.max(0, finalLiters);
@@ -10263,6 +10298,8 @@ function RecipeConcentrateBuilder({
   );
   const rawStrength = Math.max(0, Number(strengthInput) || 0);
   const allInOneStockVolumeMl = Math.max(0, Number(stockVolumeInputs['all-in-one'] ?? '100') || 0);
+  const groupVolumeMlFor = (group: { id: string }) =>
+    Math.max(0, Number(stockVolumeInputs[group.id] ?? '100') || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
@@ -10288,12 +10325,12 @@ function RecipeConcentrateBuilder({
     minimumDrops: 1,
     dropsPerMl: activeDropsPerMl,
   };
-  const groupMaxSafeStrengthFor = (group: { saltIds: string[] }) =>
+  const groupMaxSafeStrengthFor = (group: { id: string; saltIds: string[] }) =>
     findStrongestSafeConcentrateStrength(
       groupTargetsFor(group),
       undefined,
       groupFormsFor(group),
-      dropDosingOptions,
+      { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
     );
   const maxSafeStrengthByStrategy = {
     'gh-kh': compatibleStockGroups.length > 0
@@ -10325,7 +10362,7 @@ function RecipeConcentrateBuilder({
     finalLiters,
   });
   const allInOneWarnings = stockStrategy === 'all-in-one' && strength > 0
-    ? checkConcentrate(strength, saltTargets, formIdxBySaltId)
+    ? checkConcentrate(strength, saltTargets, formIdxBySaltId, allInOneStockVolumeMl)
     : [];
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
@@ -10338,7 +10375,7 @@ function RecipeConcentrateBuilder({
     saltTargets,
     formIdxBySaltId,
     undefined,
-    dropDosingOptions,
+    { ...dropDosingOptions, stockVolumeMl: allInOneStockVolumeMl },
   );
   const updateStrength = (groupId: string, value: string) => {
     if (stockStrategy === 'all-in-one') {

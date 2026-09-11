@@ -1084,7 +1084,7 @@ export type ConcentrateDosingOptions = {
  *
  * A recipe stock uses stockVolumeMl / strength mL per liter of final water, so the
  * number of drops for a batch is:
- *   1000 / strength × finalLiters × dropsPerMl
+ *   stockVolumeMl / strength × finalLiters × dropsPerMl
  *
  * This is deliberately a separate constraint from solubility. It prevents an
  * otherwise safe stock from requiring a fractional drop for a 100 mL+ batch.
@@ -1094,6 +1094,7 @@ export function findWholeDropDosingStrengthCeiling(
     minimumFinalLiters = CONCENTRATE_MINIMUM_DOSE_LITERS,
     dropsPerMl = 20,
     minimumDrops = CONCENTRATE_MINIMUM_WHOLE_DROPS,
+    stockVolumeMl = 1000,
   }: ConcentrateDosingOptions = {},
 ): number {
   if (
@@ -1124,6 +1125,7 @@ export function findStrongestSafeConcentrateStrength(
   maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
   formIdxBySaltId: Record<string, number> = {},
   dosingOptions: ConcentrateDosingOptions = {},
+  chemicalStockVolumeMl = dosingOptions.stockVolumeMl ?? 1000,
 ): number {
   const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
     target => Number.isFinite(target) && target > 0,
@@ -1134,7 +1136,7 @@ export function findStrongestSafeConcentrateStrength(
   if (!hasActiveTarget || upperBound <= 1) return 1;
 
   const isSafe = (strength: number) =>
-    checkConcentrate(strength, saltTargetsBySaltId, formIdxBySaltId)
+    checkConcentrate(strength, saltTargetsBySaltId, formIdxBySaltId, chemicalStockVolumeMl)
       .every(warning => warning.severity !== 'error');
 
   if (isSafe(upperBound)) return upperBound;
@@ -1169,6 +1171,8 @@ export function findConcentrateLimitingConstraint(
     saltTargetsBySaltId,
     chemicalUpperBound,
     formIdxBySaltId,
+    {},
+    dosingOptions.stockVolumeMl ?? 1000,
   );
   const maxSafeStrength = findStrongestSafeConcentrateStrength(
     saltTargetsBySaltId,
@@ -1206,6 +1210,7 @@ export function findConcentrateLimitingConstraint(
     maxSafeStrength + 1,
     saltTargetsBySaltId,
     formIdxBySaltId,
+    dosingOptions.stockVolumeMl ?? 1000,
   ).find(warning => warning.severity === 'error');
   return {
     kind: 'chemical',

@@ -180,6 +180,28 @@ describe('findStrongestSafeConcentrateStrength', () => {
     )).toBe(500);
   });
 
+  it('uses the selected bottle volume for whole-drop dosing ceilings', () => {
+    expect(findWholeDropDosingStrengthCeiling({
+      stockVolumeMl: 100,
+      minimumFinalLiters: 0.1,
+      dropsPerMl: 20,
+      minimumDrops: 1,
+    })).toBe(200);
+  });
+
+  it('uses the selected bottle volume for precipitation and solubility limits', () => {
+    const targets = { mgso4: 20_000 };
+
+    expect(checkConcentrate(2, targets, {}, 1000)
+      .some(warning => warning.severity === 'error')).toBe(false);
+    expect(checkConcentrate(2, targets, {}, 100)
+      .some(warning => warning.severity === 'error')).toBe(true);
+
+    const oneLiterLimit = findStrongestSafeConcentrateStrength(targets, 500, {}, { stockVolumeMl: 1000 });
+    const smallBottleLimit = findStrongestSafeConcentrateStrength(targets, 500, {}, { stockVolumeMl: 100 });
+    expect(smallBottleLimit).toBeLessThan(oneLiterLimit);
+  });
+
   it('explains when whole-drop dosing is the limiting constraint', () => {
     const limit = findConcentrateLimitingConstraint(
       { nacl: 1 },
