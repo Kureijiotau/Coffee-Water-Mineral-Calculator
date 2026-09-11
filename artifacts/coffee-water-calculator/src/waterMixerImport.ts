@@ -3,7 +3,7 @@ import type { WaterMetadata } from '@/localWaters';
 import {
   extractWaterRecipeJsonFromPng,
   extractWaterRecipeJsonFromQrImage,
-  getRecipeImageMimeType,
+  resolveRecipeImageMimeType,
   isPngImageBytes,
 } from './waterRecipeImage';
 import {
@@ -210,7 +210,7 @@ export function parseWaterMixerImportText(text: string): ParsedWaterMixerImport 
 export async function readWaterMixerImportFile(file: File): Promise<ParsedWaterMixerImport> {
   const bytes = await file.arrayBuffer();
   const isPng = isPngImageBytes(bytes);
-  const imageMimeType = getRecipeImageMimeType(file.name, file.type);
+  const imageMimeType = resolveRecipeImageMimeType(file.name, file.type, bytes);
   try {
     const importedText = (imageMimeType
       ? await extractWaterRecipeJsonFromQrImage(bytes, imageMimeType)

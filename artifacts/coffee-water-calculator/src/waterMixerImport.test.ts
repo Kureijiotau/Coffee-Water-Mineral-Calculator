@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as waterRecipeImage from './waterRecipeImage';
-import { embedWaterRecipeJsonInPng } from './waterRecipeImage';
+import {
+  detectRecipeImageMimeType,
+  embedWaterRecipeJsonInPng,
+  getRecipeImageMimeType,
+  resolveRecipeImageMimeType,
+} from './waterRecipeImage';
 import { serializeRecipeFile } from './recipes';
 import { computeIonTotals } from './waterData';
 import {
@@ -55,6 +60,26 @@ const ONE_PIXEL_PNG = Uint8Array.from(
 );
 
 describe('Mixer recipe imports', () => {
+  it('recognizes supported MIME types and filename-only image types', () => {
+    expect(getRecipeImageMimeType('recipe.png', 'image/png')).toBe('image/png');
+    expect(getRecipeImageMimeType('recipe.webp', 'image/webp')).toBe('image/webp');
+    expect(getRecipeImageMimeType('recipe.jpeg', 'image/jpeg')).toBe('image/jpeg');
+    expect(getRecipeImageMimeType('recipe.webp')).toBe('image/webp');
+    expect(getRecipeImageMimeType('recipe.jpg')).toBe('image/jpeg');
+    expect(getRecipeImageMimeType('recipe.txt', 'image/avif')).toBeNull();
+  });
+
+  it('uses image bytes instead of inaccurate declared metadata', () => {
+    expect(detectRecipeImageMimeType(ONE_PIXEL_PNG)).toBe('image/png');
+    expect(resolveRecipeImageMimeType('recipe.png', 'image/jpeg', ONE_PIXEL_PNG)).toBe('image/png');
+    expect(resolveRecipeImageMimeType('recipe.webp', 'image/png', Uint8Array.from([
+      0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+    ]))).toBe('image/webp');
+    expect(resolveRecipeImageMimeType('recipe.jpg', 'image/png', Uint8Array.from([
+      0xff, 0xd8, 0xff, 0xe0,
+    ]))).toBe('image/jpeg');
+  });
+
   it('keeps the fixture matrix aligned with every registered kind and version', () => {
     expect(legacyFixtures.map(fixture => `${fixture.kind}:${fixture.version}`)).toEqual(
       LEGACY_WATER_MIGRATIONS.map(migration => `${migration.kind}:${migration.version}`),
@@ -169,6 +194,13 @@ describe('Mixer recipe imports', () => {
 
   it('uses QR first for deterministic PNG, WEBP, and JPEG card imports', async () => {
     const qrPng = await createTwoWaterRecipeCardQrPng();
+    const imageBytesByType = {
+      png: qrPng,
+      webp: Uint8Array.from([
+        0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50,
+      ]),
+      jpg: Uint8Array.from([0xff, 0xd8, 0xff, 0xe0]),
+    } as const;
     const mixerText = serializeWaterMixRecipeFile({
       name: TWO_WATER_RECIPE_CARD_FIXTURE.name,
       sourceA: {
@@ -200,16 +232,23 @@ describe('Mixer recipe imports', () => {
         ['png', 'image/png'],
         ['webp', 'image/webp'],
         ['jpg', 'image/jpeg'],
+        ['png', 'image/jpeg'],
       ] as const) {
+        const imageBytes = extension === 'png' && type === 'image/jpeg'
+          ? qrPng
+          : imageBytesByType[extension];
         const file = {
           name: `two-water.WATER.${extension}`,
           type,
-          arrayBuffer: async () => qrPng.buffer,
+          arrayBuffer: async () => imageBytes.buffer,
         } as unknown as File;
 
         const result = await readWaterMixerImportFile(file);
 
-        expect(qrReader).toHaveBeenLastCalledWith(qrPng.buffer, type);
+        expect(qrReader).toHaveBeenLastCalledWith(
+          imageBytes.buffer,
+          extension === 'png' ? 'image/png' : type,
+        );
         expect(result.kind).toBe('source');
         if (result.kind !== 'source') continue;
         expect(result.source.name).toBe(TWO_WATER_RECIPE_CARD_FIXTURE.name);
@@ -217,7 +256,7 @@ describe('Mixer recipe imports', () => {
       }
 
       expect(metadataReader).not.toHaveBeenCalled();
-      expect(qrReader).toHaveBeenCalledTimes(3);
+      expect(qrReader).toHaveBeenCalledTimes(4);
       expect(TWO_WATER_RECIPE_CARD_QR_TEXT).toContain(TWO_WATER_RECIPE_CARD_SHARE_TOKEN);
     } finally {
       qrReader.mockRestore();
@@ -361,7 +400,7 @@ describe('Mixer recipe imports', () => {
   it('rejects recipe-card PNGs without embedded readings', async () => {
     const file = {
       name: 'plain.png',
-      type: 'image/png',
+      type: 'image/avif',
       arrayBuffer: async () => ONE_PIXEL_PNG.buffer,
     } as unknown as File;
 

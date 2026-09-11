@@ -23,12 +23,46 @@ export function getRecipeImageMimeType(
   return null;
 }
 
+function matchesBytes(bytes: Uint8Array, signature: ArrayLike<number>, offset = 0): boolean {
+  for (let index = 0; index < signature.length; index += 1) {
+    if (bytes[offset + index] !== signature[index]) return false;
+  }
+  return true;
+}
+
 function matchesPngSignature(bytes: Uint8Array): boolean {
-  return PNG_SIGNATURE.every((value, index) => bytes[index] === value);
+  return matchesBytes(bytes, PNG_SIGNATURE);
 }
 
 export function isPngImageBytes(input: ArrayBuffer | Uint8Array): boolean {
   return matchesPngSignature(input instanceof Uint8Array ? input : new Uint8Array(input));
+}
+
+export function detectRecipeImageMimeType(
+  input: ArrayBuffer | Uint8Array,
+): RecipeImageMimeType | null {
+  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
+  if (matchesPngSignature(bytes)) return 'image/png';
+  if (
+    matchesBytes(bytes, [0xff, 0xd8, 0xff])
+  ) {
+    return 'image/jpeg';
+  }
+  if (
+    matchesBytes(bytes, [0x52, 0x49, 0x46, 0x46])
+    && matchesBytes(bytes, [0x57, 0x45, 0x42, 0x50], 8)
+  ) {
+    return 'image/webp';
+  }
+  return null;
+}
+
+export function resolveRecipeImageMimeType(
+  fileName: string,
+  declaredType: string,
+  input: ArrayBuffer | Uint8Array,
+): RecipeImageMimeType | null {
+  return detectRecipeImageMimeType(input) ?? getRecipeImageMimeType(fileName, declaredType);
 }
 
 function readUint32(bytes: Uint8Array, offset: number): number {
