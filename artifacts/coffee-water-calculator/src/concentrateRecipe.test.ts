@@ -7,9 +7,8 @@ import {
 import { SALTS } from './waterData';
 
 describe('recipe concentrate stock conversion', () => {
-  it('preserves the target through strength and stock-volume scaling', () => {
+  it('uses the base recipe amount and scales it only by strength', () => {
     const targetPpm = 10;
-    const stockVolumeMl = 500;
     const strength = 500;
     const hydrationMass = 246.47;
     const anhydrousMass = 120.37;
@@ -17,18 +16,30 @@ describe('recipe concentrate stock conversion', () => {
     expect(
       computeRecipeStockSaltMassMg(
         targetPpm,
-        stockVolumeMl,
         strength,
         hydrationMass,
         anhydrousMass,
       ),
-    ).toBeCloseTo(10 * 0.5 * 500 * (hydrationMass / anhydrousMass), 8);
+    ).toBeCloseTo(10 * 500 * (hydrationMass / anhydrousMass), 8);
   });
 
   it('returns zero for unusable stock inputs', () => {
-    expect(computeRecipeStockSaltMassMg(10, 0, 500, 246.47, 120.37)).toBe(0);
-    expect(computeRecipeStockSaltMassMg(10, 500, 0, 246.47, 120.37)).toBe(0);
-    expect(computeRecipeStockSaltMassMg(0, 500, 500, 246.47, 120.37)).toBe(0);
+    expect(computeRecipeStockSaltMassMg(10, 0, 246.47, 120.37)).toBe(0);
+    expect(computeRecipeStockSaltMassMg(10, Number.NaN, 246.47, 120.37)).toBe(0);
+    expect(computeRecipeStockSaltMassMg(0, 500, 246.47, 120.37)).toBe(0);
+  });
+
+  it('uses the base recipe amount at ×1 regardless of bottle volume', () => {
+    const targetPpm = 10;
+    const hydrationMass = 246.47;
+    const anhydrousMass = 120.37;
+
+    expect(computeRecipeStockSaltMassMg(
+      targetPpm,
+      1,
+      hydrationMass,
+      anhydrousMass,
+    )).toBeCloseTo(targetPpm * (hydrationMass / anhydrousMass), 8);
   });
 });
 
@@ -88,6 +99,20 @@ describe('all-in-one recipe drop equivalents', () => {
 
     expect(measured.totalSaltMgPerDrop).toBeCloseTo(assumed.totalSaltMgPerDrop * 20 / 25, 8);
     expect(measured.dropsPerLiter).toBe(50);
+  });
+
+  it('scales stock salt mass and dose from the selected bottle volume', () => {
+    const result = computeRecipeConcentrateDropEquivalents({
+      saltTargets: { nahco3: 10 },
+      strength: 1,
+      stockVolumeMl: 100,
+      dropsPerMl: 20,
+      finalLiters: 1,
+    });
+
+    expect(result.perSalt[0]?.saltMgPerDrop).toBeCloseTo(10 / 100 / 20, 8);
+    expect(result.dropsPerLiter).toBe(2000);
+    expect(result.batchDrops).toBe(2000);
   });
 
   it('solves stock strength for a requested physical salt ppm per drop', () => {

@@ -338,19 +338,17 @@ function renderIonTooltipText(text: string): ReactNode {
 
 export function computeRecipeStockSaltMassMg(
   targetPpm: number,
-  stockVolumeMl: number,
   strength: number,
   hydrationMass: number,
   anhydrousMass: number,
 ): number {
   if (
     !Number.isFinite(targetPpm) || targetPpm <= 0
-    || !Number.isFinite(stockVolumeMl) || stockVolumeMl <= 0
     || !Number.isFinite(strength) || strength <= 0
   ) {
     return 0;
   }
-  return computeSaltMg(targetPpm, stockVolumeMl / 1000, hydrationMass, anhydrousMass) * strength;
+  return computeSaltMg(targetPpm, 1, hydrationMass, anhydrousMass) * strength;
 }
 
 export type RecipeConcentrateSaltDropContribution = {
@@ -378,12 +376,14 @@ export type RecipeConcentrateDropEquivalents = {
 export function computeRecipeConcentrateStrengthForPhysicalSaltPpm({
   saltTargets,
   formIdxBySaltId = {},
+  stockVolumeMl = 1000,
   dropsPerMl,
   finalLiters,
   physicalSaltPpmPerDrop,
 }: {
   saltTargets: Record<string, number>;
   formIdxBySaltId?: Record<string, number>;
+  stockVolumeMl?: number;
   dropsPerMl: number;
   finalLiters: number;
   physicalSaltPpmPerDrop: number;
@@ -391,6 +391,8 @@ export function computeRecipeConcentrateStrengthForPhysicalSaltPpm({
   if (
     !Number.isFinite(physicalSaltPpmPerDrop)
     || physicalSaltPpmPerDrop <= 0
+    || !Number.isFinite(stockVolumeMl)
+    || stockVolumeMl <= 0
     || !Number.isFinite(finalLiters)
     || finalLiters <= 0
   ) {
@@ -400,6 +402,7 @@ export function computeRecipeConcentrateStrengthForPhysicalSaltPpm({
     saltTargets,
     formIdxBySaltId,
     strength: 1,
+    stockVolumeMl,
     dropsPerMl,
     finalLiters,
   });
@@ -420,16 +423,19 @@ export function computeRecipeConcentrateDropEquivalents({
   saltTargets,
   formIdxBySaltId = {},
   strength,
+  stockVolumeMl = 1000,
   dropsPerMl,
   finalLiters,
 }: {
   saltTargets: Record<string, number>;
   formIdxBySaltId?: Record<string, number>;
   strength: number;
+  stockVolumeMl?: number;
   dropsPerMl: number;
   finalLiters: number;
 }): RecipeConcentrateDropEquivalents {
   const validInputs = Number.isFinite(strength) && strength > 0
+    && Number.isFinite(stockVolumeMl) && stockVolumeMl > 0
     && Number.isFinite(dropsPerMl) && dropsPerMl > 0
     && Number.isFinite(finalLiters) && finalLiters > 0;
   const activeSalts = SALTS.flatMap(salt => {
@@ -458,12 +464,12 @@ export function computeRecipeConcentrateDropEquivalents({
   }
 
   const perSalt = activeSalts.map(({ salt, target, form }) => {
-    const saltMgPerMl = target * strength * form.molarMass / salt.anhydrousMass / 1000;
+    const saltMgPerMl = target * strength * form.molarMass / salt.anhydrousMass / stockVolumeMl;
     const saltMgPerDrop = saltMgPerMl / dropsPerMl;
     const ionPpmPerDrop = Object.fromEntries(
       salt.ions.map(contribution => [
         contribution.ionId,
-        target * strength * contribution.fraction / 1000 / dropsPerMl / finalLiters,
+        target * strength * contribution.fraction / stockVolumeMl / dropsPerMl / finalLiters,
       ]),
     ) as Partial<Record<IonId, number>>;
     return {
@@ -478,7 +484,7 @@ export function computeRecipeConcentrateDropEquivalents({
   });
   const totalSaltMgPerMl = perSalt.reduce((total, row) => total + row.saltMgPerMl, 0);
   const totalSaltEquivalentMgPerMl = activeSalts.reduce(
-    (total, { target }) => total + target * strength / 1000,
+    (total, { target }) => total + target * strength / stockVolumeMl,
     0,
   );
   const totalSaltMgPerDrop = totalSaltMgPerMl / dropsPerMl;
@@ -496,8 +502,8 @@ export function computeRecipeConcentrateDropEquivalents({
     totalSaltEquivalentMgPerMl,
     totalSaltMgPerDrop,
     saltEquivalentPpmPerDrop: saltEquivalentMgPerDrop / finalLiters,
-    dropsPerLiter: 1000 / strength * dropsPerMl,
-    batchDrops: 1000 / strength * dropsPerMl * finalLiters,
+    dropsPerLiter: stockVolumeMl / strength * dropsPerMl,
+    batchDrops: stockVolumeMl / strength * dropsPerMl * finalLiters,
     ionPpmPerDrop,
     perSalt,
   };
@@ -4749,7 +4755,7 @@ function App() {
     if (concentrateOn && !splitMode) {
       // Single stock
       const stockL = num(concentrateMl) / 1000;
-      const dosePerLiter = concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
+      const dosePerLiter = concentrateStrength > 0 ? num(concentrateMl) / concentrateStrength : 0;
       const dosePerBatch = dosePerLiter * L;
       line('');
       divider();
@@ -4793,7 +4799,7 @@ function App() {
         const strength = splitStrengths[group.id] ?? 100;
         const volumeMl = splitMls[group.id] ?? '500';
         const stockL = num(volumeMl) / 1000;
-        const dosePerLiter = strength > 0 ? 1000 / strength : 0;
+        const dosePerLiter = strength > 0 ? num(volumeMl) / strength : 0;
         const dosePerBatch = dosePerLiter * L;
         line('');
         line(`  ── ${group.name} ${'─'.repeat(Math.max(0, 38 - group.name.length))}`);
@@ -8943,6 +8949,7 @@ function LegacyRecipeConcentrateBuilder({
   const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
 
   const strength = Math.max(0, Number(strengthInput) || 0);
+  const allInOneStockVolumeMl = Math.max(0, Number(stockVolumeInputs['all-in-one'] ?? '100') || 0);
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
   );
@@ -9019,6 +9026,7 @@ function LegacyRecipeConcentrateBuilder({
     saltTargets,
     formIdxBySaltId,
     strength: allInOneStrengthIsSafe && stockStrategy === 'all-in-one' ? strength : 0,
+    stockVolumeMl: allInOneStockVolumeMl,
     dropsPerMl: activeDropsPerMl,
     finalLiters,
   });
@@ -9027,7 +9035,7 @@ function LegacyRecipeConcentrateBuilder({
     : [];
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
-  const doseMlPerLiter = strength > 0 ? 1000 / strength : 0;
+  const doseMlPerLiter = strength > 0 ? allInOneStockVolumeMl / strength : 0;
   const doseMlPerReference = doseMlPerLiter * doseReferenceLiters;
   const stockStrategyDetails = stockStrategy === 'all-in-one'
     ? {
@@ -9652,7 +9660,6 @@ function LegacyRecipeConcentrateBuilder({
             const target = num(entry.target);
             const massMg = computeRecipeStockSaltMassMg(
               target,
-              stockVolumeMl,
               groupStrength,
               form.molarMass,
               salt.anhydrousMass,
@@ -9721,7 +9728,7 @@ function LegacyRecipeConcentrateBuilder({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span>Total <strong className="text-slate-300">{totalSaltMassG.toFixed(2)} g</strong></span>
+                <span>Total <strong className="text-slate-300">{recipeConcentrateMassLabel(totalSaltMassG)}</strong></span>
               </div>
 
               {warnings.length > 0 && (
@@ -9760,6 +9767,13 @@ type RecipeBottleGroup = {
 function recipeConcentrateNumber(value: number, digits = 2): string {
   if (!Number.isFinite(value)) return '—';
   return value.toFixed(digits).replace(/\.?0+$/, '');
+}
+
+function recipeConcentrateMassLabel(massG: number): string {
+  if (!Number.isFinite(massG)) return '—';
+  return massG >= 1
+    ? `${massG.toFixed(2)} g`
+    : `${(massG * 1000).toFixed(1)} mg`;
 }
 
 function RecipeConcentrateBottleCard({
@@ -9827,7 +9841,7 @@ function RecipeConcentrateBottleCard({
     },
   );
   const safeFinalLiters = Math.max(0, finalLiters);
-  const doseMl = strength > 0 ? 1000 / strength * safeFinalLiters : 0;
+  const doseMl = strength > 0 ? stockVolumeMl / strength * safeFinalLiters : 0;
   const doseDrops = doseMl * activeDropsPerMl;
   const stockRows = group.saltIds.map(saltId => {
     const salt = SALTS.find(item => item.id === saltId);
@@ -9838,7 +9852,6 @@ function RecipeConcentrateBottleCard({
     const target = num(entry.target);
     const massMg = computeRecipeStockSaltMassMg(
       target,
-      stockVolumeMl,
       strength,
       form.molarMass,
       salt.anhydrousMass,
@@ -9984,7 +9997,7 @@ function RecipeConcentrateBottleCard({
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className={`rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
-              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(totalSaltMassG, 2)} g</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateMassLabel(totalSaltMassG)}</div>
               <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
             </div>
             <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
@@ -10246,6 +10259,7 @@ function RecipeConcentrateBuilder({
     group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
   );
   const rawStrength = Math.max(0, Number(strengthInput) || 0);
+  const allInOneStockVolumeMl = Math.max(0, Number(stockVolumeInputs['all-in-one'] ?? '100') || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
@@ -10259,6 +10273,7 @@ function RecipeConcentrateBuilder({
     ? computeRecipeConcentrateStrengthForPhysicalSaltPpm({
       saltTargets,
       formIdxBySaltId,
+      stockVolumeMl: allInOneStockVolumeMl,
       dropsPerMl: activeDropsPerMl,
       finalLiters,
       physicalSaltPpmPerDrop: Number(physicalSaltPpmPerDropInput),
@@ -10302,6 +10317,7 @@ function RecipeConcentrateBuilder({
     saltTargets,
     formIdxBySaltId,
     strength: stockStrategy === 'all-in-one' ? strength : 0,
+    stockVolumeMl: allInOneStockVolumeMl,
     dropsPerMl: activeDropsPerMl,
     finalLiters,
   });
@@ -10311,7 +10327,7 @@ function RecipeConcentrateBuilder({
   const doseReferenceLabel = volumeUnit === 'gallons' ? '1 US gallon' : '1 L';
   const doseReferenceLiters = volumeUnit === 'gallons' ? US_GALLON_IN_LITERS : 1;
   const doseMlPerReference = stockStrategy === 'all-in-one' && strength > 0
-    ? 1000 / strength * doseReferenceLiters
+    ? allInOneStockVolumeMl / strength * doseReferenceLiters
     : 0;
   const allInOneStrengthIsSafe = stockStrategy !== 'all-in-one'
     || (maxSafeStrength != null && strength > 0 && strength <= maxSafeStrength);
@@ -13185,7 +13201,6 @@ function ConcentrateRecipeStepsModal({
       ...row,
       massMg: computeRecipeStockSaltMassMg(
         row.target,
-        group.volumeMl,
         group.strength,
         row.form.molarMass,
         row.salt.anhydrousMass,
@@ -13199,7 +13214,7 @@ function ConcentrateRecipeStepsModal({
     };
   };
   const doseForGroup = (group: ConcentratePlanSnapshot['groups'][number], liters: number) => {
-    const milliliters = group.strength > 0 ? 1000 / group.strength * liters : 0;
+    const milliliters = group.strength > 0 ? group.volumeMl / group.strength * liters : 0;
     return {
       milliliters,
       drops: milliliters * safeDropsPerMl,
@@ -15256,7 +15271,7 @@ function SplitStockCard({
 }) {
   const cls = STOCK_COLOR_CLASSES[group.color];
   const stockL = num(volumeMl) / 1000;
-  const dosePerLiter = strength > 0 ? 1000 / strength : 0;
+  const dosePerLiter = strength > 0 ? num(volumeMl) / strength : 0;
   const dosePerBatch = dosePerLiter * batchL;
 
   return (
