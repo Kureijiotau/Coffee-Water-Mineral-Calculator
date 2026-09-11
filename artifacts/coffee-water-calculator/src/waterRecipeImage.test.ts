@@ -212,7 +212,11 @@ describe('Watermancer recipe share card', () => {
       saltSteps: [],
       mixingNote: undefined,
     });
-    const long = buildRecipeShareCardSvg(shareCardFixture);
+    const long = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      qrDataUrl: 'data:image/png;base64,app-reference',
+      shareQrDataUrl: 'data:image/png;base64,share-link',
+    });
     expect(long.width).toBe(1200);
     expect(long.height).toBeGreaterThan(short.height);
     expect(long.svg).toContain('Magnesium chloride');

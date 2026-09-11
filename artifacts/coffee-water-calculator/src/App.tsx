@@ -1492,16 +1492,27 @@ function saltVisualStyle(salt: typeof SALTS[number]): CSSProperties {
 function SaltIonBadges({
   salt,
   className = '',
+  highContrast = false,
 }: {
   salt: typeof SALTS[number];
   className?: string;
+  highContrast?: boolean;
 }) {
   return (
     <span className={`inline-flex flex-wrap items-center gap-1 ${className}`} aria-label={`Ions in ${salt.name}`}>
       {salt.ions.map(({ ionId }, index) => (
         <span key={ionId} className="inline-flex items-center gap-1" title={ION_MAP[ionId].name}>
           {index > 0 && <span className="text-slate-600">+</span>}
-          <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle(ionId)}>
+          <span
+            className="font-semibold text-[color:var(--ion-fg)]"
+            style={{
+              ...ionVisualStyle(ionId),
+              ...(highContrast ? {
+                '--ion-fg': '#173f49',
+                '--ion-light-fg': '#173f49',
+              } : {}),
+            }}
+          >
             {ION_MAP[ionId].formula}
           </span>
         </span>
@@ -13508,36 +13519,37 @@ function ConcentrateRecipeStepsModal({
                           {details.rows.map((row, index) => {
                             const isCarbonate = saltMixGroup(row.salt) === 3;
                             return (
-                               <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
+                               <div key={row.salt.id} className={`relative overflow-hidden rounded-lg border px-3 py-2.5 ${
                                 isCarbonate
                                   ? 'border-amber-300/35 bg-amber-500/[0.08]'
                                   : 'border-white/[0.08] bg-slate-900/50'
                                }`} style={saltVisualStyle(row.salt)}>
-                                <div className="flex items-start justify-between gap-3">
+                                 <div className="pointer-events-none absolute inset-0 bg-slate-950/25" aria-hidden="true" />
+                                 <div className="relative z-10 flex items-start justify-between gap-3">
                                   <div className="flex min-w-0 items-start gap-2.5">
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                                       isCarbonate
-                                        ? 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/25'
-                                        : 'bg-violet-400/15 text-violet-100 ring-1 ring-violet-300/20'
+                                         ? 'bg-amber-100/65 text-slate-950 ring-1 ring-amber-950/20'
+                                         : 'bg-white/55 text-slate-950 ring-1 ring-slate-950/20'
                                     }`}>
                                       {index + 1}
                                     </span>
                                     <div className="min-w-0">
-                                       <div className="text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
-                                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                                        <div className="text-[11px] font-bold text-slate-950">{row.salt.name}</div>
+                                        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold text-slate-900/80">
                                          <span>{row.form.label} ·</span>
-                                         <SaltIonBadges salt={row.salt} />
+                                         <SaltIonBadges salt={row.salt} highContrast />
                                        </div>
                                       {isCarbonate && (
-                                        <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+                                         <div className="mt-1 inline-flex rounded bg-amber-100/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-950">
                                           Add last — reduce precipitation risk
                                         </div>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="shrink-0 rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 px-2 py-1 text-right">
-                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Weigh</div>
-                                    <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-fuchsia-100">{formatStockSaltMass(row.massMg)}</div>
+                                   <div className="shrink-0 rounded-md border border-slate-950/20 bg-slate-950/35 px-2 py-1 text-right shadow-sm">
+                                     <div className="text-[9px] font-bold uppercase tracking-wider text-white/85">Weigh</div>
+                                     <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-white">{formatStockSaltMass(row.massMg)}</div>
                                   </div>
                                 </div>
                               </div>
