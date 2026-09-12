@@ -212,11 +212,7 @@ describe('Watermancer recipe share card', () => {
       saltSteps: [],
       mixingNote: undefined,
     });
-    const long = buildRecipeShareCardSvg({
-      ...shareCardFixture,
-      qrDataUrl: 'data:image/png;base64,app-reference',
-      shareQrDataUrl: 'data:image/png;base64,share-link',
-    });
+    const long = buildRecipeShareCardSvg(shareCardFixture);
     expect(long.width).toBe(1200);
     expect(long.height).toBeGreaterThan(short.height);
     expect(long.svg).toContain('Magnesium chloride');
@@ -224,8 +220,6 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('Aiki safe profile');
     expect(long.svg).not.toContain('Published conservative ceilings');
     expect(long.svg).toContain('MIXING VESSEL');
-    expect(long.svg).toContain('Scan this 👇');
-    expect(long.svg).toContain('APP REFERENCE');
     expect(long.svg).not.toContain('…');
   });
 

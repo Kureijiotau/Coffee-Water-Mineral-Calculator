@@ -39,7 +39,6 @@
 - [TDS meter versus ion total](tds-meter-vs-ion-total.md) — modeled summed ions and conductivity-meter ppm are different measurements
 - [Visual polish direction](visual-polish-direction.md) — keep the current palette but make the instrument-console treatment more dramatic
 - [Recipe image export](recipe-image-export.md) — use html2canvas’s onclone hook instead of manually mounting an off-screen modal clone
-- [html2canvas color compatibility](html2canvas-color-compatibility.md) — normalize Chromium’s computed color(srgb …) values before html2canvas export
 - [Taste starting recipe boundary](taste-starting-recipe-boundary.md) — coffee preferences generate a tunable Brewer recipe starting point, not bottled-water or roaster-specific chemistry
 - [Taste profile mini triangle](taste-profile-mini-triangle.md) — Brewer Taste Profile can drive the shared flavor recipe; Alchemist and Watermancer remain static
 - [Watermancer dose overrides](watermancer-dose-overrides.md) — unified Dose controls hold edited salt amounts fixed while Watermancer optimizes the remaining selected salts

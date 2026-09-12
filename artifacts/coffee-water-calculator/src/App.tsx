@@ -1492,27 +1492,16 @@ function saltVisualStyle(salt: typeof SALTS[number]): CSSProperties {
 function SaltIonBadges({
   salt,
   className = '',
-  highContrast = false,
 }: {
   salt: typeof SALTS[number];
   className?: string;
-  highContrast?: boolean;
 }) {
   return (
     <span className={`inline-flex flex-wrap items-center gap-1 ${className}`} aria-label={`Ions in ${salt.name}`}>
       {salt.ions.map(({ ionId }, index) => (
         <span key={ionId} className="inline-flex items-center gap-1" title={ION_MAP[ionId].name}>
           {index > 0 && <span className="text-slate-600">+</span>}
-          <span
-            className="font-semibold text-[color:var(--ion-fg)]"
-            style={{
-              ...ionVisualStyle(ionId),
-              ...(highContrast ? {
-                '--ion-fg': '#173f49',
-                '--ion-light-fg': '#173f49',
-              } : {}),
-            }}
-          >
+          <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle(ionId)}>
             {ION_MAP[ionId].formula}
           </span>
         </span>
@@ -10169,7 +10158,7 @@ function RecipeConcentrateBottleCard({
         </section>
       </div>
 
-      <div className="mt-3 grid gap-2 sm:grid-cols-2" data-concentrate-preview-salt-list>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {stockRows.map(row => (
           <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={saltVisualStyle(row.salt)}>
             <div className="flex items-start justify-between gap-3">
@@ -10193,7 +10182,7 @@ function RecipeConcentrateBottleCard({
       </div>
 
       {warnings.length > 0 && (
-        <div className={`recipe-concentrate-warning mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
+        <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${
           warnings.some(warning => warning.severity === 'error')
             ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200'
             : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'
@@ -10572,7 +10561,7 @@ function RecipeConcentrateBuilder({
             </div>
           </div>
         </div>
-        <div className="space-y-3 p-3 sm:p-4" data-concentrate-preview-cards>
+        <div className="space-y-3 p-3 sm:p-4">
           {stockGroups.length > 0 ? stockGroups.map(group => (
             <RecipeConcentrateBottleCard
               key={group.id}
@@ -13281,11 +13270,11 @@ function ConcentrateRecipeStepsModal({
     .filter(row => row.liters > 0)
     .map(row => ({ ...row, groups: planGroups.map(group => ({ group, dose: doseForGroup(group, row.liters) })) }));
   const handleSaveJpg = async () => {
-    const source = document.querySelector<HTMLElement>('[data-concentrate-preview-cards]') ?? exportCardRef.current;
+    const source = exportCardRef.current;
     if (!source || isSavingJpg) return;
     setIsSavingJpg(true);
     setSaveJpgStatus('idle');
-    let clone: HTMLElement | null = null;
+    let clone: HTMLDivElement | null = null;
     let imageUrl: string | null = null;
     const downloadUrl = (url: string, filename: string) => {
       const link = document.createElement('a');
@@ -13297,41 +13286,22 @@ function ConcentrateRecipeStepsModal({
       link.remove();
     };
     try {
-      const normalizeCanvasCssValue = (value: string) => value.replace(
-        /color\(\s*srgb\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)(?:\s*\/\s*([0-9.]+))?\s*\)/gi,
-        (_match, red, green, blue, alpha) => {
-          const channel = (component: string) => Math.round(Math.min(1, Math.max(0, Number(component))) * 255);
-          return `rgba(${channel(red)}, ${channel(green)}, ${channel(blue)}, ${alpha ?? '1'})`;
-        },
-      );
-      clone = source.cloneNode(true) as HTMLElement;
-      document.body.appendChild(clone);
-      const sourceNodes = [source, ...Array.from(source.querySelectorAll('*'))];
-      const cloneNodes = [clone, ...Array.from(clone.querySelectorAll('*'))];
-      sourceNodes.forEach((sourceNode, index) => {
-        const cloneNode = cloneNodes[index];
-        if (!(cloneNode instanceof HTMLElement)) return;
+      clone = source.cloneNode(true) as HTMLDivElement;
+      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
         const sourceStyle = window.getComputedStyle(sourceNode);
-        for (let styleIndex = 0; styleIndex < sourceStyle.length; styleIndex += 1) {
-          const property = sourceStyle.item(styleIndex);
-          if (property) {
-            cloneNode.style.setProperty(property, normalizeCanvasCssValue(sourceStyle.getPropertyValue(property)));
-          }
+        const targetStyle = (targetNode as HTMLElement).style;
+        for (let index = 0; index < sourceStyle.length; index += 1) {
+          const property = sourceStyle.item(index);
+          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
         }
-      });
-      const sourceControls = source.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
-      const cloneControls = clone.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
-      sourceControls.forEach((sourceControl, index) => {
-        const cloneControl = cloneControls[index];
-        if (!cloneControl) return;
-        if (cloneControl instanceof HTMLInputElement || cloneControl instanceof HTMLTextAreaElement) {
-          cloneControl.value = sourceControl.value;
-        }
-        if (cloneControl instanceof HTMLInputElement && sourceControl instanceof HTMLInputElement) {
-          cloneControl.checked = sourceControl.checked;
-        }
-      });
-      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
+        Array.from(sourceNode.children).forEach((child, index) => {
+          const targetChild = targetNode.children[index];
+          if (targetChild) copyComputedStyles(child, targetChild);
+        });
+      };
+
+      document.body.appendChild(clone);
+      copyComputedStyles(source, clone);
       clone.style.position = 'fixed';
       clone.style.left = '-100000px';
       clone.style.top = '0';
@@ -13346,12 +13316,19 @@ function ConcentrateRecipeStepsModal({
         element.style.overflow = 'visible';
         element.style.flex = 'none';
       });
+      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
       clone.querySelectorAll<HTMLElement>('*').forEach(element => {
+        const computed = window.getComputedStyle(element);
+        const fontSize = parseFloat(computed.fontSize);
         element.style.overflow = 'visible';
         element.style.textOverflow = 'clip';
+        if (Number.isFinite(fontSize) && fontSize > 0) {
+          element.style.lineHeight = `${Math.ceil(fontSize * 1.25)}px`;
+        }
       });
-      const width = Math.ceil(Math.max(clone.getBoundingClientRect().width, clone.scrollWidth));
-      const height = Math.ceil(Math.max(clone.getBoundingClientRect().height, clone.scrollHeight));
+
+      const width = Math.ceil(clone.getBoundingClientRect().width);
+      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(clone, {
         backgroundColor: '#0f172a',
@@ -13377,8 +13354,7 @@ function ConcentrateRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(downloadedImageUrl), 1000);
       setSaveJpgStatus('saved');
       window.setTimeout(() => setSaveJpgStatus('idle'), 2200);
-    } catch (error) {
-      console.error('[concentrate] JPG export failed', error);
+    } catch {
       setSaveJpgStatus('error');
     } finally {
       clone?.remove();
@@ -13531,37 +13507,36 @@ function ConcentrateRecipeStepsModal({
                           {details.rows.map((row, index) => {
                             const isCarbonate = saltMixGroup(row.salt) === 3;
                             return (
-                               <div key={row.salt.id} className={`relative overflow-hidden rounded-lg border px-3 py-2.5 ${
+                               <div key={row.salt.id} className={`rounded-lg border px-3 py-2.5 ${
                                 isCarbonate
                                   ? 'border-amber-300/35 bg-amber-500/[0.08]'
                                   : 'border-white/[0.08] bg-slate-900/50'
                                }`} style={saltVisualStyle(row.salt)}>
-                                 <div className="pointer-events-none absolute inset-0 bg-slate-950/25" aria-hidden="true" />
-                                 <div className="relative z-10 flex items-start justify-between gap-3">
+                                <div className="flex items-start justify-between gap-3">
                                   <div className="flex min-w-0 items-start gap-2.5">
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                                       isCarbonate
-                                         ? 'bg-amber-100/65 text-slate-950 ring-1 ring-amber-950/20'
-                                         : 'bg-white/55 text-slate-950 ring-1 ring-slate-950/20'
+                                        ? 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/25'
+                                        : 'bg-violet-400/15 text-violet-100 ring-1 ring-violet-300/20'
                                     }`}>
                                       {index + 1}
                                     </span>
                                     <div className="min-w-0">
-                                        <div className="text-[11px] font-bold text-slate-950">{row.salt.name}</div>
-                                        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] font-semibold text-slate-900/80">
+                                       <div className="text-[11px] font-semibold text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
+                                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
                                          <span>{row.form.label} ·</span>
-                                         <SaltIonBadges salt={row.salt} highContrast />
+                                         <SaltIonBadges salt={row.salt} />
                                        </div>
                                       {isCarbonate && (
-                                         <div className="mt-1 inline-flex rounded bg-amber-100/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-slate-950">
+                                        <div className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
                                           Add last — reduce precipitation risk
                                         </div>
                                       )}
                                     </div>
                                   </div>
-                                   <div className="shrink-0 rounded-md border border-slate-950/20 bg-slate-950/35 px-2 py-1 text-right shadow-sm">
-                                     <div className="text-[9px] font-bold uppercase tracking-wider text-white/85">Weigh</div>
-                                     <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-white">{formatStockSaltMass(row.massMg)}</div>
+                                  <div className="shrink-0 rounded-md border border-fuchsia-300/25 bg-fuchsia-400/10 px-2 py-1 text-right">
+                                    <div className="text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Weigh</div>
+                                    <div className="mt-0.5 font-mono text-sm font-bold tabular-nums text-fuchsia-100">{formatStockSaltMass(row.massMg)}</div>
                                   </div>
                                 </div>
                               </div>
