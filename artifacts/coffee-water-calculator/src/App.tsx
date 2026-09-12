@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -21,6 +21,7 @@ import {
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
+import LabelScanner from './LabelScanner';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import {
@@ -2513,6 +2514,13 @@ function App() {
       return [...prev, entry];
     });
     return entry;
+  };
+  const handleScannedMineralWater = (ions: Partial<Record<IonId, string>>) => {
+    addMineralWater({
+      name: 'Scanned mineral water',
+      ions,
+      volumeMl: '0',
+    });
   };
   const addReferenceWater = (water: typeof EMPIRICAL_WATERS[number]) => {
     const ions: Partial<Record<IonId, string>> = {};
@@ -6556,6 +6564,23 @@ function App() {
                      </div>
                    </div>
                  )}
+               </div>
+             )}
+
+             {showWatermancer && (
+               <div className="rounded-xl border border-indigo-400/25 bg-indigo-950/20 p-3 sm:p-4">
+                 <div className="flex flex-wrap items-start justify-between gap-3">
+                   <div>
+                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Scan a mineral-water label</p>
+                     <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                       Gemini will extract the labeled ions for review before adding a new water source.
+                     </p>
+                   </div>
+                   <ScanLine className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" aria-hidden="true" />
+                 </div>
+                 <div className="mt-3">
+                   <LabelScanner onExtracted={handleScannedMineralWater} />
+                 </div>
                </div>
              )}
 
