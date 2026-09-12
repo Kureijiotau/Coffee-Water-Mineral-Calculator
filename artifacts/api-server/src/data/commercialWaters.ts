@@ -5,6 +5,8 @@ import type { SharedWater } from "./sharedWaters";
  * Keep this list separate from the older community/imported fallback entries.
  */
 export const COMMERCIAL_WATERS: SharedWater[] = [
+  // Source: user-provided Berain bottle label image, scanned and cross-checked with Gemini.
+  { id: 79, name: "Berain", ions: { sodium: 17, potassium: 5, magnesium: 3, calcium: 22, chloride: 35, sulfate: 9, bicarbonate: 50 }, metadata: { tds: 155, ph: 8 }, shared: "yes", createdAt: "2026-09-12T00:00:00.000Z" },
   // Source: Sources ALMA, https://www.sources-alma.com/en/our-brands/mineral-water/brand-st-yorre/
   { id: 75, name: "St. Yorre", ions: { sodium: 1708, potassium: 110, magnesium: 11, calcium: 90, chloride: 322, sulfate: 174, bicarbonate: 4368 }, metadata: { tds: 4774 }, shared: "yes", createdAt: "2026-09-07T00:00:00.000Z" },
   // Source: Sources ALMA, https://www.sources-alma.com/en/our-brands/mineral-water/vichy-celestins/
