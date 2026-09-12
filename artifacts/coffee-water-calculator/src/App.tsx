@@ -13325,6 +13325,8 @@ function ConcentrateRecipeStepsModal({
               element.style.maxHeight = 'none';
               element.style.overflow = 'visible';
               element.style.flex = 'none';
+              element.scrollTop = 0;
+              element.scrollLeft = 0;
             });
           clonedDocument
             .querySelectorAll<HTMLElement>('[data-html2canvas-ignore]')
@@ -13443,7 +13445,7 @@ function ConcentrateRecipeStepsModal({
                     {planGroups.map(group => (
                       <div key={group.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.08] bg-slate-900/50 px-3 py-2">
                         <div className="min-w-0">
-                          <div className="truncate text-[11px] font-semibold text-slate-200">{group.name}</div>
+                          <div className="whitespace-nowrap text-[11px] font-semibold leading-tight text-slate-200">{group.name}</div>
                           <div className="mt-0.5 text-[9px] text-slate-500">
                             stock strength ×{recipeConcentrateNumber(group.strength, 2)}
                           </div>
@@ -13511,9 +13513,9 @@ function ConcentrateRecipeStepsModal({
                                    }`}>
                                      {index + 1}
                                    </span>
-                                    <div className="relative -top-4 min-w-0">
-                                      <div className="font-semibold text-[color:var(--salt-primary)] mt-[17px] mb-[-3px] pt-[0px] pb-[0px] pl-[0px] pr-[0px] ml-[0px] mr-[0px] text-[12px]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
-                                      <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
+                                     <div className="relative -top-2 min-w-0">
+                                       <div className="text-[11px] font-semibold leading-tight text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
+                                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-tight text-slate-500">
                                         <span>{row.form.label} ·</span>
                                         <SaltIonBadges salt={row.salt} />
                                       </div>
