@@ -22,7 +22,8 @@ interface Props {
 }
 
 export default function LabelScanner({ onExtracted, disabled }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraFileRef = useRef<HTMLInputElement>(null);
+  const savedImageFileRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<'idle' | 'scanning' | 'done' | 'error'>('idle');
   const [results, setResults] = useState<ScannedValue[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -163,22 +164,39 @@ export default function LabelScanner({ onExtracted, disabled }: Props) {
   }
 
   return (
-    <div>
+    <div className="flex flex-wrap gap-2">
       <input
-        ref={fileRef}
+        ref={cameraFileRef}
         type="file"
         accept="image/*"
         capture="environment"
         onChange={handleFile}
         className="hidden"
       />
+      <input
+        ref={savedImageFileRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFile}
+        className="hidden"
+      />
       <button
-        onClick={() => fileRef.current?.click()}
+        type="button"
+        onClick={() => cameraFileRef.current?.click()}
         disabled={disabled}
         className="flex items-center gap-1.5 text-xs bg-slate-700/40 hover:bg-slate-600/50 disabled:opacity-40 text-slate-300 hover:text-slate-100 rounded-lg px-3 py-1.5 transition border border-slate-600/40"
       >
+        <Camera className="w-3.5 h-3.5" />
+        Take photo
+      </button>
+      <button
+        type="button"
+        onClick={() => savedImageFileRef.current?.click()}
+        disabled={disabled}
+        className="flex items-center gap-1.5 text-xs bg-indigo-500/10 hover:bg-indigo-500/20 disabled:opacity-40 text-indigo-200 hover:text-indigo-100 rounded-lg px-3 py-1.5 transition border border-indigo-400/30"
+      >
         <ScanLine className="w-3.5 h-3.5" />
-        Scan label
+        Choose saved image
       </button>
     </div>
   );
