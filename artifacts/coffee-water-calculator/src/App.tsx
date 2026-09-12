@@ -13506,7 +13506,7 @@ function ConcentrateRecipeStepsModal({
                                }`} style={concentrateRecipeSaltVisualStyle(row.salt)}>
                                 <div className="flex items-start justify-between gap-3">
                                  <div className="flex min-w-0 items-start gap-2.5">
-                                   <span className={`relative -top-[7px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                                   <span className={`relative top-[7px] flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                                      isCarbonate
                                        ? 'bg-amber-400/20 text-amber-100 ring-1 ring-amber-300/25'
                                        : 'bg-violet-400/15 text-violet-100 ring-1 ring-violet-300/20'
