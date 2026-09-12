@@ -9969,23 +9969,23 @@ function RecipeConcentrateBottleCard({
 
   return (
     <article className={`recipe-concentrate-bottle aio-bottle-card rounded-2xl border p-3 sm:p-4 ${colors.border} ${colors.soft}`}>
-      <div className="recipe-concentrate-bottle__header mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className={`recipe-concentrate-bottle__icon flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${colors.border} ${colors.soft} ${colors.accent}`}>
             <Beaker className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <div className={`recipe-concentrate-bottle__title text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>{cardName}</div>
-            <div className="recipe-concentrate-bottle__helper mt-0.5 text-[10px] text-slate-500">{helper}</div>
+            <div className={`text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>{cardName}</div>
+            <div className="mt-0.5 text-[10px] text-slate-500">{helper}</div>
           </div>
         </div>
-        <span className={`recipe-concentrate-bottle__badge rounded-full border px-2 py-1 text-[9px] font-semibold ${colors.badge}`}>one bottle</span>
+        <span className={`rounded-full border px-2 py-1 text-[9px] font-semibold ${colors.badge}`}>one bottle</span>
       </div>
 
-      <div className="recipe-concentrate-bottle__main grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="recipe-concentrate-bottle__controls">
+      <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr]">
+        <section>
           <div className="grid grid-cols-2 gap-2 sm:gap-3">
-            <label className="recipe-concentrate-control block">
+            <label className="block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Stock strength</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <StableNumberInput
@@ -10001,7 +10001,7 @@ function RecipeConcentrateBottleCard({
               </div>
               <div className="mt-1 text-[9px] text-slate-600">recipe target multiplier</div>
             </label>
-            <label className="recipe-concentrate-control block">
+            <label className="block">
               <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500">Bottle volume</div>
               <div className="mt-1 flex items-baseline gap-2">
                 <StableNumberInput
@@ -10044,12 +10044,12 @@ function RecipeConcentrateBottleCard({
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className={`recipe-concentrate-metric rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
+            <div className={`rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
               <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateMassLabel(totalSaltMassG)}</div>
               <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
             </div>
-            <div className="recipe-concentrate-metric rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+            <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
               <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{recipeConcentrateNumber(waterToAddG, 1)} g</div>
               <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
@@ -10103,7 +10103,7 @@ function RecipeConcentrateBottleCard({
           </div>
         </section>
 
-        <section className="recipe-concentrate-dose recipe-concentrate-bottle__dose rounded-xl border p-4">
+        <section className="recipe-concentrate-dose rounded-xl border p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className={`flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] ${colors.accent}`}>
@@ -10169,7 +10169,7 @@ function RecipeConcentrateBottleCard({
         </section>
       </div>
 
-      <div className="recipe-concentrate-salt-list mt-3 grid gap-2 sm:grid-cols-2">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2" data-concentrate-preview-salt-list>
         {stockRows.map(row => (
           <div key={row.salt.id} className="recipe-concentrate-salt-row rounded-lg px-3 py-2.5" style={saltVisualStyle(row.salt)}>
             <div className="flex items-start justify-between gap-3">
@@ -13285,7 +13285,7 @@ function ConcentrateRecipeStepsModal({
     if (!source || isSavingJpg) return;
     setIsSavingJpg(true);
     setSaveJpgStatus('idle');
-    let clone: HTMLDivElement | null = null;
+    let clone: HTMLElement | null = null;
     let imageUrl: string | null = null;
     const downloadUrl = (url: string, filename: string) => {
       const link = document.createElement('a');
@@ -13297,22 +13297,41 @@ function ConcentrateRecipeStepsModal({
       link.remove();
     };
     try {
-      clone = source.cloneNode(true) as HTMLDivElement;
-      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
-        const sourceStyle = window.getComputedStyle(sourceNode);
-        const targetStyle = (targetNode as HTMLElement).style;
-        for (let index = 0; index < sourceStyle.length; index += 1) {
-          const property = sourceStyle.item(index);
-          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
-        }
-        Array.from(sourceNode.children).forEach((child, index) => {
-          const targetChild = targetNode.children[index];
-          if (targetChild) copyComputedStyles(child, targetChild);
-        });
-      };
-
+      const normalizeCanvasCssValue = (value: string) => value.replace(
+        /color\(\s*srgb\s+([0-9.]+)\s+([0-9.]+)\s+([0-9.]+)(?:\s*\/\s*([0-9.]+))?\s*\)/gi,
+        (_match, red, green, blue, alpha) => {
+          const channel = (component: string) => Math.round(Math.min(1, Math.max(0, Number(component))) * 255);
+          return `rgba(${channel(red)}, ${channel(green)}, ${channel(blue)}, ${alpha ?? '1'})`;
+        },
+      );
+      clone = source.cloneNode(true) as HTMLElement;
       document.body.appendChild(clone);
-      copyComputedStyles(source, clone);
+      const sourceNodes = [source, ...Array.from(source.querySelectorAll('*'))];
+      const cloneNodes = [clone, ...Array.from(clone.querySelectorAll('*'))];
+      sourceNodes.forEach((sourceNode, index) => {
+        const cloneNode = cloneNodes[index];
+        if (!(cloneNode instanceof HTMLElement)) return;
+        const sourceStyle = window.getComputedStyle(sourceNode);
+        for (let styleIndex = 0; styleIndex < sourceStyle.length; styleIndex += 1) {
+          const property = sourceStyle.item(styleIndex);
+          if (property) {
+            cloneNode.style.setProperty(property, normalizeCanvasCssValue(sourceStyle.getPropertyValue(property)));
+          }
+        }
+      });
+      const sourceControls = source.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+      const cloneControls = clone.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select');
+      sourceControls.forEach((sourceControl, index) => {
+        const cloneControl = cloneControls[index];
+        if (!cloneControl) return;
+        if (cloneControl instanceof HTMLInputElement || cloneControl instanceof HTMLTextAreaElement) {
+          cloneControl.value = sourceControl.value;
+        }
+        if (cloneControl instanceof HTMLInputElement && sourceControl instanceof HTMLInputElement) {
+          cloneControl.checked = sourceControl.checked;
+        }
+      });
+      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
       clone.style.position = 'fixed';
       clone.style.left = '-100000px';
       clone.style.top = '0';
@@ -13327,19 +13346,12 @@ function ConcentrateRecipeStepsModal({
         element.style.overflow = 'visible';
         element.style.flex = 'none';
       });
-      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
       clone.querySelectorAll<HTMLElement>('*').forEach(element => {
-        const computed = window.getComputedStyle(element);
-        const fontSize = parseFloat(computed.fontSize);
         element.style.overflow = 'visible';
         element.style.textOverflow = 'clip';
-        if (Number.isFinite(fontSize) && fontSize > 0) {
-          element.style.lineHeight = `${Math.ceil(fontSize * 1.25)}px`;
-        }
       });
-
-      const width = Math.ceil(clone.getBoundingClientRect().width);
-      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
+      const width = Math.ceil(Math.max(clone.getBoundingClientRect().width, clone.scrollWidth));
+      const height = Math.ceil(Math.max(clone.getBoundingClientRect().height, clone.scrollHeight));
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(clone, {
         backgroundColor: '#0f172a',
@@ -13365,7 +13377,8 @@ function ConcentrateRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(downloadedImageUrl), 1000);
       setSaveJpgStatus('saved');
       window.setTimeout(() => setSaveJpgStatus('idle'), 2200);
-    } catch {
+    } catch (error) {
+      console.error('[concentrate] JPG export failed', error);
       setSaveJpgStatus('error');
     } finally {
       clone?.remove();
