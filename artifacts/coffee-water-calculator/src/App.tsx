@@ -1489,6 +1489,14 @@ function saltVisualStyle(salt: typeof SALTS[number]): CSSProperties {
   };
 }
 
+function concentrateRecipeSaltVisualStyle(salt: typeof SALTS[number]): CSSProperties {
+  const color = getSaltColorTokens(salt);
+  return {
+    ...saltVisualStyle(salt),
+    boxShadow: `inset 1px 0 0 ${color.primary}, inset -1px 0 0 ${color.secondary}`,
+  };
+}
+
 function SaltIonBadges({
   salt,
   className = '',
@@ -13493,8 +13501,8 @@ function ConcentrateRecipeStepsModal({
                                 isCarbonate
                                   ? 'border-amber-300/35 bg-amber-500/[0.08]'
                                   : 'border-white/[0.08] bg-slate-900/50'
-                               }`} style={saltVisualStyle(row.salt)}>
-                                <div className="flex items-start justify-between gap-3">
+                                }`} style={concentrateRecipeSaltVisualStyle(row.salt)}>
+                                 <div className="relative -top-2 flex items-start justify-between gap-3">
                                   <div className="flex min-w-0 items-start gap-2.5">
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                                       isCarbonate
