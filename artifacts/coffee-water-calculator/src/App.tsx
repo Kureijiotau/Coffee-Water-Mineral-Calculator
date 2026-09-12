@@ -13274,7 +13274,6 @@ function ConcentrateRecipeStepsModal({
     if (!source || isSavingJpg) return;
     setIsSavingJpg(true);
     setSaveJpgStatus('idle');
-    let clone: HTMLDivElement | null = null;
     let imageUrl: string | null = null;
     const downloadUrl = (url: string, filename: string) => {
       const link = document.createElement('a');
@@ -13286,59 +13285,43 @@ function ConcentrateRecipeStepsModal({
       link.remove();
     };
     try {
-      clone = source.cloneNode(true) as HTMLDivElement;
-      const copyComputedStyles = (sourceNode: Element, targetNode: Element) => {
-        const sourceStyle = window.getComputedStyle(sourceNode);
-        const targetStyle = (targetNode as HTMLElement).style;
-        for (let index = 0; index < sourceStyle.length; index += 1) {
-          const property = sourceStyle.item(index);
-          if (property) targetStyle.setProperty(property, sourceStyle.getPropertyValue(property));
-        }
-        Array.from(sourceNode.children).forEach((child, index) => {
-          const targetChild = targetNode.children[index];
-          if (targetChild) copyComputedStyles(child, targetChild);
-        });
-      };
-
-      document.body.appendChild(clone);
-      copyComputedStyles(source, clone);
-      clone.style.position = 'fixed';
-      clone.style.left = '-100000px';
-      clone.style.top = '0';
-      clone.style.width = `${Math.ceil(source.getBoundingClientRect().width)}px`;
-      clone.style.maxHeight = 'none';
-      clone.style.height = 'auto';
-      clone.style.overflow = 'visible';
-      clone.style.display = 'block';
-      clone.querySelectorAll<HTMLElement>('[data-concentrate-export-content]').forEach(element => {
-        element.style.height = 'auto';
-        element.style.maxHeight = 'none';
-        element.style.overflow = 'visible';
-        element.style.flex = 'none';
-      });
-      clone.querySelectorAll<HTMLElement>('[data-html2canvas-ignore]').forEach(element => element.remove());
-      clone.querySelectorAll<HTMLElement>('*').forEach(element => {
-        const computed = window.getComputedStyle(element);
-        const fontSize = parseFloat(computed.fontSize);
-        element.style.overflow = 'visible';
-        element.style.textOverflow = 'clip';
-        if (Number.isFinite(fontSize) && fontSize > 0) {
-          element.style.lineHeight = `${Math.ceil(fontSize * 1.25)}px`;
-        }
-      });
-
-      const width = Math.ceil(clone.getBoundingClientRect().width);
-      const height = Math.ceil(Math.max(clone.scrollHeight, clone.getBoundingClientRect().height));
+      const sourceContent = source.querySelector<HTMLElement>('[data-concentrate-export-content]');
+      const sourceHeader = source.firstElementChild as HTMLElement | null;
+      const width = Math.ceil(source.getBoundingClientRect().width);
+      const height = Math.ceil(
+        (sourceHeader?.getBoundingClientRect().height ?? 0)
+        + (sourceContent?.scrollHeight ?? 0)
+        + 2,
+      );
       const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(clone, {
+      const canvas = await html2canvas(source, {
         backgroundColor: '#0f172a',
         width,
         height,
         scale: 2,
         useCORS: true,
         logging: false,
-        windowWidth: width,
-        windowHeight: height,
+        windowWidth: window.innerWidth,
+        windowHeight: Math.max(window.innerHeight, height),
+        onclone: clonedDocument => {
+          const clonedCard = clonedDocument.querySelector<HTMLElement>('[data-concentrate-export-card]');
+          if (clonedCard) {
+            clonedCard.style.maxHeight = 'none';
+            clonedCard.style.height = `${height}px`;
+            clonedCard.style.overflow = 'hidden';
+          }
+          clonedDocument
+            .querySelectorAll<HTMLElement>('[data-concentrate-export-content]')
+            .forEach(element => {
+              element.style.height = 'auto';
+              element.style.maxHeight = 'none';
+              element.style.overflow = 'visible';
+              element.style.flex = 'none';
+            });
+          clonedDocument
+            .querySelectorAll<HTMLElement>('[data-html2canvas-ignore]')
+            .forEach(element => element.remove());
+        },
       });
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
       if (!jpg) throw new Error('Concentrate guide JPEG could not be exported.');
@@ -13357,7 +13340,6 @@ function ConcentrateRecipeStepsModal({
     } catch {
       setSaveJpgStatus('error');
     } finally {
-      clone?.remove();
       if (imageUrl) URL.revokeObjectURL(imageUrl);
       setIsSavingJpg(false);
     }
