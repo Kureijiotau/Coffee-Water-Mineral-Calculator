@@ -13513,7 +13513,7 @@ function ConcentrateRecipeStepsModal({
                                    }`}>
                                      {index + 1}
                                    </span>
-                                     <div className="relative -top-[11px] min-w-0">
+                                     <div className="relative -top-[16px] min-w-0">
                                        <div className="font-semibold text-[color:var(--salt-primary)] mb-[1px] text-[12px] mt-[10px]" style={{ '--salt-primary': getSaltColorTokens(row.salt).primary } as CSSProperties}>{row.salt.name}</div>
                                        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] leading-tight text-slate-500">
                                         <span>{row.form.label} ·</span>
