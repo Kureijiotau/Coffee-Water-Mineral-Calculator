@@ -9866,6 +9866,8 @@ function RecipeConcentrateBottleCard({
   straightDropsPerMl,
   measuredDropsPerMlInput,
   physicalSaltPpmPerDropInput,
+  saltMassScale,
+  saltMassInputs,
   onStrengthChange,
   onVolumeChange,
   onFinalVolumeChange,
@@ -9873,6 +9875,7 @@ function RecipeConcentrateBottleCard({
   onDropperStyleChange,
   onMeasuredDropsPerMlChange,
   onPhysicalSaltPpmPerDropChange,
+  onSaltMassChange,
 }: {
   group: RecipeBottleGroup;
   handoff: ConcentrateRecipeHandoff;
@@ -9885,6 +9888,8 @@ function RecipeConcentrateBottleCard({
   straightDropsPerMl: number;
   measuredDropsPerMlInput: string;
   physicalSaltPpmPerDropInput: string | null;
+  saltMassScale: number;
+  saltMassInputs: Record<string, string>;
   onStrengthChange: (value: string) => void;
   onVolumeChange: (value: string) => void;
   onFinalVolumeChange: (value: string) => void;
@@ -9892,6 +9897,7 @@ function RecipeConcentrateBottleCard({
   onDropperStyleChange: (style: LotusDropperStyle) => void;
   onMeasuredDropsPerMlChange: (value: string) => void;
   onPhysicalSaltPpmPerDropChange?: (value: string) => void;
+  onSaltMassChange?: (saltId: string, value: string, currentMassMg: number) => void;
 }) {
   const saltTargets = Object.fromEntries(
     group.saltIds.map(saltId => [saltId, num(handoff.salts[saltId]?.target)]),
@@ -9929,18 +9935,20 @@ function RecipeConcentrateBottleCard({
     const form = salt.hydrationForms[entry.formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
     if (!form) return null;
     const target = num(entry.target);
-    const massMg = computeRecipeStockSaltMassMg(
+    const calculatedMassMg = computeRecipeStockSaltMassMg(
       target,
       strength,
       form.molarMass,
       salt.anhydrousMass,
     );
-    return { salt, form, target, massMg };
+    const massMg = calculatedMassMg * saltMassScale;
+    return { salt, form, target, massMg, calculatedMassMg };
   }).filter((row): row is {
     salt: typeof SALTS[number];
     form: typeof SALTS[number]['hydrationForms'][number];
     target: number;
     massMg: number;
+    calculatedMassMg: number;
   } => row !== null);
   const totalSaltMassG = stockRows.reduce((total, row) => total + row.massMg, 0) / 1000;
   const waterToAddG = Math.max(0, stockVolumeMl - totalSaltMassG);
@@ -10215,7 +10223,19 @@ function RecipeConcentrateBottleCard({
               </div>
               <div className="shrink-0 text-right">
                 <div className={`text-[10px] font-semibold tabular-nums ${colors.accent}`}>{recipeConcentrateNumber(row.target, 1)} ppm/L</div>
-                <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{recipeConcentrateNumber(row.massMg, 1)} mg</div>
+               {onSaltMassChange ? (
+                 <StableNumberInput
+                   min="0.1"
+                   step="0.1"
+                   value={saltMassInputs[row.salt.id] ?? recipeConcentrateNumber(row.massMg, 1)}
+                   onChange={event => onSaltMassChange(row.salt.id, event.target.value, row.massMg)}
+                   aria-label={`${row.salt.name} physical salt amount`}
+                   title="Edit this salt amount; bottle volume adjusts while stock strength stays fixed"
+                   className="recipe-concentrate-input mt-1 w-24 rounded-md border border-white/15 bg-slate-950/25 px-1.5 py-0.5 text-right text-[10px] font-semibold tabular-nums text-white outline-none focus:border-cyan-200/70"
+                 />
+               ) : (
+                 <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{recipeConcentrateNumber(row.massMg, 1)} mg</div>
+               )}
               </div>
             </div>
           </div>
@@ -10280,6 +10300,8 @@ function RecipeConcentrateBuilder({
     citrate: '100',
     'all-in-one': '100',
   });
+  const [saltMassScales, setSaltMassScales] = useState<Record<string, number>>({});
+  const [saltMassInputs, setSaltMassInputs] = useState<Record<string, Record<string, string>>>({});
   const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
   const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
 
@@ -10419,12 +10441,32 @@ function RecipeConcentrateBuilder({
     { ...dropDosingOptions, stockVolumeMl: allInOneStockVolumeMl },
   );
   const updateStrength = (groupId: string, value: string) => {
+    setSaltMassScales(previous => ({ ...previous, [groupId]: 1 }));
+    setSaltMassInputs(previous => ({ ...previous, [groupId]: {} }));
     if (stockStrategy === 'all-in-one') {
       setPhysicalSaltPpmPerDropInput(null);
       setStrengthInput(value);
       return;
     }
     setStockStrengthInputs(previous => ({ ...previous, [groupId]: value }));
+  };
+  const updateSaltMass = (groupId: string, saltId: string, value: string, currentMassMg: number) => {
+    const nextMassMg = Number(value);
+    if (!Number.isFinite(nextMassMg) || nextMassMg <= 0 || currentMassMg <= 0) return;
+    const ratio = nextMassMg / currentMassMg;
+    const currentVolume = Math.max(0, Number(stockVolumeInputs[groupId] ?? '100') || 0);
+    setSaltMassScales(previous => ({ ...previous, [groupId]: (previous[groupId] ?? 1) * ratio }));
+    setSaltMassInputs(previous => ({
+      ...previous,
+      [groupId]: { ...(previous[groupId] ?? {}), [saltId]: value },
+    }));
+    setStockVolumeInputs(previous => ({ ...previous, [groupId]: recipeConcentrateNumber(currentVolume * ratio, 2) }));
+    if (groupId === 'all-in-one') setPhysicalSaltPpmPerDropInput(null);
+  };
+  const updateStockVolume = (groupId: string, value: string) => {
+    setSaltMassScales(previous => ({ ...previous, [groupId]: 1 }));
+    setSaltMassInputs(previous => ({ ...previous, [groupId]: {} }));
+    setStockVolumeInputs(previous => ({ ...previous, [groupId]: value }));
   };
 
   useEffect(() => {
@@ -10616,6 +10658,8 @@ function RecipeConcentrateBuilder({
                   ? strengthInput
                   : stockStrengthInputs[group.id] ?? '1'}
               volumeInput={stockVolumeInputs[group.id] ?? '100'}
+              saltMassScale={saltMassScales[group.id] ?? 1}
+              saltMassInputs={saltMassInputs[group.id] ?? {}}
               finalVolumeInput={finalVolumeInput}
               finalLiters={finalLiters}
               volumeUnit={volumeUnit}
@@ -10624,7 +10668,7 @@ function RecipeConcentrateBuilder({
               measuredDropsPerMlInput={measuredDropsPerMlInput}
               physicalSaltPpmPerDropInput={stockStrategy === 'all-in-one' ? physicalSaltPpmPerDropInput : null}
               onStrengthChange={value => updateStrength(group.id, value)}
-              onVolumeChange={value => setStockVolumeInputs(previous => ({ ...previous, [group.id]: value }))}
+              onVolumeChange={value => updateStockVolume(group.id, value)}
               onFinalVolumeChange={updateFinalVolume}
               onToggleVolumeUnit={() => {
                 const liters = volumeToLiters(finalVolumeInput, volumeUnit);
@@ -10634,8 +10678,13 @@ function RecipeConcentrateBuilder({
               onDropperStyleChange={onDropperStyleChange}
               onMeasuredDropsPerMlChange={setMeasuredDropsPerMlInput}
               onPhysicalSaltPpmPerDropChange={stockStrategy === 'all-in-one'
-                ? setPhysicalSaltPpmPerDropInput
+                ? value => {
+                  setSaltMassScales(previous => ({ ...previous, [group.id]: 1 }));
+                  setSaltMassInputs(previous => ({ ...previous, [group.id]: {} }));
+                  setPhysicalSaltPpmPerDropInput(value);
+                }
                 : undefined}
+              onSaltMassChange={(saltId, value, currentMassMg) => updateSaltMass(group.id, saltId, value, currentMassMg)}
             />
           )) : (
             <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-4 py-5 text-sm text-amber-100/80">
