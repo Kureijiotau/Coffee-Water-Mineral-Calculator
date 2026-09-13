@@ -9917,17 +9917,29 @@ function RecipeConcentrateBottleCard({
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
   const activeDropsPerMl = hasMeasuredDropsPerMl ? measuredDropsPerMl : assumedDropsPerMl;
-  const maxSafeStrength = findStrongestSafeConcentrateStrength(
-    saltTargets,
-    undefined,
-    formIdxBySaltId,
-    {
-      minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
-      minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
-      dropsPerMl: activeDropsPerMl,
-      stockVolumeMl,
-    },
-  );
+  const maxSafeStrength = group.id === 'all-in-one'
+    ? findRecommendedAllInOneConcentrateStrength(
+      saltTargets,
+      undefined,
+      formIdxBySaltId,
+      {
+        minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
+        minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
+        dropsPerMl: activeDropsPerMl,
+        stockVolumeMl,
+      },
+    )
+    : findStrongestSafeConcentrateStrength(
+      saltTargets,
+      undefined,
+      formIdxBySaltId,
+      {
+        minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
+        minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
+        dropsPerMl: activeDropsPerMl,
+        stockVolumeMl,
+      },
+    );
   const safeFinalLiters = Math.max(0, finalLiters);
   const doseMl = strength > 0 ? stockVolumeMl / strength * safeFinalLiters : 0;
   const doseDrops = doseMl * activeDropsPerMl;
@@ -10031,7 +10043,7 @@ function RecipeConcentrateBottleCard({
                   value={strengthInput}
                   onChange={event => onStrengthChange(event.target.value)}
                   min="1"
-                  max={maxSafeStrength}
+                   max={group.id === 'all-in-one' ? undefined : maxSafeStrength}
                   step="1"
                   aria-label={`${cardName} stock strength`}
                   className="recipe-concentrate-input w-full min-w-0 bg-transparent text-4xl font-semibold tracking-tight text-white outline-none"
@@ -10058,13 +10070,13 @@ function RecipeConcentrateBottleCard({
           </div>
 
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-800/80 pt-3 text-[10px] text-slate-500">
-            <span>safe ceiling ×{recipeConcentrateNumber(maxSafeStrength, 2)}</span>
+             <span>{group.id === 'all-in-one' ? 'recommended ceiling' : 'safe ceiling'} ×{recipeConcentrateNumber(maxSafeStrength, 2)}</span>
             <button
               type="button"
               onClick={() => onStrengthChange(recipeConcentrateNumber(maxSafeStrength, 2))}
               className="font-semibold tabular-nums text-emerald-300 transition hover:text-emerald-200"
             >
-              Apply maximum
+               {group.id === 'all-in-one' ? 'Apply recommendation' : 'Apply maximum'}
             </button>
           </div>
           <input
@@ -10376,12 +10388,19 @@ function RecipeConcentrateBuilder({
     dropsPerMl: activeDropsPerMl,
   };
   const groupMaxSafeStrengthFor = (group: { id: string; saltIds: string[] }) =>
-    findStrongestSafeConcentrateStrength(
-      groupTargetsFor(group),
-      undefined,
-      groupFormsFor(group),
-      { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
-    );
+    group.id === 'all-in-one'
+      ? findRecommendedAllInOneConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+          { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
+        )
+      : findStrongestSafeConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+          { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
+        );
   const maxSafeStrengthByStrategy = {
     'gh-kh': compatibleStockGroups.length > 0
       ? Math.min(...compatibleStockGroups.map(groupMaxSafeStrengthFor))
@@ -10603,10 +10622,12 @@ function RecipeConcentrateBuilder({
             </div>
             <div className="rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] px-3 py-2 text-right">
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-300/75">
-                {maxSafeStrength != null && strength > maxSafeStrength ? 'Above safe ceiling' : 'Modeled ceiling'}
+               {maxSafeStrength != null && strength > maxSafeStrength
+                 ? stockStrategy === 'all-in-one' ? 'Above recommendation' : 'Above safe ceiling'
+                 : stockStrategy === 'all-in-one' ? 'Recommended AIO ceiling' : 'Modeled ceiling'}
               </div>
               <div className="mt-1 text-sm font-semibold tabular-nums text-emerald-100">
-                Max ×{recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}
+                 {stockStrategy === 'all-in-one' ? 'Recommended' : 'Max'} ×{recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}
               </div>
             </div>
           </div>
@@ -10701,9 +10722,9 @@ function RecipeConcentrateBuilder({
                 <AlertTriangle className="h-4 w-4 text-amber-200" aria-hidden="true" />
                 <span>
                   <span className="block text-xs font-semibold text-amber-100">
-                    {allInOneStrengthIsSafe
-                      ? `Why ×${recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}?`
-                      : 'Strength is above the modeled chemical ceiling'}
+                     {allInOneStrengthIsSafe
+                       ? `Why recommend ×${recipeConcentrateNumber(maxSafeStrength ?? 0, 2)}?`
+                       : 'Strength is above the recommended AIO ceiling'}
                   </span>
                   <span className="mt-0.5 block text-[10px] text-amber-100/55">Modeled ceiling · not a laboratory guarantee</span>
                 </span>
@@ -13476,7 +13497,7 @@ function ConcentrateRecipeStepsModal({
                     </div>
                     {isAllInOnePlan && plan.maxSafeStrength != null && (
                       <div className={`mt-1 text-[10px] tabular-nums ${plan.strength > plan.maxSafeStrength ? 'text-rose-300' : 'text-emerald-300/80'}`}>
-                        Max ×{recipeConcentrateNumber(plan.maxSafeStrength, 2)} · whole-drop rule included
+                        {isAllInOnePlan ? 'Recommended' : 'Max'} ×{recipeConcentrateNumber(plan.maxSafeStrength, 2)} · whole-drop rule included
                       </div>
                     )}
                   </div>
