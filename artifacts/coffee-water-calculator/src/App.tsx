@@ -9047,21 +9047,12 @@ function LegacyRecipeConcentrateBuilder({
   );
   const maxSafeStrengthFor = (groups: Array<{ id: string; saltIds: string[] }>, allInOne = false) =>
     groups.length > 0
-      ? Math.min(...groups.map(group => (
-        allInOne
-          ? findRecommendedAllInOneConcentrateStrength(
-              groupTargetsFor(group),
-              undefined,
-              groupFormsFor(group),
-              { stockVolumeMl: groupVolumeMlFor(group) },
-            )
-          : findStrongestSafeConcentrateStrength(
-              groupTargetsFor(group),
-              undefined,
-              groupFormsFor(group),
-              { stockVolumeMl: groupVolumeMlFor(group) },
-            )
-      )))
+      ? Math.min(...groups.map(group => findRecommendedAllInOneConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+          { stockVolumeMl: groupVolumeMlFor(group) },
+        )))
       : null;
   const maxSafeStrengthByStrategy = {
     'gh-kh': maxSafeStrengthFor(compatibleStockGroups),
@@ -10388,19 +10379,12 @@ function RecipeConcentrateBuilder({
     dropsPerMl: activeDropsPerMl,
   };
   const groupMaxSafeStrengthFor = (group: { id: string; saltIds: string[] }) =>
-    group.id === 'all-in-one'
-      ? findRecommendedAllInOneConcentrateStrength(
-          groupTargetsFor(group),
-          undefined,
-          groupFormsFor(group),
-          { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
-        )
-      : findStrongestSafeConcentrateStrength(
-          groupTargetsFor(group),
-          undefined,
-          groupFormsFor(group),
-          { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
-        );
+    findRecommendedAllInOneConcentrateStrength(
+      groupTargetsFor(group),
+      undefined,
+      groupFormsFor(group),
+      { ...dropDosingOptions, stockVolumeMl: groupVolumeMlFor(group) },
+    );
   const maxSafeStrengthByStrategy = {
     'gh-kh': compatibleStockGroups.length > 0
       ? Math.min(...compatibleStockGroups.map(groupMaxSafeStrengthFor))
