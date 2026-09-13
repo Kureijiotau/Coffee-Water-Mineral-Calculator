@@ -9736,12 +9736,12 @@ function LegacyRecipeConcentrateBuilder({
             if (!salt || !entry) return null;
             const form = salt.hydrationForms[entry.formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
             const target = num(entry.target);
-            const massMg = computeRecipeStockSaltMassMg(
+             const massMg = computeRecipeStockSaltMassMg(
               target,
               groupStrength,
               form.molarMass,
               salt.anhydrousMass,
-            );
+             ) * stockVolumeMl / 100;
             return { salt, form, target, massMg };
           }).filter((row): row is {
             salt: typeof SALTS[number];
@@ -9941,7 +9941,7 @@ function RecipeConcentrateBottleCard({
       form.molarMass,
       salt.anhydrousMass,
     );
-    const massMg = calculatedMassMg * saltMassScale;
+    const massMg = calculatedMassMg * (stockVolumeMl / 100) * saltMassScale;
     return { salt, form, target, massMg, calculatedMassMg };
   }).filter((row): row is {
     salt: typeof SALTS[number];
@@ -10455,7 +10455,7 @@ function RecipeConcentrateBuilder({
     if (!Number.isFinite(nextMassMg) || nextMassMg <= 0 || currentMassMg <= 0) return;
     const ratio = nextMassMg / currentMassMg;
     const currentVolume = Math.max(0, Number(stockVolumeInputs[groupId] ?? '100') || 0);
-    setSaltMassScales(previous => ({ ...previous, [groupId]: (previous[groupId] ?? 1) * ratio }));
+    setSaltMassScales(previous => ({ ...previous, [groupId]: 1 }));
     setSaltMassInputs(previous => ({
       ...previous,
       [groupId]: { ...(previous[groupId] ?? {}), [saltId]: value },
@@ -13338,7 +13338,7 @@ function ConcentrateRecipeStepsModal({
         group.strength,
         row.form.molarMass,
         row.salt.anhydrousMass,
-      ),
+      ) * group.volumeMl / 100,
     }));
     const totalSaltMassG = saltMasses.reduce((total, row) => total + row.massMg, 0) / 1000;
     return {
