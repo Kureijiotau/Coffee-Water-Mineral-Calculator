@@ -10684,7 +10684,9 @@ function RecipeConcentrateBuilder({
                   setPhysicalSaltPpmPerDropInput(value);
                 }
                 : undefined}
-              onSaltMassChange={(saltId, value, currentMassMg) => updateSaltMass(group.id, saltId, value, currentMassMg)}
+              onSaltMassChange={stockStrategy === 'individual'
+                ? (saltId, value, currentMassMg) => updateSaltMass(group.id, saltId, value, currentMassMg)
+                : undefined}
             />
           )) : (
             <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-4 py-5 text-sm text-amber-100/80">
