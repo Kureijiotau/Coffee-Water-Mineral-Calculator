@@ -11,7 +11,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -9045,18 +9045,27 @@ function LegacyRecipeConcentrateBuilder({
   const groupFormsFor = (group: { saltIds: string[] }) => Object.fromEntries(
     group.saltIds.map(saltId => [saltId, formIdxBySaltId[saltId] ?? 0]),
   );
-  const maxSafeStrengthFor = (groups: Array<{ id: string; saltIds: string[] }>) =>
+  const maxSafeStrengthFor = (groups: Array<{ id: string; saltIds: string[] }>, allInOne = false) =>
     groups.length > 0
-      ? Math.min(...groups.map(group => findStrongestSafeConcentrateStrength(
-        groupTargetsFor(group),
-        undefined,
-        groupFormsFor(group),
-        { stockVolumeMl: groupVolumeMlFor(group) },
+      ? Math.min(...groups.map(group => (
+        allInOne
+          ? findRecommendedAllInOneConcentrateStrength(
+              groupTargetsFor(group),
+              undefined,
+              groupFormsFor(group),
+              { stockVolumeMl: groupVolumeMlFor(group) },
+            )
+          : findStrongestSafeConcentrateStrength(
+              groupTargetsFor(group),
+              undefined,
+              groupFormsFor(group),
+              { stockVolumeMl: groupVolumeMlFor(group) },
+            )
       )))
       : null;
   const maxSafeStrengthByStrategy = {
     'gh-kh': maxSafeStrengthFor(compatibleStockGroups),
-    'all-in-one': maxSafeStrengthFor(allInOneStockGroups),
+    'all-in-one': maxSafeStrengthFor(allInOneStockGroups, true),
     individual: maxSafeStrengthFor(individualStockGroups),
   };
   const maxSafeStrength = maxSafeStrengthByStrategy[stockStrategy];
@@ -9064,12 +9073,19 @@ function LegacyRecipeConcentrateBuilder({
     ? strength
     : Math.max(0, Number(stockStrengthInputs[group.id] ?? '500') || 0);
   const groupMaxSafeStrengthFor = (group: { id: string; saltIds: string[] }) =>
-    findStrongestSafeConcentrateStrength(
-      groupTargetsFor(group),
-      undefined,
-      groupFormsFor(group),
-      { stockVolumeMl: groupVolumeMlFor(group) },
-    );
+    group.id === 'all-in-one'
+      ? findRecommendedAllInOneConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+          { stockVolumeMl: groupVolumeMlFor(group) },
+        )
+      : findStrongestSafeConcentrateStrength(
+          groupTargetsFor(group),
+          undefined,
+          groupFormsFor(group),
+          { stockVolumeMl: groupVolumeMlFor(group) },
+        );
   const limitingConstraint = findConcentrateLimitingConstraint(
     saltTargets,
     formIdxBySaltId,
@@ -9132,10 +9148,11 @@ function LegacyRecipeConcentrateBuilder({
 
   useEffect(() => {
     const initialAllInOneStrength = allInOneStockGroups.length > 0
-      ? findStrongestSafeConcentrateStrength(
+      ? findRecommendedAllInOneConcentrateStrength(
         groupTargetsFor(allInOneStockGroups[0]),
         undefined,
         groupFormsFor(allInOneStockGroups[0]),
+        { stockVolumeMl: 100 },
       )
       : 1;
     const initialStockStrengths = Object.fromEntries(
@@ -9329,7 +9346,7 @@ function LegacyRecipeConcentrateBuilder({
               <div className="mt-3 text-sm font-semibold text-slate-100">{option.label}</div>
               {option.maxSafeStrength != null && (
                 <div className="mt-2 text-[10px] font-semibold tabular-nums text-emerald-300/80">
-                  Max ×{option.maxSafeStrength}
+                  {option.value === 'all-in-one' ? 'Recommended' : 'Max'} ×{option.maxSafeStrength}
                 </div>
               )}
             </button>
@@ -9355,10 +9372,10 @@ function LegacyRecipeConcentrateBuilder({
                           ? 'text-rose-300 hover:bg-rose-400/10 hover:text-rose-200'
                           : 'text-emerald-300/80 hover:bg-emerald-400/10 hover:text-emerald-200'
                       }`}
-                      aria-label={`Apply max safe concentrate strength of ${maxSafeStrength} times`}
-                      title={`Apply max safe concentrate strength ×${maxSafeStrength}`}
+                      aria-label={`Apply recommended all-in-one concentrate strength of ${maxSafeStrength} times`}
+                      title={`Apply recommended all-in-one strength ×${maxSafeStrength}`}
                     >
-                      Max ×{maxSafeStrength}
+                      Recommended ×{maxSafeStrength}
                     </button>
                   )}
                 </div>
@@ -9494,7 +9511,7 @@ function LegacyRecipeConcentrateBuilder({
               : <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />}
             <span>
               {maxSafeStrength != null && strength > maxSafeStrength
-                ? `Lower strength below ×${maxSafeStrength}.`
+                ? `This is above the recommended all-in-one strength of ×${maxSafeStrength} and has a higher precipitation risk. Consider lowering it or making separate GH + KH concentrates.`
                 : stockStrategyDetails.helper}
             </span>
           </div>

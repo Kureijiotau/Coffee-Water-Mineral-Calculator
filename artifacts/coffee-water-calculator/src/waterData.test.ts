@@ -16,6 +16,7 @@ import {
   checkConcentrate,
   findWholeDropDosingStrengthCeiling,
   findStrongestSafeConcentrateStrength,
+  findRecommendedAllInOneConcentrateStrength,
   findConcentrateLimitingConstraint,
   computeIonMmolPerL,
   computeIonMeqPerL,
@@ -224,6 +225,24 @@ describe('findStrongestSafeConcentrateStrength', () => {
     const limit = findConcentrateLimitingConstraint(targets);
     expect(limit.kind).toBe('model-bound');
     expect(checkConcentrate(500, targets).some(warning => warning.severity === 'warning')).toBe(true);
+  });
+
+  it('gives all-in-one stocks a recipe-specific margin below the first modeled concern', () => {
+    const targets = { nahco3: 100, mgso4: 100 };
+    const generalCeiling = findStrongestSafeConcentrateStrength(targets);
+    const allInOneRecommendation = findRecommendedAllInOneConcentrateStrength(targets);
+
+    expect(allInOneRecommendation).toBeLessThan(generalCeiling);
+    expect(checkConcentrate(allInOneRecommendation, targets)
+      .every(warning => warning.severity === 'info')).toBe(true);
+  });
+
+  it('backs off from the model ceiling even for a simple all-in-one recipe', () => {
+    expect(findRecommendedAllInOneConcentrateStrength({ nacl: 1 })).toBe(425);
+  });
+
+  it('can recommend very low all-in-one strengths when the recipe requires it', () => {
+    expect(findRecommendedAllInOneConcentrateStrength({ cacit: 400 })).toBe(1);
   });
 
   it('can apply a selected hydration form to solubility checks', () => {

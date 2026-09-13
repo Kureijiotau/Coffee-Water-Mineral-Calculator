@@ -1063,6 +1063,7 @@ export function checkConcentrate(
 }
 
 export const ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH = 500;
+export const ALL_IN_ONE_CONCENTRATE_SAFETY_FACTOR = 0.85;
 
 export const CONCENTRATE_MINIMUM_DOSE_LITERS = 0.1;
 export const CONCENTRATE_MINIMUM_WHOLE_DROPS = 1;
@@ -1152,6 +1153,54 @@ export function findStrongestSafeConcentrateStrength(
     }
   }
   return low;
+}
+
+/**
+ * Recommend a deliberately conservative all-in-one strength.
+ *
+ * Unlike the general stock ceiling, an all-in-one stock treats precipitation
+ * and high-solids warnings as limiting conditions because every active salt
+ * must remain stable together. The recommendation then backs off from the
+ * first modeled concern to leave room for temperature, mixing, and ingredient
+ * variation. Informational dosing notes do not lower the recommendation.
+ */
+export function findRecommendedAllInOneConcentrateStrength(
+  saltTargetsBySaltId: Record<string, number>,
+  maxStrength = ALL_IN_ONE_CONCENTRATE_MAX_STRENGTH,
+  formIdxBySaltId: Record<string, number> = {},
+  dosingOptions: ConcentrateDosingOptions = {},
+): number {
+  const hasActiveTarget = Object.values(saltTargetsBySaltId).some(
+    target => Number.isFinite(target) && target > 0,
+  );
+  if (!hasActiveTarget) return 1;
+
+  const upperBound = Math.min(
+    Math.max(1, Math.floor(maxStrength)),
+    findWholeDropDosingStrengthCeiling(dosingOptions),
+  );
+  const stockVolumeMl = dosingOptions.stockVolumeMl ?? 1000;
+  const hasModeledConcern = (strength: number) =>
+    checkConcentrate(strength, saltTargetsBySaltId, formIdxBySaltId, stockVolumeMl)
+      .some(warning => warning.severity === 'error' || warning.severity === 'warning');
+
+  let low = 1;
+  let high = upperBound;
+  while (low < high) {
+    const midpoint = Math.ceil((low + high) / 2);
+    if (hasModeledConcern(midpoint)) {
+      high = midpoint - 1;
+    } else {
+      low = midpoint;
+    }
+  }
+
+  const concernFreeStrength = low;
+  if (concernFreeStrength <= 1) return 1;
+  return Math.max(
+    1,
+    Math.floor(concernFreeStrength * ALL_IN_ONE_CONCENTRATE_SAFETY_FACTOR),
+  );
 }
 
 /**

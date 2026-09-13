@@ -13,6 +13,7 @@
 - [Builder dropper strength](builder-dropper-strength.md) — use conservative 500× stocks so small bottles make fewer batches instead of stronger solutions
 - [Editable drop contribution](editable-drop-contribution.md) — pin physical salt ppm per drop while solving stock strength around fixed bottle volume
 - [Recipe concentrate bottle volume](recipe-concentrate-bottle-volume.md) — strength scales salt mass; bottle volume scales per-mL concentration and final-water dose
+- [Conservative all-in-one strength](conservative-aio-strength.md) — recommend below the first recipe-specific concern while allowing stronger user-entered AIO stocks with a clear warning
 - [Builder dosing methods](builder-dosing-methods.md) — keep dry-salt and dropper workflows as presentation choices over the shared chemistry engine
 - [API health route](api-health-route.md) — use `/api/healthz` for API checks; `/api/health` is not a valid route
 - [Water auto-fill constraints](water-auto-fill-constraints.md) — solve selected waters together under every ion ceiling, including zero-target ions
