@@ -9908,29 +9908,17 @@ function RecipeConcentrateBottleCard({
   const measuredDropsPerMl = Number(measuredDropsPerMlInput);
   const hasMeasuredDropsPerMl = Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0;
   const activeDropsPerMl = hasMeasuredDropsPerMl ? measuredDropsPerMl : assumedDropsPerMl;
-  const maxSafeStrength = group.id === 'all-in-one'
-    ? findRecommendedAllInOneConcentrateStrength(
-      saltTargets,
-      undefined,
-      formIdxBySaltId,
-      {
-        minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
-        minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
-        dropsPerMl: activeDropsPerMl,
-        stockVolumeMl,
-      },
-    )
-    : findStrongestSafeConcentrateStrength(
-      saltTargets,
-      undefined,
-      formIdxBySaltId,
-      {
-        minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
-        minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
-        dropsPerMl: activeDropsPerMl,
-        stockVolumeMl,
-      },
-    );
+  const maxSafeStrength = findRecommendedAllInOneConcentrateStrength(
+    saltTargets,
+    undefined,
+    formIdxBySaltId,
+    {
+      minimumFinalLiters: CONCENTRATE_MINIMUM_DOSE_LITERS,
+      minimumDrops: CONCENTRATE_MINIMUM_WHOLE_DROPS,
+      dropsPerMl: activeDropsPerMl,
+      stockVolumeMl,
+    },
+  );
   const safeFinalLiters = Math.max(0, finalLiters);
   const doseMl = strength > 0 ? stockVolumeMl / strength * safeFinalLiters : 0;
   const doseDrops = doseMl * activeDropsPerMl;
