@@ -5645,6 +5645,10 @@ function App() {
             restoreSnapshot={pendingConcentrateRestore}
             onRestoreSnapshotConsumed={() => setPendingConcentrateRestore(null)}
             onSnapshotChange={setConcentrateSnapshot}
+            onSaveSnapshot={() => {
+              const name = window.prompt('Name this concentrate snapshot:')?.trim();
+              if (name) handleSaveWaterPlan(name);
+            }}
           />
         </div>
         </div>
@@ -8172,6 +8176,7 @@ function ConcentrateWorkspace({
   restoreSnapshot,
   onRestoreSnapshotConsumed,
   onSnapshotChange,
+  onSaveSnapshot,
 }: {
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
@@ -8185,6 +8190,7 @@ function ConcentrateWorkspace({
   restoreSnapshot: WaterPlanConcentrateSnapshot | null;
   onRestoreSnapshotConsumed: () => void;
   onSnapshotChange: (snapshot: WaterPlanConcentrateSnapshot) => void;
+  onSaveSnapshot: () => void;
 }) {
   const [concentrateMode, setConcentrateMode] = useState<ConcentrateMode>('builder');
   const [saltId, setSaltId] = useState('mgso4');
@@ -8418,6 +8424,7 @@ function ConcentrateWorkspace({
           onStyleChange={setDropperStyle}
           straightDropsPerMlInput={straightDropsPerMlInput}
           onStraightDropsPerMlChange={setStraightDropsPerMlInput}
+          onSaveSnapshot={onSaveSnapshot}
         />
       ) : recipeHandoff ? (
         <RecipeConcentrateBuilder
@@ -8677,11 +8684,13 @@ function LotusDropsSection({
   onStyleChange,
   straightDropsPerMlInput,
   onStraightDropsPerMlChange,
+  onSaveSnapshot,
 }: {
   style: LotusDropperStyle;
   onStyleChange: (style: LotusDropperStyle) => void;
   straightDropsPerMlInput: string;
   onStraightDropsPerMlChange: (value: string) => void;
+  onSaveSnapshot: () => void;
 }) {
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
 
@@ -8710,9 +8719,20 @@ function LotusDropsSection({
              Coffee Products, and does not claim to reproduce any proprietary manufacturing formula.
           </p>
         </div>
-        <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
-          Independent model
-        </span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onSaveSnapshot}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300/35 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-400/20"
+              title="Save the current concentrate workspace as a reusable session snapshot"
+            >
+              <Save className="h-3.5 w-3.5" aria-hidden="true" />
+              Save snapshot
+            </button>
+            <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
+             Independent model
+           </span>
+          </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
