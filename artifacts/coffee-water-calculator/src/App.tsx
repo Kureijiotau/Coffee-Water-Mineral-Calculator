@@ -8728,7 +8728,7 @@ function LotusDropsSection({
             replacement.style.boxSizing = 'border-box';
             replacement.style.display = 'flex';
             replacement.style.alignItems = 'center';
-            replacement.style.justifyContent = control.classList.contains('text-right') ? 'flex-end' : 'flex-start';
+            replacement.style.justifyContent = 'center';
             replacement.style.textAlign = 'center';
             replacement.style.minHeight = `${control.getBoundingClientRect().height}px`;
             control.replaceWith(replacement);
