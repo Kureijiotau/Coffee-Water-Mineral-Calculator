@@ -8710,19 +8710,20 @@ function LotusDropsSection({
     setIsSavingImage(true);
     try {
       const { default: html2canvas } = await import('html2canvas');
+      const liveControlValues = Array.from(
+        exportRef.current.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('input, textarea, select'),
+      ).map(control => control instanceof HTMLSelectElement
+        ? control.options[control.selectedIndex]?.text ?? ''
+        : control.value);
       const canvas = await html2canvas(exportRef.current, {
         backgroundColor: '#101526',
         scale: Math.max(2, window.devicePixelRatio || 1),
         useCORS: true,
         onclone: clonedDocument => {
-          clonedDocument.querySelectorAll<HTMLElement>('input, textarea, select').forEach(control => {
+          clonedDocument.querySelectorAll<HTMLElement>('input, textarea, select').forEach((control, index) => {
             const replacement = clonedDocument.createElement('div');
             replacement.className = control.className;
-            replacement.textContent = control instanceof HTMLSelectElement
-              ? control.options[control.selectedIndex]?.text ?? ''
-              : control instanceof HTMLInputElement
-                ? control.value
-                : control.textContent ?? '';
+            replacement.textContent = liveControlValues[index] ?? control.getAttribute('value') ?? control.textContent ?? '';
             replacement.setAttribute('aria-hidden', 'true');
             replacement.style.boxSizing = 'border-box';
             replacement.style.display = 'flex';
