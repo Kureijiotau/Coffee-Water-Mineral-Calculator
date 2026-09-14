@@ -10,12 +10,22 @@ import {
 
 describe('DIY Lotus Drops calculations', () => {
   it('maps the four commercial droppers to the expected salts', () => {
-    expect(LOTUS_DROPPER_DEFINITIONS.map(dropper => [dropper.id, dropper.saltId])).toEqual([
+    expect(LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus).map(dropper => [dropper.id, dropper.saltId])).toEqual([
       ['magnesium', 'mgcl2'],
       ['calcium', 'cacl2'],
       ['potassium', 'khco3'],
       ['sodium', 'nahco3'],
     ]);
+  });
+
+  it('defines the optional bonus Epsom dropper with the default heptahydrate form', () => {
+    const epsom = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'bonus-epsom')!;
+    const plan = lotusStockPlan(epsom, 'straight');
+
+    expect(epsom.isBonus).toBe(true);
+    expect(epsom.saltId).toBe('mgso4');
+    expect(plan.hydrationForm).toBe('Heptahydrate (Epsom)');
+    expect(plan.saltMgPerMl).toBeGreaterThan(0);
   });
 
   it('matches the Lotus 450 mL drop model for both styles', () => {

@@ -8693,6 +8693,7 @@ function LotusDropsSection({
   onSaveSnapshot: () => void;
 }) {
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
+  const [showBonusEpsom, setShowBonusEpsom] = useState(false);
   const exportRef = useRef<HTMLElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
 
@@ -8701,7 +8702,9 @@ function LotusDropsSection({
   const activeDropsPerMl = lotusDropsPerMl(style, straightBaselineDropsPerMl);
   const roundDropsPerMl = lotusDropsPerMl('round', straightBaselineDropsPerMl);
   const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
-  const stockPlans = LOTUS_DROPPER_DEFINITIONS.map(dropper => (
+  const stockPlans = LOTUS_DROPPER_DEFINITIONS
+    .filter(dropper => !dropper.isBonus || showBonusEpsom)
+    .map(dropper => (
     lotusStockPlan(dropper, style, stockVolumeMl, straightBaselineDropsPerMl)
   ));
 
@@ -8763,9 +8766,9 @@ function LotusDropsSection({
             <FlaskConical className="h-4 w-4 text-rose-300" />
             DIY Lotus Drops
           </div>
-           <h2 className="mt-2 text-xl font-semibold text-white">Build an independent four-concentrate mineral system</h2>
+           <h2 className="mt-2 text-xl font-semibold text-white">Build an independent mineral dropper system</h2>
           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-slate-400">
-             Prepare your own four independent concentrates using public ingredient identities and recipe inputs.
+              Prepare four independent Lotus-style concentrates, with an optional fifth bonus concentrate using public ingredient identities and recipe inputs.
              Choose the recipe you prefer from the official instructions, then use its drop counts with
              your finished droppers. This independent model is not affiliated with or endorsed by Lotus
              Coffee Products, and does not claim to reproduce any proprietary manufacturing formula.
@@ -8887,7 +8890,18 @@ function LotusDropsSection({
       </div>
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
-        <span className="text-[11px] text-slate-500">4 independent droppers</span>
+         <div className="flex flex-wrap items-center gap-2">
+           <span className="text-[11px] text-slate-500">{showBonusEpsom ? '5 droppers' : '4 independent droppers'}</span>
+           <label className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-200">
+             <input
+               type="checkbox"
+               checked={showBonusEpsom}
+               onChange={event => setShowBonusEpsom(event.target.checked)}
+               className="accent-amber-400"
+             />
+             Add bonus Epsom
+           </label>
+         </div>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {stockPlans.map(plan => {
@@ -8916,7 +8930,14 @@ function LotusDropsSection({
                     <Droplet className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
-                    <div className="text-sm font-semibold text-[color:var(--salt-primary)]" style={saltColors ? { '--salt-primary': saltColors.primary } as CSSProperties : undefined}>{plan.label} Dropper</div>
+                     <div className="flex flex-wrap items-center gap-1.5">
+                       <div className="text-sm font-semibold text-[color:var(--salt-primary)]" style={saltColors ? { '--salt-primary': saltColors.primary } as CSSProperties : undefined}>{plan.label} Dropper</div>
+                       {plan.isBonus && (
+                         <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+                           Bonus · not Lotus
+                         </span>
+                       )}
+                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
                       <span>{plan.saltName} ·</span>
                       {salt ? <SaltIonBadges salt={salt} /> : <span>{plan.saltFormula}</span>}
@@ -8925,7 +8946,12 @@ function LotusDropsSection({
                   </div>
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+               {plan.isBonus && (
+                 <div className="mt-3 rounded-lg border border-amber-300/25 bg-amber-400/[0.08] px-3 py-2 text-[10px] leading-relaxed text-amber-100/80">
+                   This concentrate is not part of the Lotus lineup. It is an optional bonus Epsom concentrate suggested by you for extra sulfate/brightness.
+                 </div>
+               )}
+               <div className="mt-3 grid grid-cols-2 gap-2">
                 <SummaryMetric label="Concentrate strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
                 <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(2)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>

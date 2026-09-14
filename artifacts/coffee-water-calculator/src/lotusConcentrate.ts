@@ -6,7 +6,7 @@ import {
 } from './lotusRecipes';
 
 export type LotusDropperStyle = 'round' | 'straight';
-export type LotusDropperId = 'magnesium' | 'calcium' | 'potassium' | 'sodium';
+export type LotusDropperId = 'magnesium' | 'calcium' | 'potassium' | 'sodium' | 'bonus-epsom';
 
 export const LOTUS_BREW_VOLUME_ML = 450;
 export const LOTUS_BOTTLE_VOLUME_ML = 59;
@@ -16,17 +16,21 @@ export const LOTUS_STYLE_FACTORS: Record<LotusDropperStyle, number> = {
   straight: 1,
 };
 
-export const LOTUS_DROPPER_DEFINITIONS: Array<{
+type LotusDropperDefinition = {
   id: LotusDropperId;
   label: string;
   saltId: string;
   ionId: IonId;
   inputKey: keyof LotusRecipe['publishedInputs'];
-}> = [
+  isBonus?: boolean;
+};
+
+export const LOTUS_DROPPER_DEFINITIONS: LotusDropperDefinition[] = [
   { id: 'magnesium', label: 'Magnesium', saltId: 'mgcl2', ionId: 'magnesium', inputKey: 'magnesium' },
   { id: 'calcium', label: 'Calcium', saltId: 'cacl2', ionId: 'calcium', inputKey: 'calcium' },
   { id: 'potassium', label: 'Potassium', saltId: 'khco3', ionId: 'potassium', inputKey: 'potassium' },
   { id: 'sodium', label: 'Sodium', saltId: 'nahco3', ionId: 'sodium', inputKey: 'sodium' },
+  { id: 'bonus-epsom', label: 'Bonus Epsom', saltId: 'mgso4', ionId: 'magnesium', inputKey: 'magnesium', isBonus: true },
 ];
 
 function sourceInputMultiplier(dropperId: LotusDropperId): number {
@@ -54,7 +58,7 @@ export function lotusPublishedDrops(
   const styleFactor = lotusStyleFactor(style);
   const volumeFactor = LOTUS_BREW_VOLUME_ML / 4500;
   return Object.fromEntries(
-    LOTUS_DROPPER_DEFINITIONS.map(dropper => [
+    LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus).map(dropper => [
       dropper.id,
       Math.round(
         Number(recipe.publishedInputs[dropper.inputKey] ?? 0)
@@ -76,6 +80,7 @@ function hydrationIonFraction(saltId: string, ionId: IonId): number {
 
 export interface LotusStockPlan {
   id: LotusDropperId;
+  isBonus: boolean;
   label: string;
   saltId: string;
   saltName: string;
@@ -120,6 +125,7 @@ export function lotusStockPlan(
 
   return {
     id: dropper.id,
+    isBonus: Boolean(dropper.isBonus),
     label: dropper.label,
     saltId: dropper.saltId,
     saltName: salt.name,
