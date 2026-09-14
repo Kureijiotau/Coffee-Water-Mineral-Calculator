@@ -8731,7 +8731,11 @@ function LotusDropsSection({
             replacement.style.justifyContent = 'center';
             replacement.style.textAlign = 'center';
             replacement.style.transform = 'translateY(-3px)';
-            replacement.style.minHeight = `${control.getBoundingClientRect().height}px`;
+            replacement.style.height = `${control.getBoundingClientRect().height}px`;
+            replacement.style.minHeight = '0';
+            replacement.style.paddingTop = '0';
+            replacement.style.paddingBottom = '0';
+            replacement.style.lineHeight = '1.2';
             control.replaceWith(replacement);
           });
           clonedDocument.querySelectorAll<HTMLElement>('.lotus-export-card').forEach(card => {
