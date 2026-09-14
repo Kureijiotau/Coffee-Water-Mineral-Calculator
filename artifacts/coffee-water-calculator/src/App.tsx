@@ -8740,10 +8740,10 @@ function LotusDropsSection({
           <div className="font-semibold text-amber-200">What this independent model means</div>
           <p className="mt-1">
             The public Lotus recipe calculator lists 450 mL recipe inputs, rounded drops, a 0.56
-            Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
-            formula or guaranteed drop volume. The default model uses {LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML}
-            Straight drops/mL and derives Round at 0.56×. Measure each finished concentrate and replace
-            that baseline here. Once your droppers are prepared, use the official recipe instructions
+             Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
+             formula or guaranteed drop volume. This calibration tells the calculator how many drops
+             your selected tip actually produces from 1 mL. Measure a known volume with your finished
+             dropper and enter the resulting drops/mL here. Once your droppers are prepared, use the official recipe instructions
             to select the drop counts for your brew.
           </p>
         </div>
@@ -8792,20 +8792,40 @@ function LotusDropsSection({
               </span>
             </label>
             <label>
-              <span className="text-[10px] uppercase tracking-wider text-slate-500">Straight drops/mL</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                {style === 'round' ? 'Round drops/mL calibration' : 'Straight drops/mL calibration'}
+              </span>
               <span className="mt-1 flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 px-2 py-1.5">
                 <StableNumberInput
                   min="0.1"
                   step="0.1"
-                  value={straightDropsPerMlInput}
-                   onChange={event => onStraightDropsPerMlChange(event.target.value)}
+                  value={style === 'round'
+                    ? recipeConcentrateNumber(roundDropsPerMl, 1)
+                    : straightDropsPerMlInput}
+                  onChange={event => {
+                    if (style === 'round') {
+                      const roundValue = Number(event.target.value);
+                      const roundFactor = lotusDropsPerMl('round', 1);
+                      onStraightDropsPerMlChange(
+                        Number.isFinite(roundValue) && roundValue > 0
+                          ? String(roundValue / roundFactor)
+                          : event.target.value,
+                      );
+                    } else {
+                      onStraightDropsPerMlChange(event.target.value);
+                    }
+                  }}
                   className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                  aria-label="Straight dropper calibration in drops per milliliter"
+                  aria-label={`${style === 'round' ? 'Round' : 'Straight'} dropper calibration in drops per milliliter`}
                 />
                 <span className="text-xs text-slate-500">drops/mL</span>
               </span>
             </label>
           </div>
+          <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
+            Calibration guide: measure a known amount such as 1 mL, count the drops it produces with this tip,
+            then enter that count. This value controls every drops-per-mL and dose calculation below.
+          </p>
           <div className="mt-3 grid gap-2 sm:grid-cols-3">
             <SummaryMetric label="Active style" value={style === 'round' ? 'Round' : 'Straight'} detail={`${activeDropsPerMl.toFixed(1)} drops/mL`} tone="fuchsia" />
             <SummaryMetric label="Round model" value={`${roundDropsPerMl.toFixed(1)}`} detail="drops/mL" tone="slate" />
