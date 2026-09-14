@@ -8957,7 +8957,7 @@ function LotusDropsSection({
                         onStraightDropsPerMlChange(style === 'round' && Number.isFinite(value) && value > 0
                           ? String(value / lotusDropsPerMl('round', 1)) : event.target.value);
                       }}
-                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-100 outline-none pr-[102px]"
+                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-100 outline-none pr-[6px] pl-[6px]"
                       aria-label={`${style} dropper calibration in drops per milliliter`} />
                   </label>
                 </div>
