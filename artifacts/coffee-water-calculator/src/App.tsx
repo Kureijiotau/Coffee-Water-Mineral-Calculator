@@ -8695,6 +8695,7 @@ function LotusDropsSection({
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
   const exportRef = useRef<HTMLElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
+  const [cardBorderWidth, setCardBorderWidth] = useState('1');
 
   const stockVolumeMl = Math.max(1, Number(stockVolumeInput) || LOTUS_BOTTLE_VOLUME_ML);
   const straightBaselineDropsPerMl = Math.max(0.1, Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML);
@@ -8877,7 +8878,23 @@ function LotusDropsSection({
 
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
-        <span className="text-[11px] text-slate-500">4 independent droppers</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 rounded-lg border border-slate-700/60 bg-slate-950/30 px-2 py-1.5 text-[10px] text-slate-500">
+            Card border
+            <select
+              value={cardBorderWidth}
+              onChange={event => setCardBorderWidth(event.target.value)}
+              className="rounded border border-slate-700/70 bg-slate-900 px-1.5 py-1 text-[10px] font-semibold text-slate-200 outline-none"
+              aria-label="DIY Lotus Drops card border width"
+            >
+              <option value="1">1 px</option>
+              <option value="2">2 px</option>
+              <option value="3">3 px</option>
+              <option value="4">4 px</option>
+            </select>
+          </label>
+          <span className="text-[11px] text-slate-500">4 independent droppers</span>
+        </div>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         {stockPlans.map(plan => {
@@ -8887,7 +8904,10 @@ function LotusDropsSection({
             <article
               key={plan.id}
               className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4"
-              style={salt ? saltVisualStyle(salt) : undefined}
+              style={{
+                ...(salt ? saltVisualStyle(salt) : {}),
+                borderWidth: `${cardBorderWidth}px`,
+              }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-2.5">
