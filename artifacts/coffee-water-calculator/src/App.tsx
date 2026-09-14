@@ -8729,8 +8729,15 @@ function LotusDropsSection({
             replacement.style.display = 'flex';
             replacement.style.alignItems = 'center';
             replacement.style.justifyContent = control.classList.contains('text-right') ? 'flex-end' : 'flex-start';
+            replacement.style.textAlign = 'center';
             replacement.style.minHeight = `${control.getBoundingClientRect().height}px`;
             control.replaceWith(replacement);
+          });
+          clonedDocument.querySelectorAll<HTMLElement>('.lotus-export-card').forEach(card => {
+            card.style.borderWidth = '2px';
+          });
+          clonedDocument.querySelectorAll<HTMLElement>('.lotus-export-card button').forEach(button => {
+            button.style.textAlign = 'center';
           });
         },
       });
@@ -8889,7 +8896,7 @@ function LotusDropsSection({
               className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-4"
               style={{
                 ...(salt ? saltVisualStyle(salt) : {}),
-                borderWidth: '2px',
+                borderWidth: '1px',
                 boxShadow: 'none',
               }}
             >
@@ -8930,7 +8937,7 @@ function LotusDropsSection({
                      <span className="mt-1 flex gap-1 rounded-md border border-slate-700/60 bg-slate-900/60 p-1">
                        {(['round', 'straight'] as LotusDropperStyle[]).map(option => (
                          <button key={option} type="button" onClick={() => onStyleChange(option)} aria-pressed={style === option}
-                         className={`flex-1 rounded px-2 py-1 text-center text-[10px] font-semibold ${style === option ? 'bg-rose-400/15 text-rose-200' : 'text-slate-500'}`}>
+                         className={`flex-1 rounded px-2 py-1 text-[10px] font-semibold ${style === option ? 'bg-rose-400/15 text-rose-200' : 'text-slate-500'}`}>
                            {option}
                          </button>
                        ))}
@@ -8947,14 +8954,14 @@ function LotusDropsSection({
                          onStraightDropsPerMlChange(style === 'round' && Number.isFinite(value) && value > 0
                            ? String(value / lotusDropsPerMl('round', 1)) : event.target.value);
                        }}
-                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
                        aria-label={`${style} dropper calibration in drops per milliliter`} />
                    </label>
                  </div>
                  <label className="mt-2 block text-[9px] uppercase tracking-wider text-slate-500">
                    Concentrate volume (mL)
                    <StableNumberInput min="1" step="1" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)}
-                     className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-center text-sm font-semibold text-slate-100 outline-none"
+                     className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
                      aria-label="Four-mineral concentrate volume in milliliters" />
                  </label>
                </div>
