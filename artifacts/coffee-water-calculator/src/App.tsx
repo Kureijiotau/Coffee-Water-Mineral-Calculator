@@ -8693,6 +8693,8 @@ function LotusDropsSection({
   onSaveSnapshot: () => void;
 }) {
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
+  const exportRef = useRef<HTMLElement>(null);
+  const [isSavingImage, setIsSavingImage] = useState(false);
 
   const stockVolumeMl = Math.max(1, Number(stockVolumeInput) || LOTUS_BOTTLE_VOLUME_ML);
   const straightBaselineDropsPerMl = Math.max(0.1, Number(straightDropsPerMlInput) || LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML);
@@ -8703,8 +8705,23 @@ function LotusDropsSection({
     lotusStockPlan(dropper, style, stockVolumeMl, straightBaselineDropsPerMl)
   ));
 
+  const handleSaveLotusImage = async () => {
+    if (isSavingImage || !exportRef.current) return;
+    setIsSavingImage(true);
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(exportRef.current, { backgroundColor: '#101526', scale: 2, useCORS: true });
+      const link = document.createElement('a');
+      link.download = 'DIY Lotus Drops.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      setIsSavingImage(false);
+    }
+  };
+
   return (
-    <section className="space-y-4 rounded-2xl border border-rose-400/25 bg-gradient-to-br from-rose-500/[0.08] via-slate-800/80 to-amber-500/[0.06] p-4 shadow-xl sm:p-6">
+    <section ref={exportRef} className="space-y-4 rounded-2xl border border-rose-400/25 bg-gradient-to-br from-rose-500/[0.08] via-slate-800/80 to-amber-500/[0.06] p-4 shadow-xl sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-sm font-semibold text-rose-100">
@@ -8722,12 +8739,12 @@ function LotusDropsSection({
           <div className="flex flex-wrap items-center justify-end gap-2">
             <button
               type="button"
-              onClick={onSaveSnapshot}
+              onClick={handleSaveLotusImage}
               className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300/35 bg-rose-400/10 px-3 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-400/20"
               title="Save the current concentrate workspace as a reusable session snapshot"
             >
               <Save className="h-3.5 w-3.5" aria-hidden="true" />
-              Save snapshot
+              {isSavingImage ? 'Saving…' : 'Save image'}
             </button>
             <span className="rounded-full border border-rose-300/25 bg-rose-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-rose-200">
              Independent model
@@ -8735,7 +8752,7 @@ function LotusDropsSection({
           </div>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="hidden">
         <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-3 text-[11px] leading-relaxed text-amber-100/80">
           <div className="font-semibold text-amber-200">What this independent model means</div>
           <p className="mt-1">
@@ -8874,6 +8891,45 @@ function LotusDropsSection({
                 <SummaryMetric label="Concentrate strength" value={`${plan.saltMgPerMl.toFixed(1)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
                 <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(2)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
+               <div className="mt-3 rounded-lg border border-rose-300/20 bg-rose-400/[0.06] p-2">
+                 <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/80">Calibrate this dropper</div>
+                 <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                   Measure 1 mL with this tip, count the drops, and enter that count. This controls the dose calculations.
+                 </p>
+                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                   <label>
+                     <span className="text-[9px] uppercase tracking-wider text-slate-500">Tip</span>
+                     <span className="mt-1 flex gap-1 rounded-md border border-slate-700/60 bg-slate-900/60 p-1">
+                       {(['round', 'straight'] as LotusDropperStyle[]).map(option => (
+                         <button key={option} type="button" onClick={() => onStyleChange(option)} aria-pressed={style === option}
+                           className={`flex-1 rounded px-2 py-1 text-[10px] font-semibold ${style === option ? 'bg-rose-400/15 text-rose-200' : 'text-slate-500'}`}>
+                           {option}
+                         </button>
+                       ))}
+                     </span>
+                   </label>
+                   <label>
+                     <span className="text-[9px] uppercase tracking-wider text-slate-500">
+                       {style === 'round' ? 'Round' : 'Straight'} drops/mL
+                     </span>
+                     <StableNumberInput min="0.1" step="0.1"
+                       value={style === 'round' ? recipeConcentrateNumber(roundDropsPerMl, 1) : straightDropsPerMlInput}
+                       onChange={event => {
+                         const value = Number(event.target.value);
+                         onStraightDropsPerMlChange(style === 'round' && Number.isFinite(value) && value > 0
+                           ? String(value / lotusDropsPerMl('round', 1)) : event.target.value);
+                       }}
+                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-right text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                       aria-label={`${style} dropper calibration in drops per milliliter`} />
+                   </label>
+                 </div>
+                 <label className="mt-2 block text-[9px] uppercase tracking-wider text-slate-500">
+                   Concentrate volume (mL)
+                   <StableNumberInput min="1" step="1" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)}
+                     className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
+                     aria-label="Four-mineral concentrate volume in milliliters" />
+                 </label>
+               </div>
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
                 <strong className="text-slate-200">Tare the bottle and weigh {stockVolumeMl.toFixed(1)} g of distilled/RO water.</strong>
                 Add <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}, then dissolve completely.
