@@ -745,15 +745,18 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     });
     cursor += 18;
     for (const ion of ions) {
-      const ionName = wrapRecipeShareCardText(`${ion.formula} · ${ion.name}`, 25);
-      const rowHeight = Math.max(38, ionName.length * 16 + 16);
+      const rowHeight = 48;
       svg += `<line x1="${innerX}" y1="${cursor + rowHeight}" x2="${innerX + innerWidth}" y2="${cursor + rowHeight}" stroke="#0d6170" stroke-opacity="0.14"/>`;
-      svg += ionName.map((line, index) => svgText(
-        innerX,
-        cursor + 18 + index * 16,
-        line,
-        { fill: recipeIonColor(ion.id), size: 13, weight: index === 0 ? 700 : 600 },
-      )).join('');
+      svg += svgText(innerX, cursor + 18, ion.formula, {
+        fill: recipeIonColor(ion.id),
+        size: 13,
+        weight: 700,
+      });
+      svg += svgText(innerX, cursor + 36, ion.name, {
+        fill: '#0b1117',
+        size: 12,
+        weight: 600,
+      });
       svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
         fill: recipeIonColor(ion.id),
         size: 18,
