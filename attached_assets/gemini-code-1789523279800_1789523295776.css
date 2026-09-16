@@ -1,0 +1,86 @@
+.qr-options-panel {
+  background: #111a24;
+  border-radius: 12px;
+  padding: 16px;
+  color: #8a9ba8;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.panel-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #5c7080;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.qr-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* Individual Pill Cards */
+.qr-card {
+  background: #182432;
+  border: 1px solid #233346;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.qr-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #00d2c4;
+  background: rgba(0, 210, 196, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+/* QR Code Container with Centered Icon */
+.qr-wrapper {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qr-code {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Center Overlay Icon */
+.qr-icon-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  background: #182432;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.qr-caption {
+  font-size: 0.7rem;
+  color: #8a9ba8;
+  text-align: center;
+}
