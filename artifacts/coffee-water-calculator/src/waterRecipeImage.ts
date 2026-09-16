@@ -825,8 +825,18 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     anchor: 'end',
   });
   const height = cursor - y + 32;
+  const gridPatternId = 'recipe-analysis-grid';
+  const gridOverlay = `
+    <defs>
+      <pattern id="${gridPatternId}" width="8" height="8" patternUnits="userSpaceOnUse">
+        <path d="M 0 8 L 0 0 L 8 0" fill="none" stroke="#0d6170" stroke-opacity="0.12" stroke-width="1"/>
+        <path d="M 8 0 L 8 8 L 0 8" fill="none" stroke="#0d6170" stroke-opacity="0.08" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="18" fill="url(#${gridPatternId})" opacity="0.3"/>
+  `;
   return {
-    svg: roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5') + svg,
+    svg: roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5') + gridOverlay + svg,
     height,
   };
 }
