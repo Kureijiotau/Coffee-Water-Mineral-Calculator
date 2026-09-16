@@ -535,6 +535,9 @@ function svgText(
     family?: string;
     anchor?: 'start' | 'middle' | 'end';
     letterSpacing?: number;
+    stroke?: string;
+    strokeWidth?: number;
+    strokeOpacity?: number;
   } = {},
 ): string {
   const {
