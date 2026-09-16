@@ -8,6 +8,21 @@ const WATERMANCER_METADATA_KEY = 'Watermancer-Recipe';
 export const WATERMANCER_QR_PREFIX = 'WMQR1:';
 export type RecipeImageMimeType = 'image/png' | 'image/webp' | 'image/jpeg';
 
+const RECIPE_ION_COLORS: Record<string, string> = {
+  sodium: '#fb7185',
+  potassium: '#c084fc',
+  magnesium: '#fde047',
+  calcium: '#fb923c',
+  chloride: '#60a5fa',
+  sulfate: '#818cf8',
+  bicarbonate: '#5eead4',
+  carbonate: '#a3e635',
+};
+
+function recipeIonColor(id: string): string {
+  return RECIPE_ION_COLORS[id] ?? '#0d6170';
+}
+
 export function getRecipeImageMimeType(
   fileName: string,
   declaredType = '',
@@ -737,10 +752,10 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         innerX,
         cursor + 18 + index * 16,
         line,
-        { fill: '#173f49', size: 13, weight: index === 0 ? 700 : 600 },
+        { fill: recipeIonColor(ion.id), size: 13, weight: index === 0 ? 700 : 600 },
       )).join('');
       svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
-        fill: '#0d6170',
+        fill: recipeIonColor(ion.id),
         size: 18,
         weight: 700,
         family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
