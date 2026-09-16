@@ -879,9 +879,9 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
     }
     return { svg, height };
   }
-  const qrSize = Math.min(110, Math.max(100, Math.floor((width - 66 - gap) / 2)));
+  const qrSize = Math.min(150, Math.max(126, Math.floor((width - 66 - gap) / 2)));
   const hasTwoQrs = Boolean(model.qrDataUrl && model.shareQrDataUrl);
-  const height = hasTwoQrs ? 202 : qrSize + 30;
+  const height = qrSize + (hasTwoQrs ? 92 : 54);
   let svg = roundedRect(x, y, width, height, '#111a24', '#233346');
   const qrItems = [
     model.qrDataUrl
@@ -899,7 +899,7 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
     const cardY = y + 12;
     const qrX = itemX + 12;
     const qrY = cardY + 30;
-    const cardHeight = hasTwoQrs ? 178 : qrSize + 42;
+    const cardHeight = qrSize + (hasTwoQrs ? 54 : 42);
     svg += roundedRect(itemX, cardY, cardWidth, cardHeight, '#182432', '#233346');
     if (item.kind === 'share') {
       svg += roundedRect(itemX + 12, cardY + 9, cardWidth - 24, 16, '#173c43', '#21585b');
