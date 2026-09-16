@@ -890,7 +890,7 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
     model.shareQrDataUrl
       ? { dataUrl: model.shareQrDataUrl, kind: 'share' as const }
       : null,
-  ].filter((item): item is { dataUrl: string } => item !== null);
+  ].filter((item): item is { dataUrl: string; kind: 'app' | 'share' } => item !== null);
   qrItems.forEach((item, index) => {
     const cardWidth = qrSize + 24;
     const itemX = hasTwoQrs
@@ -902,7 +902,7 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
     const cardHeight = hasTwoQrs ? 178 : qrSize + 42;
     svg += roundedRect(itemX, cardY, cardWidth, cardHeight, '#182432', '#233346');
     if (item.kind === 'share') {
-      svg += roundedRect(itemX + 12, cardY + 9, cardWidth - 24, 16, '#173c43', '#21585b', 4);
+      svg += roundedRect(itemX + 12, cardY + 9, cardWidth - 24, 16, '#173c43', '#21585b');
       svg += svgText(itemX + cardWidth / 2, cardY + 21, 'SHARE LINK', {
         fill: '#47737a',
         size: 8,
