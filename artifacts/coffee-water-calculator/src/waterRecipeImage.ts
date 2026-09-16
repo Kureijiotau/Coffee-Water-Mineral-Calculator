@@ -535,6 +535,8 @@ function svgText(
     family?: string;
     anchor?: 'start' | 'middle' | 'end';
     letterSpacing?: number;
+    stroke?: string;
+    strokeWidth?: number;
   } = {},
 ): string {
   const {
@@ -544,9 +546,12 @@ function svgText(
     family = 'Arial, Helvetica, sans-serif',
     anchor = 'start',
     letterSpacing,
+    stroke,
+    strokeWidth,
   } = options;
   const spacing = letterSpacing === undefined ? '' : ` letter-spacing="${letterSpacing}"`;
-  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}>${escapeXml(text)}</text>`;
+  const textStroke = stroke ? ` stroke="${stroke}" stroke-width="${strokeWidth ?? 1}" paint-order="stroke fill"` : '';
+  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}${textStroke}>${escapeXml(text)}</text>`;
 }
 
 function svgWrappedText(
@@ -751,11 +756,15 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         fill: recipeIonColor(ion.id),
         size: 13,
         weight: 700,
+        stroke: recipeIonColor(ion.id),
+        strokeWidth: 1,
       });
       svg += svgText(innerX, cursor + 36, ion.name, {
         fill: '#0b1117',
         size: 12,
         weight: 600,
+        stroke: '#0b1117',
+        strokeWidth: 1,
       });
       svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
         fill: recipeIonColor(ion.id),
@@ -763,6 +772,8 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         weight: 700,
         family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
         anchor: 'end',
+        stroke: recipeIonColor(ion.id),
+        strokeWidth: 1,
       });
       svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 20, 'mg/L', {
         fill: '#47737a',
