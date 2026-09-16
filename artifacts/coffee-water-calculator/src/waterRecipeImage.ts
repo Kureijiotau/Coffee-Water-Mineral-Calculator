@@ -544,9 +544,15 @@ function svgText(
     family = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
     anchor = 'start',
     letterSpacing,
+    stroke,
+    strokeWidth,
+    strokeOpacity,
   } = options;
   const spacing = letterSpacing === undefined ? '' : ` letter-spacing="${letterSpacing}"`;
-  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}>${escapeXml(text)}</text>`;
+  const strokeAttributes = stroke
+    ? ` stroke="${stroke}" stroke-width="${strokeWidth ?? 1}" stroke-opacity="${strokeOpacity ?? 0.8}" paint-order="stroke fill"`
+    : '';
+  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}${strokeAttributes}>${escapeXml(text)}</text>`;
 }
 
 function svgWrappedText(
@@ -707,15 +713,30 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
 function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
   const innerX = x + 26;
   const innerWidth = width - 52;
+  const analysisText = (
+    textX: number,
+    textY: number,
+    text: string,
+    options: Parameters<typeof svgText>[3] = {},
+  ) => {
+    const fill = options.fill ?? '#d8e9ef';
+    return svgText(textX, textY, text, {
+      ...options,
+      fill,
+      stroke: fill,
+      strokeWidth: 1,
+      strokeOpacity: 0.8,
+    });
+  };
   let cursor = y + 58;
   let svg = '';
-  svg += svgText(innerX, y + 31, 'MINERAL ANALYSIS', {
+  svg += analysisText(innerX, y + 31, 'MINERAL ANALYSIS', {
     fill: '#47737a',
     size: 13,
     weight: 700,
     letterSpacing: 2.1,
   });
-  svg += svgText(x + width - 26, y + 31, 'FINAL MIX', {
+  svg += analysisText(x + width - 26, y + 31, 'FINAL MIX', {
     fill: '#0d6170',
     size: 11,
     weight: 700,
@@ -723,7 +744,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     anchor: 'end',
   });
   const nameLines = wrapRecipeShareCardText(model.recipeName, 26);
-  svg += nameLines.map((line, index) => svgText(
+  svg += nameLines.map((line, index) => analysisText(
     x + width / 2,
     cursor + 25 + index * 25,
     line,
@@ -737,7 +758,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   for (const category of categories) {
     const ions = model.analysis.ions.filter(ion => ion.category === category);
     if (ions.length === 0) continue;
-    svg += svgText(innerX, cursor, category.toUpperCase(), {
+    svg += analysisText(innerX, cursor, category.toUpperCase(), {
       fill: '#47737a',
       size: 11,
       weight: 700,
@@ -747,24 +768,24 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     for (const ion of ions) {
       const rowHeight = 48;
       svg += `<line x1="${innerX}" y1="${cursor + rowHeight}" x2="${innerX + innerWidth}" y2="${cursor + rowHeight}" stroke="${recipeIonColor(ion.id)}" stroke-opacity="0.42"/>`;
-      svg += svgText(innerX, cursor + 18, ion.formula, {
+      svg += analysisText(innerX, cursor + 18, ion.formula, {
         fill: recipeIonColor(ion.id),
         size: 13,
         weight: 700,
       });
-      svg += svgText(innerX, cursor + 36, ion.name, {
+      svg += analysisText(innerX, cursor + 36, ion.name, {
         fill: '#0b1117',
         size: 12,
         weight: 600,
       });
-      svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
+      svg += analysisText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
         fill: recipeIonColor(ion.id),
         size: 18,
         weight: 700,
         family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
         anchor: 'end',
       });
-      svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 20, 'mg/L', {
+      svg += analysisText(innerX + innerWidth, cursor + rowHeight / 2 + 20, 'mg/L', {
         fill: '#47737a',
         size: 9,
         weight: 700,
@@ -786,21 +807,21 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   const metricWidth = innerWidth / metrics.length;
   metrics.forEach(([label, value], index) => {
     const metricX = innerX + metricWidth * index + metricWidth / 2;
-    svg += svgText(metricX, metricTop + 29, label, {
+    svg += analysisText(metricX, metricTop + 29, label, {
       fill: '#47737a',
       size: 10,
       weight: 700,
       letterSpacing: 1.2,
       anchor: 'middle',
     });
-    svg += svgText(metricX, metricTop + 56, value.toFixed(0), {
+    svg += analysisText(metricX, metricTop + 56, value.toFixed(0), {
       fill: '#0d6170',
       size: 25,
       weight: 700,
       family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
       anchor: 'middle',
     });
-    svg += svgText(metricX, metricTop + 72, 'ppm', {
+    svg += analysisText(metricX, metricTop + 72, 'ppm', {
       fill: '#47737a',
       size: 9,
       weight: 700,
@@ -812,12 +833,12 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   const ratio = model.analysis.kh > 0
     ? `${(model.analysis.gh / model.analysis.kh).toFixed(2)}:1`
     : model.analysis.gh > 0 ? '∞:1' : '—';
-  svg += svgText(innerX, cursor + 4, `Estimated final TDS: ${model.analysis.tds.toFixed(0)} ppm`, {
+  svg += analysisText(innerX, cursor + 4, `Estimated final TDS: ${model.analysis.tds.toFixed(0)} ppm`, {
     fill: '#47737a',
     size: 11,
     weight: 700,
   });
-  svg += svgText(innerX + innerWidth, cursor + 4, `GH:KH ${ratio}`, {
+  svg += analysisText(innerX + innerWidth, cursor + 4, `GH:KH ${ratio}`, {
     fill: '#47737a',
     size: 11,
     weight: 700,
