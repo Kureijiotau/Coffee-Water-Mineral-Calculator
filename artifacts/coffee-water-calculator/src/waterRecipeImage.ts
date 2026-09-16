@@ -855,38 +855,34 @@ function renderConcentrateGuide(model: RecipeShareCardModel, x: number, y: numbe
 function renderQrSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
   if (!model.qrDataUrl && !model.shareQrDataUrl) return { svg: '', height: 0 };
   const innerX = x + 22;
-  const gap = 16;
+  const gap = 18;
   if (model.largeRecoveryQr && model.qrDataUrl) {
     const recoverySize = Math.min(760, width - 66 - gap - 220);
     const shareSize = 220;
-    const height = 860;
-    let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
-    svg += svgText(innerX, y + 27, 'QR OPTIONS', {
-      fill: '#47737a',
-      size: 11,
-      weight: 700,
-      letterSpacing: 1.5,
-    });
-    const recoveryY = y + 54;
-    svg += `<rect x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" rx="8" fill="#ffffff"/>`;
+    const height = 820;
+    let svg = roundedRect(x, y, width, height, '#f2f6f3', '#b8d0c9');
+    const recoveryY = y + 24;
+    svg += `<rect x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" rx="4" fill="#ffffff"/>`;
     svg += `<image href="${escapeXml(model.qrDataUrl)}" x="${innerX}" y="${recoveryY}" width="${recoverySize}" height="${recoverySize}" preserveAspectRatio="xMidYMid meet"/>`;
     if (model.shareQrDataUrl) {
       const shareX = innerX + recoverySize + gap;
       const shareY = y + 220;
-      svg += `<rect x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" rx="8" fill="#ffffff"/>`;
+      svg += `<rect x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" rx="4" fill="#ffffff"/>`;
       svg += `<image href="${escapeXml(model.shareQrDataUrl)}" x="${shareX}" y="${shareY}" width="${shareSize}" height="${shareSize}" preserveAspectRatio="xMidYMid meet"/>`;
+      svg += svgText(shareX + shareSize / 2, shareY + shareSize + 22, 'SHARE LINK', {
+        fill: '#47737a',
+        size: 10,
+        weight: 700,
+        letterSpacing: 1.3,
+        anchor: 'middle',
+      });
     }
     return { svg, height };
   }
-  const qrSize = Math.min(165, Math.max(126, Math.floor((width - 66 - gap) / 2)));
-  const height = 244;
-  let svg = roundedRect(x, y, width, height, '#e9f3ee', '#7cc3c5');
-  svg += svgText(innerX, y + 27, 'QR OPTIONS', {
-    fill: '#47737a',
-    size: 11,
-    weight: 700,
-    letterSpacing: 1.5,
-  });
+  const qrSize = Math.min(138, Math.max(116, Math.floor((width - 66 - gap) / 2)));
+  const hasTwoQrs = Boolean(model.qrDataUrl && model.shareQrDataUrl);
+  const height = hasTwoQrs ? 214 : qrSize + 54;
+  let svg = roundedRect(x, y, width, height, '#f2f6f3', '#b8d0c9');
   const qrItems = [
     model.qrDataUrl
       ? { dataUrl: model.qrDataUrl }
@@ -897,9 +893,18 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
   ].filter((item): item is { dataUrl: string } => item !== null);
   qrItems.forEach((item, index) => {
     const itemX = innerX + index * (qrSize + gap);
-    const qrY = y + Math.max(12, Math.floor((height - qrSize) / 2));
-    svg += `<rect x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" rx="8" fill="#ffffff"/>`;
+    const qrY = y + 18;
+    svg += `<rect x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" rx="4" fill="#ffffff"/>`;
     svg += `<image href="${escapeXml(item.dataUrl)}" x="${itemX}" y="${qrY}" width="${qrSize}" height="${qrSize}" preserveAspectRatio="xMidYMid meet"/>`;
+    if (model.shareQrDataUrl && item.dataUrl === model.shareQrDataUrl) {
+      svg += svgText(itemX + qrSize / 2, qrY + qrSize + 20, 'SHARE LINK', {
+        fill: '#47737a',
+        size: 9,
+        weight: 700,
+        letterSpacing: 1.1,
+        anchor: 'middle',
+      });
+    }
   });
   return { svg, height };
 }
