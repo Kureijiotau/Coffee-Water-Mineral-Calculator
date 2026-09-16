@@ -744,42 +744,34 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
       letterSpacing: 1.7,
     });
     cursor += 18;
-    const tileGap = 10;
-    const tileWidth = (innerWidth - tileGap) / 2;
-    const tileHeight = 60;
-    for (let groupStart = 0; groupStart < ions.length; groupStart += 2) {
-      const rowIons = ions.slice(groupStart, groupStart + 2);
-      rowIons.forEach((ion, column) => {
-        const tileX = innerX + column * (tileWidth + tileGap);
-        const tileY = cursor;
-        const ionColor = recipeIonColor(ion.id);
-        svg += roundedRect(tileX, tileY, tileWidth, tileHeight, '#f5faf8', '#c7ddd8');
-        svg += svgText(tileX + 12, tileY + 18, ion.formula, {
-          fill: ionColor,
-          size: 13,
-          weight: 700,
-        });
-        svg += svgText(tileX + 12, tileY + 37, ion.name, {
-          fill: '#0b1117',
-          size: 11,
-          weight: 600,
-        });
-        svg += svgText(tileX + tileWidth - 12, tileY + 24, ion.value.toFixed(1), {
-          fill: ionColor,
-          size: 17,
-          weight: 700,
-          family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-          anchor: 'end',
-        });
-        svg += svgText(tileX + tileWidth - 12, tileY + 41, 'mg/L', {
-          fill: '#47737a',
-          size: 8,
-          weight: 700,
-          letterSpacing: 0.9,
-          anchor: 'end',
-        });
+    for (const ion of ions) {
+      const rowHeight = 48;
+      svg += `<line x1="${innerX}" y1="${cursor + rowHeight}" x2="${innerX + innerWidth}" y2="${cursor + rowHeight}" stroke="#0d6170" stroke-opacity="0.14"/>`;
+      svg += svgText(innerX, cursor + 18, ion.formula, {
+        fill: recipeIonColor(ion.id),
+        size: 13,
+        weight: 700,
       });
-      cursor += tileHeight + tileGap;
+      svg += svgText(innerX, cursor + 36, ion.name, {
+        fill: '#0b1117',
+        size: 12,
+        weight: 600,
+      });
+      svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 5, ion.value.toFixed(1), {
+        fill: recipeIonColor(ion.id),
+        size: 18,
+        weight: 700,
+        family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+        anchor: 'end',
+      });
+      svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 20, 'mg/L', {
+        fill: '#47737a',
+        size: 9,
+        weight: 700,
+        letterSpacing: 1.1,
+        anchor: 'end',
+      });
+      cursor += rowHeight;
     }
     cursor += 18;
   }
