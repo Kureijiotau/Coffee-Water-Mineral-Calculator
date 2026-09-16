@@ -541,7 +541,7 @@ function svgText(
     fill = '#d8e9ef',
     size = 18,
     weight = 400,
-    family = 'Arial, Helvetica, sans-serif',
+    family = 'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
     anchor = 'start',
     letterSpacing,
   } = options;
@@ -1040,7 +1040,7 @@ export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: str
     letterSpacing: 0.5,
   });
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" viewBox="0 0 ${RECIPE_SHARE_CARD_WIDTH} ${height}">${body}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" viewBox="0 0 ${RECIPE_SHARE_CARD_WIDTH} ${height}" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">${body}</svg>`,
     width: RECIPE_SHARE_CARD_WIDTH,
     height,
   };

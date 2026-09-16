@@ -14191,7 +14191,7 @@ function BrewerRecipeStepsModal({
       const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
       const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
       const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl, shareQrDataUrl });
-      const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
+      const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 3);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
        downloadBlob(
          new Blob([packagedPng], { type: 'image/png' }),
