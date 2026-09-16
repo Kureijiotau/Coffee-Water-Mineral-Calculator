@@ -746,7 +746,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     cursor += 18;
     for (const ion of ions) {
       const rowHeight = 48;
-      svg += `<line x1="${innerX}" y1="${cursor + rowHeight}" x2="${innerX + innerWidth}" y2="${cursor + rowHeight}" stroke="#0d6170" stroke-opacity="0.14"/>`;
+      svg += `<line x1="${innerX}" y1="${cursor + rowHeight}" x2="${innerX + innerWidth}" y2="${cursor + rowHeight}" stroke="${recipeIonColor(ion.id)}" stroke-opacity="0.42"/>`;
       svg += svgText(innerX, cursor + 18, ion.formula, {
         fill: recipeIonColor(ion.id),
         size: 13,
