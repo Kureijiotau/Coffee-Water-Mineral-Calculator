@@ -93,3 +93,4 @@
 - [Profile picker ordering](profile-picker-order.md) — keep user-saved profiles and recipes manually reorderable across tabs while built-in entries remain fixed
 - [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before PNG metadata
 - [Salt-mass bottle-volume anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve strength and scale that bottle after a physical-mass edit
+- [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
