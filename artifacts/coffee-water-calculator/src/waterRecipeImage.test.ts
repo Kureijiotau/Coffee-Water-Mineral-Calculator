@@ -223,6 +223,7 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('SHARE LINK');
     expect(long.svg).not.toContain('<image');
     expect(long.svg).not.toContain('QR');
+    expect(long.svg).not.toContain('paint-order="stroke fill"');
     expect(long.svg).not.toContain('…');
   });
 

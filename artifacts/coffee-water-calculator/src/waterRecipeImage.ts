@@ -726,9 +726,6 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     return svgText(textX, textY, text, {
       ...options,
       fill,
-      stroke: '#000000',
-      strokeWidth: 1,
-      strokeOpacity: 0.8,
     });
   };
   let cursor = y + 58;
