@@ -987,210 +987,79 @@ function renderQrSection(model: RecipeShareCardModel, x: number, y: number, widt
  */
 export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: string; width: number; height: number } {
   const model = createRecipeShareCardModel(input);
-  const cardX = RECIPE_SHARE_CARD_PADDING;
-  const cardWidth = RECIPE_SHARE_CARD_WIDTH - RECIPE_SHARE_CARD_PADDING * 2;
-  const innerX = cardX + 36;
-  const innerWidth = cardWidth - 72;
-  const titleLines = wrapRecipeShareCardText(model.recipeName, 34);
-  const finalLines = wrapRecipeShareCardText(model.finalStep, 92);
-  const waterHeight = model.waterSteps.length > 0 ? 205 + model.waterSteps.length * 86 : 0;
-  const saltHeight = model.saltSteps.length > 0
-    ? 182 + model.saltSteps.reduce((total, step) => total + (step.note ? 102 : 78), 0)
-    : 118;
-  const analysisRows = model.analysis.ions.reduce((total, ion) => total + 1, 0);
-  const analysisGroups = new Set(model.analysis.ions.map(ion => ion.category)).size;
-  const analysisHeight = 220 + analysisRows * 56 + analysisGroups * 34;
-  const finalHeight = Math.max(112, 62 + finalLines.length * 22);
-  const headerHeight = Math.max(228, 158 + titleLines.length * 34);
-  const sectionGap = 18;
-  const contentHeight = headerHeight
-    + (waterHeight ? waterHeight + sectionGap : 0)
-    + saltHeight + sectionGap
-    + analysisHeight + sectionGap
-    + finalHeight;
-  const height = contentHeight + RECIPE_SHARE_CARD_PADDING * 2 + 36;
-  let cursor = RECIPE_SHARE_CARD_PADDING + headerHeight;
-  let body = `<rect width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" fill="#dbece5"/>`;
-  body += `<rect x="${cardX}" y="${RECIPE_SHARE_CARD_PADDING}" width="${cardWidth}" height="${contentHeight}" rx="20" fill="#edf7f1" stroke="#c3ddd2" stroke-width="2"/>`;
-  body += svgText(innerX, RECIPE_SHARE_CARD_PADDING + 46, 'WATERMANCER', {
-    fill: '#177b79',
-    size: 16,
-    weight: 800,
-    letterSpacing: 2.2,
-  });
-  body += svgText(cardX + cardWidth - 36, RECIPE_SHARE_CARD_PADDING + 46, 'WM / 0427 / RECIPE', {
-    fill: '#789793',
-    size: 11,
+  const contentWidth = RECIPE_SHARE_CARD_WIDTH - RECIPE_SHARE_CARD_PADDING * 2;
+  const leftWidth = 690;
+  const rightWidth = contentWidth - leftWidth - 28;
+  const titleLines = wrapRecipeShareCardText(model.recipeName, 36);
+  const headerHeight = Math.max(154, 90 + titleLines.length * 34);
+  const top = RECIPE_SHARE_CARD_PADDING + headerHeight + 28;
+  const water = renderWaterSection(model, RECIPE_SHARE_CARD_PADDING, top, leftWidth);
+  const analysis = renderAnalysisSection(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, top, rightWidth);
+  const saltTop = top + water.height + 20;
+  const salt = renderSaltSection(model, RECIPE_SHARE_CARD_PADDING, saltTop, leftWidth);
+  const guideTop = top + analysis.height + 20;
+  const guide = renderConcentrateGuide(model, RECIPE_SHARE_CARD_PADDING + leftWidth + 28, guideTop, rightWidth);
+  const qrTop = guideTop + guide.height + (guide.height > 0 ? 20 : 0);
+  const qr = renderQrSection(
+    model,
+    model.largeRecoveryQr ? RECIPE_SHARE_CARD_PADDING : RECIPE_SHARE_CARD_PADDING + leftWidth + 28,
+    qrTop,
+    model.largeRecoveryQr ? contentWidth : rightWidth,
+  );
+  const finalTop = saltTop + salt.height + 20;
+  const finalLines = wrapRecipeShareCardText(model.finalStep, 76);
+  const finalHeight = Math.max(92, finalLines.length * 21 + 50);
+  const contentBottom = Math.max(finalTop + finalHeight, guideTop + guide.height, qrTop + qr.height);
+  const height = contentBottom + RECIPE_SHARE_CARD_PADDING;
+  const headerX = RECIPE_SHARE_CARD_PADDING;
+  let body = `<rect width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" fill="#071a2a"/>`;
+  body += `<rect x="0" y="0" width="${RECIPE_SHARE_CARD_WIDTH}" height="${RECIPE_SHARE_CARD_PADDING + headerHeight}" fill="#0a2435"/>`;
+  body += `<circle cx="${RECIPE_SHARE_CARD_WIDTH - 95}" cy="82" r="66" fill="#1a6670" fill-opacity="0.2"/>`;
+  body += `<circle cx="${RECIPE_SHARE_CARD_WIDTH - 140}" cy="30" r="35" fill="#55c9c5" fill-opacity="0.1"/>`;
+  body += svgText(headerX, 62, 'WATERMANCER · COFFEE WATER RECIPE', {
+    fill: '#77d8d7',
+    size: 14,
     weight: 700,
-    family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-    letterSpacing: 1.2,
-    anchor: 'end',
-  });
-  body += `<line x1="${innerX}" y1="${RECIPE_SHARE_CARD_PADDING + 72}" x2="${cardX + cardWidth - 36}" y2="${RECIPE_SHARE_CARD_PADDING + 72}" stroke="#b9d4ca"/>`;
-  body += svgText(innerX, RECIPE_SHARE_CARD_PADDING + 111, 'FILTER COFFEE · PREPARED WATER', {
-    fill: '#6c8f8a',
-    size: 12,
-    weight: 700,
-    letterSpacing: 1.8,
+    letterSpacing: 2.8,
   });
   body += titleLines.map((line, index) => svgText(
-    innerX,
-    RECIPE_SHARE_CARD_PADDING + 150 + index * 34,
+    headerX,
+    102 + index * 34,
     line,
-    { fill: '#126d70', size: 31, weight: 800, family: 'Georgia, serif' },
+    { fill: '#f2fbfa', size: 31, weight: 700, family: 'Georgia, serif' },
   )).join('');
-  body += svgText(innerX, RECIPE_SHARE_CARD_PADDING + 180 + titleLines.length * 34, model.batchLabel, {
-    fill: '#789793',
-    size: 13,
-    weight: 600,
-    family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-  });
-  body += roundedRect(cardX + cardWidth - 226, RECIPE_SHARE_CARD_PADDING + 104, 190, 76, '#e1f3ec', '#8bc9bb');
-  body += svgText(cardX + cardWidth - 210, RECIPE_SHARE_CARD_PADDING + 128, 'APPROX. TDS', {
-    fill: '#4c8f88',
-    size: 10,
+  body += svgText(headerX, 102 + titleLines.length * 34 + 6, model.batchLabel, { fill: '#a4c5cc', size: 14, weight: 600 });
+  body += roundedRect(RECIPE_SHARE_CARD_WIDTH - RECIPE_SHARE_CARD_PADDING - 260, 44, 260, 72, '#123c4a', '#2b7880');
+  body += svgText(RECIPE_SHARE_CARD_WIDTH - RECIPE_SHARE_CARD_PADDING - 240, 69, 'ESTIMATED FINAL TDS', {
+    fill: '#8ed9d7',
+    size: 11,
     weight: 700,
     letterSpacing: 1.5,
   });
-  body += svgText(cardX + cardWidth - 210, RECIPE_SHARE_CARD_PADDING + 159, model.analysis.tds.toFixed(1), {
-    fill: '#168b87',
-    size: 27,
-    weight: 800,
+  body += svgText(RECIPE_SHARE_CARD_WIDTH - RECIPE_SHARE_CARD_PADDING - 240, 99, `${model.analysis.tds.toFixed(0)} ppm`, {
+    fill: '#f6ffff',
+    size: 26,
+    weight: 700,
     family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
   });
-  body += svgText(cardX + cardWidth - 52, RECIPE_SHARE_CARD_PADDING + 159, 'mg/L', {
-    fill: '#4c8f88',
-    size: 10,
-    weight: 700,
-    anchor: 'end',
-  });
-
-  const renderPreviewSection = (label: string, title: string, y: number, sectionHeight: number, tone: 'dark' | 'light') => {
-    const fill = tone === 'dark' ? '#143e4b' : '#e9f5ef';
-    const stroke = tone === 'dark' ? '#235d69' : '#8bc9bb';
-    const headingColor = tone === 'dark' ? '#bce9df' : '#207b78';
-    let section = roundedRect(cardX + 36, y, innerWidth, sectionHeight, fill, stroke);
-    section += svgText(innerX + 18, y + 30, `${label} /`, {
-      fill: tone === 'dark' ? '#7ad0c2' : '#55a49b',
-      size: 10,
+  body += water.svg + salt.svg + analysis.svg + guide.svg + qr.svg;
+  body += roundedRect(RECIPE_SHARE_CARD_PADDING, finalTop, leftWidth, finalHeight, '#12382f', '#3d8f78');
+  body += sectionLabel(RECIPE_SHARE_CARD_PADDING + 26, finalTop + 31, 'Final · Verify and brew', '#8ce1b1');
+  body += finalLines.map((line, index) => svgText(
+    RECIPE_SHARE_CARD_PADDING + 26,
+    finalTop + 58 + index * 21,
+    line,
+    { fill: '#dcf8e8', size: 14, weight: 600 },
+  )).join('');
+  if (model.tdsTarget > 0) {
+    body += svgText(RECIPE_SHARE_CARD_PADDING + leftWidth - 26, finalTop + 31, `${model.tdsTarget.toFixed(0)} ppm target`, {
+      fill: '#baf5d0',
+      size: 13,
       weight: 700,
       family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-      letterSpacing: 1.1,
+      anchor: 'end',
     });
-    section += svgText(innerX + 56, y + 30, title, {
-      fill: headingColor,
-      size: 18,
-      weight: 700,
-    });
-    section += `<line x1="${innerX + 230}" y1="${y + 25}" x2="${cardX + cardWidth - 54}" y2="${y + 25}" stroke="${stroke}" stroke-opacity="0.75"/>`;
-    return section;
-  };
-
-  if (waterHeight) {
-    body += renderPreviewSection('01', 'Prepare the water', cursor, waterHeight, 'dark');
-    let rowY = cursor + 54;
-    model.waterSteps.forEach((step, index) => {
-      const rowHeight = 70;
-      body += roundedRect(innerX + 18, rowY, innerWidth - 36, rowHeight, index % 2 === 0 ? '#1c4e5d' : '#1a4857', '#347180');
-      body += svgText(innerX + 34, rowY + 20, step.label.toUpperCase(), { fill: '#8bc0bd', size: 9, weight: 700, letterSpacing: 1.3 });
-      body += svgText(innerX + 34, rowY + 43, step.name, { fill: '#e5f5f1', size: 17, weight: 700 });
-      body += svgText(cardX + cardWidth - 54, rowY + 40, step.amount, {
-        fill: '#b9eee1',
-        size: 19,
-        weight: 700,
-        family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-        anchor: 'end',
-      });
-      rowY += rowHeight + 12;
-    });
-    cursor += waterHeight + sectionGap;
   }
-
-  body += renderPreviewSection('02', 'Add the mineral salts', cursor, saltHeight, 'dark');
-  let saltY = cursor + 52;
-  if (model.saltSteps.length > 0) {
-    body += svgWrappedText(innerX + 18, saltY, model.saltIntro, 104, { fill: '#a8d1cb', size: 13, lineHeight: 18 }).svg;
-    saltY += 42;
-    model.saltSteps.forEach((step, index) => {
-      const noteLines = step.note ? wrapRecipeShareCardText(step.note, 82) : [];
-      const rowHeight = noteLines.length > 0 ? 88 : 66;
-      const fill = noteLines.length > 0 ? '#5a3544' : index % 2 === 0 ? '#1c4e5d' : '#1a4857';
-      const stroke = noteLines.length > 0 ? '#d98193' : '#347180';
-      body += roundedRect(innerX + 18, saltY, innerWidth - 36, rowHeight, fill, stroke);
-      body += svgText(innerX + 34, saltY + 20, `${String(index + 1).padStart(2, '0')} / ${step.form}`.toUpperCase(), {
-        fill: noteLines.length > 0 ? '#ffc5ce' : '#8bc0bd',
-        size: 9,
-        weight: 700,
-        letterSpacing: 1.1,
-      });
-      body += svgText(innerX + 34, saltY + 43, `${step.name} ${step.formula}`, { fill: '#e5f5f1', size: 16, weight: 700 });
-      body += svgText(cardX + cardWidth - 54, saltY + 39, step.amount, {
-        fill: noteLines.length > 0 ? '#ffe5a8' : '#b9eee1',
-        size: 17,
-        weight: 700,
-        family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-        anchor: 'end',
-      });
-      if (noteLines.length > 0) {
-        body += noteLines.map((line, lineIndex) => svgText(innerX + 34, saltY + 65 + lineIndex * 15, line, {
-          fill: '#ffc5ce',
-          size: 10,
-          weight: 700,
-        })).join('');
-      }
-      saltY += rowHeight + 10;
-    });
-    if (model.mixingNote) {
-      const noteLines = wrapRecipeShareCardText(model.mixingNote, 96);
-      body += svgText(innerX + 18, saltY + 14, 'MIXING VESSEL', { fill: '#8bcfc5', size: 10, weight: 700, letterSpacing: 1.2 });
-      body += noteLines.map((line, index) => svgText(innerX + 18, saltY + 36 + index * 17, line, { fill: '#ccebe4', size: 12, weight: 600 })).join('');
-    }
-  } else {
-    body += svgText(innerX + 18, saltY + 25, 'No mineral salts are needed for this recipe.', { fill: '#a8d1cb', size: 14 });
-  }
-  cursor += saltHeight + sectionGap;
-
-  body += renderPreviewSection('03', 'Mineral analysis', cursor, analysisHeight, 'light');
-  body += svgText(innerX + 18, cursor + 58, 'FINAL MIX / ION BALANCE', { fill: '#5a9790', size: 10, weight: 700, letterSpacing: 1.4 });
-  body += svgText(cardX + cardWidth - 54, cursor + 58, 'mg/L', { fill: '#6d9790', size: 10, weight: 700, anchor: 'end' });
-  body += svgText(innerX + 18, cursor + 84, model.recipeName, { fill: '#126d70', size: 22, weight: 800, family: 'Georgia, serif' });
-  let ionY = cursor + 112;
-  const categories: Array<RecipeShareCardIon['category']> = ['Cations', 'Anions', 'Other modeled ions'];
-  for (const category of categories) {
-    const ions = model.analysis.ions.filter(ion => ion.category === category);
-    if (ions.length === 0) continue;
-    body += svgText(innerX + 18, ionY, category.toUpperCase(), { fill: '#5a9790', size: 10, weight: 700, letterSpacing: 1.4 });
-    ionY += 22;
-    for (const ion of ions) {
-      const ionColor = recipeIonColor(ion.id);
-      body += `<line x1="${innerX + 18}" y1="${ionY + 42}" x2="${cardX + cardWidth - 54}" y2="${ionY + 42}" stroke="${ionColor}" stroke-opacity="0.32"/>`;
-      body += svgText(innerX + 18, ionY + 18, ion.formula, { fill: ionColor, size: 14, weight: 800, filter: 'url(#recipe-ion-text-shadow)' });
-      body += svgText(innerX + 18, ionY + 35, ion.name, { fill: '#223636', size: 12, weight: 600 });
-      body += svgText(cardX + cardWidth - 54, ionY + 25, ion.value.toFixed(1), {
-        fill: ionColor,
-        size: 19,
-        weight: 800,
-        family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-        anchor: 'end',
-      });
-      ionY += 56;
-    }
-    ionY += 16;
-  }
-  const metricWidth = (innerWidth - 36) / 3;
-  const metrics = [['GH', model.analysis.gh, '°dH'], ['KH', model.analysis.kh, '°dH'], ['ION TOTAL', model.analysis.tds, 'mg/L']] as const;
-  metrics.forEach(([label, value, unit], index) => {
-    const metricX = innerX + 18 + metricWidth * index + metricWidth / 2;
-    body += svgText(metricX, cursor + analysisHeight - 72, label, { fill: '#5a9790', size: 9, weight: 700, letterSpacing: 1.1, anchor: 'middle' });
-    body += svgText(metricX, cursor + analysisHeight - 45, value.toFixed(1), { fill: '#126d70', size: 23, weight: 800, family: 'ui-monospace, SFMono-Regular, Consolas, monospace', anchor: 'middle' });
-    body += svgText(metricX, cursor + analysisHeight - 27, unit, { fill: '#6d9790', size: 9, weight: 700, anchor: 'middle' });
-  });
-  cursor += analysisHeight + sectionGap;
-
-  body += roundedRect(cardX + 36, cursor, innerWidth, finalHeight, '#e1f2e8', '#9bcdbd');
-  body += svgText(innerX + 18, cursor + 29, 'FINAL / VERIFY AND BREW', { fill: '#3e8d7c', size: 10, weight: 700, letterSpacing: 1.3 });
-  body += finalLines.map((line, index) => svgText(innerX + 18, cursor + 57 + index * 22, line, { fill: '#315d51', size: 13, weight: 600 })).join('');
-  body += svgText(cardX + cardWidth - 54, cursor + 29, 'W / 04', { fill: '#6c9f8f', size: 10, weight: 700, family: 'ui-monospace, SFMono-Regular, Consolas, monospace', anchor: 'end' });
   body += svgText(RECIPE_SHARE_CARD_WIDTH / 2, height - 20, 'mg/L = ppm · Mix carefully and adjust extraction to taste', {
     fill: '#6c929d',
     size: 11,
@@ -1198,7 +1067,6 @@ export function buildRecipeShareCardSvg(input: RecipeShareCardInput): { svg: str
     anchor: 'middle',
     letterSpacing: 0.5,
   });
-  body = `<defs><filter id="recipe-ion-text-shadow" x="-20%" y="-30%" width="140%" height="170%"><feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0b1117" flood-opacity="0.46"/></filter></defs>${body}`;
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${RECIPE_SHARE_CARD_WIDTH}" height="${height}" viewBox="0 0 ${RECIPE_SHARE_CARD_WIDTH} ${height}" text-rendering="geometricPrecision" shape-rendering="geometricPrecision">${body}</svg>`,
     width: RECIPE_SHARE_CARD_WIDTH,
