@@ -100,6 +100,8 @@ const formatGhKhRatio = (gh: number, kh: number): string => {
 };
 
 const MIXER_MEME_SALT_IDS = new Set(['calact', 'mggly']);
+const MIXER_HIDDEN_SOURCES_STORAGE_KEY = 'cwm.waterMixerHiddenFinishedSources';
+const MIXER_FINISHED_WATER_CLEANUP_KEY = 'cwm.waterMixerFinishedWaterCleanup';
 const MIXER_LIVE_ION_ORDER: IonId[] = [
   'magnesium',
   'chloride',
