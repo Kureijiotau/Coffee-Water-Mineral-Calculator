@@ -29,7 +29,7 @@ import {
   type WaterMixSourceSnapshot,
 } from './waterMixer';
 import type { WaterMixerImportResult, WaterMixerImportedRecipe } from './waterMixerImport';
-import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, createWaterRecipeShareQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
+import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
 import { StableNumberInput } from './components/StableNumberInput';
 import { createWaterRecipeSharePayload, createWaterRecipeShareUrl, encodeWaterRecipeSharePayload } from './waterRecipeShare';
@@ -834,8 +834,7 @@ function MixerRecipeCardModal({
       // overflowing QR capacity for larger blends.
       const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
       const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
-      const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
-      const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl, shareQrDataUrl });
+      const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipePayload);
       const url = URL.createObjectURL(new Blob([packagedPng], { type: 'image/png' }));

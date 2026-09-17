@@ -62,7 +62,6 @@ import {
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
   createWaterRecipeQrDataUrl,
-  createWaterRecipeShareQrDataUrl,
   extractWaterRecipeJsonFromQrImage,
   getRecipeImageMimeType,
   isPngImageBytes,
@@ -82,6 +81,7 @@ import {
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import WaterMixer, { type WaterMixerDatabaseWater, type WaterMixerSavedSource } from './WaterMixer';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
+import { scanRecipeCardImage, type RecipeCardScanResult } from './recipeCardReader';
 import {
   LEGACY_WATER_PAYLOAD_VERSION,
   migrateLegacyWaterPayload,
@@ -1179,6 +1179,46 @@ const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
   'citrates',
   'bicarbonate',
 ];
+
+function recipeCardRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function recipeCardIonTargets(value: unknown): IonicTargetValues {
+  const record = recipeCardRecord(value);
+  if (!record) return {};
+  const targets: IonicTargetValues = {};
+  for (const id of ACTIVE_ION_IDS) {
+    const raw = record[id];
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) targets[id] = raw;
+  }
+  return targets;
+}
+
+function recipeCardSaltRecipe(scan: RecipeCardScanResult): SaltRecipe | null {
+  if (typeof scan.name !== 'string' || !scan.name.trim() || !Array.isArray(scan.salts)) return null;
+  const salts: Record<string, SaltRecipeEntry> = {};
+  for (const rawSalt of scan.salts) {
+    const entry = recipeCardRecord(rawSalt);
+    if (!entry || typeof entry.saltId !== 'string') continue;
+    const salt = SALTS.find(item => item.id === entry.saltId);
+    const target = typeof entry.targetPpm === 'number' ? entry.targetPpm : Number(entry.targetPpm);
+    if (!salt || !Number.isFinite(target) || target < 0) continue;
+    const formLabel = typeof entry.formLabel === 'string' ? entry.formLabel.trim().toLowerCase() : '';
+    const formIdx = formLabel
+      ? salt.hydrationForms.findIndex(form => form.label.toLowerCase() === formLabel || form.label.toLowerCase().includes(formLabel) || formLabel.includes(form.label.toLowerCase()))
+      : -1;
+    salts[salt.id] = {
+      target: String(target),
+      formIdx: formIdx >= 0 ? formIdx : salt.defaultFormIdx ?? 0,
+    };
+  }
+  return Object.keys(salts).length > 0
+    ? { id: newRecipeId(), name: scan.name.trim(), salts }
+    : null;
+}
 type AutoFillPriorityPreset = 'mineral-first' | 'bicarbonate-first' | 'balanced-gh-kh' | 'custom';
 
 const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }> = {
@@ -4726,6 +4766,58 @@ function App() {
       return;
     }
     applyRecipeObject(recipe);
+    return;
+  };
+
+  const importRecipeCardWithGemini = async (file: File): Promise<void> => {
+    const scan = await scanRecipeCardImage(file);
+    const confidenceRecord = recipeCardRecord(scan.confidence);
+    const overallConfidence = typeof confidenceRecord?.overall === 'number'
+      ? confidenceRecord.overall
+      : 0;
+    const warnings = [
+      ...(Array.isArray(scan.warnings) ? scan.warnings.filter((item): item is string => typeof item === 'string') : []),
+      ...(Array.isArray(confidenceRecord?.uncertainFields)
+        ? confidenceRecord.uncertainFields.filter((item): item is string => typeof item === 'string')
+        : []),
+    ];
+
+    if (showWatermancer) {
+      const targets = recipeCardIonTargets(scan.finalIons);
+      if (Object.keys(targets).length < 4) {
+        throw new Error('The card did not contain enough readable final ion readings for Watermancer.');
+      }
+      const name = typeof scan.name === 'string' && scan.name.trim() ? scan.name.trim() : 'Imported recipe card';
+      const needsReview = overallConfidence < 0.85 || warnings.length > 0;
+      const reviewMessage = [
+        `Read "${name}" as a Watermancer ion target.`,
+        `Detected ${Object.keys(targets).length} final ion readings.`,
+        ...(warnings.length > 0 ? [`Warnings: ${warnings.join('; ')}`] : []),
+        'Apply these readings to Watermancer?',
+      ].join('\n');
+      if (needsReview && !window.confirm(reviewMessage)) return;
+      const importedProfile = createWatermancerProfile(name, targets);
+      setWmProfiles(prev => [...prev, importedProfile]);
+      setWatermancerTargetOverride(targets);
+      setWatermancerImportedRecipeName(importedProfile.name);
+      setWatermancerTargetSource(`saved:${importedProfile.id}`);
+      return;
+    }
+
+    const importedRecipe = recipeCardSaltRecipe(scan);
+    if (!importedRecipe) {
+      throw new Error('The card did not contain readable salt targets for Alchemist.');
+    }
+    const needsReview = overallConfidence < 0.85 || warnings.length > 0;
+    const reviewMessage = [
+      `Read "${importedRecipe.name}" as an Alchemist salt recipe.`,
+      `Detected ${Object.keys(importedRecipe.salts).length} salt rows.`,
+      ...(warnings.length > 0 ? [`Warnings: ${warnings.join('; ')}`] : []),
+      'Apply these salt targets to Alchemist?',
+    ].join('\n');
+    if (needsReview && !window.confirm(reviewMessage)) return;
+    setSavedRecipes(prev => [...prev, importedRecipe]);
+    applyRecipeObject(importedRecipe);
   };
 
   const updateRow = (i: number, patch: Partial<SaltRow>) => {
@@ -14189,8 +14281,7 @@ function BrewerRecipeStepsModal({
       // and can exceed QR capacity for larger recipes.
       const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
       const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
-      const shareQrDataUrl = await createWaterRecipeShareQrDataUrl(shareUrl);
-      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl, shareQrDataUrl });
+      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl });
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 3);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
        downloadBlob(
