@@ -61,7 +61,6 @@ import {
   extractWaterRecipeJsonFromPng,
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
-  createWaterRecipeQrDataUrl,
   extractWaterRecipeJsonFromQrImage,
   getRecipeImageMimeType,
   isPngImageBytes,
@@ -87,10 +86,7 @@ import {
   migrateLegacyWaterPayload,
 } from './legacyWaterRecovery';
 import {
-  createWaterRecipeSharePayload,
-  createWaterRecipeShareUrl,
   decodeWaterRecipeSharePayload,
-  encodeWaterRecipeSharePayload,
   WATER_RECIPE_SHARE_PARAM,
   type WaterRecipeSharePayload,
 } from './waterRecipeShare';
@@ -7966,16 +7962,6 @@ function App() {
            dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
            profile={recipeShareProfile}
-           sharePayload={createWaterRecipeSharePayload(
-             captureWaterPlanSnapshot(),
-             recipeStepsProfileName,
-           )}
-           shareUrl={createWaterRecipeShareUrl(
-             createWaterRecipeSharePayload(
-               captureWaterPlanSnapshot(),
-               recipeStepsProfileName,
-             ),
-           )}
           onClose={() => setShowBrewerSteps(null)}
         />
       )}
@@ -13976,8 +13962,6 @@ function BrewerRecipeStepsModal({
   dropsPerMl,
   dosingMethod,
   profile,
-  sharePayload,
-  shareUrl,
   onClose,
 }: {
   recipeName: string;
@@ -13999,8 +13983,6 @@ function BrewerRecipeStepsModal({
   dropsPerMl: number;
   dosingMethod: 'dry' | 'dropper';
   profile: NonNullable<ReturnType<typeof createRecipeShareCardModel>['profile']>;
-  sharePayload: WaterRecipeSharePayload;
-  shareUrl: string;
   onClose: () => void;
 }) {
   const configuredBaseWaters = baseWaters
@@ -14284,13 +14266,7 @@ function BrewerRecipeStepsModal({
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     };
     try {
-      // The share payload already contains the complete waters, salt rows,
-      // hydration forms, volumes, and final readings. Do not wrap it in the
-      // legacy recipe payload as well: that duplicates most of the QR data
-      // and can exceed QR capacity for larger recipes.
-      const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
-      const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
-      const rendered = buildRecipeShareCardSvg({ ...shareCardModel, qrDataUrl });
+      const rendered = buildRecipeShareCardSvg(shareCardModel);
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 3);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipeCardPayload);
        downloadBlob(

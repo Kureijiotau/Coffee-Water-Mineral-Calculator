@@ -30,10 +30,9 @@ import {
   type WaterMixSourceSnapshot,
 } from './waterMixer';
 import type { WaterMixerImportResult, WaterMixerImportedRecipe } from './waterMixerImport';
-import { buildRecipeShareCardSvg, createWaterRecipeQrDataUrl, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
+import { buildRecipeShareCardSvg, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
 import { recipeFilenameSlug } from './recipes';
 import { StableNumberInput } from './components/StableNumberInput';
-import { createWaterRecipeSharePayload, createWaterRecipeShareUrl, encodeWaterRecipeSharePayload } from './waterRecipeShare';
 
 export type WaterMixerDatabaseWater = {
   id: string | number;
@@ -798,46 +797,8 @@ function MixerRecipeCardModal({
       gh: result.gh,
       kh: result.kh,
     },
-    largeRecoveryQr: true,
   }), [recipeName, result, saltSteps, sourceA.name, sourceB.name]);
   const model = useMemo(() => buildRecipeShareCardSvg(cardInput), [cardInput]);
-  const sharePayload = useMemo(() => createWaterRecipeSharePayload({
-    liters: String(result.totalVolumeMl / 1000),
-    volumeUnit: 'liters',
-    rows: SALTS.map(salt => ({
-      target: saltTargets[salt.id] === undefined ? '' : String(saltTargets[salt.id]),
-      formIdx: formIdxBySaltId[salt.id] ?? salt.defaultFormIdx ?? 0,
-    })),
-    mineralWaters: [
-      {
-        id: 'mixer-source-a',
-        name: sourceA.name,
-        ions: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, String(sourceA.ions[id] ?? '')])),
-        metadata: Object.fromEntries(Object.entries(sourceA.metadata ?? {}).map(([key, value]) => [key, String(value ?? '')])),
-        volumeMl: String(result.volumeAMl),
-        ...(sourceA.sourceId ? { sourceLocalId: sourceA.sourceId } : {}),
-      },
-    ],
-    additionWaters: [
-      {
-        id: 'mixer-source-b',
-        name: sourceB.name,
-        ions: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, String(sourceB.ions[id] ?? '')])),
-        metadata: Object.fromEntries(Object.entries(sourceB.metadata ?? {}).map(([key, value]) => [key, String(value ?? '')])),
-        volumeMl: String(result.volumeBMl),
-        ...(sourceB.sourceId ? { sourceLocalId: sourceB.sourceId } : {}),
-      },
-    ],
-    finishedIons: result.finalIons,
-  }, recipeName), [
-    formIdxBySaltId,
-    recipeName,
-    result,
-    saltTargets,
-    sourceA,
-    sourceB,
-  ]);
-  const shareUrl = useMemo(() => createWaterRecipeShareUrl(sharePayload), [sharePayload]);
   const previewUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(model.svg)}`;
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
@@ -858,12 +819,7 @@ function MixerRecipeCardModal({
          saltTargets,
          formIdxBySaltId,
        });
-      // The share payload is already complete. Keeping the legacy recipe
-      // payload out of the QR avoids duplicating the entire recipe and
-      // overflowing QR capacity for larger blends.
-      const recoveryQrPayload = encodeWaterRecipeSharePayload(sharePayload);
-      const qrDataUrl = await createWaterRecipeQrDataUrl(recoveryQrPayload);
-      const rendered = buildRecipeShareCardSvg({ ...cardInput, qrDataUrl });
+      const rendered = buildRecipeShareCardSvg(cardInput);
       const blob = await rasterizeRecipeShareCard(rendered.svg, rendered.width, rendered.height, 'png', 2);
       const packagedPng = embedWaterRecipeJsonInPng(await blob.arrayBuffer(), recipePayload);
       const url = URL.createObjectURL(new Blob([packagedPng], { type: 'image/png' }));
