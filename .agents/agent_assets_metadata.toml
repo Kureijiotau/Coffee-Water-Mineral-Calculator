@@ -74,3 +74,17 @@ mtime_ms = 1789017091453
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/ebdbfdce-b8bd-43b1-bd62-da073f02cb6c/fd361c20-fa26-4f5b-b1ba-a198f80c9474"
 storage_version_token = "1789017310543267"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "P7-ThV9zUqsVQzBwzPsrT"
+uri = "file://docs/superpowers/specs/2026-09-17-recipe-card-reading-design.md"
+type = "text"
+title = "Recipe Card Reading Design Spec"
+description = "Approved design for hybrid recipe-card import, OCR/Gemini fallback, and active-workspace interpretation."
+logical_id = "fe145bad-f16f-4f07-ac3b-fd90a6ba26ad"
+content_hash = "sha256:03482109673fc01404b5799e4e65e7e082528ea4e5a644ed7bee76c467cf101c"
+size = 10709
+mtime_ms = 1789613630534
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/fe145bad-f16f-4f07-ac3b-fd90a6ba26ad/6a81ff09-902d-419e-b628-e92be0440cde"
+storage_version_token = "1789613711254217"
+content_type = "text/markdown"
