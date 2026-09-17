@@ -61,7 +61,6 @@ export type WaterMixerProps = {
   onLoadCommunityWaters?: () => void | Promise<unknown>;
   onSavedRecipe?: (recipe: WaterMixRecipe) => void;
   onImportRecipeFile?: (file: File) => Promise<WaterMixerImportResult>;
-  onClearSavedFinishedWaters?: () => void;
 };
 
 type CardState = {
@@ -79,6 +78,32 @@ const emptyCard = (): CardState => ({
   manualIons: {},
   databaseQuery: '',
 });
+
+function loadHiddenMixerSourceIds(): Set<string> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(MIXER_HIDDEN_SOURCES_STORAGE_KEY) ?? '[]') as unknown;
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+        : [],
+    );
+  } catch {
+    return new Set();
+  }
+}
+
+function saveHiddenMixerSourceIds(ids: Set<string>): void {
+  try {
+    localStorage.setItem(MIXER_HIDDEN_SOURCES_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Local storage is best effort in private browsing and embedded previews.
+  }
+}
+
+function mixerSourceStorageId(source: Pick<WaterMixerSavedSource, 'id' | 'sourceId'>): string | null {
+  const id = source.sourceId?.trim() || source.id?.trim();
+  return id || null;
+}
 
 const blankSnapshot = (name: string, sourceKind: WaterMixSourceKind, ions: Partial<Record<IonId, number>> = {}): WaterMixSourceSnapshot => ({
   name,
@@ -942,7 +967,6 @@ export default function WaterMixer({
   onLoadCommunityWaters,
   onSavedRecipe,
   onImportRecipeFile,
-  onClearSavedFinishedWaters,
 }: WaterMixerProps) {
   const [cardA, setCardA] = useState<CardState>(emptyCard);
   const [cardB, setCardB] = useState<CardState>(emptyCard);
@@ -963,6 +987,7 @@ export default function WaterMixer({
   const [importMessage, setImportMessage] = useState('');
   const [pendingImport, setPendingImport] = useState<WaterMixerSavedSource | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [hiddenSourceIds, setHiddenSourceIds] = useState<Set<string>>(loadHiddenMixerSourceIds);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
@@ -976,6 +1001,26 @@ export default function WaterMixer({
     deleteConfirmRef.current?.focus();
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pendingDeleteRecipe]);
+
+  useEffect(() => {
+    if (localStorage.getItem(MIXER_FINISHED_WATER_CLEANUP_KEY) === 'done') return;
+    if (savedSources.length === 0 && importedSources.length === 0 && storedRecipes.length === 0) return;
+
+    const nextHiddenSourceIds = new Set(hiddenSourceIds);
+    savedSources.forEach(source => {
+      const id = mixerSourceStorageId(source);
+      if (id) nextHiddenSourceIds.add(id);
+    });
+    saveHiddenMixerSourceIds(nextHiddenSourceIds);
+    setHiddenSourceIds(nextHiddenSourceIds);
+    saveWaterMixRecipes([]);
+    saveImportedWaterMixSources([]);
+    setStoredRecipes([]);
+    setImportedSources([]);
+    localStorage.setItem(MIXER_FINISHED_WATER_CLEANUP_KEY, 'done');
+    setCardA(emptyCard());
+    setCardB(emptyCard());
+  }, [hiddenSourceIds, importedSources.length, savedSources, storedRecipes.length]);
 
   const databaseWaters = useMemo(() => {
     const byId = new Map<string, WaterMixerDatabaseWater>();
@@ -1002,7 +1047,12 @@ export default function WaterMixer({
     [formIdxBySaltId, result.totalVolumeMl, saltTargets],
   );
   const eligibleSources = useMemo<WaterMixerSavedSource[]>(() => dedupeWaterMixSourceSnapshots([
-    ...savedSources.map(migrateWaterMixSourceSnapshot),
+    ...savedSources
+      .filter(source => {
+        const id = mixerSourceStorageId(source);
+        return !id || !hiddenSourceIds.has(id);
+      })
+      .map(migrateWaterMixSourceSnapshot),
     ...importedSources.map(migrateWaterMixSourceSnapshot),
     ...storedRecipes.map(recipe => ({
       id: recipe.id,
@@ -1013,7 +1063,7 @@ export default function WaterMixer({
       metadata: recipe.finalMetadata,
       provenance: 'Mixer recipe',
     })).map(migrateWaterMixSourceSnapshot),
-  ]), [importedSources, savedSources, storedRecipes]);
+  ]), [hiddenSourceIds, importedSources, savedSources, storedRecipes]);
 
   const rememberImportedSource = (source: WaterMixerSavedSource) => {
     setImportedSources(previous => {
@@ -1145,24 +1195,6 @@ export default function WaterMixer({
     setDeleteMessage(outcome.deleted ? `Deleted "${recipe.name}".` : `"${recipe.name}" was already deleted.`);
     setDeleteMessageIsError(false);
     setPendingDeleteRecipe(null);
-  };
-
-  const clearAllSavedFinishedWaters = () => {
-    const count = savedSources.length + importedSources.length + storedRecipes.length;
-    if (count === 0) return;
-    if (!window.confirm(
-      `Clear all ${count} saved finished-water entries from the Mixer? This will remove saved Alchemist sessions, Watermancer profiles, imported sources, and saved Mixer blends. Catalog waters and salt recipes will not be affected.`,
-    )) return;
-
-    saveWaterMixRecipes([]);
-    saveImportedWaterMixSources([]);
-    setStoredRecipes([]);
-    setImportedSources([]);
-    if (cardA.mode === 'saved-recipe') setCardA(emptyCard());
-    if (cardB.mode === 'saved-recipe') setCardB(emptyCard());
-    onClearSavedFinishedWaters?.();
-    setDeleteMessage(`Cleared ${count} saved finished-water entries from the Mixer.`);
-    setDeleteMessageIsError(false);
   };
 
   const updateMixerSaltDose = (saltId: string, value: string) => {
@@ -1403,18 +1435,6 @@ export default function WaterMixer({
         >
           {deleteMessage}
         </p>
-      )}
-
-      {(savedSources.length + importedSources.length + storedRecipes.length) > 0 && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] px-4 py-3" data-testid="panel-mixer-clear-finished-waters">
-          <div>
-            <p className="text-xs font-semibold text-slate-200">Finished-water sources</p>
-            <p className="mt-1 text-[11px] text-slate-500">Saved sessions, profiles, imports, and Mixer blends currently appear in the source picker.</p>
-          </div>
-          <button type="button" onClick={clearAllSavedFinishedWaters} className="inline-flex items-center gap-2 rounded-lg border border-rose-300/35 bg-rose-300/10 px-3 py-2 text-[11px] font-bold text-rose-100 transition hover:border-rose-200/70 hover:bg-rose-300/20" data-testid="button-clear-all-mixer-finished-waters">
-            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Clear all
-          </button>
-        </section>
       )}
 
       {storedRecipes.length > 0 && (
