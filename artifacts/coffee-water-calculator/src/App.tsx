@@ -4754,6 +4754,15 @@ function App() {
     }
     const recipe = parseRecipeFile(text);
     if (!recipe) {
+      if (imageMimeType) {
+        try {
+          await importRecipeCardWithGemini(file);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : '';
+          window.alert(message || "Couldn't read that recipe card. Try a clearer exported card.");
+        }
+        return;
+      }
       window.alert("Couldn't read that file — it doesn't look like a valid coffee water recipe.");
       return;
     }
