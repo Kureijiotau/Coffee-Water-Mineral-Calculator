@@ -538,6 +538,7 @@ function svgText(
     stroke?: string;
     strokeWidth?: number;
     strokeOpacity?: number;
+    filter?: string;
   } = {},
 ): string {
   const {
@@ -550,12 +551,14 @@ function svgText(
     stroke,
     strokeWidth,
     strokeOpacity,
+    filter,
   } = options;
   const spacing = letterSpacing === undefined ? '' : ` letter-spacing="${letterSpacing}"`;
   const strokeAttributes = stroke
     ? ` stroke="${stroke}" stroke-width="${strokeWidth ?? 1}" stroke-opacity="${strokeOpacity ?? 0.8}" paint-order="stroke fill"`
     : '';
-  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}${strokeAttributes}>${escapeXml(text)}</text>`;
+  const filterAttribute = filter ? ` filter="${filter}"` : '';
+  return `<text x="${x}" y="${y}" fill="${fill}" font-family="${family}" font-size="${size}" font-weight="${weight}" text-anchor="${anchor}"${spacing}${strokeAttributes}${filterAttribute}>${escapeXml(text)}</text>`;
 }
 
 function svgWrappedText(
@@ -772,6 +775,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         fill: recipeIonColor(ion.id),
         size: 13,
         weight: 700,
+        filter: 'url(#recipe-ion-text-shadow)',
       });
       svg += svgText(innerX, cursor + 36, ion.name, {
         fill: '#0b1117',
@@ -853,6 +857,9 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         <path d="M 0 8 L 0 0 L 8 0" fill="none" stroke="#0d6170" stroke-opacity="0.12" stroke-width="1"/>
         <path d="M 8 0 L 8 8 L 0 8" fill="none" stroke="#0d6170" stroke-opacity="0.08" stroke-width="1"/>
       </pattern>
+      <filter id="recipe-ion-text-shadow" x="-20%" y="-30%" width="140%" height="170%">
+        <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0b1117" flood-opacity="0.46"/>
+      </filter>
     </defs>
     <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="18" fill="url(#${gridPatternId})" opacity="0.3"/>
   `;
