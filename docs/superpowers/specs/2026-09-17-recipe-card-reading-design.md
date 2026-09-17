@@ -19,29 +19,25 @@ The first supported image source is a recipe card exported by this app. Arbitrar
    - Recovery QR decoding.
 3. If the image is an app-exported card without usable metadata or QR data, the importer attempts local card recognition.
 4. If local recognition is incomplete or ambiguous, the image is sent through the dedicated recipe-card Gemini extraction path.
-5. The normalized candidate is routed according to its ingredients:
-   - Salt-only recipes remain compatible with Alchemist.
-   - Recipes containing one or more mineral waters are routed to Watermancer because the primary meaning is the finished ion profile, not the specific water brand or recipe ingredients.
+5. The active workspace determines which part of the candidate is applied:
+   - In Watermancer, use the card's final ion readings as the ion-target input and preserve any available source-water details relevant to that target.
+   - In Alchemist, use the recognized salt rows and hydration forms as the recipe input.
 6. A structurally clear result may be applied automatically.
 7. An uncertain result enters the existing pending import review flow, with warnings and the recognized values visible before the user applies it.
 8. Existing legacy import behavior remains available and unchanged when the newer paths do not apply.
 
 The visible share-link QR is removed from new exported cards. The app-facing recovery path and PNG metadata remain available so existing `.WATER.png` files continue to import.
 
-## Destination semantics
+## Active-workspace interpretation
 
-The reader must separate ingredient interpretation from workspace destination:
+The reader must not change tabs automatically. The user's active workspace determines the semantic interpretation of the same card:
 
-- Salts are directly understandable by Alchemist and can be imported into an Alchemist recipe when no mineral water is present.
-- Watermancer is ion-first. A mineral water is an ion-source input, not merely another recipe ingredient, so the reader must preserve the water's ion profile and volume when routing a recipe there.
-- A recipe with both mineral water and salts must not be forced into Alchemist. It is automatically routed to Watermancer, where the water ions and salt additions can be modeled together.
-- When a mineral-water recipe is routed to Watermancer, navigate to the Watermancer tab and show a small explanatory message:
-  - The imported recipe contains mineral water or waters.
-  - Its ion profile cannot be represented accurately with salts alone.
-  - Watermancer was selected so the source-water ions can be preserved.
-- A salts-only recipe may continue through the existing Alchemist import path without this message or route change.
+- In Watermancer, the final mineral-analysis readings are the primary import. Map the card's calcium, magnesium, sodium, potassium, chloride, sulfate, bicarbonate, carbonate, and other modeled readings to the existing ion-target input where available. Mineral-water names and volumes may remain available as source context, but the card's final ion readings are what should be plugged into the Watermancer target model.
+- In Alchemist, the salt rows are the primary import. Map each recognized salt amount and hydration form into the existing Alchemist recipe controls. Mineral-water rows are not converted into salts.
+- A recipe containing both mineral water and salts is therefore valid in either workspace: Watermancer uses the final ion readings, while Alchemist uses the salts.
+- If the active workspace cannot use the requested interpretation because required fields are missing, show the candidate in review with a clear explanation rather than switching tabs or silently dropping data.
 
-The message is informational, not an error. It should not claim that the recipe is impossible to reproduce; it should explain that Alchemist models salt additions while Watermancer preserves and matches ion sources.
+Any informational copy should describe what was imported, not imply that the app changed workspace destinations. For example, when Alchemist imports a mixed card, explain that only its salt additions were applied; when Watermancer imports it, explain that the final ion readings were applied.
 
 ## Architecture
 
@@ -65,12 +61,12 @@ Introduce a single normalized candidate boundary for all recipe-card readers:
 
 The existing Watermancer and Mixer-specific conversion functions remain responsible for converting a valid candidate into their current state. The reader must not bypass those chemistry and state boundaries.
 
-Add a destination decision to the normalized candidate or its import result:
+Add an active-workspace interpretation to the normalized import result:
 
-- `alchemist-salts`: no mineral water detected; salts can be applied to Alchemist.
-- `watermancer-ion-profile`: one or more mineral waters detected; preserve water ions and route to Watermancer.
+- `alchemist-salts`: apply recognized salt amounts and hydration forms to Alchemist.
+- `watermancer-ion-targets`: apply final mineral-analysis readings to Watermancer ion targets.
 
-The route decision must be made before applying workspace state, so a mixed recipe cannot briefly populate Alchemist and then be copied into Watermancer.
+The interpretation must be selected before applying workspace state, so a mixed recipe is never silently converted from water ions into salts or vice versa.
 
 ### Staged reader
 
@@ -140,7 +136,7 @@ No QR payload format, metadata envelope, or legacy decoder is removed in this fe
 
 - Unsupported image: explain that the reader currently supports cards exported by this app.
 - Low-confidence read: show the candidate in review with highlighted uncertain fields.
-- Mineral-water route: navigate to Watermancer and show the informational explanation after the candidate is accepted or auto-applied.
+- Active-workspace mismatch: explain which part of the card was applied when the card contains data that the current workspace intentionally does not use.
 - Gemini unavailable or rate-limited: preserve the local candidate for review when one exists; otherwise show a retryable error and keep legacy import errors distinct.
 - Invalid structured response: discard the invalid fields, report the validation issue, and never apply partially invented chemistry.
 - Cancelled import: clear the pending candidate without changing the active workspace.
@@ -157,8 +153,9 @@ No image bytes or extracted recipe data should be persisted beyond the active im
 - Ambiguous digits, unsupported salts, missing volumes, and duplicate rows become `needs-review`.
 - Gemini JSON validation rejects unknown salts and malformed numeric values.
 - Clear candidates are eligible for automatic application; uncertain candidates are not.
-- Salt-only candidates route to Alchemist; candidates with mineral water route to Watermancer.
-- Mixed water-and-salt candidates preserve both water ion profiles and salt additions in Watermancer.
+- In Alchemist, salt-only and mixed cards apply their recognized salt rows.
+- In Watermancer, salt-only and mixed cards apply their recognized final ion readings when present.
+- Importing a mixed card never changes the active tab.
 - Removing the share-link QR does not remove recovery QR or metadata import behavior.
 
 ### Integration tests
@@ -167,9 +164,9 @@ No image bytes or extracted recipe data should be persisted beyond the active im
 - Force local ambiguity and confirm the Gemini fallback request boundary.
 - Import the same candidate into Watermancer and Mixer through the existing controls.
 - Confirm review/apply/cancel behavior does not mutate workspace state prematurely.
-- Confirm salt-only cards import to Alchemist without a route message.
-- Confirm cards containing mineral water automatically route to Watermancer and show the explanation.
-- Confirm mixed water-and-salt cards preserve both water sources and salt rows in Watermancer.
+- Confirm salt-only cards apply their salt rows in Alchemist.
+- Confirm cards containing mineral water do not change the active tab.
+- Confirm mixed cards apply salt rows in Alchemist and final ion readings in Watermancer.
 
 ### Browser verification
 
@@ -185,6 +182,6 @@ This feature does not:
 - Read arbitrary external recipe-card designs in the first version.
 - Replace or remove JSON, `.WATER`, metadata, QR, or legacy imports.
 - Automatically modify chemistry targets based on an image.
-- Treat mineral water as a salt-only Alchemist ingredient.
+- Automatically switch tabs based on detected recipe ingredients.
 - Add share-link persistence or server-side recipe storage.
 - Persist uploaded images or OCR results outside the active import flow.
