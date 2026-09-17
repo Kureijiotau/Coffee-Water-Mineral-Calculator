@@ -22,6 +22,7 @@ import {
   migrateWaterMixSourceSnapshot,
   saveImportedWaterMixSources,
   saveWaterMixRecipe,
+  saveWaterMixRecipes,
   serializeWaterMixRecipeFile,
   type WaterMixRecipe,
   type WaterMixResult,
@@ -60,6 +61,7 @@ export type WaterMixerProps = {
   onLoadCommunityWaters?: () => void | Promise<unknown>;
   onSavedRecipe?: (recipe: WaterMixRecipe) => void;
   onImportRecipeFile?: (file: File) => Promise<WaterMixerImportResult>;
+  onClearSavedFinishedWaters?: () => void;
 };
 
 type CardState = {
@@ -938,6 +940,7 @@ export default function WaterMixer({
   onLoadCommunityWaters,
   onSavedRecipe,
   onImportRecipeFile,
+  onClearSavedFinishedWaters,
 }: WaterMixerProps) {
   const [cardA, setCardA] = useState<CardState>(emptyCard);
   const [cardB, setCardB] = useState<CardState>(emptyCard);
@@ -1140,6 +1143,24 @@ export default function WaterMixer({
     setDeleteMessage(outcome.deleted ? `Deleted "${recipe.name}".` : `"${recipe.name}" was already deleted.`);
     setDeleteMessageIsError(false);
     setPendingDeleteRecipe(null);
+  };
+
+  const clearAllSavedFinishedWaters = () => {
+    const count = savedSources.length + importedSources.length + storedRecipes.length;
+    if (count === 0) return;
+    if (!window.confirm(
+      `Clear all ${count} saved finished-water entries from the Mixer? This will remove saved Alchemist sessions, Watermancer profiles, imported sources, and saved Mixer blends. Catalog waters and salt recipes will not be affected.`,
+    )) return;
+
+    saveWaterMixRecipes([]);
+    saveImportedWaterMixSources([]);
+    setStoredRecipes([]);
+    setImportedSources([]);
+    if (cardA.mode === 'saved-recipe') setCardA(emptyCard());
+    if (cardB.mode === 'saved-recipe') setCardB(emptyCard());
+    onClearSavedFinishedWaters?.();
+    setDeleteMessage(`Cleared ${count} saved finished-water entries from the Mixer.`);
+    setDeleteMessageIsError(false);
   };
 
   const updateMixerSaltDose = (saltId: string, value: string) => {
@@ -1380,6 +1401,18 @@ export default function WaterMixer({
         >
           {deleteMessage}
         </p>
+      )}
+
+      {(savedSources.length + importedSources.length + storedRecipes.length) > 0 && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] px-4 py-3" data-testid="panel-mixer-clear-finished-waters">
+          <div>
+            <p className="text-xs font-semibold text-slate-200">Finished-water sources</p>
+            <p className="mt-1 text-[11px] text-slate-500">Saved sessions, profiles, imports, and Mixer blends currently appear in the source picker.</p>
+          </div>
+          <button type="button" onClick={clearAllSavedFinishedWaters} className="inline-flex items-center gap-2 rounded-lg border border-rose-300/35 bg-rose-300/10 px-3 py-2 text-[11px] font-bold text-rose-100 transition hover:border-rose-200/70 hover:bg-rose-300/20" data-testid="button-clear-all-mixer-finished-waters">
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Clear all
+          </button>
+        </section>
       )}
 
       {storedRecipes.length > 0 && (

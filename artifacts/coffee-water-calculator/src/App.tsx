@@ -3140,6 +3140,17 @@ function App() {
     if (parsed.kind === 'source') return { source: parsed.source, provenance: parsed.provenance };
     return { source: waterPlanToMixerSource(parsed.plan, mixerCatalogWaters) };
   }, [mixerCatalogWaters]);
+  const handleClearMixerFinishedWaters = useCallback(() => {
+    setSavedPlans(previous => {
+      const next = previous.filter(isAutoSavedWaterPlan);
+      saveWaterPlans(next);
+      return next;
+    });
+    setWmProfiles(previous => {
+      saveWatermancerProfiles([]);
+      return previous.length === 0 ? previous : [];
+    });
+  }, []);
   const allRecipesForWatermancer = useMemo(
     () => [...RECIPES, ...savedRecipes],
     [savedRecipes],
@@ -5678,6 +5689,7 @@ function App() {
               databaseError={communityLoadError}
               onLoadCommunityWaters={loadCommunityWaters}
               onImportRecipeFile={handleImportMixerRecipeFile}
+              onClearSavedFinishedWaters={handleClearMixerFinishedWaters}
             />
           </div>
         </div>
