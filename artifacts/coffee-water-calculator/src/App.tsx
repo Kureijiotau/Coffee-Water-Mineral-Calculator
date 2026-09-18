@@ -12232,9 +12232,9 @@ function WatermancerIonCoverageBars({
     ? `${(gh / kh).toFixed(1)}:1`
     : '—';
   const ratioSummaries = [
-    { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
-    { first: 'sulfate' as const, second: 'chloride' as const, label: 'SO₄:Cl' },
     { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
+    { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
+    { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
   ].map(({ first, second, label }) => {
     const firstValue = completeActualIons[first] ?? 0;
     const secondValue = completeActualIons[second] ?? 0;
@@ -12433,25 +12433,25 @@ function WatermancerIonCoverageBars({
             <span className="ml-1 text-slate-300">{ghKhRatio}</span>
           </span>
           <span className="whitespace-nowrap">
+             <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
+             <span className="text-slate-500">:</span>
+             <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
+             <span className="ml-1 text-slate-300">{ratioSummaries[0]?.ratio}</span>
+             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[0]?.total ?? 0)} ppm)</span>
+           </span>
+           <span className="whitespace-nowrap">
             <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
             <span className="text-slate-500">:</span>
             <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
-            <span className="ml-1 text-slate-300">{ratioSummaries[0]?.ratio}</span>
-            <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[0]?.total ?? 0)} ppm)</span>
+             <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
+             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
           </span>
           <span className="whitespace-nowrap">
-            <span style={{ color: ION_MAP.sulfate.color.foreground }}>SO₄</span>
+             <span style={{ color: ION_MAP.chloride.color.foreground }}>Cl</span>
             <span className="text-slate-500">:</span>
-            <span style={{ color: ION_MAP.chloride.color.foreground }}>Cl</span>
-            <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
-            <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
-          </span>
-          <span className="whitespace-nowrap">
-            <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
-            <span className="text-slate-500">:</span>
-            <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
-            <span className="ml-1 text-slate-300">{ratioSummaries[2]?.ratio}</span>
-            <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[2]?.total ?? 0)} ppm)</span>
+             <span style={{ color: ION_MAP.sulfate.color.foreground }}>SO₄</span>
+             <span className="ml-1 text-slate-300">{ratioSummaries[2]?.ratio}</span>
+             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[2]?.total ?? 0)} ppm)</span>
           </span>
        </div>
       </div>
