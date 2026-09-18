@@ -65,12 +65,12 @@ describe('ion ratio model', () => {
   it('keeps the accepted row order and defaults', () => {
     const rows = evaluateIonRatioDraft(DEFAULT_ION_RATIO_DRAFT);
 
-    expect(rows.map(row => row.id)).toEqual(['gh-kh', 'mg-ca', 'cl-sulfate', 'na-k']);
+    expect(rows.map(row => row.id)).toEqual(['gh-kh', 'na-k', 'mg-ca', 'cl-sulfate']);
     expect(rows.map(row => row.ratioValue)).toEqual([
       34 / 9,
+      7.8,
       1.6,
       16.3 / 4.2,
-      7.8,
     ]);
     expect(rows[0].diagnosticOnly).toBe(true);
   });
