@@ -61,7 +61,6 @@ import {
   extractWaterRecipeJsonFromPng,
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
-  extractWaterRecipeJsonFromQrImage,
   getRecipeImageMimeType,
   isPngImageBytes,
   rasterizeRecipeShareCard,
@@ -4697,81 +4696,83 @@ function App() {
     const fileBytes = await file.arrayBuffer();
     const isPng = isPngImageBytes(fileBytes);
     const imageMimeType = getRecipeImageMimeType(file.name, file.type);
-    const qrText = imageMimeType
-      ? await extractWaterRecipeJsonFromQrImage(fileBytes, imageMimeType)
-      : null;
     const embeddedMetadata = isPng ? extractWaterRecipeJsonFromPng(fileBytes) : null;
-    const text = qrText
-      ?? embeddedMetadata
-      ?? new TextDecoder().decode(fileBytes);
-    let sharedPayloadFromQr = decodeWaterRecipeSharePayload(text);
-    if (!sharedPayloadFromQr) {
-      try {
-        const qrPayload = JSON.parse(text) as { sharePayload?: unknown };
-        if (typeof qrPayload.sharePayload === 'string') {
-          sharedPayloadFromQr = decodeWaterRecipeSharePayload(qrPayload.sharePayload);
-        }
-      } catch {
-        // Continue with the legacy recipe formats below.
-      }
-    }
-    if (sharedPayloadFromQr) {
-      applyImportedSharePayload(sharedPayloadFromQr);
-      return;
-    }
-    const waterRecipe = parseWaterRecipeFile(text);
-    if (waterRecipe) {
-      if (!showWatermancer && !waterRecipe.profile) {
-        window.alert('Switch to Watermancer before importing an ion recipe.');
-        return;
-      }
-      const importedProfileName = waterRecipe.profile?.name?.trim() || file.name
-        .replace(/(?:\.WATER)?\.png$/i, '')
-        .replace(/\.WATER$/i, '')
-        .replace(/\.json$/i, '')
-        .trim() || waterRecipe.name;
-      const importedTargets = waterRecipe.profile?.targets ?? waterRecipe.ions;
-      const importedProfile = createWatermancerProfile(
-        importedProfileName,
-        importedTargets as IonicTargetValues,
-        waterRecipe.profile
-          ? {
-            source: waterRecipe.profile.source,
-            details: waterRecipe.profile.details,
-            finishedIons: waterRecipe.ions as IonicTargetValues,
-          }
-          : undefined,
-      );
-      setWmProfiles(prev => [...prev, importedProfile]);
-      setWatermancerTargetOverride(waterRecipe.profile ? null : waterRecipe.ions as IonicTargetValues);
-      setWatermancerImportedRecipeName(importedProfile.name);
-      setWatermancerTargetSource(`saved:${importedProfile.id}`);
-      return;
-    }
-    const recipe = parseRecipeFile(text);
-    if (!recipe) {
-      if (imageMimeType) {
+
+    const tryApplyStructuredImport = (text: string): boolean => {
+      let sharedPayload = decodeWaterRecipeSharePayload(text);
+      if (!sharedPayload) {
         try {
-          await importRecipeCardWithGemini(file);
-        } catch (error) {
-          const message = error instanceof Error ? error.message : '';
-          window.alert(message || "Couldn't read that recipe card. Try a clearer exported card.");
+          const payload = JSON.parse(text) as { sharePayload?: unknown };
+          if (typeof payload.sharePayload === 'string') {
+            sharedPayload = decodeWaterRecipeSharePayload(payload.sharePayload);
+          }
+        } catch {
+          // Continue with the legacy recipe formats below.
         }
-        return;
       }
-      window.alert("Couldn't read that file — it doesn't look like a valid coffee water recipe.");
+      if (sharedPayload) {
+        applyImportedSharePayload(sharedPayload);
+        return true;
+      }
+
+      const waterRecipe = parseWaterRecipeFile(text);
+      if (waterRecipe) {
+        if (!showWatermancer && !waterRecipe.profile) {
+          window.alert('Switch to Watermancer before importing an ion recipe.');
+          return true;
+        }
+        const importedProfileName = waterRecipe.profile?.name?.trim() || file.name
+          .replace(/(?:\.WATER)?\.png$/i, '')
+          .replace(/\.WATER$/i, '')
+          .replace(/\.json$/i, '')
+          .trim() || waterRecipe.name;
+        const importedTargets = waterRecipe.profile?.targets ?? waterRecipe.ions;
+        const importedProfile = createWatermancerProfile(
+          importedProfileName,
+          importedTargets as IonicTargetValues,
+          waterRecipe.profile
+            ? {
+              source: waterRecipe.profile.source,
+              details: waterRecipe.profile.details,
+              finishedIons: waterRecipe.ions as IonicTargetValues,
+            }
+            : undefined,
+        );
+        setWmProfiles(prev => [...prev, importedProfile]);
+        setWatermancerTargetOverride(waterRecipe.profile ? null : waterRecipe.ions as IonicTargetValues);
+        setWatermancerImportedRecipeName(importedProfile.name);
+        setWatermancerTargetSource(`saved:${importedProfile.id}`);
+        return true;
+      }
+
+      const recipe = parseRecipeFile(text);
+      if (!recipe) return false;
+      setSavedRecipes(prev => [...prev, recipe]);
+      if (showWatermancer) {
+        setWatermancerTargetOverride(null);
+        setWatermancerTargetSource(`recipe:${recipe.id}`);
+        setActiveRecipeId('custom');
+        setExternalRecipeId('custom');
+        return true;
+      }
+      applyRecipeObject(recipe);
+      return true;
+    };
+
+    if (imageMimeType) {
+      if (embeddedMetadata && tryApplyStructuredImport(embeddedMetadata)) return;
+      try {
+        await importRecipeCardWithGemini(file);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : '';
+        window.alert(message || "Couldn't read that recipe card. Try a clearer exported card.");
+      }
       return;
     }
-    setSavedRecipes(prev => [...prev, recipe]);
-    if (showWatermancer) {
-       setWatermancerTargetOverride(null);
-       setWatermancerTargetSource(`recipe:${recipe.id}`);
-      setActiveRecipeId('custom');
-      setExternalRecipeId('custom');
-      return;
-    }
-    applyRecipeObject(recipe);
-    return;
+
+    const text = new TextDecoder().decode(fileBytes);
+    if (tryApplyStructuredImport(text)) return;
+    window.alert("Couldn't read that file — it doesn't look like a valid coffee water recipe.");
   };
 
   const importRecipeCardWithGemini = async (file: File): Promise<void> => {
