@@ -815,6 +815,11 @@ function brewerSliderStatus(value: number): { label: string; className: string }
 }
 
 function ionTotalsForSaltRecipe(recipe: SaltRecipe): Record<IonId, number> {
+  if (recipe.finishedWaterIons) {
+    return Object.fromEntries(
+      IONS.map(({ id }) => [id, Number(recipe.finishedWaterIons?.[id] ?? 0)]),
+    ) as Record<IonId, number>;
+  }
   const saltTargets = Object.fromEntries(
     Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
   );
@@ -4550,6 +4555,49 @@ function App() {
     setSplitMode(recipe.splitMode ?? false);
     if (recipe.splitStrengths) setSplitStrengths(prev => ({ ...prev, ...recipe.splitStrengths }));
     if (recipe.splitMls) setSplitMls(prev => ({ ...prev, ...recipe.splitMls }));
+    if (recipe.sourceWaters) {
+      setLiters(recipe.sourceWaters.liters);
+      setVolumeUnit(recipe.sourceWaters.volumeUnit);
+      setMineralWaters(recipe.sourceWaters.mineralWaters.map(water => ({
+        id: newMwId(),
+        ...water,
+        ions: { ...water.ions },
+        metadata: { ...water.metadata },
+      })));
+      setAdditionWaters(recipe.sourceWaters.additionWaters.map(water => ({
+        id: newMwId(),
+        ...water,
+        ions: { ...water.ions },
+        metadata: { ...water.metadata },
+      })));
+    } else if (recipe.finishedWaterIons) {
+      const recipeSaltTargets = Object.fromEntries(
+        Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
+      );
+      const saltOnlyIons = computeIonTotals(recipeSaltTargets, {}, 1);
+      const importedSourceIons = Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [
+          id,
+          String(Math.max(
+            Number(recipe.finishedWaterIons?.[id] ?? 0) - Number(saltOnlyIons[id] ?? 0),
+            0,
+          )),
+        ]),
+      ) as Partial<Record<IonId, string>>;
+      const hasImportedSourceWater = Object.values(importedSourceIons).some(value => num(value) > 0.0001);
+      if (hasImportedSourceWater) {
+        setMineralWaters([{
+          id: newMwId(),
+          name: 'Imported source water',
+          ions: importedSourceIons,
+          metadata: recipe.finishedWaterMetadata?.tds !== undefined
+            ? { tds: String(recipe.finishedWaterMetadata.tds) }
+            : {},
+          volumeMl: String(Math.max(L * 1000, 1)),
+        }]);
+        setAdditionWaters([]);
+      }
+    }
   };
 
   const applyRecipe = (recipeId: string) => {
@@ -4663,6 +4711,20 @@ function App() {
       finishedWaterMetadata: {
         tds: Object.values(ionTotals).reduce((total, ppm) => total + ppm, 0),
       },
+      sourceWaters: {
+        liters,
+        volumeUnit,
+        mineralWaters: mineralWaters.map(({ id: _id, ...water }) => ({
+          ...water,
+          ions: { ...water.ions },
+          metadata: { ...water.metadata },
+        })),
+        additionWaters: additionWaters.map(({ id: _id, ...water }) => ({
+          ...water,
+          ions: { ...water.ions },
+          metadata: { ...water.metadata },
+        })),
+      },
       ...(splitMode && {
         splitMode: true,
         splitStrengths: { ...splitStrengths },
@@ -4749,10 +4811,12 @@ function App() {
       if (!recipe) return false;
       setSavedRecipes(prev => [...prev, recipe]);
       if (showWatermancer) {
+        if (recipe.sourceWaters) {
+          applyRecipeObject(recipe);
+        }
         setWatermancerTargetOverride(null);
         setWatermancerTargetSource(`recipe:${recipe.id}`);
-        setActiveRecipeId('custom');
-        setExternalRecipeId('custom');
+        setWatermancerImportedRecipeName(recipe.name);
         return true;
       }
       applyRecipeObject(recipe);
@@ -14247,6 +14311,20 @@ function BrewerRecipeStepsModal({
     ),
     finishedWaterIons: finalProfileIons,
     finishedWaterMetadata: { tds: finalProfileTds },
+    sourceWaters: {
+      liters: String(liters),
+      volumeUnit,
+      mineralWaters: baseWaters.map(({ id: _id, ...water }) => ({
+        ...water,
+        ions: { ...water.ions },
+        metadata: { ...water.metadata },
+      })),
+      additionWaters: additionWaters.map(({ id: _id, ...water }) => ({
+        ...water,
+        ions: { ...water.ions },
+        metadata: { ...water.metadata },
+      })),
+    },
   });
   const waterStepStyles = [
     'border-cyan-300/35 bg-cyan-400/[0.08] text-cyan-100',

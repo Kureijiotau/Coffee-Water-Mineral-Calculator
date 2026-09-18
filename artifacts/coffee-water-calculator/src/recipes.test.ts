@@ -130,6 +130,37 @@ describe('serializeRecipeFile', () => {
     const parsed = JSON.parse(json);
     expect(parsed.splitMls).toEqual(splitMls);
   });
+
+  it('preserves finished readings and source waters for mineral-water recipes', () => {
+    const sourceWaters = {
+      liters: '1',
+      volumeUnit: 'liters' as const,
+      mineralWaters: [{
+        name: 'Spring source',
+        ions: { calcium: '20', bicarbonate: '80' },
+        metadata: { tds: '125' },
+        volumeMl: '700',
+        sourceLocalId: 'saved-water-1',
+      }],
+      additionWaters: [{
+        name: 'RO',
+        ions: {},
+        metadata: {},
+        volumeMl: '300',
+      }],
+    };
+    const json = serializeRecipeFile({
+      name: 'Mineral water recipe',
+      salts: makeSalts(),
+      finishedWaterIons: { calcium: 14, bicarbonate: 56 },
+      finishedWaterMetadata: { tds: 91 },
+      sourceWaters,
+    });
+    const parsed = parseRecipeFile(json);
+    expect(parsed?.finishedWaterIons).toEqual({ calcium: 14, bicarbonate: 56 });
+    expect(parsed?.finishedWaterMetadata).toEqual({ tds: 91 });
+    expect(parsed?.sourceWaters).toEqual(sourceWaters);
+  });
 });
 
 describe('recipeFilenameSlug', () => {

@@ -1,4 +1,10 @@
-import { SALTS, type SaltRecipe, type SaltRecipeEntry } from '@/waterData';
+import {
+  SALTS,
+  type RecipeWaterSource,
+  type RecipeWaterSources,
+  type SaltRecipe,
+  type SaltRecipeEntry,
+} from '@/waterData';
 
 const STORAGE_KEY = 'cwc-saved-recipes';
 export const RECIPE_FILE_KIND = 'coffee-water-recipe';
@@ -20,6 +26,7 @@ export function recipeFilenameSlug(name: string, fallback = 'coffee-water-recipe
 export type FinishedWaterRecipeExtras = {
   finishedWaterIons?: Record<string, number>;
   finishedWaterMetadata?: Record<string, number>;
+  sourceWaters?: RecipeWaterSources;
 };
 
 export function isValidRecipe(r: unknown): r is SaltRecipe {
@@ -97,6 +104,9 @@ export function serializeRecipeFile(
         .filter(([, value]) => typeof value === 'number' && Number.isFinite(value) && value >= 0),
     );
   }
+  if (recipe.sourceWaters) {
+    payload.sourceWaters = recipe.sourceWaters;
+  }
   return JSON.stringify(payload, null, 2);
 }
 
@@ -118,16 +128,89 @@ function parseSplitSettings(o: Record<string, unknown>): Partial<SplitSettings> 
   return { splitMode: true, splitStrengths, splitMls };
 }
 
+function parseNumericRecord(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value)
+    .filter(([, raw]) => typeof raw === 'number' && Number.isFinite(raw) && raw >= 0)
+    .map(([key, raw]) => [key, raw as number] as const);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
+function parseRecipeWaterSource(value: unknown): RecipeWaterSource | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  if (
+    typeof source.name !== 'string'
+    || typeof source.volumeMl !== 'string'
+    || !source.ions
+    || typeof source.ions !== 'object'
+    || Array.isArray(source.ions)
+    || !source.metadata
+    || typeof source.metadata !== 'object'
+    || Array.isArray(source.metadata)
+  ) {
+    return null;
+  }
+  const ions = Object.fromEntries(
+    Object.entries(source.ions)
+      .filter(([, raw]) => typeof raw === 'string' && Number.isFinite(Number(raw)) && Number(raw) >= 0),
+  ) as RecipeWaterSource['ions'];
+  const metadata = Object.fromEntries(
+    Object.entries(source.metadata)
+      .filter(([, raw]) => typeof raw === 'string' && Number.isFinite(Number(raw)) && Number(raw) >= 0),
+  ) as RecipeWaterSource['metadata'];
+  if (source.sourceLocalId !== undefined && typeof source.sourceLocalId !== 'string') return null;
+  return {
+    name: source.name,
+    ions,
+    metadata,
+    volumeMl: source.volumeMl,
+    ...(typeof source.sourceLocalId === 'string' ? { sourceLocalId: source.sourceLocalId } : {}),
+  };
+}
+
+function parseRecipeWaterSources(value: unknown): RecipeWaterSources | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const sources = value as Record<string, unknown>;
+  if (
+    typeof sources.liters !== 'string'
+    || (sources.volumeUnit !== 'liters' && sources.volumeUnit !== 'gallons')
+    || !Array.isArray(sources.mineralWaters)
+    || !Array.isArray(sources.additionWaters)
+  ) {
+    return undefined;
+  }
+  const mineralWaters = sources.mineralWaters.map(parseRecipeWaterSource);
+  const additionWaters = sources.additionWaters.map(parseRecipeWaterSource);
+  if (mineralWaters.some(source => !source) || additionWaters.some(source => !source)) return undefined;
+  return {
+    liters: sources.liters,
+    volumeUnit: sources.volumeUnit,
+    mineralWaters: mineralWaters as RecipeWaterSource[],
+    additionWaters: additionWaters as RecipeWaterSource[],
+  };
+}
+
 /** Parse a shared recipe file. Returns null when the file is not a valid recipe. */
 export function parseRecipeFile(text: string): SaltRecipe | null {
   try {
     const o = JSON.parse(text);
     if (!o || typeof o !== 'object' || o.kind !== RECIPE_FILE_KIND || o.version !== 1) return null;
+    const object = o as Record<string, unknown>;
     const candidate: SaltRecipe = {
       id: newRecipeId(),
-      name: String(o.name ?? '').trim(),
-      salts: o.salts,
-      ...parseSplitSettings(o as Record<string, unknown>),
+      name: String(object.name ?? '').trim(),
+      salts: object.salts as SaltRecipe['salts'],
+      ...parseSplitSettings(object),
+      ...(parseNumericRecord(object.finishedWaterIons)
+        ? { finishedWaterIons: parseNumericRecord(object.finishedWaterIons) }
+        : {}),
+      ...(parseNumericRecord(object.finishedWaterMetadata)
+        ? { finishedWaterMetadata: parseNumericRecord(object.finishedWaterMetadata) }
+        : {}),
+      ...(parseRecipeWaterSources(object.sourceWaters)
+        ? { sourceWaters: parseRecipeWaterSources(object.sourceWaters) }
+        : {}),
     };
     return isValidRecipe(candidate) ? candidate : null;
   } catch {

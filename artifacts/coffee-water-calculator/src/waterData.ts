@@ -729,10 +729,30 @@ export interface SourceRecipeAmount {
   amount: string;
 }
 
+export interface RecipeWaterSource {
+  name: string;
+  ions: Partial<Record<IonId, string>>;
+  metadata: Partial<Record<'silica' | 'ph' | 'tds' | 'alkalinity', string>>;
+  volumeMl: string;
+  sourceLocalId?: string;
+}
+
+export interface RecipeWaterSources {
+  liters: string;
+  volumeUnit: 'liters' | 'gallons';
+  mineralWaters: RecipeWaterSource[];
+  additionWaters: RecipeWaterSource[];
+}
+
 export interface SaltRecipe {
   id: string;
   name: string;
   salts: Record<string, SaltRecipeEntry>;
+  /** Final source-water-plus-salt readings captured when the recipe was exported. */
+  finishedWaterIons?: Partial<Record<IonId, number>>;
+  finishedWaterMetadata?: Partial<Record<'silica' | 'ph' | 'tds' | 'alkalinity', number>>;
+  /** Source waters and final volume needed to reproduce the exported mixture. */
+  sourceWaters?: RecipeWaterSources;
   /** Public source metadata for recipes transcribed from external resources. */
   source?: string;
   sourceUrl?: string;
