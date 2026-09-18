@@ -12361,6 +12361,13 @@ function WatermancerIonCoverageBars({
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ratios</span>
           <span className="whitespace-nowrap">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">GH:KH</span>
+            <span className="ml-1" style={{ color: ION_MAP.magnesium.color.foreground }}>GH</span>
+            <span className="text-slate-500">:</span>
+            <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>KH</span>
+            <span className="ml-1 text-slate-300">{ghKhRatio}</span>
+          </span>
+          <span className="whitespace-nowrap">
             <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
             <span className="text-slate-500">:</span>
             <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
@@ -12380,13 +12387,6 @@ function WatermancerIonCoverageBars({
             <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
             <span className="ml-1 text-slate-300">{ratioSummaries[2]?.ratio}</span>
             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[2]?.total ?? 0)} ppm)</span>
-          </span>
-          <span className="whitespace-nowrap">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">GH:KH</span>
-            <span className="ml-1" style={{ color: ION_MAP.magnesium.color.foreground }}>GH</span>
-            <span className="text-slate-500">:</span>
-            <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>KH</span>
-            <span className="ml-1 text-slate-300">{ghKhRatio}</span>
           </span>
        </div>
       </div>
