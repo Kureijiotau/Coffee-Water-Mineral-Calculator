@@ -34,6 +34,10 @@ function scDescription(sc: number): string {
   return 'Sulfate extremely dominant — aggressive, drying, potentially harsh/bitter.';
 }
 
+function csDescription(cs: number): string {
+  return scDescription(cs === 0 ? Number.POSITIVE_INFINITY : 1 / cs);
+}
+
 function ghDescriptor(gh: number): string {
   if (gh < 25) return 'Very soft — extraction is weak; cup may taste hollow or thin.';
   if (gh < 50) return 'Soft — clean and delicate; suits very light floral roasts.';
@@ -406,6 +410,9 @@ export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false,
   const sc = ionTotals.chloride > 0
     ? ionTotals.sulfate / ionTotals.chloride
     : ionTotals.sulfate > 0 ? 20 : 0;
+  const cs = ionTotals.sulfate > 0
+    ? ionTotals.chloride / ionTotals.sulfate
+    : ionTotals.chloride > 0 ? 20 : 0;
 
   const hasData = ionTotals.sulfate > 0 || ionTotals.chloride > 0
     || ionTotals.magnesium > 0 || ionTotals.calcium > 0;
@@ -444,9 +451,9 @@ export default function TasteProfileCard({ ionTotals, gh, kh, collapsed = false,
         <p className="flex items-start gap-1.5">
           <Droplets className="w-3 h-3 text-sky-400 mt-0.5 shrink-0" />
           <span>
-            SC ratio (SO₄/Cl): <span className="font-mono text-sky-300 font-semibold">{sc.toFixed(1)}</span>
+            CS ratio (Cl:SO₄): <span className="font-mono text-sky-300 font-semibold">{cs.toFixed(1)}</span>
             <span className="text-slate-500 mx-1">·</span>
-            {scDescription(sc)}
+            {csDescription(cs)}
           </span>
         </p>
         <p className="flex items-start gap-1.5">
