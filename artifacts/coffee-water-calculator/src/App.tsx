@@ -4318,6 +4318,9 @@ function App() {
     setWatermancerBestMatchRunning(false);
     setWatermancerActionRunning(false);
     setWatermancerActionMessage(null);
+     setConcentrateOn(false);
+     setConcentrateStrength(100);
+     setConcentrateMl('500');
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
     setSodiumCorrectionOn(false);
@@ -6370,6 +6373,22 @@ function App() {
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
                </label> : undefined}
+                  {showWatermancer ? (
+                    <button
+                      type="button"
+                      onClick={() => handleAllInOneConcentrateToggle(true)}
+                      disabled={!Object.values(concSaltTargets).some(target => Number.isFinite(target) && target > 0)}
+                      className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                        concentrateOn
+                          ? 'border-teal-300/45 bg-teal-400/15 text-teal-100'
+                          : 'border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200 hover:border-fuchsia-300/60 hover:bg-fuchsia-500/20 hover:text-fuchsia-100'
+                      } disabled:cursor-not-allowed disabled:border-slate-700/60 disabled:bg-slate-900/30 disabled:text-slate-600`}
+                      aria-label={concentrateOn ? 'Concentrate preparation is open' : 'Make concentrate from Watermancer salts'}
+                    >
+                      <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+                      {concentrateOn ? 'Concentrate ready' : 'Make concentrate'}
+                    </button>
+                  ) : undefined}
                </div>
             }
           />
@@ -6404,7 +6423,7 @@ function App() {
                />
             </div>
 
-             {showAlchemist && concentrateOn && !splitMode && (
+              {(showAlchemist || showWatermancer) && concentrateOn && !splitMode && (
                <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -8014,7 +8033,7 @@ function App() {
           liters={L}
            volumeUnit={volumeUnit}
           concentrateOn={concentrateOn}
-           allInOneConcentrate={showAlchemist && concentrateOn}
+            allInOneConcentrate={(showAlchemist || showWatermancer) && concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
           baseWaters={nerdLevel === 'brewer' ? [] : mineralWaters}
