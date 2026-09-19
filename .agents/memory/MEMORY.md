@@ -96,5 +96,3 @@
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
 - [Mixer picker cleanup](mixer-picker-cleanup.md) — hide finished-water entries locally in Mixer without deleting reusable source profiles or sessions
 - [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength
-- [DIY concentrate persistence scope](diy-concentrate-persistence.md) — DIY Concentrate restoration now comes from the shared autosaved session snapshot
-- [DIY concentrate persistence loop](diy-concentrate-persistence-loop.md) — avoid a second DIY plan record; restore the autosaved session once and guard plan writes
