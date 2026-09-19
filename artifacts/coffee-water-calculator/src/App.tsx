@@ -4342,15 +4342,22 @@ function App() {
     for (const group of stockGroups) {
       const groupTargets: Record<string, number> = {};
       for (const saltId of group.saltIds) groupTargets[saltId] = concSaltTargets[saltId] ?? 0;
+      const groupForms: Record<string, number> = {};
+      for (const saltId of group.saltIds) {
+        const saltIndex = SALTS.findIndex(salt => salt.id === saltId);
+        groupForms[saltId] = saltIndex >= 0
+          ? safeRows[saltIndex]?.formIdx ?? SALTS[saltIndex].defaultFormIdx ?? 0
+          : 0;
+      }
       result[group.id] = checkConcentrate(
         splitStrengths[group.id] ?? 100,
         groupTargets,
-        {},
+        groupForms,
         num(splitMls[group.id] ?? '500'),
       );
     }
     return result;
-  }, [stockGroups, splitStrengths, splitMls, concSaltTargets]);
+  }, [stockGroups, splitStrengths, splitMls, concSaltTargets, safeRows]);
 
   const splitFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
     if (!splitMode || stockGroups.length === 0) return { level: 'green', label: 'Split OK' };
@@ -10098,7 +10105,7 @@ function LegacyRecipeConcentrateBuilder({
                   </div>
                   <div className="text-right">
                     <div className="text-[10px] uppercase tracking-wider text-slate-500">Dose</div>
-                     <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{(groupStrength > 0 ? 1000 / groupStrength * doseReferenceLiters : 0).toFixed(2)} mL</div>
+                     <div className={`mt-1 text-lg font-semibold tabular-nums ${tone.accent}`}>{(groupStrength > 0 ? stockVolumeMl / groupStrength * doseReferenceLiters : 0).toFixed(2)} mL</div>
                   </div>
                 </div>
               </div>
@@ -10279,7 +10286,6 @@ function RecipeConcentrateBottleCard({
     calculatedMassMg: number;
   } => row !== null);
   const totalSaltMassG = stockRows.reduce((total, row) => total + row.massMg, 0) / 1000;
-  const waterToAddG = Math.max(0, stockVolumeMl - totalSaltMassG);
   const saltMgPerMl = stockVolumeMl > 0
     ? stockRows.reduce((total, row) => total + row.massMg, 0) / stockVolumeMl
     : 0;
@@ -14212,7 +14218,7 @@ function BrewerRecipeStepsModal({
   const useMixingVessel = !concentrateOn && batchMl > 1000 && dosedStepSaltCount > 0;
   const mixingVesselMl = useMixingVessel ? Math.min(500, batchMl) : batchMl;
   const concentrateDoseMlPerLiter = concentrateOn && concentrateStrength > 0
-    ? 1000 / concentrateStrength
+    ? concentrateLiters * 1000 / concentrateStrength
     : 0;
   const concentrateDoseMlPerGallon = concentrateDoseMlPerLiter * US_GALLON_IN_LITERS;
   const concentrateDropsPerLiter = concentrateDoseMlPerLiter > 0 && dropsPerMl > 0
