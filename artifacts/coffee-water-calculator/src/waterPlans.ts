@@ -36,7 +36,7 @@ export type WaterPlanConcentrateSnapshot = {
 
 export type WaterPlanSnapshot = {
   version: 1;
-  appTab: 'calculator' | 'concentrate';
+  appTab: 'calculator' | 'concentrate' | 'diy-concentrate';
   nerdLevel: NerdLevel;
   liters: string;
   volumeUnit: WaterPlanVolumeUnit;
@@ -145,7 +145,7 @@ const isWaterEntry = (value: unknown): boolean => {
 function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
   if (!isRecord(value)) return false;
   if (value.version !== WATER_PLAN_VERSION) return false;
-  if (!['calculator', 'concentrate'].includes(String(value.appTab))) return false;
+  if (!['calculator', 'concentrate', 'diy-concentrate'].includes(String(value.appTab))) return false;
   if (!['brewer', 'alchemist', 'watermancer'].includes(String(value.nerdLevel))) return false;
   if (typeof value.liters !== 'string' || !['liters', 'gallons'].includes(String(value.volumeUnit))) return false;
   if (!Array.isArray(value.rows)

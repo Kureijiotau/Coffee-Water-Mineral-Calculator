@@ -551,7 +551,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate' | 'ion-ratios' | 'mixer';
+type AppTab = 'calculator' | 'guide' | 'concentrate' | 'diy-concentrate' | 'ion-ratios' | 'mixer';
 type ConcentrateMode = 'builder' | 'lotus';
 
 // Ratio matching remains implemented for saved/imported sessions, but the
@@ -5255,7 +5255,7 @@ function App() {
 
   const captureWaterPlanSnapshot = (): WaterPlanSnapshot => ({
     version: 1,
-    appTab: appTab === 'concentrate' ? 'concentrate' : 'calculator',
+    appTab: appTab === 'concentrate' || appTab === 'diy-concentrate' ? appTab : 'calculator',
     nerdLevel,
     liters,
     volumeUnit,
@@ -5654,7 +5654,7 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' || appTab === 'diy-concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerMarkImage}
@@ -5710,7 +5710,17 @@ function App() {
               className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
-              Concentrate
+              Recipe Concentrate
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={appTab === 'diy-concentrate'}
+              onClick={() => setAppTab('diy-concentrate')}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'diy-concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+              DIY Concentrate
             </button>
             <button
               type="button"
@@ -5801,16 +5811,17 @@ function App() {
     );
   }
 
-  if (appTab === 'concentrate') {
+  if (appTab === 'concentrate' || appTab === 'diy-concentrate') {
     return (
       <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="app-page-stack flex w-full max-w-5xl flex-col">
           {appHeader}
           <ConcentrateWorkspace
+            workspaceMode={appTab === 'diy-concentrate' ? 'diy' : 'recipe'}
             volumeUnit={volumeUnit}
             onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-            recipeHandoff={concentrateRecipeHandoff}
+            recipeHandoff={appTab === 'concentrate' ? concentrateRecipeHandoff : null}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
             dropsPerMl={brewerDropsPerMl}
             diySaltTargets={dosingSaltTargets}
@@ -8357,6 +8368,7 @@ function DiySingleSaltConcentrateBuilder({
 }
 
 function ConcentrateWorkspace({
+  workspaceMode,
   volumeUnit,
   onToggleVolumeUnit,
   recipeHandoff,
@@ -8371,6 +8383,7 @@ function ConcentrateWorkspace({
   onSnapshotChange,
   onSaveSnapshot,
 }: {
+  workspaceMode: 'recipe' | 'diy';
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
   recipeHandoff: ConcentrateRecipeHandoff | null;
@@ -8498,7 +8511,7 @@ function ConcentrateWorkspace({
     totalStockMassInput,
   ]);
 
-  if (!recipeHandoff && concentrateMode === 'builder') {
+  if (workspaceMode === 'diy' && concentrateMode === 'builder') {
     return (
       <div className="concentrate-workspace space-y-4">
         <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
@@ -8506,8 +8519,8 @@ function ConcentrateWorkspace({
             <div className="flex items-start gap-2">
               <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
-                <div className="mt-0.5 text-xs text-slate-500">Prepare one DIY mineral concentrate using the same bottle-card workflow as recipe concentrates.</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">DIY concentrate workspace</div>
+              <div className="mt-0.5 text-xs text-slate-500">Prepare one DIY mineral concentrate using the same bottle-card workflow as recipe concentrates.</div>
               </div>
             </div>
             <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
@@ -8571,47 +8584,55 @@ function ConcentrateWorkspace({
 
   return (
     <div className="concentrate-workspace space-y-4">
-      <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
+       <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
             <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" />
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrate workspace</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {workspaceMode === 'recipe' ? 'Recipe concentrate workspace' : 'DIY concentrate workspace'}
+              </div>
               <div className="mt-0.5 text-xs text-slate-500">
-                {concentrateMode === 'lotus'
+                {workspaceMode === 'recipe'
+                  ? recipeHandoff
+                    ? 'Build and calibrate the concentrate for the imported calculator recipe.'
+                    : 'Send a recipe from Calculator to build its concentrate here.'
+                  : concentrateMode === 'lotus'
                   ? 'Craft four independent mineral droppers for your own brewing setup.'
                   : 'Build and calibrate a single-mineral concentrate by weight.'}
               </div>
             </div>
           </div>
-          <div role="tablist" aria-label="Concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
-            {([
-              ['builder', 'Stock builder', 'Build one concentrate'],
-              ['lotus', 'DIY Lotus Drops', 'Four independent dropper concentrates'],
-            ] as const).map(([value, label, description]) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={concentrateMode === value}
-                onClick={() => setConcentrateMode(value)}
-                title={description}
-                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
-                  concentrateMode === value
-                    ? value === 'lotus'
-                      ? 'border border-rose-400/40 bg-rose-500/15 text-rose-200 shadow-sm'
-                      : 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
-                    : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          {workspaceMode === 'diy' && (
+            <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+              {([
+                ['builder', 'Stock builder', 'Build one concentrate'],
+                ['lotus', 'DIY Lotus Drops', 'Four independent dropper concentrates'],
+              ] as const).map(([value, label, description]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={concentrateMode === value}
+                  onClick={() => setConcentrateMode(value)}
+                  title={description}
+                  className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                    concentrateMode === value
+                      ? value === 'lotus'
+                        ? 'border border-rose-400/40 bg-rose-500/15 text-rose-200 shadow-sm'
+                        : 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
+                      : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      {concentrateMode === 'lotus' ? (
+      {workspaceMode === 'diy' && concentrateMode === 'lotus' ? (
         <LotusDropsSection
           style={dropperStyle}
           onStyleChange={setDropperStyle}
@@ -8619,7 +8640,7 @@ function ConcentrateWorkspace({
           onStraightDropsPerMlChange={setStraightDropsPerMlInput}
           onSaveSnapshot={onSaveSnapshot}
         />
-      ) : recipeHandoff ? (
+      ) : workspaceMode === 'recipe' && recipeHandoff ? (
         <RecipeConcentrateBuilder
           handoff={recipeHandoff}
           volumeUnit={volumeUnit}
@@ -8632,6 +8653,18 @@ function ConcentrateWorkspace({
           onClear={onClearRecipeHandoff}
           onPlanChange={setRecipeConcentratePlan}
         />
+      ) : workspaceMode === 'recipe' ? (
+        <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
+          <div className="flex items-start gap-3">
+            <BottleWine className="mt-0.5 h-5 w-5 shrink-0 text-fuchsia-300" aria-hidden="true" />
+            <div>
+              <h2 className="text-sm font-semibold text-fuchsia-100">No recipe concentrate loaded</h2>
+              <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                Enter a recipe in Calculator, then choose “Send to Concentrate” to build its recipe stock here.
+              </p>
+            </div>
+          </div>
+        </section>
       ) : (
         <>
       <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
