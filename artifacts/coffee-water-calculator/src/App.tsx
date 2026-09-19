@@ -8249,9 +8249,16 @@ function DiySingleSaltConcentrateBuilder({
     [diySaltTargets],
   );
   const [saltId, setSaltId] = useState(() => activeSaltIds[0] ?? 'mgso4');
+  const [diyFormIdxBySaltId, setDiyFormIdxBySaltId] = useState<Record<string, number>>(
+    () => ({ ...diySaltForms }),
+  );
   const selectedSalt = SALTS.find(salt => salt.id === saltId) ?? SALTS[0];
+  const requestedFormIdx = diyFormIdxBySaltId[saltId]
+    ?? diySaltForms[saltId]
+    ?? selectedSalt.defaultFormIdx
+    ?? 0;
   const safeFormIdx = Math.min(
-    Math.max(0, diySaltForms[saltId] ?? selectedSalt.defaultFormIdx ?? 0),
+    Math.max(0, requestedFormIdx),
     Math.max(0, selectedSalt.hydrationForms.length - 1),
   );
   const targetFromCalculator = Number(diySaltTargets[saltId] ?? 0);
@@ -8305,13 +8312,25 @@ function DiySingleSaltConcentrateBuilder({
               ))}
             </select>
           </label>
-          <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hydration form</span>
-            <div className="mt-1 text-sm font-semibold text-slate-100">
-              {selectedSalt.hydrationForms[safeFormIdx]?.label ?? 'Default form'}
-            </div>
-            <span className="mt-1 block text-[9px] text-slate-600">Uses the form selected in Calculator</span>
-          </div>
+            <select
+              value={safeFormIdx}
+              onChange={event => setDiyFormIdxBySaltId(previous => ({
+                ...previous,
+                [saltId]: Number(event.target.value),
+              }))}
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              aria-label="DIY concentrate hydration form"
+            >
+              {selectedSalt.hydrationForms.map((hydration, index) => (
+                <option key={`${selectedSalt.id}-${hydration.label}`} value={index}>
+                  {hydration.label}
+                </option>
+              ))}
+            </select>
+            <span className="mt-1 block text-[9px] text-slate-600">Controls the salt mass to weigh</span>
+          </label>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.06] px-3 py-2 text-[10px]">
           <span className="text-slate-400">Calculator target</span>
