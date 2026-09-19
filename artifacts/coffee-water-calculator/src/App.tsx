@@ -10483,7 +10483,7 @@ function RecipeConcentrateBottleCard({
                 Dose the final water
               </div>
               <div className="mt-3 flex flex-wrap items-baseline gap-2">
-                <strong className="text-5xl font-semibold tracking-[-0.05em] text-white">{Math.round(doseDrops)}</strong>
+                <strong className="text-5xl font-semibold tracking-[-0.05em] text-white">{recipeConcentrateNumber(doseDrops, 2)}</strong>
                 <span className="text-sm font-medium">drops / {recipeConcentrateNumber(doseMl, 2)} mL</span>
               </div>
               <div className="mt-1 text-[11px]">for {recipeConcentrateNumber(finalLiters > 0 ? Number(finalVolumeInput) : 0, 2)} {unitLabel} final water</div>
@@ -10511,7 +10511,7 @@ function RecipeConcentrateBottleCard({
               ) : (
                 <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
               )}
-              <div className="text-[9px]">physical salt ppm</div>
+               <div className="text-[9px]">physical hydrated-salt ppm/drop</div>
             </div>
           </div>
           <label className="mt-4 block">
