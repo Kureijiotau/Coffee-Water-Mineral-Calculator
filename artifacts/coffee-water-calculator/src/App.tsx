@@ -8536,7 +8536,7 @@ function ConcentrateWorkspace({
   const totalStockMassG = Math.max(0, Number(totalStockMassInput) || 0);
   const saltMassG = computeConcentrateStockSaltMassMg(strengthPercent, totalStockMassG) / 1000;
   const waterMassG = Math.max(0, totalStockMassG - saltMassG);
-  const saltMassLabel = saltMassG >= 1 ? `${saltMassG.toFixed(2)} g` : `${(saltMassG * 1000).toFixed(0)} mg`;
+  const saltMassLabel = saltMassG >= 1 ? `${saltMassG.toFixed(3)} g` : `${(saltMassG * 1000).toFixed(0)} mg`;
   const saltMgPerStockG = strengthPercent * 10;
   const measuredDrops = Number(calibrationDrops);
   const measuredStockMassG = Number(calibrationStockMass);
@@ -10295,7 +10295,7 @@ function LegacyRecipeConcentrateBuilder({
                         <td className="px-3 py-3 text-slate-400">{row.form.label}</td>
                         <td className="px-3 py-3 text-right tabular-nums">{row.target.toFixed(2)} ppm</td>
                         <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tone.accent}`}>
-                          {row.massMg >= 1000 ? `${(row.massMg / 1000).toFixed(2)} g` : `${row.massMg.toFixed(1)} mg`}
+                          {row.massMg >= 1000 ? `${(row.massMg / 1000).toFixed(3)} g` : `${row.massMg.toFixed(1)} mg`}
                         </td>
                       </tr>
                     ))}
@@ -10348,7 +10348,7 @@ function recipeConcentrateNumber(value: number, digits = 2): string {
 function recipeConcentrateMassLabel(massG: number): string {
   if (!Number.isFinite(massG)) return '—';
   return massG >= 1
-    ? `${massG.toFixed(2)} g`
+    ? `${massG.toFixed(3)} g`
     : `${(massG * 1000).toFixed(1)} mg`;
 }
 
