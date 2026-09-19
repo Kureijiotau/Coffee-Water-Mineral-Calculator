@@ -179,6 +179,33 @@ describe('all-in-one recipe drop equivalents', () => {
     expect(result.totalSaltMgPerDrop / 2).toBeCloseTo(requestedPpm, 8);
   });
 
+  it('keeps the exact fractional drop dose aligned with the displayed volume for dihydrate salt', () => {
+    const strength = computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+      saltTargets: { cacl2: 40 },
+      formIdxBySaltId: { cacl2: 1 },
+      stockVolumeMl: 120,
+      dropsPerMl: 30,
+      finalLiters: 0.225,
+      physicalSaltPpmPerDrop: 10,
+    });
+    const result = computeRecipeConcentrateDropEquivalents({
+      saltTargets: { cacl2: 40 },
+      formIdxBySaltId: { cacl2: 1 },
+      strength,
+      stockVolumeMl: 120,
+      dropsPerMl: 30,
+      finalLiters: 0.225,
+    });
+
+    expect(result.saltEquivalentPpmPerDrop).toBeCloseTo(
+      40 * strength / 120 / 30 / 0.225,
+      8,
+    );
+    expect(result.totalSaltMgPerDrop / 0.225).toBeCloseTo(10, 8);
+    expect(result.batchDrops).toBeCloseTo(5.3, 1);
+    expect(result.batchDrops).not.toBe(5);
+  });
+
   it('rejects unusable inverse-calculation inputs', () => {
     expect(computeRecipeConcentrateStrengthForPhysicalSaltPpm({
       saltTargets: { mgso4: 10 },
