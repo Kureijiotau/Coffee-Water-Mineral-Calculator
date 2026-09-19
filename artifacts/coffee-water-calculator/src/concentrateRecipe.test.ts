@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeDiyConcentrateStrengthForCaCo3PpmPerDrop,
   computeRecipeConcentrateDropEquivalents,
   computeRecipeConcentrateStrengthForPhysicalSaltPpm,
   computeRecipeStockSaltMassMg,
@@ -61,6 +62,43 @@ describe('recipe concentrate stock conversion', () => {
 
     expect(anhydrousMass).toBeCloseTo(6114.8, 1);
     expect(dihydrateMass).toBeCloseTo(8100.0, 1);
+    expect(dihydrateMass / anhydrousMass).toBeCloseTo(
+      dihydrate.molarMass / anhydrous.molarMass,
+      8,
+    );
+  });
+});
+
+describe('DIY concentrate workbook-style conversion', () => {
+  it('solves from CaCO3-equivalent ppm per drop without canceling hydration mass', () => {
+    const salt = SALTS.find(item => item.id === 'cacl2')!;
+    const anhydrous = salt.hydrationForms[0];
+    const dihydrate = salt.hydrationForms[1];
+    const strength = computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
+      saltId: salt.id,
+      targetPpm: 40,
+      stockVolumeMl: 100,
+      dropsPerMl: 100 / 3.5,
+      finalLiters: 1,
+      caCo3PpmPerDrop: 5,
+    });
+    const anhydrousMass = computeRecipeStockSaltMassMg(
+      40,
+      strength,
+      anhydrous.molarMass,
+      salt.anhydrousMass,
+    );
+    const dihydrateMass = computeRecipeStockSaltMassMg(
+      40,
+      strength,
+      dihydrate.molarMass,
+      salt.anhydrousMass,
+    );
+
+    expect(strength).toBeGreaterThan(0);
+    expect(anhydrousMass).toBeCloseTo(15840.23, 1);
+    expect(dihydrateMass).toBeCloseTo(20982.91, 1);
+    expect(dihydrateMass).toBeGreaterThan(anhydrousMass);
     expect(dihydrateMass / anhydrousMass).toBeCloseTo(
       dihydrate.molarMass / anhydrous.molarMass,
       8,

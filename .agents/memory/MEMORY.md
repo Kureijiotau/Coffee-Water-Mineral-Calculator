@@ -95,3 +95,4 @@
 - [Salt-mass bottle-volume anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve strength and scale that bottle after a physical-mass edit
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
 - [Mixer picker cleanup](mixer-picker-cleanup.md) — hide finished-water entries locally in Mixer without deleting reusable source profiles or sessions
+- [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength

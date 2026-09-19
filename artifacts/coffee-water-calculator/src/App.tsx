@@ -347,6 +347,119 @@ export function computeRecipeStockSaltMassMg(
   return computeSaltMg(targetPpm, 1, hydrationMass, anhydrousMass) * strength;
 }
 
+const DIY_CACO3_EQUIVALENT_MOLAR_MASS = 100.0869;
+const DIY_EQUIVALENT_CATION_MOLAR_MASSES: Partial<Record<IonId, number>> = {
+  calcium: 40.078,
+  magnesium: 24.305,
+  sodium: 22.990,
+  potassium: 39.098,
+};
+const DIY_EQUIVALENT_CATION_MASSES: Partial<Record<IonId, number>> = {
+  calcium: DIY_CACO3_EQUIVALENT_MOLAR_MASS,
+  magnesium: DIY_CACO3_EQUIVALENT_MOLAR_MASS,
+  sodium: DIY_CACO3_EQUIVALENT_MOLAR_MASS / 2,
+  potassium: DIY_CACO3_EQUIVALENT_MOLAR_MASS / 2,
+};
+
+function diyCaCo3EquivalentPerAnhydrousGram(salt: typeof SALTS[number]): number {
+  const cation = salt.ions.find(contribution => (
+    DIY_EQUIVALENT_CATION_MOLAR_MASSES[contribution.ionId] != null
+  ));
+  if (!cation) return 0;
+  const cationMolarMass = DIY_EQUIVALENT_CATION_MOLAR_MASSES[cation.ionId] ?? 0;
+  const equivalentMolarMass = DIY_EQUIVALENT_CATION_MASSES[cation.ionId] ?? 0;
+  return cationMolarMass > 0 && equivalentMolarMass > 0
+    ? cation.fraction * equivalentMolarMass / cationMolarMass
+    : 0;
+}
+
+function diyCaCo3EquivalentPerPhysicalGram(
+  salt: typeof SALTS[number],
+  hydrationMolarMass: number,
+): number {
+  if (!Number.isFinite(hydrationMolarMass) || hydrationMolarMass <= 0) return 0;
+  return diyCaCo3EquivalentPerAnhydrousGram(salt)
+    * salt.anhydrousMass
+    / hydrationMolarMass;
+}
+
+export function computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
+  saltId,
+  targetPpm,
+  stockVolumeMl,
+  dropsPerMl,
+  finalLiters,
+  caCo3PpmPerDrop,
+}: {
+  saltId: string;
+  targetPpm: number;
+  stockVolumeMl: number;
+  dropsPerMl: number;
+  finalLiters: number;
+  caCo3PpmPerDrop: number;
+}): number {
+  const salt = SALTS.find(item => item.id === saltId);
+  const caCo3EquivalentPerAnhydrousGram = salt
+    ? diyCaCo3EquivalentPerAnhydrousGram(salt)
+    : 0;
+  if (
+    !salt
+    || !Number.isFinite(targetPpm) || targetPpm <= 0
+    || !Number.isFinite(stockVolumeMl) || stockVolumeMl <= 0
+    || !Number.isFinite(dropsPerMl) || dropsPerMl <= 0
+    || !Number.isFinite(finalLiters) || finalLiters <= 0
+    || !Number.isFinite(caCo3PpmPerDrop) || caCo3PpmPerDrop <= 0
+    || caCo3EquivalentPerAnhydrousGram <= 0
+  ) {
+    return 0;
+  }
+  const caCo3PpmPerDropAtStrengthOne = targetPpm
+    * caCo3EquivalentPerAnhydrousGram
+    / stockVolumeMl
+    / dropsPerMl
+    / finalLiters;
+  return caCo3PpmPerDropAtStrengthOne > 0
+    ? caCo3PpmPerDrop / caCo3PpmPerDropAtStrengthOne
+    : 0;
+}
+
+function computeDiyCaCo3PpmPerDrop({
+  salt,
+  formMolarMass,
+  targetPpm,
+  strength,
+  stockVolumeMl,
+  dropsPerMl,
+  finalLiters,
+}: {
+  salt: typeof SALTS[number];
+  formMolarMass: number;
+  targetPpm: number;
+  strength: number;
+  stockVolumeMl: number;
+  dropsPerMl: number;
+  finalLiters: number;
+}): number {
+  if (
+    !Number.isFinite(targetPpm) || targetPpm <= 0
+    || !Number.isFinite(strength) || strength <= 0
+    || !Number.isFinite(stockVolumeMl) || stockVolumeMl <= 0
+    || !Number.isFinite(dropsPerMl) || dropsPerMl <= 0
+    || !Number.isFinite(finalLiters) || finalLiters <= 0
+  ) {
+    return 0;
+  }
+  const physicalSaltMgPerDrop = targetPpm
+    * strength
+    * formMolarMass
+    / salt.anhydrousMass
+    / stockVolumeMl
+    / dropsPerMl;
+  return physicalSaltMgPerDrop
+    * diyCaCo3EquivalentPerPhysicalGram(salt, formMolarMass)
+    / finalLiters;
+}
+
 export type RecipeConcentrateSaltDropContribution = {
   saltId: string;
   saltName: string;
@@ -10242,6 +10355,7 @@ function recipeConcentrateMassLabel(massG: number): string {
 function RecipeConcentrateBottleCard({
   group,
   handoff,
+  singleSaltOnly,
   strengthInput,
   volumeInput,
   finalVolumeInput,
@@ -10264,6 +10378,7 @@ function RecipeConcentrateBottleCard({
 }: {
   group: RecipeBottleGroup;
   handoff: ConcentrateRecipeHandoff;
+  singleSaltOnly?: boolean;
   strengthInput: string;
   volumeInput: string;
   finalVolumeInput: string;
@@ -10342,7 +10457,18 @@ function RecipeConcentrateBottleCard({
     ? stockRows.reduce((total, row) => total + row.massMg, 0) / stockVolumeMl
     : 0;
   const saltMgPerDrop = activeDropsPerMl > 0 ? saltMgPerMl / activeDropsPerMl : 0;
-  const ppmPerDrop = safeFinalLiters > 0 ? saltMgPerDrop / safeFinalLiters : 0;
+  const physicalPpmPerDrop = safeFinalLiters > 0 ? saltMgPerDrop / safeFinalLiters : 0;
+  const ppmPerDrop = singleSaltOnly && stockRows.length === 1
+    ? computeDiyCaCo3PpmPerDrop({
+      salt: stockRows[0].salt,
+      formMolarMass: stockRows[0].form.molarMass,
+      targetPpm: stockRows[0].target,
+      strength,
+      stockVolumeMl,
+      dropsPerMl: activeDropsPerMl,
+      finalLiters: safeFinalLiters,
+    })
+    : physicalPpmPerDrop;
   const tone: Record<RecipeBottleGroup['color'], {
     border: string;
     badge: string;
@@ -10541,8 +10667,10 @@ function RecipeConcentrateBottleCard({
               <div className="mt-1 text-[11px]">for {recipeConcentrateNumber(finalLiters > 0 ? Number(finalVolumeInput) : 0, 2)} {unitLabel} final water</div>
             </div>
             <div className={`recipe-concentrate-dose-metric rounded-lg border px-2.5 py-2 text-right ${colors.border} ${colors.soft}`}>
-              <div className="flex items-center justify-end gap-2">
-                <div className="text-[9px] font-bold uppercase tracking-[0.16em]">1 drop adds</div>
+                <div className="flex items-center justify-end gap-2">
+                  <div className="text-[9px] font-bold uppercase tracking-[0.16em]">
+                    {singleSaltOnly ? 'CaCO₃ ppm/drop' : '1 drop adds'}
+                  </div>
                 {onPhysicalSaltPpmPerDropChange && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-slate-950/25 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.12em] text-slate-300/80">
                     <Pencil className="h-2.5 w-2.5" aria-hidden="true" />
@@ -10556,14 +10684,18 @@ function RecipeConcentrateBottleCard({
                   step="0.01"
                   value={physicalSaltPpmPerDropInput ?? recipeConcentrateNumber(ppmPerDrop, 2)}
                   onChange={event => onPhysicalSaltPpmPerDropChange(event.target.value)}
-                  aria-label={`${cardName} physical salt ppm added by one drop`}
-                  title="Set the physical salt ppm added by one drop; stock strength adjusts to match"
+                   aria-label={`${cardName} ${singleSaltOnly ? 'CaCO3-equivalent ppm per drop' : 'physical salt ppm added by one drop'}`}
+                   title={singleSaltOnly
+                     ? 'Set the CaCO3-equivalent ppm per drop; stock strength adjusts to match'
+                     : 'Set the physical salt ppm added by one drop; stock strength adjusts to match'}
                   className="recipe-concentrate-input mt-1 w-full cursor-text rounded-md border border-white/15 bg-slate-950/25 px-2 py-1 text-right text-lg font-semibold tabular-nums text-white outline-none transition hover:border-white/30 focus:border-cyan-200/70 focus:bg-slate-950/45 focus:ring-2 focus:ring-cyan-300/20"
                 />
               ) : (
                 <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateNumber(ppmPerDrop, 2)}</div>
               )}
-               <div className="text-[9px]">physical hydrated-salt ppm/drop</div>
+                <div className="text-[9px]">
+                  {singleSaltOnly ? 'workbook basis · per final-water volume' : 'physical hydrated-salt ppm/drop'}
+                </div>
             </div>
           </div>
           <label className="mt-4 block">
@@ -10759,14 +10891,23 @@ function RecipeConcentrateBuilder({
     && physicalSaltPpmPerDropInput !== null
     && Number(physicalSaltPpmPerDropInput) > 0;
   const pinnedStrength = hasPinnedDropTarget
-    ? computeRecipeConcentrateStrengthForPhysicalSaltPpm({
-      saltTargets,
-      formIdxBySaltId,
-      stockVolumeMl: allInOneStockVolumeMl,
-      dropsPerMl: activeDropsPerMl,
-      finalLiters,
-      physicalSaltPpmPerDrop: Number(physicalSaltPpmPerDropInput),
-    })
+    ? singleSaltOnly
+      ? computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
+        saltId: activeSaltIds[0] ?? '',
+        targetPpm: saltTargets[activeSaltIds[0] ?? ''] ?? 0,
+        stockVolumeMl: allInOneStockVolumeMl,
+        dropsPerMl: activeDropsPerMl,
+        finalLiters,
+        caCo3PpmPerDrop: Number(physicalSaltPpmPerDropInput),
+      })
+      : computeRecipeConcentrateStrengthForPhysicalSaltPpm({
+        saltTargets,
+        formIdxBySaltId,
+        stockVolumeMl: allInOneStockVolumeMl,
+        dropsPerMl: activeDropsPerMl,
+        finalLiters,
+        physicalSaltPpmPerDrop: Number(physicalSaltPpmPerDropInput),
+      })
     : 0;
   const strength = pinnedStrength > 0 ? pinnedStrength : rawStrength;
   const dropDosingOptions = {
@@ -11038,6 +11179,7 @@ function RecipeConcentrateBuilder({
               key={group.id}
               group={group}
               handoff={handoff}
+              singleSaltOnly={singleSaltOnly}
               strengthInput={stockStrategy === 'all-in-one' && hasPinnedDropTarget
                 ? recipeConcentrateNumber(strength, 2)
                 : stockStrategy === 'all-in-one'
