@@ -322,6 +322,13 @@ type ConcentratePlanSnapshot = {
   }>;
 };
 
+type DiyConcentratePreferenceSnapshot = {
+  version: 1;
+  saltId: string;
+  formIdxBySaltId: Record<string, number>;
+  planBySaltId: Record<string, ConcentratePlanSnapshot>;
+};
+
 const ION_TOOLTIP_KEYWORDS = /\b(acid(?:ity|ic)?|sweet(?:ness)?|dull|bitter|dry|smooth(?:er)?|full(?:er)?|sour|metallic|salty|brackish|chalky|harsh|clear|bright|flavor)\b/gi;
 
 function renderIonTooltipText(text: string): ReactNode {
@@ -1352,6 +1359,7 @@ const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
 const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-policy';
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
+const DIY_CONCENTRATE_PREFERENCES_STORAGE_KEY = 'coffee-water-diy-concentrate-preferences';
 const DEFAULT_DROPS_PER_ML = 20;
 /** Smallest physical salt dose considered by Watermancer. */
 const WATERMANCER_MIN_SALT_MG = 1;
@@ -1367,6 +1375,54 @@ function loadDropsPerMl(): number {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_DROPS_PER_ML;
   } catch {
     return DEFAULT_DROPS_PER_ML;
+  }
+}
+
+function isKnownSaltId(value: string): boolean {
+  return SALTS.some(salt => salt.id === value);
+}
+
+function isConcentratePlanSnapshot(value: unknown): value is ConcentratePlanSnapshot {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Partial<ConcentratePlanSnapshot>;
+  return (
+    (record.strategy === 'gh-kh' || record.strategy === 'all-in-one' || record.strategy === 'individual')
+    && Array.isArray(record.groups)
+  );
+}
+
+function loadDiyConcentratePreferences(): DiyConcentratePreferenceSnapshot {
+  const fallback: DiyConcentratePreferenceSnapshot = {
+    version: 1,
+    saltId: '',
+    formIdxBySaltId: {},
+    planBySaltId: {},
+  };
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem(DIY_CONCENTRATE_PREFERENCES_STORAGE_KEY) ?? 'null',
+    ) as Partial<DiyConcentratePreferenceSnapshot> | null;
+    if (!stored || stored.version !== 1) return fallback;
+    const formIdxBySaltId = Object.fromEntries(
+      Object.entries(stored.formIdxBySaltId ?? {})
+        .filter(([saltId, formIdx]) => isKnownSaltId(saltId) && Number.isInteger(formIdx) && Number(formIdx) >= 0)
+        .map(([saltId, formIdx]) => [saltId, Number(formIdx)]),
+    );
+    const planBySaltId = Object.fromEntries(
+      Object.entries(stored.planBySaltId ?? {})
+        .filter(([saltId, plan]) => isKnownSaltId(saltId) && isConcentratePlanSnapshot(plan))
+        .map(([saltId, plan]) => [saltId, plan]),
+    ) as Record<string, ConcentratePlanSnapshot>;
+    return {
+      version: 1,
+      saltId: typeof stored.saltId === 'string' && isKnownSaltId(stored.saltId)
+        ? stored.saltId
+        : '',
+      formIdxBySaltId,
+      planBySaltId,
+    };
+  } catch {
+    return fallback;
   }
 }
 
@@ -8372,9 +8428,16 @@ function DiySingleSaltConcentrateBuilder({
       .map(salt => salt.id),
     [diySaltTargets],
   );
-  const [saltId, setSaltId] = useState(() => activeSaltIds[0] ?? 'mgso4');
+  const [diyPreferences, setDiyPreferences] = useState<DiyConcentratePreferenceSnapshot>(
+    () => loadDiyConcentratePreferences(),
+  );
+  const [saltId, setSaltId] = useState(() => (
+    activeSaltIds.includes(diyPreferences.saltId)
+      ? diyPreferences.saltId
+      : activeSaltIds[0] ?? 'mgso4'
+  ));
   const [diyFormIdxBySaltId, setDiyFormIdxBySaltId] = useState<Record<string, number>>(
-    () => ({ ...diySaltForms }),
+    () => ({ ...diySaltForms, ...diyPreferences.formIdxBySaltId }),
   );
   const selectedSalt = SALTS.find(salt => salt.id === saltId) ?? SALTS[0];
   const requestedFormIdx = diyFormIdxBySaltId[saltId]
@@ -8387,6 +8450,7 @@ function DiySingleSaltConcentrateBuilder({
   );
   const targetFromCalculator = Number(diySaltTargets[saltId] ?? 0);
   const target = targetFromCalculator > 0 ? targetFromCalculator : 10;
+  const restoredPlan = diyPreferences.planBySaltId[saltId] ?? null;
   const handoff = useMemo<ConcentrateRecipeHandoff>(() => ({
     name: 'DIY single-salt concentrate',
     salts: {
@@ -8398,11 +8462,52 @@ function DiySingleSaltConcentrateBuilder({
     finalLiters: diyFinalLiters > 0 ? diyFinalLiters : 1,
   }), [diyFinalLiters, safeFormIdx, saltId, target]);
 
+  useDebouncedPersistence(() => {
+    localStorage.setItem(
+      DIY_CONCENTRATE_PREFERENCES_STORAGE_KEY,
+      JSON.stringify(diyPreferences),
+    );
+  }, [diyPreferences]);
+
   useEffect(() => {
     if (activeSaltIds.length > 0 && !activeSaltIds.includes(saltId)) {
-      setSaltId(activeSaltIds[0]);
+      const nextSaltId = activeSaltIds[0];
+      setSaltId(nextSaltId);
+      setDiyPreferences(previous => ({ ...previous, saltId: nextSaltId }));
     }
   }, [activeSaltIds, saltId]);
+
+  const handleSaltChange = (nextSaltId: string) => {
+    if (!isKnownSaltId(nextSaltId)) return;
+    setSaltId(nextSaltId);
+    setDiyPreferences(previous => ({ ...previous, saltId: nextSaltId }));
+  };
+
+  const handleFormChange = (nextFormIdx: number) => {
+    setDiyFormIdxBySaltId(previous => ({
+      ...previous,
+      [saltId]: nextFormIdx,
+    }));
+    setDiyPreferences(previous => ({
+      ...previous,
+      formIdxBySaltId: {
+        ...previous.formIdxBySaltId,
+        [saltId]: nextFormIdx,
+      },
+    }));
+  };
+
+  const handlePlanChange = useCallback((plan: ConcentratePlanSnapshot) => {
+    setDiyPreferences(previous => ({
+      ...previous,
+      saltId,
+      planBySaltId: {
+        ...previous.planBySaltId,
+        [saltId]: plan,
+      },
+    }));
+    onPlanChange(plan);
+  }, [onPlanChange, saltId]);
 
   return (
     <div className="space-y-3">
@@ -8427,7 +8532,7 @@ function DiySingleSaltConcentrateBuilder({
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mineral</span>
             <select
               value={saltId}
-              onChange={event => setSaltId(event.target.value)}
+              onChange={event => handleSaltChange(event.target.value)}
               className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
               aria-label="DIY concentrate mineral"
             >
@@ -8440,10 +8545,7 @@ function DiySingleSaltConcentrateBuilder({
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hydration form</span>
             <select
               value={safeFormIdx}
-              onChange={event => setDiyFormIdxBySaltId(previous => ({
-                ...previous,
-                [saltId]: Number(event.target.value),
-              }))}
+              onChange={event => handleFormChange(Number(event.target.value))}
               className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
               aria-label="DIY concentrate hydration form"
             >
@@ -8470,10 +8572,10 @@ function DiySingleSaltConcentrateBuilder({
         dropperStyle={dropperStyle}
         onDropperStyleChange={onDropperStyleChange}
         straightDropsPerMl={straightDropsPerMl}
-        restoredPlan={null}
+         restoredPlan={restoredPlan}
         onToggleVolumeUnit={onToggleVolumeUnit}
         onClear={() => undefined}
-        onPlanChange={onPlanChange}
+         onPlanChange={handlePlanChange}
         singleSaltOnly
       />
     </div>
@@ -11005,14 +11107,16 @@ function RecipeConcentrateBuilder({
     );
     const restored = restoredPlan && restoredPlan.strategy ? restoredPlan : null;
     setStrengthInput(
-      restored && !singleSaltOnly
+      restored
         ? String(restored.strength)
         : recipeConcentrateNumber(initialAllInOneStrength, 2),
     );
     setPhysicalSaltPpmPerDropInput(restored?.physicalSaltPpmPerDropInput ?? null);
+    if (singleSaltOnly && restored?.dropperStyle) {
+      onDropperStyleChange(restored.dropperStyle);
+    }
     setStockStrategy(singleSaltOnly ? 'all-in-one' : restored?.strategy ?? 'gh-kh');
     setStockStrengthInputs(restored
-      && !singleSaltOnly
       ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.strength)]))
       : {
           hardness: initialStockStrengths.hardness ?? '1',
@@ -11021,7 +11125,6 @@ function RecipeConcentrateBuilder({
           'all-in-one': recipeConcentrateNumber(initialAllInOneStrength, 2),
         });
     setStockVolumeInputs(restored
-      && !singleSaltOnly
       ? Object.fromEntries(restored.groups.map(group => [group.id, String(group.volumeMl)]))
       : {
           hardness: '100',
@@ -11037,7 +11140,7 @@ function RecipeConcentrateBuilder({
         ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
         : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
     );
-  }, [handoff, singleSaltOnly]);
+  }, [handoff, onDropperStyleChange, restoredPlan, singleSaltOnly, volumeUnit]);
 
   useEffect(() => {
     onPlanChange({
