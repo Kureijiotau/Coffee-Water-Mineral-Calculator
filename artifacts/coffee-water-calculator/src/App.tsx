@@ -9354,9 +9354,6 @@ function LotusDropsSection({
                        <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/80">Per-drop reference</span>
                        <span className="flex items-center gap-2 text-[10px] font-semibold tabular-nums text-cyan-100">
                          +{plan.ionPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name} / drop
-                         <span className="rounded border border-cyan-300/30 px-1 py-0.5 font-mono text-[10px] text-cyan-200" aria-hidden="true">
-                           {isExpanded ? '[−]' : '[+]'}
-                         </span>
                        </span>
                      </button>
                      {isExpanded && (
