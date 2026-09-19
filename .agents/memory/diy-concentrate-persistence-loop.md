@@ -3,8 +3,8 @@ name: DIY concentrate persistence loop
 description: Restored DIY concentrate plans must not trigger equivalent state updates during builder initialization
 ---
 
-When restoring DIY concentrate preferences, treat structurally equivalent plans as unchanged both in the builder emission effect and at the workspace plan-state boundary.
+Use the existing autosaved water-plan session as the source of truth for DIY Concentrate restoration; do not maintain a second DIY-specific persisted plan record.
 
-**Why:** The restore effect can recreate equivalent plan objects on every render; either the DIY preference write or the workspace `recipeConcentratePlan` write can create a React maximum-update-depth loop and make the page unstable.
+**Why:** The separate DIY preference record duplicated the concentrate snapshot and its restore/write feedback loop caused repeated React updates.
 
-**How to apply:** Keep equality guards at both state boundaries and preserve the separate DIY storage record so Recipe Concentrate and DIY Lotus Drops remain independent.
+**How to apply:** Restore the autosaved session once on app startup, pass its concentrate snapshot into the DIY builder, and keep plan state updates structurally guarded.
