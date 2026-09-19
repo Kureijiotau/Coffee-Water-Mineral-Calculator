@@ -41,6 +41,31 @@ describe('recipe concentrate stock conversion', () => {
       anhydrousMass,
     )).toBeCloseTo(targetPpm * (hydrationMass / anhydrousMass), 8);
   });
+
+  it('changes the physical stock mass when the selected hydration form changes', () => {
+    const salt = SALTS.find(item => item.id === 'cacl2')!;
+    const anhydrous = salt.hydrationForms[0];
+    const dihydrate = salt.hydrationForms[1];
+    const anhydrousMass = computeRecipeStockSaltMassMg(
+      40,
+      152.87,
+      anhydrous.molarMass,
+      salt.anhydrousMass,
+    );
+    const dihydrateMass = computeRecipeStockSaltMassMg(
+      40,
+      152.87,
+      dihydrate.molarMass,
+      salt.anhydrousMass,
+    );
+
+    expect(anhydrousMass).toBeCloseTo(6114.8, 1);
+    expect(dihydrateMass).toBeCloseTo(8100.0, 1);
+    expect(dihydrateMass / anhydrousMass).toBeCloseTo(
+      dihydrate.molarMass / anhydrous.molarMass,
+      8,
+    );
+  });
 });
 
 describe('all-in-one recipe drop equivalents', () => {

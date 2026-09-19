@@ -4218,12 +4218,16 @@ function App() {
     }
     return m;
   }, [dosingSaltTargets]);
+  const concFormIdxBySaltId = useMemo(
+    () => Object.fromEntries(SALTS.map((salt, index) => [salt.id, safeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0])),
+    [safeRows],
+  );
 
   const concWarnings: ConcentrateWarning[] = useMemo(
     () => concentrateOn
-      ? checkConcentrate(concentrateStrength, concSaltTargets, {}, num(concentrateMl))
+      ? checkConcentrate(concentrateStrength, concSaltTargets, concFormIdxBySaltId, num(concentrateMl))
       : [],
-    [concentrateOn, concentrateStrength, concSaltTargets, concentrateMl],
+    [concentrateOn, concentrateStrength, concSaltTargets, concFormIdxBySaltId, concentrateMl],
   );
 
   const concFeasibility: { level: 'green' | 'amber' | 'red'; label: string } = useMemo(() => {
@@ -4241,7 +4245,7 @@ function App() {
     setConcentrateStrength(findStrongestSafeConcentrateStrength(
       concSaltTargets,
       undefined,
-      {},
+      concFormIdxBySaltId,
       { stockVolumeMl: 100 },
     ));
     setSplitMode(false);
@@ -4356,7 +4360,9 @@ function App() {
     return { level: 'green', label: 'Split OK' };
   }, [splitMode, stockGroups, splitGroupWarnings]);
 
-  const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0 ? 1000 / concentrateStrength : 0;
+  const concDoseMlPerLiter = concentrateOn && concentrateStrength > 0
+    ? concL * 1000 / concentrateStrength
+    : 0;
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
 
   const allRecipes = [...RECIPES, ...savedRecipes];
@@ -4963,8 +4969,8 @@ function App() {
         const form = salt.hydrationForms[row.formIdx];
         const target = dosingSaltTargets[salt.id] ?? 0;
         if (target === 0) return null;
-        const mg = concentrateStrength > 0 && stockL > 0
-          ? computeSaltMg(target, stockL, form.molarMass, salt.anhydrousMass) * concentrateStrength
+         const mg = concentrateStrength > 0
+           ? computeRecipeStockSaltMassMg(target, concentrateStrength, form.molarMass, salt.anhydrousMass)
           : 0;
         const massLabel = mg >= 1000 ? `${(mg / 1000).toFixed(3)} g ` : `${mg.toFixed(2)} mg`;
         const saltLabel = `${salt.name}${salt.hydrationForms.length > 1 ? ` (${form.label})` : ''}`;
@@ -6143,14 +6149,11 @@ function App() {
            <div className="mineral-recipe-table__header hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider">
             <span>Salt</span>
             <span>
-              {publishedTargetLabel === 'Salt target (ppm)' ? (
-                <>
-                  Salt target{' '}
-                  <span className="cursor-help" title="ppm as CaCO₃">
-                    (ppm)
-                  </span>
-                </>
-              ) : publishedTargetLabel}
+               {publishedTargetLabel === 'Salt target (ppm)' ? (
+                 <span title="Anhydrous-equivalent salt concentration in mg/L; for water, ppm is approximately mg/L.">
+                   Salt target (ppm)
+                 </span>
+               ) : publishedTargetLabel}
             </span>
               <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
@@ -6191,8 +6194,8 @@ function App() {
             const recipeMass = L > 0 && recipeTarget > 0
               ? computeSaltMg(recipeTarget, L, form.molarMass, salt.anhydrousMass)
               : 0;
-            const concMg = concentrateOn && target > 0 && concL > 0
-              ? computeSaltMg(target, concL, form.molarMass, salt.anhydrousMass) * concentrateStrength
+            const concMg = concentrateOn && target > 0 && concentrateStrength > 0
+              ? computeRecipeStockSaltMassMg(target, concentrateStrength, form.molarMass, salt.anhydrousMass)
               : 0;
             const displayMass = concentrateOn ? concMg : mg;
             const massLabel = concentrateOn && displayMass >= 1000
@@ -10413,9 +10416,9 @@ function RecipeConcentrateBottleCard({
               <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
             </div>
             <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
-              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Water to add</div>
-              <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{recipeConcentrateNumber(waterToAddG, 1)} g</div>
-              <div className="mt-0.5 text-[9px] text-slate-500">distilled or RO</div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-slate-500">Fill to volume</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-slate-100">{stockVolumeMl.toFixed(1)} mL</div>
+              <div className="mt-0.5 text-[9px] text-slate-500">add distilled or RO to volume</div>
             </div>
           </div>
 
@@ -13699,18 +13702,18 @@ function ConcentrateRecipeStepsModal({
     const rows = stockGroupSaltRows(group);
     const saltMasses = rows.map(row => ({
       ...row,
-      massMg: computeRecipeStockSaltMassMg(
-        row.target,
-        group.strength,
-        row.form.molarMass,
-        row.salt.anhydrousMass,
-      ) * group.volumeMl / 100,
+       massMg: computeRecipeStockSaltMassMg(
+         row.target,
+         group.strength,
+         row.form.molarMass,
+         row.salt.anhydrousMass,
+       ),
     }));
     const totalSaltMassG = saltMasses.reduce((total, row) => total + row.massMg, 0) / 1000;
     return {
       rows: saltMasses,
       totalSaltMassG,
-      waterToAddMl: Math.max(group.volumeMl - totalSaltMassG, 0),
+       finalVolumeMl: group.volumeMl,
     };
   };
   const doseForGroup = (group: ConcentratePlanSnapshot['groups'][number], liters: number) => {
@@ -13917,7 +13920,7 @@ function ConcentrateRecipeStepsModal({
                   <div>
                     <div className="text-xs font-semibold text-slate-100">Prepare each bottle</div>
                     <div className="mt-1 text-[10px] leading-relaxed text-slate-400">
-                      Weigh the hydrated salt amounts below, add the listed water, and dissolve each stock completely. Keep bottles separate whenever the selected plan calls for it.
+                      Weigh the hydrated salt amounts below, dissolve them completely, and bring each stock to its stated final volume. Keep bottles separate whenever the selected plan calls for it.
                     </div>
                   </div>
                   <div className="shrink-0 rounded-md border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-200/75">
@@ -13942,8 +13945,8 @@ function ConcentrateRecipeStepsModal({
                               <div className="mt-0.5 font-mono text-xs font-bold tabular-nums text-fuchsia-100">{details.totalSaltMassG >= 1 ? `${details.totalSaltMassG.toFixed(2)} g` : `${(details.totalSaltMassG * 1000).toFixed(1)} mg`}</div>
                             </div>
                             <div className="rounded-md border border-sky-300/20 bg-sky-400/[0.08] px-2 py-1">
-                              <div className="text-[8px] font-semibold uppercase tracking-wider text-sky-200/70">Water to add</div>
-                              <div className="mt-0.5 font-mono text-xs font-bold tabular-nums text-sky-100">{details.waterToAddMl.toFixed(1)} mL</div>
+                              <div className="text-[8px] font-semibold uppercase tracking-wider text-sky-200/70">Fill to volume</div>
+                              <div className="mt-0.5 font-mono text-xs font-bold tabular-nums text-sky-100">{details.finalVolumeMl.toFixed(1)} mL</div>
                             </div>
                           </div>
                         </div>
