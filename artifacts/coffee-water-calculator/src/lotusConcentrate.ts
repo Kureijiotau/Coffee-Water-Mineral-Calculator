@@ -90,6 +90,8 @@ export interface LotusStockPlan {
   ionId: IonId;
   dropsPerMl: number;
   saltMgPerMl: number;
+  saltMgPerDrop: number;
+  ionPpmPerDrop: number;
   stockVolumeMl: number;
   saltMassMg: number;
   saltMassG: number;
@@ -122,6 +124,7 @@ export function lotusStockPlan(
   const saltMgPerDrop = ionFraction > 0 ? ionMgPerDrop / ionFraction : 0;
   const saltMgPerMl = saltMgPerDrop * dropsPerMl;
   const saltMassMg = saltMgPerMl * safeStockVolumeMl;
+  const ionPpmPerDrop = ionMgPerDrop / (LOTUS_BREW_VOLUME_ML / 1000);
 
   return {
     id: dropper.id,
@@ -135,6 +138,8 @@ export function lotusStockPlan(
     ionId: dropper.ionId,
     dropsPerMl,
     saltMgPerMl,
+    saltMgPerDrop,
+    ionPpmPerDrop,
     stockVolumeMl: safeStockVolumeMl,
     saltMassMg,
     saltMassG: saltMassMg / 1000,

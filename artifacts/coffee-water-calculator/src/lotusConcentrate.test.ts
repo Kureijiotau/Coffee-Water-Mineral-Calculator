@@ -53,6 +53,10 @@ describe('DIY Lotus Drops calculations', () => {
     expect(lotusDropsPerMl('round')).toBeCloseTo(11.2, 8);
     expect(lotusDropsPerMl('straight')).toBeCloseTo(20, 8);
     expect(round.saltMgPerMl).toBeCloseTo(straight.saltMgPerMl, 8);
+    expect(round.saltMgPerDrop).toBeCloseTo(16.3366875, 7);
+    expect(straight.saltMgPerDrop).toBeCloseTo(9.148545, 7);
+    expect(round.ionPpmPerDrop).toBeCloseTo(4.3401786, 6);
+    expect(straight.ionPpmPerDrop).toBeCloseTo(2.4305, 4);
     expect(round.saltMassG).toBeCloseTo(10.7953, 3);
     expect(round.stockVolumeMl).toBe(LOTUS_BOTTLE_VOLUME_ML);
   });

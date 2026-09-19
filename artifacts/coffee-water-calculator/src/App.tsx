@@ -69,6 +69,7 @@ import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { WATERING_HOLE_WATER_RECIPES, type WateringHoleWaterRecipe } from './wateringHoleWaterRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
 import {
+  LOTUS_BREW_VOLUME_ML,
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
@@ -9333,6 +9334,49 @@ function LotusDropsSection({
                     aria-label="Four-mineral concentrate volume in milliliters" />
                 </label>
               </div>
+               {salt && (
+                 <div className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-400/[0.05] p-2.5" data-testid={`lotus-drop-reference-${plan.id}`}>
+                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                     <div className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/80">Per-drop reference</div>
+                     <div className="text-[10px] font-semibold tabular-nums text-cyan-100">
+                       +{plan.ionPpmPerDrop.toFixed(2)} ppm {ION_MAP[plan.ionId].name} / drop
+                     </div>
+                   </div>
+                   <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                     Cumulative contribution in {LOTUS_BREW_VOLUME_ML} mL of final water. Use the salt column when comparing physical dose.
+                   </p>
+                   <div className="mt-2 overflow-hidden rounded-md border border-slate-700/60">
+                     <table className="w-full text-left text-[10px]">
+                       <thead className="bg-slate-900/70 text-[9px] uppercase tracking-wider text-slate-500">
+                         <tr>
+                           <th scope="col" className="px-2 py-1.5 font-semibold">Drops</th>
+                           <th scope="col" className="px-2 py-1.5 text-right font-semibold">Salt added</th>
+                           <th scope="col" className="px-2 py-1.5 text-right font-semibold">{ION_MAP[plan.ionId].name} ppm</th>
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y divide-slate-800/80">
+                         {Array.from({ length: 10 }, (_, index) => {
+                           const drops = index + 1;
+                           return (
+                             <tr key={drops} className={drops === 1 ? 'bg-cyan-400/[0.06]' : undefined}>
+                               <th scope="row" className="px-2 py-1 font-semibold tabular-nums text-slate-300">
+                                 {drops}
+                                 {drops === 1 && <span className="ml-1 font-normal text-cyan-200/70">(+1)</span>}
+                               </th>
+                               <td className="px-2 py-1 text-right tabular-nums text-slate-400">
+                                 {(drops * plan.saltMgPerDrop).toFixed(2)} mg
+                               </td>
+                               <td className="px-2 py-1 text-right font-semibold tabular-nums text-cyan-100">
+                                 +{(drops * plan.ionPpmPerDrop).toFixed(2)}
+                               </td>
+                             </tr>
+                           );
+                         })}
+                       </tbody>
+                     </table>
+                   </div>
+                 </div>
+               )}
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
                 <strong className="text-slate-200">Tare the bottle and weigh {stockVolumeMl.toFixed(1)} g of distilled/RO water.</strong>
                 Add <strong className="text-slate-200">{plan.saltMassG.toFixed(2)} g</strong> of {plan.hydrationForm} {plan.saltName}, then dissolve completely.
