@@ -10064,7 +10064,7 @@ function LegacyRecipeConcentrateBuilder({
               groupStrength,
               form.molarMass,
               salt.anhydrousMass,
-             ) * stockVolumeMl / 100;
+              );
             return { salt, form, target, massMg };
           }).filter((row): row is {
             salt: typeof SALTS[number];
@@ -10264,7 +10264,9 @@ function RecipeConcentrateBottleCard({
       form.molarMass,
       salt.anhydrousMass,
     );
-    const massMg = calculatedMassMg * (stockVolumeMl / 100) * saltMassScale;
+     // Bottle volume changes the stock concentration and dose volume, not the
+     // total salt required for the selected recipe strength.
+     const massMg = calculatedMassMg * saltMassScale;
     return { salt, form, target, massMg, calculatedMassMg };
   }).filter((row): row is {
     salt: typeof SALTS[number];
