@@ -8498,14 +8498,24 @@ function DiySingleSaltConcentrateBuilder({
   };
 
   const handlePlanChange = useCallback((plan: ConcentratePlanSnapshot) => {
-    setDiyPreferences(previous => ({
-      ...previous,
-      saltId,
-      planBySaltId: {
-        ...previous.planBySaltId,
-        [saltId]: plan,
-      },
-    }));
+    setDiyPreferences(previous => {
+      const existingPlan = previous.planBySaltId[saltId];
+      if (
+        previous.saltId === saltId
+        && existingPlan
+        && JSON.stringify(existingPlan) === JSON.stringify(plan)
+      ) {
+        return previous;
+      }
+      return {
+        ...previous,
+        saltId,
+        planBySaltId: {
+          ...previous.planBySaltId,
+          [saltId]: plan,
+        },
+      };
+    });
     onPlanChange(plan);
   }, [onPlanChange, saltId]);
 
