@@ -8640,6 +8640,13 @@ function ConcentrateWorkspace({
   const [recipeConcentratePlan, setRecipeConcentratePlan] = useState<ConcentratePlanSnapshot | null>(null);
   const [dropperStyle, setDropperStyle] = useState<LotusDropperStyle>('straight');
   const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
+  const handleRecipeConcentratePlanChange = useCallback((nextPlan: ConcentratePlanSnapshot) => {
+    setRecipeConcentratePlan(previous => (
+      previous && JSON.stringify(previous) === JSON.stringify(nextPlan)
+        ? previous
+        : nextPlan
+    ));
+  }, []);
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
@@ -8780,7 +8787,7 @@ function ConcentrateWorkspace({
           diySaltTargets={diySaltTargets}
           diySaltForms={diySaltForms}
           diyFinalLiters={diyFinalLiters}
-          onPlanChange={setRecipeConcentratePlan}
+           onPlanChange={handleRecipeConcentratePlanChange}
         />
         <button
           type="button"
@@ -8876,7 +8883,7 @@ function ConcentrateWorkspace({
            restoredPlan={restoredRecipePlan}
           onToggleVolumeUnit={onToggleVolumeUnit}
           onClear={onClearRecipeHandoff}
-          onPlanChange={setRecipeConcentratePlan}
+           onPlanChange={handleRecipeConcentratePlanChange}
         />
       ) : workspaceMode === 'recipe' ? (
         <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
@@ -10934,6 +10941,7 @@ function RecipeConcentrateBuilder({
   const [saltMassInputs, setSaltMassInputs] = useState<Record<string, Record<string, string>>>({});
   const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
   const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
+  const lastEmittedPlanSignatureRef = useRef<string | null>(null);
 
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
@@ -11153,7 +11161,7 @@ function RecipeConcentrateBuilder({
   }, [handoff, onDropperStyleChange, restoredPlan, singleSaltOnly, volumeUnit]);
 
   useEffect(() => {
-    onPlanChange({
+    const nextPlan: ConcentratePlanSnapshot = {
       strategy: stockStrategy,
       strategyLabel: stockStrategyDetails.label,
       strength,
@@ -11177,7 +11185,11 @@ function RecipeConcentrateBuilder({
         maxSafeStrength: groupMaxSafeStrengthFor(group),
         saltIds: [...group.saltIds],
       })),
-    });
+    };
+    const nextPlanSignature = JSON.stringify(nextPlan);
+    if (lastEmittedPlanSignatureRef.current === nextPlanSignature) return;
+    lastEmittedPlanSignatureRef.current = nextPlanSignature;
+    onPlanChange(nextPlan);
   }, [
     activeDropsPerMl,
     dropEquivalents.batchDrops,
