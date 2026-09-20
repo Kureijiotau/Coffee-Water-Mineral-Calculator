@@ -8,7 +8,6 @@ import {
   ChevronDown,
   CircleHelp,
   Droplets,
-  Download,
   FlaskConical,
   Info,
   LockKeyhole,
@@ -586,40 +585,6 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
           <div className="week1-actions">
             <button className="week1-button" type="button" disabled={activeDay === 1} onClick={() => goToDay(activeDay - 1)}>
               <ArrowLeft /> Previous
-            </button>
-            <button
-              className="week1-button"
-              type="button"
-              onClick={() => {
-                const lines = [
-                  `Robert Asami Week 1 Guide — Day ${currentDay.day}: ${currentDay.title}`,
-                  '',
-                  `Target: 1 L brew water`,
-                  `GH: ${gh.toFixed(0)} · KH: ${kh.toFixed(0)}`,
-                  '',
-                  'Minerals:',
-                  ...recipeSalts.map(salt => {
-                    const display = saltDisplay[salt.id] ?? { label: salt.name, note: salt.formula };
-                    return `- ${display.label} (${display.note}): ${formatMass(massFor(salt.id))} · ${activeDisplayTargets[salt.id] ?? `${activeTargets[salt.id].toFixed(1)} ppm`}`;
-                  }),
-                  '',
-                  'Tasting prompt:',
-                  currentDay.prompt,
-                  '',
-                  currentDay.description,
-                  '',
-                  `Source: ${currentDay.note}`,
-                ];
-                const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `week-1-day-${currentDay.day}-water-guide.txt`;
-                link.click();
-                URL.revokeObjectURL(url);
-              }}
-            >
-              <Download /> Save guide
             </button>
             <button className={`week1-recipe-button ${appliedDay === currentDay.day ? 'applied' : ''}`} type="button" onClick={applyCurrentRecipe}>
               {appliedDay === currentDay.day ? <Check /> : <FlaskConical />}
