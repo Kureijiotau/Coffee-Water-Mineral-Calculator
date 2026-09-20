@@ -8463,12 +8463,6 @@ function DiySingleSaltConcentrateBuilder({
             <span className="mt-1 block text-[9px] text-slate-600">Controls the salt mass to weigh</span>
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.06] px-3 py-2 text-[10px]">
-          <span className="text-slate-400">Calculator target</span>
-          <strong className="tabular-nums text-cyan-100">
-             {targetFromCalculator > 0 ? `${recipeConcentrateNumber(targetFromCalculator, 1)} ppm/L` : 'No active target · using 10 ppm/L starter'}
-          </strong>
-        </div>
       </section>
       <RecipeConcentrateBuilder
         handoff={handoff}
