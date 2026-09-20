@@ -10868,6 +10868,8 @@ function DiySingleSaltConcentratePanel({
   const [calibrationDropsInput, setCalibrationDropsInput] = useState('');
   const [calibrationWeightInput, setCalibrationWeightInput] = useState('');
   const [desiredPpmInput, setDesiredPpmInput] = useState('');
+  const preparationCardRef = useRef<HTMLElement | null>(null);
+  const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
@@ -10972,6 +10974,41 @@ function DiySingleSaltConcentratePanel({
     setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
     onToggleVolumeUnit();
   };
+  const handleSavePreparationJpg = async () => {
+    const source = preparationCardRef.current;
+    if (!source || preparationJpgStatus === 'saving') return;
+    setPreparationJpgStatus('saving');
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(source, {
+        backgroundColor: '#1e293b',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: clonedDocument => {
+          clonedDocument
+            .querySelectorAll<HTMLElement>('[data-diy-preparation-export-ignore]')
+            .forEach(element => element.remove());
+        },
+      });
+      const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      if (!jpg) throw new Error('Preparation card JPG could not be created.');
+      const url = URL.createObjectURL(jpg);
+      const link = document.createElement('a');
+      const saltSlug = salt.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'single-salt';
+      link.href = url;
+      link.download = `diy-${saltSlug}-preparation.jpg`;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPreparationJpgStatus('saved');
+      window.setTimeout(() => setPreparationJpgStatus('idle'), 2200);
+    } catch {
+      setPreparationJpgStatus('error');
+    }
+  };
 
   return (
     <main className="space-y-3">
@@ -11048,10 +11085,35 @@ function DiySingleSaltConcentratePanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
-        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">
-          <ListChecks className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />
-          <span>Preparation</span>
+      <section ref={preparationCardRef} className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+            <ListChecks className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />
+            <span>Preparation</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleSavePreparationJpg}
+            disabled={preparationJpgStatus === 'saving'}
+            data-diy-preparation-export-ignore
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition ${
+              preparationJpgStatus === 'saved'
+                ? 'border-emerald-300/35 bg-emerald-400/10 text-emerald-100'
+                : preparationJpgStatus === 'error'
+                  ? 'border-rose-300/35 bg-rose-400/10 text-rose-200'
+                  : 'border-emerald-200/25 bg-slate-950/25 text-emerald-100 hover:border-emerald-200/55 hover:bg-emerald-400/10'
+            } disabled:cursor-wait disabled:opacity-70`}
+            aria-label="Save preparation card as JPG"
+          >
+            <Save className="h-3.5 w-3.5" aria-hidden="true" />
+            {preparationJpgStatus === 'saving'
+              ? 'Saving…'
+              : preparationJpgStatus === 'saved'
+                ? 'Saved JPG'
+                : preparationJpgStatus === 'error'
+                  ? 'Try again'
+                  : 'Save JPG'}
+          </button>
         </div>
         <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
         <div className="mt-3 space-y-2 text-xs text-slate-300">
