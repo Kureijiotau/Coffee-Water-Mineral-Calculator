@@ -4768,10 +4768,11 @@ function App() {
   const buildCurrentSalts = (liveTargets?: Record<string, number>) =>
     buildSaltRecipeEntries(safeRows, liveTargets);
 
-  const handleSendRecipeToConcentrate = () => {
+  const handleOpenConcentrateFromCurrentRecipe = () => {
     const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
     if (Object.keys(salts).length === 0) {
-      window.alert('Enter at least one salt target before sending a recipe to Concentrate.');
+      setConcentrateRecipeHandoff(null);
+      setAppTab('concentrate');
       return;
     }
     setConcentrateRecipeHandoff({
@@ -4784,6 +4785,15 @@ function App() {
       recipeConcentratePlan: null,
     }));
     setAppTab('concentrate');
+  };
+
+  const handleSendRecipeToConcentrate = () => {
+    const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
+    if (Object.keys(salts).length === 0) {
+      window.alert('Enter at least one salt target before sending a recipe to Concentrate.');
+      return;
+    }
+    handleOpenConcentrateFromCurrentRecipe();
   };
 
   const handleSaveRecipe = () => {
@@ -5826,7 +5836,7 @@ function App() {
               type="button"
               role="tab"
               aria-selected={appTab === 'concentrate'}
-              onClick={() => setAppTab('concentrate')}
+              onClick={handleOpenConcentrateFromCurrentRecipe}
               className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
