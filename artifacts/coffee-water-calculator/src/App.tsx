@@ -6015,6 +6015,7 @@ function App() {
                   concentrateLiters={concL}
                   concentrateStrength={concentrateStrength}
                   dropsPerMl={brewerDropsPerMl}
+                  onCalibrate={setBrewerDropsPerMl}
                   onOpenSteps={method => setShowBrewerSteps(method)}
                 />
               </div>
@@ -13622,6 +13623,7 @@ function BrewerSimpleRecipeCard({
   concentrateLiters,
   concentrateStrength,
   dropsPerMl,
+  onCalibrate,
   onOpenSteps,
 }: {
   prepMethod: BrewerPrepMethod;
@@ -13639,11 +13641,21 @@ function BrewerSimpleRecipeCard({
   concentrateLiters: number;
   concentrateStrength: number;
   dropsPerMl: number;
+  onCalibrate: (value: number) => void;
   onOpenSteps: (method: 'dry' | 'dropper') => void;
 }) {
+  const [calibrationDropsInput, setCalibrationDropsInput] = useState('');
+  const [calibrationWeightInput, setCalibrationWeightInput] = useState('');
   const UNIVERSAL_STOCK_PERCENT = 5;
   const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
-  const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / dropsPerMl;
+  const measuredCalibrationDrops = Number(calibrationDropsInput);
+  const measuredCalibrationWeightG = Number(calibrationWeightInput);
+  const hasGuideCalibration = measuredCalibrationDrops > 0 && measuredCalibrationWeightG > 0;
+  const measuredDropsPerMl = hasGuideCalibration
+    ? computeDiyDropsPerMlFromCalibration(measuredCalibrationDrops, measuredCalibrationWeightG)
+    : 0;
+  const activeDropsPerMl = dropsPerMl > 0 ? dropsPerMl : LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML;
+  const UNIVERSAL_STOCK_MG_PER_DROP = UNIVERSAL_STOCK_MG_PER_ML / activeDropsPerMl;
   const [stocksReady, setStocksReady] = useState(false);
   const [makeWaterOpen, setMakeWaterOpen] = useState(false);
   const [makeWaterStage, setMakeWaterStage] = useState<'choice' | 'prep' | 'dose'>('choice');
@@ -14057,6 +14069,67 @@ function BrewerSimpleRecipeCard({
             <div className="mt-3 flex items-center justify-center gap-2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-100">
               <Sparkles className="h-4 w-4 text-emerald-300" />
                Everything is in for {formatVolumeValue(liters || 1, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} — brew away.
+            </div>
+          )}
+          {prepMethod === 'dropper' && (
+            <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/[0.06] p-3">
+              <div className="flex items-start gap-2.5">
+                <Ruler className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-100/80">Dropper calibration</div>
+                  <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+                    Measure a known number of drops by weight, then apply the result to this Guide recipe.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <label className="rounded-lg border border-amber-200/15 bg-slate-950/25 px-3 py-2">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Measured drops</span>
+                  <StableNumberInput
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={calibrationDropsInput}
+                    onChange={event => setCalibrationDropsInput(event.target.value)}
+                    placeholder="e.g. 100"
+                    className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                    aria-label="Guide measured number of drops"
+                  />
+                </label>
+                <label className="rounded-lg border border-amber-200/15 bg-slate-950/25 px-3 py-2">
+                  <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Measured weight (g)</span>
+                  <StableNumberInput
+                    min="0.01"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={calibrationWeightInput}
+                    onChange={event => setCalibrationWeightInput(event.target.value)}
+                    placeholder="e.g. 5"
+                    className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
+                    aria-label="Guide measured drop weight in grams"
+                  />
+                </label>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/50 bg-slate-950/25 px-3 py-2">
+                <div className="text-[10px] text-slate-400">
+                  Current: <strong className="text-cyan-200">{activeDropsPerMl.toFixed(1)} drops/mL</strong>
+                  {hasGuideCalibration && (
+                    <span className="ml-2 text-slate-500">New: {measuredDropsPerMl.toFixed(1)} drops/mL</span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onCalibrate(measuredDropsPerMl)}
+                  disabled={!hasGuideCalibration || measuredDropsPerMl <= 0}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-500/15 px-3 py-2 text-[10px] font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  Use this calibration
+                </button>
+              </div>
+              <div className="mt-2 text-[10px] text-slate-500">
+                Weight per drop: {hasGuideCalibration ? `${(measuredCalibrationWeightG / measuredCalibrationDrops).toFixed(4)} g` : 'Not measured'} · {hasGuideCalibration ? 'New reading ready' : 'Enter both measurements'}
+              </div>
             </div>
           )}
         </div>
