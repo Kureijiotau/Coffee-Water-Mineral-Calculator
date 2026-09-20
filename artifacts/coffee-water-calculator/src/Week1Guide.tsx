@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ArrowLeft,
   ArrowRight,
@@ -8,7 +8,6 @@ import {
   ChevronDown,
   CircleHelp,
   Droplets,
-  Download,
   FlaskConical,
   Info,
   LockKeyhole,
@@ -359,8 +358,6 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   const [day5MagnesiumSwapped, setDay5MagnesiumSwapped] = useState(false);
   const [day5BufferSwapped, setDay5BufferSwapped] = useState(false);
   const [visitedDays, setVisitedDays] = useState(() => new Set([1]));
-  const guideRef = useRef<HTMLElement | null>(null);
-  const [saveJpgStatus, setSaveJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const currentDay = DAYS[activeDay - 1];
   const activeTargets: Record<string, number> = useMemo(() => {
     if (activeDay !== 5) return currentDay.targets;
@@ -422,41 +419,6 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
     setAppliedDay(currentDay.day);
   };
 
-  const handleSaveGuideJpg = async () => {
-    const source = guideRef.current;
-    if (!source || saveJpgStatus === 'saving') return;
-    setSaveJpgStatus('saving');
-    try {
-      const { default: html2canvas } = await import('html2canvas');
-      const canvas = await html2canvas(source, {
-        backgroundColor: '#08151b',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        onclone: clonedDocument => {
-          clonedDocument
-            .querySelectorAll<HTMLElement>('[data-week1-export-ignore]')
-            .forEach(element => element.remove());
-        },
-      });
-      const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-      if (!jpg) throw new Error('Guide JPEG could not be exported.');
-      const url = URL.createObjectURL(jpg);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `water-guide-day-${activeDay}.jpg`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      setSaveJpgStatus('saved');
-      window.setTimeout(() => setSaveJpgStatus('idle'), 2200);
-    } catch {
-      setSaveJpgStatus('error');
-    }
-  };
-
   const massFor = (saltId: string) => {
     const salt = SALTS.find(item => item.id === saltId);
     if (!salt) return 0;
@@ -466,7 +428,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   };
 
   return (
-    <section ref={guideRef} id="brewer-week1-guide" tabIndex={-1} className="order-1 scroll-mt-6 overflow-hidden rounded-2xl border border-sky-300/20 bg-slate-950/45 shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-300/50 focus:ring-offset-2 focus:ring-offset-slate-950">
+    <section id="brewer-week1-guide" tabIndex={-1} className="order-1 scroll-mt-6 overflow-hidden rounded-2xl border border-sky-300/20 bg-slate-950/45 shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-300/50 focus:ring-offset-2 focus:ring-offset-slate-950">
       <style>{styles}</style>
       <main className="week1-shell">
         <div className="week1-frame">
@@ -630,23 +592,6 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
             </button>
             <button className="week1-button" type="button" disabled={activeDay === DAYS.length} onClick={() => goToDay(activeDay + 1)} data-week1-export-ignore>
               Next <ArrowRight />
-            </button>
-            <button
-              className="week1-button"
-              type="button"
-              onClick={handleSaveGuideJpg}
-              disabled={saveJpgStatus === 'saving'}
-              data-week1-export-ignore
-              aria-label="Save guide as JPG"
-            >
-              <Download />
-              {saveJpgStatus === 'saving'
-                ? 'Saving…'
-                : saveJpgStatus === 'saved'
-                  ? 'Saved JPG'
-                  : saveJpgStatus === 'error'
-                    ? 'Try again'
-                    : 'Save JPG'}
             </button>
           </div>
           <div className="week1-bottom">

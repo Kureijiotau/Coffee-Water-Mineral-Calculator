@@ -1349,6 +1349,7 @@ const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-po
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
 const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = 'coffee-water-diy-concentrate-inputs';
+const GUIDE_CALIBRATION_INPUTS_STORAGE_KEY = 'coffee-water-guide-calibration-inputs';
 const DEFAULT_DROPS_PER_ML = 20;
 /** Smallest physical salt dose considered by Watermancer. */
 const WATERMANCER_MIN_SALT_MG = 1;
@@ -1397,6 +1398,18 @@ function loadDiyConcentrateInputs(): DiyConcentrateStoredInputs {
     return stored && typeof stored === 'object' ? stored : {};
   } catch {
     return {};
+  }
+}
+
+function loadGuideCalibrationInputs(): Pick<DiyConcentrateStoredInputs, 'calibrationDropsInput' | 'calibrationWeightInput'> {
+  try {
+    const stored = JSON.parse(localStorage.getItem(GUIDE_CALIBRATION_INPUTS_STORAGE_KEY) ?? 'null') as Partial<DiyConcentrateStoredInputs> | null;
+    return {
+      calibrationDropsInput: typeof stored?.calibrationDropsInput === 'string' ? stored.calibrationDropsInput : '',
+      calibrationWeightInput: typeof stored?.calibrationWeightInput === 'string' ? stored.calibrationWeightInput : '',
+    };
+  } catch {
+    return { calibrationDropsInput: '', calibrationWeightInput: '' };
   }
 }
 function normalizeAutoFillPriority(priority: unknown): IonId[] {
@@ -2639,6 +2652,8 @@ function App() {
   const [fillWaterNudgeSeen, setFillWaterNudgeSeen] = useState(false);
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
+  const guideExportRef = useRef<HTMLElement | null>(null);
+  const [guideJpgStatus, setGuideJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [brewerFlavor, setBrewerFlavor] = useState<BrewerFlavorInput>(DEFAULT_BREWER_FLAVOR);
   const [brewerRecipeOverride, setBrewerRecipeOverride] = useState<Week1Recipe | null>(null);
   const [brewerRecipeHandoffToken, setBrewerRecipeHandoffToken] = useState(0);
@@ -5401,6 +5416,41 @@ function App() {
     navigator.clipboard.writeText(text).catch(() => {});
   };
 
+  const handleSaveGuideJpg = async () => {
+    const source = guideExportRef.current;
+    if (!source || guideJpgStatus === 'saving') return;
+    setGuideJpgStatus('saving');
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(source, {
+        backgroundColor: '#0f172a',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        onclone: clonedDocument => {
+          clonedDocument
+            .querySelectorAll<HTMLElement>('[data-guide-export-ignore]')
+            .forEach(element => element.remove());
+        },
+      });
+      const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+      if (!jpg) throw new Error('Guide JPG could not be created.');
+      const url = URL.createObjectURL(jpg);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'coffee-water-guide.jpg';
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setGuideJpgStatus('saved');
+      window.setTimeout(() => setGuideJpgStatus('idle'), 2200);
+    } catch {
+      setGuideJpgStatus('error');
+    }
+  };
+
   const captureWaterPlanSnapshot = (): WaterPlanSnapshot => ({
     version: 1,
     appTab: appTab === 'concentrate' || appTab === 'diy-concentrate' ? appTab : 'calculator',
@@ -5996,7 +6046,7 @@ function App() {
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
           <div className="app-page-stack flex w-full max-w-6xl flex-col">
             {appHeader}
-            <main className="app-card overflow-hidden rounded-2xl border border-emerald-300/20 shadow-2xl shadow-emerald-950/20">
+            <main ref={guideExportRef} className="app-card overflow-hidden rounded-2xl border border-emerald-300/20 shadow-2xl shadow-emerald-950/20">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-200/10 bg-slate-950/35 px-4 py-3 sm:px-6">
                 <div>
                   <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/75">Guided tasting</div>
@@ -6036,6 +6086,24 @@ function App() {
                   onCalibrate={setBrewerDropsPerMl}
                   onOpenSteps={method => setShowBrewerSteps(method)}
                 />
+              </div>
+              <div className="border-t border-emerald-200/10 bg-slate-950/30 px-4 py-5 sm:px-6" data-guide-export-ignore>
+                <button
+                  type="button"
+                  onClick={handleSaveGuideJpg}
+                  disabled={guideJpgStatus === 'saving'}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-emerald-200/60 bg-emerald-400 px-4 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-emerald-500/25 transition hover:bg-emerald-300 hover:shadow-emerald-400/35 focus:outline-none focus:ring-2 focus:ring-emerald-100/80 disabled:cursor-wait disabled:opacity-70"
+                  aria-label="Save guide cards as JPG"
+                >
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  {guideJpgStatus === 'saving'
+                    ? 'Saving guide…'
+                    : guideJpgStatus === 'saved'
+                      ? 'Guide saved as JPG'
+                      : guideJpgStatus === 'error'
+                        ? 'Try saving again'
+                        : 'Save Guide as JPG'}
+                </button>
               </div>
             </main>
           </div>
@@ -13724,8 +13792,9 @@ function BrewerSimpleRecipeCard({
   onCalibrate: (value: number) => void;
   onOpenSteps: (method: 'dry' | 'dropper') => void;
 }) {
-  const [calibrationDropsInput, setCalibrationDropsInput] = useState('');
-  const [calibrationWeightInput, setCalibrationWeightInput] = useState('');
+  const [storedGuideCalibration] = useState(loadGuideCalibrationInputs);
+  const [calibrationDropsInput, setCalibrationDropsInput] = useState(storedGuideCalibration.calibrationDropsInput ?? '');
+  const [calibrationWeightInput, setCalibrationWeightInput] = useState(storedGuideCalibration.calibrationWeightInput ?? '');
   const UNIVERSAL_STOCK_PERCENT = 5;
   const UNIVERSAL_STOCK_MG_PER_ML = UNIVERSAL_STOCK_PERCENT * 10;
   const measuredCalibrationDrops = Number(calibrationDropsInput);
@@ -13854,6 +13923,17 @@ function BrewerSimpleRecipeCard({
   const [makeWaterChecklistFlash, setMakeWaterChecklistFlash] = useState(false);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(GUIDE_CALIBRATION_INPUTS_STORAGE_KEY, JSON.stringify({
+        calibrationDropsInput,
+        calibrationWeightInput,
+      }));
+    } catch {
+      // Guide calibration remains usable when local storage is unavailable.
+    }
+  }, [calibrationDropsInput, calibrationWeightInput]);
+
+  useEffect(() => {
     if (recipeHandoffToken === 0) return;
     const recipeCard = document.getElementById('brewer-mineral-recipe');
     if (!recipeCard) return;
@@ -13927,15 +14007,6 @@ function BrewerSimpleRecipeCard({
           >
             <Droplet className="h-4 w-4" />
             Make this water
-          </button>
-          <button
-            type="button"
-            onClick={() => onOpenSteps(prepMethod)}
-            className="flex items-center justify-center gap-2 rounded-xl border border-violet-300/40 bg-violet-400/15 px-4 py-3 text-xs font-semibold text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-400/25 hover:text-white hover:shadow-lg hover:shadow-violet-950/25"
-            title="View step-by-step recipe instructions"
-          >
-            <ListChecks className="h-4 w-4" />
-            Recipe steps
           </button>
         </div>
         <p className="mt-2 text-center text-[10px] text-slate-500">
