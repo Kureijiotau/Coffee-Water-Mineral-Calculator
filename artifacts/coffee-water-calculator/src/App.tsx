@@ -10900,27 +10900,25 @@ function DiySingleSaltConcentratePanel({
     dropsPerMl: 1,
     finalLiters: 1,
   });
-  const defaultDesiredPpm = targetCaCo3Ppm / 500;
+  const defaultDesiredPpm = 5;
   const desiredPpm = Math.max(0, Number(desiredPpmInput) || defaultDesiredPpm);
-  const strength = desiredPpm > 0
-    ? computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
-      saltId: salt.id,
-      targetPpm,
-      stockVolumeMl,
-      dropsPerMl: activeDropsPerMl,
-      finalLiters,
-      caCo3PpmPerDrop: desiredPpm,
-    })
+  const dropWeightG = hasCalibration
+    ? calibrationWeightG / calibrationDrops
+    : (activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0);
+  const caCo3EquivalentPerPhysicalGram = diyCaCo3EquivalentPerPhysicalGram(salt, form.molarMass);
+  const saltMassMg = desiredPpm > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
+    ? desiredPpm * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram * 1000
     : 0;
-  const saltMassMg = computeRecipeStockSaltMassMg(
+  const baseSaltMassMg = computeRecipeStockSaltMassMg(
     targetPpm,
-    strength,
+    1,
     form.molarMass,
     salt.anhydrousMass,
   );
+  const strength = baseSaltMassMg > 0 ? saltMassMg / baseSaltMassMg : 0;
   const doseDrops = desiredPpm > 0 ? targetCaCo3Ppm / desiredPpm : 0;
   const doseMl = activeDropsPerMl > 0 ? doseDrops / activeDropsPerMl : 0;
-  const waterVolumeMl = Math.max(0, stockVolumeMl - saltMassMg / 1000);
+  const waterVolumeMl = stockVolumeMl;
   const effectiveSaltMgPerDrop = activeDropsPerMl > 0
     ? saltMassMg / activeDropsPerMl / stockVolumeMl
     : 0;
