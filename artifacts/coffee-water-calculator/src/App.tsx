@@ -11144,7 +11144,8 @@ function DiySingleSaltConcentratePanel({
               className="mt-1 cursor-help text-xl font-semibold tabular-nums text-white"
               title={`Exact calculation: ${recipeConcentrateNumber(doseDrops, 2)} drops (${recipeConcentrateNumber(doseMl, 2)} mL)`}
             >
-              {practicalDoseDrops} drops
+              {recipeConcentrateNumber(doseDrops, 2)} drops
+              <span className="ml-2 text-sm font-medium text-cyan-100/70">≈ {practicalDoseDrops} drops</span>
             </div>
             <div className="mt-1 text-[10px] text-cyan-100/60">
               {recipeConcentrateNumber(practicalDoseMl, 2)} mL for {recipeConcentrateNumber(finalLiters, 2)} L
@@ -11199,7 +11200,9 @@ function DiySingleSaltConcentratePanel({
             <strong className="tabular-nums text-emerald-100">{waterVolumeMl.toFixed(2)} g</strong>
           </div>
           <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
-            <strong>3. Dose {practicalDoseDrops} drops ({recipeConcentrateNumber(practicalDoseMl, 2)} mL)</strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.
+            <strong>
+              3. Dose {recipeConcentrateNumber(doseDrops, 2)} drops (≈ {practicalDoseDrops} drops, {recipeConcentrateNumber(doseMl, 2)} mL)
+            </strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.
           </div>
         </div>
       </section>
