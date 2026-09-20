@@ -10920,7 +10920,7 @@ function DiySingleSaltConcentratePanel({
   );
   const doseDrops = desiredPpm > 0 ? targetCaCo3Ppm / desiredPpm : 0;
   const doseMl = activeDropsPerMl > 0 ? doseDrops / activeDropsPerMl : 0;
-  const waterVolumeMl = Math.max(0, stockVolumeMl - saltMassMg / 1000);
+  const waterVolumeMl = Math.max(0, stockVolumeMl);
   const effectiveSaltMgPerDrop = activeDropsPerMl > 0
     ? saltMassMg / activeDropsPerMl / stockVolumeMl
     : 0;
@@ -11139,12 +11139,13 @@ function DiySingleSaltConcentratePanel({
         <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
         <div className="mt-3 space-y-2 text-xs text-slate-300">
           <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
-            <strong>1. Mix {recipeConcentrateMassLabel(saltMassMg / 1000)} of {form.label} {salt.name}</strong>
-            <span> with </span>
-            <strong>{waterVolumeMl.toFixed(2)} g of RO or distilled water.</strong>
+            <strong>1. Add {waterVolumeMl.toFixed(2)} g of RO or distilled water.</strong>
           </div>
           <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
-            <strong>2. Dose {recipeConcentrateNumber(doseDrops, 2)} drops ({recipeConcentrateNumber(doseMl, 2)} mL)</strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.
+            <strong>2. Add {recipeConcentrateMassLabel(saltMassMg / 1000)} of {form.label} {salt.name}</strong> and mix thoroughly.
+          </div>
+          <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
+            <strong>3. Dose {recipeConcentrateNumber(doseDrops, 2)} drops ({recipeConcentrateNumber(doseMl, 2)} mL)</strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.
           </div>
         </div>
       </section>
