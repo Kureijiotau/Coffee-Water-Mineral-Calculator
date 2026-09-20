@@ -10974,7 +10974,17 @@ function DiySingleSaltConcentratePanel({
   };
 
   return (
-    <main className="space-y-3">
+    <main
+      className="relative isolate overflow-hidden rounded-[1.5rem] border border-white/10 p-1.5 shadow-2xl sm:p-2"
+      style={{
+        background: 'linear-gradient(180deg, rgba(217, 70, 239, 0.22) 0%, rgba(34, 211, 238, 0.18) 28%, rgba(251, 191, 36, 0.18) 55%, rgba(56, 189, 248, 0.16) 76%, rgba(52, 211, 153, 0.24) 100%)',
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-5 left-3 w-px bg-gradient-to-b from-fuchsia-300/70 via-cyan-300/60 via-amber-200/70 to-emerald-200/80 opacity-70 shadow-[0_0_12px_rgba(103,232,249,0.45)]"
+      />
+      <div className="relative z-10 space-y-3">
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">Concentrate and batch volume</div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -11052,6 +11062,7 @@ function DiySingleSaltConcentratePanel({
           <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50"><strong>4. Dose {recipeConcentrateNumber(doseDrops, 2)} drops ({recipeConcentrateNumber(doseMl, 2)} mL)</strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.</div>
         </div>
       </section>
+      </div>
     </main>
   );
 }
