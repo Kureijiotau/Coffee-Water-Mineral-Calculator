@@ -80,7 +80,13 @@ import {
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import WaterMixer, { type WaterMixerDatabaseWater, type WaterMixerSavedSource } from './WaterMixer';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
-import { scanRecipeCardImage, type RecipeCardScanResult } from './recipeCardReader';
+import {
+  recipeCardIonTargets,
+  recipeCardRecord,
+  recipeCardSaltRecipe,
+  scanRecipeCardImage,
+  type RecipeCardScanResult,
+} from './recipeCardReader';
 import {
   LEGACY_WATER_PAYLOAD_VERSION,
   migrateLegacyWaterPayload,
@@ -270,6 +276,20 @@ async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Pr
 }
 
 export type SaltRow = { target: string; formIdx: number };
+
+export function restoreRecipeSaltRows(recipe: Pick<SaltRecipe, 'salts'>): SaltRow[] {
+  return SALTS.map(salt => {
+    const entry = recipe.salts[salt.id];
+    if (entry) return { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx };
+    return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
+  });
+}
+
+export function positiveSaltIdsFromRows(rows: SaltRow[]): string[] {
+  return SALTS
+    .filter((_, index) => num(rows[index]?.target ?? '') > 0)
+    .map(salt => salt.id);
+}
 const MEME_SALT_IDS = new Set(['calact', 'mggly', 'mgmalate']);
 export type ConcentrateRecipeHandoff = {
   name: string;
@@ -1294,45 +1314,6 @@ const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
   'bicarbonate',
 ];
 
-function recipeCardRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
-function recipeCardIonTargets(value: unknown): IonicTargetValues {
-  const record = recipeCardRecord(value);
-  if (!record) return {};
-  const targets: IonicTargetValues = {};
-  for (const id of ACTIVE_ION_IDS) {
-    const raw = record[id];
-    if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) targets[id] = raw;
-  }
-  return targets;
-}
-
-function recipeCardSaltRecipe(scan: RecipeCardScanResult): SaltRecipe | null {
-  if (typeof scan.name !== 'string' || !scan.name.trim() || !Array.isArray(scan.salts)) return null;
-  const salts: Record<string, SaltRecipeEntry> = {};
-  for (const rawSalt of scan.salts) {
-    const entry = recipeCardRecord(rawSalt);
-    if (!entry || typeof entry.saltId !== 'string') continue;
-    const salt = SALTS.find(item => item.id === entry.saltId);
-    const target = typeof entry.targetPpm === 'number' ? entry.targetPpm : Number(entry.targetPpm);
-    if (!salt || !Number.isFinite(target) || target < 0) continue;
-    const formLabel = typeof entry.formLabel === 'string' ? entry.formLabel.trim().toLowerCase() : '';
-    const formIdx = formLabel
-      ? salt.hydrationForms.findIndex(form => form.label.toLowerCase() === formLabel || form.label.toLowerCase().includes(formLabel) || formLabel.includes(form.label.toLowerCase()))
-      : -1;
-    salts[salt.id] = {
-      target: String(target),
-      formIdx: formIdx >= 0 ? formIdx : salt.defaultFormIdx ?? 0,
-    };
-  }
-  return Object.keys(salts).length > 0
-    ? { id: newRecipeId(), name: scan.name.trim(), salts }
-    : null;
-}
 type AutoFillPriorityPreset = 'mineral-first' | 'bicarbonate-first' | 'balanced-gh-kh' | 'custom';
 
 const AUTO_FILL_PRIORITY_PRESETS: Record<Exclude<AutoFillPriorityPreset, 'custom'>, { label: string; ions: IonId[] }> = {
@@ -4676,16 +4657,10 @@ function App() {
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
-    const restoredRows = SALTS.map(salt => {
-      const entry = recipe.salts[salt.id];
-      if (entry) return { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx };
-      return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
-    });
+    const restoredRows = restoreRecipeSaltRows(recipe);
     setRows(restoredRows);
     if (options.syncWatermancerSaltInventory) {
-      setWatermancerUsedSaltIds(
-        SALTS.filter((_, index) => num(restoredRows[index]?.target ?? '') > 0).map(salt => salt.id),
-      );
+      setWatermancerUsedSaltIds(positiveSaltIdsFromRows(restoredRows));
     }
     // Restore split stocks state — missing fields default to off/100/'500'
     setSplitMode(recipe.splitMode ?? false);
