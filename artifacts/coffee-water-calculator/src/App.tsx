@@ -11,7 +11,7 @@ import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -10941,6 +10941,9 @@ function DiySingleSaltConcentratePanel({
   const practicalDoseDrops = doseDrops > 0 ? Math.max(1, Math.round(doseDrops)) : 0;
   const practicalDoseMl = activeDropsPerMl > 0 ? practicalDoseDrops / activeDropsPerMl : 0;
   const waterVolumeMl = stockVolumeMl;
+  const saltGPer100MlWater = waterVolumeMl > 0 ? (saltMassMg / 1000) / waterVolumeMl * 100 : 0;
+  const solubilityLimitGPer100Ml = getSaltSolubilityLimitGPer100Ml(salt.id, formIdx);
+  const willDissolve = solubilityLimitGPer100Ml == null || saltGPer100MlWater <= solubilityLimitGPer100Ml;
   const effectiveSaltMgPerDrop = activeDropsPerMl > 0
     ? saltMassMg / activeDropsPerMl / stockVolumeMl
     : 0;
@@ -11198,6 +11201,21 @@ function DiySingleSaltConcentratePanel({
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3">
             <span>2. Add RO or distilled water</span>
             <strong className="tabular-nums text-emerald-100">{waterVolumeMl.toFixed(2)} g</strong>
+          </div>
+          <div className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${
+            willDissolve
+              ? 'border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-50'
+              : 'border-rose-300/30 bg-rose-400/[0.08] text-rose-50'
+          }`}>
+            <span className="flex items-center gap-2">
+              {willDissolve
+                ? <Check className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                : <AlertTriangle className="h-4 w-4 text-rose-300" aria-hidden="true" />}
+              <span>{willDissolve ? 'Dissolves at this concentration' : 'May not fully dissolve'}</span>
+            </span>
+            <strong className="text-right text-[10px] tabular-nums">
+              {saltGPer100MlWater.toFixed(2)} / {solubilityLimitGPer100Ml == null ? '—' : solubilityLimitGPer100Ml.toFixed(2)} g per 100 mL
+            </strong>
           </div>
           <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
             <strong>

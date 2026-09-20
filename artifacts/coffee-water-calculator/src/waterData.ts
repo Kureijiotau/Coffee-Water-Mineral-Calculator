@@ -833,6 +833,16 @@ const SALT_SOLUBILITY_G_PER_100ML: Partial<Record<string, number>> = {
   nacl:   36,
 };
 
+export function getSaltSolubilityLimitGPer100Ml(saltId: string, formIdx = 0): number | null {
+  const salt = SALTS.find(item => item.id === saltId);
+  const anhydrousLimit = SALT_SOLUBILITY_G_PER_100ML[saltId];
+  if (!salt || anhydrousLimit == null) return null;
+  const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0];
+  return form
+    ? anhydrousLimit * form.molarMass / salt.anhydrousMass
+    : anhydrousLimit;
+}
+
 export interface ConcentrateWarning {
   severity: 'error' | 'warning' | 'info';
   /** Display names of the salts involved (so the warning is specific). */
