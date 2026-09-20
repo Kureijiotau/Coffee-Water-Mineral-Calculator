@@ -13962,7 +13962,7 @@ function BrewerSimpleRecipeCard({
               {formatVolumeValue(liters || 1, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Concentrate drops' : 'Weighed salts'}
             </p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-slate-300">
+           <div className="flex items-center gap-2 text-xs text-slate-300" data-guide-export-ignore>
             <span className="sr-only">Batch volume</span>
             <VolumeInput
               liters={liters}
@@ -13970,7 +13970,7 @@ function BrewerSimpleRecipeCard({
               onChangeLiters={onVolumeChange}
               placeholder="1"
               ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
-              className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-right text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+               className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-center text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
             <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
           </div>
