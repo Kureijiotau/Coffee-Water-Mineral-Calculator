@@ -10927,7 +10927,7 @@ function DiySingleSaltConcentratePanel({
     : (activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0);
   const caCo3EquivalentPerPhysicalGram = diyCaCo3EquivalentPerPhysicalGram(salt, form.molarMass);
   const saltMassMg = desiredPpm > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
-    ? desiredPpm * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram * 1000
+    ? desiredPpm * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
     : 0;
   const baseSaltMassMg = computeRecipeStockSaltMassMg(
     targetPpm,
