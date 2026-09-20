@@ -428,7 +428,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
   };
 
   return (
-    <section id="brewer-week1-guide" tabIndex={-1} className="order-1 scroll-mt-6 overflow-hidden rounded-2xl border border-sky-300/20 bg-slate-950/45 shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-300/50 focus:ring-offset-2 focus:ring-offset-slate-950">
+    <section id="brewer-week1-guide" tabIndex={-1} data-guide-export-ignore className="order-1 scroll-mt-6 overflow-hidden rounded-2xl border border-sky-300/20 bg-slate-950/45 shadow-xl focus:outline-none focus:ring-2 focus:ring-teal-300/50 focus:ring-offset-2 focus:ring-offset-slate-950">
       <style>{styles}</style>
       <main className="week1-shell">
         <div className="week1-frame">
