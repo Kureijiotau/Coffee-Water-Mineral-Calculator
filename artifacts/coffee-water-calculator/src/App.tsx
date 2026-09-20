@@ -5431,6 +5431,11 @@ function App() {
           clonedDocument
             .querySelectorAll<HTMLElement>('[data-guide-export-ignore]')
             .forEach(element => element.remove());
+          clonedDocument
+            .querySelectorAll<HTMLElement>('[data-guide-export-volume] input')
+            .forEach(input => {
+              input.style.textAlign = 'center';
+            });
         },
       });
       const jpg = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.95));
@@ -13934,6 +13939,12 @@ function BrewerSimpleRecipeCard({
   }, [calibrationDropsInput, calibrationWeightInput]);
 
   useEffect(() => {
+    if (hasGuideCalibration && measuredDropsPerMl > 0) {
+      onCalibrate(measuredDropsPerMl);
+    }
+  }, [hasGuideCalibration, measuredDropsPerMl, onCalibrate]);
+
+  useEffect(() => {
     if (recipeHandoffToken === 0) return;
     const recipeCard = document.getElementById('brewer-mineral-recipe');
     if (!recipeCard) return;
@@ -13962,7 +13973,7 @@ function BrewerSimpleRecipeCard({
               {formatVolumeValue(liters || 1, volumeUnit)} {volumeUnitShortLabel(volumeUnit)} batch · RO / distilled 0 TDS · {prepMethod === 'dropper' ? 'Concentrate drops' : 'Weighed salts'}
             </p>
           </div>
-           <div className="flex items-center gap-2 text-xs text-slate-300" data-guide-export-ignore>
+           <div className="flex items-center gap-2 text-xs text-slate-300" data-guide-export-volume>
             <span className="sr-only">Batch volume</span>
             <VolumeInput
               liters={liters}
@@ -14254,15 +14265,6 @@ function BrewerSimpleRecipeCard({
                     <span className="ml-2 text-slate-500">New: {measuredDropsPerMl.toFixed(1)} drops/mL</span>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => onCalibrate(measuredDropsPerMl)}
-                  disabled={!hasGuideCalibration || measuredDropsPerMl <= 0}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-300/35 bg-cyan-500/15 px-3 py-2 text-[10px] font-semibold text-cyan-50 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  Use this calibration
-                </button>
               </div>
               <div className="mt-2 text-[10px] text-slate-500">
                 Weight per drop: {hasGuideCalibration ? `${(measuredCalibrationWeightG / measuredCalibrationDrops).toFixed(4)} g` : 'Not measured'} · {hasGuideCalibration ? 'New reading ready' : 'Enter both measurements'}
