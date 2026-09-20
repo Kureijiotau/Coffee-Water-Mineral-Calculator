@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  computeDiyDropsPerMlFromCalibration,
   computeDiyConcentrateStrengthForCaCo3PpmPerDrop,
   computeRecipeConcentrateDropEquivalents,
   computeRecipeConcentrateStrengthForPhysicalSaltPpm,
@@ -70,6 +71,12 @@ describe('recipe concentrate stock conversion', () => {
 });
 
 describe('DIY concentrate workbook-style conversion', () => {
+  it('derives drops per mL from measured drops and solution weight', () => {
+    expect(computeDiyDropsPerMlFromCalibration(100, 5)).toBeCloseTo(20, 8);
+    expect(computeDiyDropsPerMlFromCalibration(0, 5)).toBe(0);
+    expect(computeDiyDropsPerMlFromCalibration(100, 0)).toBe(0);
+  });
+
   it('solves from CaCO3-equivalent ppm per drop without canceling hydration mass', () => {
     const salt = SALTS.find(item => item.id === 'cacl2')!;
     const anhydrous = salt.hydrationForms[0];

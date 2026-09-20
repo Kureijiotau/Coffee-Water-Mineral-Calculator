@@ -326,6 +326,8 @@ type ConcentratePlanSnapshot = {
   dropperStyle: LotusDropperStyle;
   straightDropsPerMl: number;
   measuredDropsPerMl: number | null;
+  calibrationDrops?: number | null;
+  calibrationWeightG?: number | null;
   activeDropsPerMl: number;
   finalLiters: number;
   totalSaltMgPerMl: number;
@@ -441,6 +443,18 @@ export function computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
     / finalLiters;
   return caCo3PpmPerDropAtStrengthOne > 0
     ? caCo3PpmPerDrop / caCo3PpmPerDropAtStrengthOne
+    : 0;
+}
+
+export function computeDiyDropsPerMlFromCalibration(
+  measuredDrops: number,
+  measuredWeightG: number,
+): number {
+  return Number.isFinite(measuredDrops)
+    && measuredDrops > 0
+    && Number.isFinite(measuredWeightG)
+    && measuredWeightG > 0
+    ? measuredDrops / measuredWeightG
     : 0;
 }
 
@@ -10831,6 +10845,223 @@ function RecipeConcentrateBottleCard({
   );
 }
 
+function DiySingleSaltConcentratePanel({
+  handoff,
+  volumeUnit,
+  dropperStyle,
+  onDropperStyleChange,
+  straightDropsPerMl,
+  onToggleVolumeUnit,
+  onPlanChange,
+}: {
+  handoff: ConcentrateRecipeHandoff;
+  volumeUnit: VolumeUnit;
+  dropperStyle: LotusDropperStyle;
+  onDropperStyleChange: (style: LotusDropperStyle) => void;
+  straightDropsPerMl: number;
+  onToggleVolumeUnit: () => void;
+  onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+}) {
+  const saltId = Object.keys(handoff.salts)[0] ?? '';
+  const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
+  const targetPpm = num(handoff.salts[salt.id]?.target);
+  const formIdx = handoff.salts[salt.id]?.formIdx ?? salt.defaultFormIdx ?? 0;
+  const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
+  const [stockVolumeInput, setStockVolumeInput] = useState('100');
+  const [finalVolumeInput, setFinalVolumeInput] = useState(
+    String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
+  );
+  const [calibrationDropsInput, setCalibrationDropsInput] = useState('');
+  const [calibrationWeightInput, setCalibrationWeightInput] = useState('');
+  const [desiredPpmInput, setDesiredPpmInput] = useState('');
+
+  const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
+  const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
+  const calibrationDrops = Number(calibrationDropsInput);
+  const calibrationWeightG = Number(calibrationWeightInput);
+  const hasCalibration = calibrationDrops > 0 && calibrationWeightG > 0;
+  const assumedDropsPerMl = lotusDropsPerMl(dropperStyle, straightDropsPerMl);
+  const activeDropsPerMl = hasCalibration
+    ? computeDiyDropsPerMlFromCalibration(calibrationDrops, calibrationWeightG)
+    : assumedDropsPerMl;
+  const targetCaCo3Ppm = computeDiyCaCo3PpmPerDrop({
+    salt,
+    formMolarMass: form.molarMass,
+    targetPpm,
+    strength: 1,
+    stockVolumeMl: 1,
+    dropsPerMl: 1,
+    finalLiters: 1,
+  });
+  const defaultDesiredPpm = targetCaCo3Ppm / 500;
+  const desiredPpm = Math.max(0, Number(desiredPpmInput) || defaultDesiredPpm);
+  const strength = desiredPpm > 0
+    ? computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
+      saltId: salt.id,
+      targetPpm,
+      stockVolumeMl,
+      dropsPerMl: activeDropsPerMl,
+      finalLiters,
+      caCo3PpmPerDrop: desiredPpm,
+    })
+    : 0;
+  const saltMassMg = computeRecipeStockSaltMassMg(
+    targetPpm,
+    strength,
+    form.molarMass,
+    salt.anhydrousMass,
+  );
+  const doseDrops = desiredPpm > 0 ? targetCaCo3Ppm / desiredPpm : 0;
+  const doseMl = activeDropsPerMl > 0 ? doseDrops / activeDropsPerMl : 0;
+  const waterVolumeMl = Math.max(0, stockVolumeMl - saltMassMg / 1000);
+  const effectiveSaltMgPerDrop = activeDropsPerMl > 0
+    ? saltMassMg / activeDropsPerMl / stockVolumeMl
+    : 0;
+  const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
+
+  useEffect(() => {
+    if (!desiredPpmInput && defaultDesiredPpm > 0) setDesiredPpmInput(recipeConcentrateNumber(defaultDesiredPpm, 3));
+  }, [defaultDesiredPpm, desiredPpmInput]);
+
+  useEffect(() => {
+    onPlanChange({
+      strategy: 'individual',
+      strategyLabel: 'Single salt',
+      strength,
+      physicalSaltPpmPerDropInput: desiredPpm > 0 ? String(desiredPpm) : null,
+      maxSafeStrength: null,
+      dropperStyle,
+      straightDropsPerMl,
+      measuredDropsPerMl: hasCalibration ? activeDropsPerMl : null,
+      calibrationDrops: hasCalibration ? calibrationDrops : null,
+      calibrationWeightG: hasCalibration ? calibrationWeightG : null,
+      activeDropsPerMl,
+      finalLiters,
+      totalSaltMgPerMl: stockVolumeMl > 0 ? saltMassMg / stockVolumeMl : 0,
+      totalSaltMgPerDrop: effectiveSaltMgPerDrop,
+      saltEquivalentPpmPerDrop: targetPpm * strength / Math.max(stockVolumeMl, 1) / Math.max(activeDropsPerMl, 1) / Math.max(finalLiters, 1),
+      dropsPerLiter: doseDrops,
+      batchDrops: doseDrops,
+      groups: [{
+        id: `salt:${salt.id}`,
+        name: `${salt.name} Concentrate`,
+        volumeMl: stockVolumeMl,
+        strength,
+        maxSafeStrength: 0,
+        saltIds: [salt.id],
+      }],
+    });
+  }, [
+    activeDropsPerMl,
+    calibrationDrops,
+    calibrationWeightG,
+    doseDrops,
+    dropperStyle,
+    effectiveSaltMgPerDrop,
+    finalLiters,
+    hasCalibration,
+    onPlanChange,
+    salt.id,
+    saltMassMg,
+    stockVolumeMl,
+    straightDropsPerMl,
+    strength,
+    targetPpm,
+    desiredPpm,
+  ]);
+
+  const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
+  const finalVolumeLabel = volumeUnitLabel(volumeUnit);
+  const volumeLabel = volumeUnitShortLabel(volumeUnit);
+  const toggleBatchVolumeUnit = () => {
+    const liters = volumeToLiters(finalVolumeInput, volumeUnit);
+    setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
+    onToggleVolumeUnit();
+  };
+
+  return (
+    <main className="space-y-3">
+      <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">Concentrate and batch volume</div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate volume</span>
+            <span className="mt-1 flex items-center gap-2">
+              <StableNumberInput min="1" step="10" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="DIY concentrate volume in milliliters" />
+              <span className="text-sm text-slate-400">mL</span>
+            </span>
+          </label>
+          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+            <span className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-500">Batch volume <button type="button" onClick={toggleBatchVolumeUnit} className="text-cyan-300">{finalVolumeLabel}</button></span>
+            <span className="mt-1 flex items-center gap-2">
+              <StableNumberInput min="0.1" step="0.1" value={finalVolumeInput} onChange={event => updateFinalVolume(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label={`DIY batch volume in ${finalVolumeLabel}`} />
+              <span className="text-sm text-slate-400">{volumeLabel}</span>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-amber-300/35 bg-gradient-to-br from-amber-400/[0.12] via-slate-800/80 to-slate-800/70 p-4 shadow-xl sm:p-5">
+        <div className="flex items-start gap-3">
+          <Ruler className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
+          <div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-100/80">Dropper calibration</div>
+            <h2 className="mt-1 text-base font-semibold text-white">Measure this before dosing</h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-300">Drop size varies by bottle and tip. We use these two measurements to calculate the actual contribution of every drop.</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-amber-200/20 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
+            <StableNumberInput min="1" step="1" value={calibrationDropsInput} onChange={event => setCalibrationDropsInput(event.target.value)} placeholder="e.g. 100" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured number of drops" />
+          </label>
+          <label className="rounded-xl border border-amber-200/20 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
+            <span className="mt-1 flex items-center gap-2">
+              <StableNumberInput min="0.01" step="0.01" value={calibrationWeightInput} onChange={event => setCalibrationWeightInput(event.target.value)} placeholder="e.g. 5" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured drop weight in grams" />
+              <span className="text-sm text-slate-400">g</span>
+            </span>
+          </label>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <SummaryMetric label="Weight per drop" value={hasCalibration ? `${weightPerDrop.toFixed(4)} g` : 'Not measured'} detail="calibrated" tone="sky" />
+          <SummaryMetric label="Drops per mL" value={hasCalibration ? activeDropsPerMl.toFixed(1) : assumedDropsPerMl.toFixed(1)} detail={hasCalibration ? 'measured' : 'assumed'} tone="sky" />
+          <SummaryMetric label="Calibration status" value={hasCalibration ? 'Active' : 'Assumption'} detail={hasCalibration ? 'used in dose' : 'measure for accuracy'} tone="slate" />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-cyan-300/25 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">Desired dose</div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired ppm as CaCO₃ per drop</span>
+            <span className="mt-1 flex items-center gap-2">
+              <StableNumberInput min="0.01" step="0.01" value={desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)} onChange={event => setDesiredPpmInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Desired CaCO3 ppm per drop" />
+              <span className="text-sm text-slate-400">ppm</span>
+            </span>
+          </label>
+          <div className="rounded-xl border border-cyan-200/20 bg-cyan-400/[0.08] px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-100/70">Drops needed to reach target</span>
+            <div className="mt-1 text-xl font-semibold tabular-nums text-white">{recipeConcentrateNumber(doseDrops, 2)} drops</div>
+            <div className="mt-1 text-[10px] text-cyan-100/60">{recipeConcentrateNumber(doseMl, 2)} mL for {recipeConcentrateNumber(finalLiters, 2)} L</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
+        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">Preparation</div>
+        <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
+        <div className="mt-3 space-y-2 text-xs text-slate-300">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3"><span>1. Weigh {form.label} {salt.name}</span><strong className="tabular-nums text-emerald-100">{recipeConcentrateMassLabel(saltMassMg / 1000)}</strong></div>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3"><span>2. Add RO or distilled water</span><strong className="tabular-nums text-emerald-100">{waterVolumeMl.toFixed(2)} g</strong></div>
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3"><span>3. Bring the bottle to</span><strong className="tabular-nums text-emerald-100">{stockVolumeMl.toFixed(1)} mL</strong></div>
+          <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50"><strong>4. Dose {recipeConcentrateNumber(doseDrops, 2)} drops ({recipeConcentrateNumber(doseMl, 2)} mL)</strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.</div>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function RecipeConcentrateBuilder({
   handoff,
   volumeUnit,
@@ -11143,6 +11374,20 @@ function RecipeConcentrateBuilder({
     straightDropsPerMl,
     dropperStyle,
   ]);
+
+  if (singleSaltOnly) {
+    return (
+      <DiySingleSaltConcentratePanel
+        handoff={handoff}
+        volumeUnit={volumeUnit}
+        dropperStyle={dropperStyle}
+        onDropperStyleChange={onDropperStyleChange}
+        straightDropsPerMl={straightDropsPerMl}
+        onToggleVolumeUnit={onToggleVolumeUnit}
+        onPlanChange={onPlanChange}
+      />
+    );
+  }
 
   const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
   const modeHeader = stockStrategy === 'gh-kh'
