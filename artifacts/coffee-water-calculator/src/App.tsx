@@ -4664,7 +4664,10 @@ function App() {
     effectiveSuggestedSaltTargets,
   );
   const recipeStepsSuggestedSaltTargets = recipeStepsSaltTargets;
-  const applyRecipeObject = (recipe: SaltRecipe) => {
+  const applyRecipeObject = (
+    recipe: SaltRecipe,
+    options: { syncWatermancerSaltInventory?: boolean } = {},
+  ) => {
     setBrewerRecipeOverride(null);
     setActiveRecipeId(recipe.id);
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
@@ -4673,11 +4676,17 @@ function App() {
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
-    setRows(SALTS.map(salt => {
+    const restoredRows = SALTS.map(salt => {
       const entry = recipe.salts[salt.id];
       if (entry) return { target: normalizeSaltTarget(entry.target), formIdx: entry.formIdx };
       return { target: '', formIdx: salt.defaultFormIdx ?? 0 };
-    }));
+    });
+    setRows(restoredRows);
+    if (options.syncWatermancerSaltInventory) {
+      setWatermancerUsedSaltIds(
+        SALTS.filter((_, index) => num(restoredRows[index]?.target ?? '') > 0).map(salt => salt.id),
+      );
+    }
     // Restore split stocks state — missing fields default to off/100/'500'
     setSplitMode(recipe.splitMode ?? false);
     if (recipe.splitStrengths) setSplitStrengths(prev => ({ ...prev, ...recipe.splitStrengths }));
@@ -4939,7 +4948,7 @@ function App() {
       setSavedRecipes(prev => [...prev, recipe]);
       if (showWatermancer) {
         if (recipe.sourceWaters) {
-          applyRecipeObject(recipe);
+          applyRecipeObject(recipe, { syncWatermancerSaltInventory: true });
         }
         setWatermancerTargetOverride(null);
         setWatermancerTargetSource(`recipe:${recipe.id}`);
@@ -4984,15 +4993,23 @@ function App() {
       if (Object.keys(targets).length < 4) {
         throw new Error('The card did not contain enough readable final ion readings for Watermancer.');
       }
+      const importedRecipe = recipeCardSaltRecipe(scan);
       const name = typeof scan.name === 'string' && scan.name.trim() ? scan.name.trim() : 'Imported recipe card';
       const needsReview = overallConfidence < 0.85 || warnings.length > 0;
       const reviewMessage = [
         `Read "${name}" as a Watermancer ion target.`,
         `Detected ${Object.keys(targets).length} final ion readings.`,
+        ...(importedRecipe
+          ? [`Detected ${Object.keys(importedRecipe.salts).length} explicit salt rows; their targets and hydration forms will be restored.`]
+          : ['No readable explicit salt rows were found; the current salt inventory will be left unchanged.']),
         ...(warnings.length > 0 ? [`Warnings: ${warnings.join('; ')}`] : []),
         'Apply these readings to Watermancer?',
       ].join('\n');
       if (needsReview && !window.confirm(reviewMessage)) return;
+      if (importedRecipe) {
+        setSavedRecipes(prev => [...prev, importedRecipe]);
+        applyRecipeObject(importedRecipe, { syncWatermancerSaltInventory: true });
+      }
       const importedProfile = createWatermancerProfile(name, targets);
       setWmProfiles(prev => [...prev, importedProfile]);
       setWatermancerTargetOverride(targets);

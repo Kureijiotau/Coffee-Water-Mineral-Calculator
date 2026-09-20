@@ -63,6 +63,7 @@
 - [Mode identity language](mode-identity-language.md) — Brewer is simple, Alchemist designs mineral recipes, Watermancer matches ion targets and source waters
 - [Gemini water assistant constraints](gemini-water-assistant-constraints.md) — keep the planner direct-key, one-shot, structured, rate-limited, and tolerant of Gemini model/latency changes
 - [Gemini recipe image reading](gemini-recipe-image-reading.md) — send recipe screenshots to a dedicated multimodal prompt, not the bottled-water label extractor
+- [Recipe-card salt import boundary](recipe-card-salt-import.md) — only explicit readable salt rows may change Watermancer salt selection; final ions alone never infer salts
 - [Watermancer profile comparison](watermancer-profile-comparison.md) — compare target-picker profiles separately from the existing reference-water ion comparison
 - [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [WATER recipe files](water-recipe-files.md) — use image-backed `.WATER.png` recipe exports while keeping embedded payloads standard JSON and legacy JSON imports valid
