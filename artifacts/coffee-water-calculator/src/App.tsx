@@ -14261,9 +14261,6 @@ function BrewerSimpleRecipeCard({
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-700/50 bg-slate-950/25 px-3 py-2">
                 <div className="text-[10px] text-slate-400">
                   Current: <strong className="text-cyan-200">{activeDropsPerMl.toFixed(1)} drops/mL</strong>
-                  {hasGuideCalibration && (
-                    <span className="ml-2 text-slate-500">New: {measuredDropsPerMl.toFixed(1)} drops/mL</span>
-                  )}
                 </div>
               </div>
               <div className="mt-2 text-[10px] text-slate-500">
