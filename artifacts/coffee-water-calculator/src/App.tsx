@@ -1348,6 +1348,7 @@ const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
 const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-policy';
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
+const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = 'coffee-water-diy-concentrate-inputs';
 const DEFAULT_DROPS_PER_ML = 20;
 /** Smallest physical salt dose considered by Watermancer. */
 const WATERMANCER_MIN_SALT_MG = 1;
@@ -1379,6 +1380,23 @@ function loadHasSavedDropperCalibration(): boolean {
     return localStorage.getItem(DROPPER_CALIBRATION_STORAGE_KEY) !== null;
   } catch {
     return false;
+  }
+}
+
+type DiyConcentrateStoredInputs = {
+  stockVolumeInput?: string;
+  finalVolumeInput?: string;
+  calibrationDropsInput?: string;
+  calibrationWeightInput?: string;
+  desiredPpmInput?: string;
+};
+
+function loadDiyConcentrateInputs(): DiyConcentrateStoredInputs {
+  try {
+    const stored = JSON.parse(localStorage.getItem(DIY_CONCENTRATE_INPUTS_STORAGE_KEY) ?? 'null') as DiyConcentrateStoredInputs | null;
+    return stored && typeof stored === 'object' ? stored : {};
+  } catch {
+    return {};
   }
 }
 function normalizeAutoFillPriority(priority: unknown): IonId[] {
@@ -10872,13 +10890,15 @@ function DiySingleSaltConcentratePanel({
   const targetPpm = num(handoff.salts[salt.id]?.target);
   const formIdx = handoff.salts[salt.id]?.formIdx ?? salt.defaultFormIdx ?? 0;
   const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
-  const [stockVolumeInput, setStockVolumeInput] = useState('100');
+  const [storedInputs] = useState(loadDiyConcentrateInputs);
+  const [stockVolumeInput, setStockVolumeInput] = useState(storedInputs.stockVolumeInput ?? '100');
   const [finalVolumeInput, setFinalVolumeInput] = useState(
-    String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
+    storedInputs.finalVolumeInput
+      ?? String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
   );
-  const [calibrationDropsInput, setCalibrationDropsInput] = useState('');
-  const [calibrationWeightInput, setCalibrationWeightInput] = useState('');
-  const [desiredPpmInput, setDesiredPpmInput] = useState('');
+  const [calibrationDropsInput, setCalibrationDropsInput] = useState(storedInputs.calibrationDropsInput ?? '');
+  const [calibrationWeightInput, setCalibrationWeightInput] = useState(storedInputs.calibrationWeightInput ?? '');
+  const [desiredPpmInput, setDesiredPpmInput] = useState(storedInputs.desiredPpmInput ?? '');
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -10923,6 +10943,26 @@ function DiySingleSaltConcentratePanel({
     ? saltMassMg / activeDropsPerMl / stockVolumeMl
     : 0;
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DIY_CONCENTRATE_INPUTS_STORAGE_KEY, JSON.stringify({
+        stockVolumeInput,
+        finalVolumeInput,
+        calibrationDropsInput,
+        calibrationWeightInput,
+        desiredPpmInput,
+      } satisfies DiyConcentrateStoredInputs));
+    } catch {
+      // The DIY tab remains functional when local storage is unavailable.
+    }
+  }, [
+    calibrationDropsInput,
+    calibrationWeightInput,
+    desiredPpmInput,
+    finalVolumeInput,
+    stockVolumeInput,
+  ]);
 
   useEffect(() => {
     if (!desiredPpmInput && defaultDesiredPpm > 0) setDesiredPpmInput(recipeConcentrateNumber(defaultDesiredPpm, 3));
