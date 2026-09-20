@@ -13997,20 +13997,6 @@ function BrewerSimpleRecipeCard({
               <p className="mt-2 text-[10px] leading-relaxed text-slate-500">
                  Label each bottle with the salt, {pantryBottleMl} mL, 50 mg of that salt per mL, and the date. For consistent dosing, calibrate your dropper to about {dropsPerMl.toFixed(1)} drops per mL.
               </p>
-              {!guideRecipe && calciumTarget > 0.05 && (
-                <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-slate-700/50 bg-slate-950/20 px-3 py-2 text-[11px] text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={!calciumAvailable}
-                    onChange={event => setCalciumAvailable(!event.target.checked)}
-                    className="mt-0.5 h-3.5 w-3.5 accent-violet-400"
-                  />
-                  <span>
-                    I don’t have calcium chloride 😔
-                    <span className="mt-0.5 block text-[10px] text-slate-500">Skip it and make a lighter-bodied version.</span>
-                  </span>
-                </label>
-              )}
               <button
                 type="button"
                 onClick={() => {
