@@ -10976,7 +10976,10 @@ function DiySingleSaltConcentratePanel({
   return (
     <main className="space-y-3">
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
-        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">Concentrate and batch volume</div>
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
+          <Gauge className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
+          <span>Concentrate and batch volume</span>
+        </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate volume</span>
@@ -11025,7 +11028,10 @@ function DiySingleSaltConcentratePanel({
       </section>
 
       <section className="rounded-2xl border border-cyan-300/25 bg-slate-800/70 p-4 shadow-xl sm:p-5">
-        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">Desired dose</div>
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
+          <Sparkles className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
+          <span>Desired dose</span>
+        </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired ppm as CaCO₃ per drop</span>
@@ -11043,7 +11049,10 @@ function DiySingleSaltConcentratePanel({
       </section>
 
       <section className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
-        <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">Preparation</div>
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+          <ListChecks className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />
+          <span>Preparation</span>
+        </div>
         <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
         <div className="mt-3 space-y-2 text-xs text-slate-300">
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3"><span>1. Weigh {form.label} {salt.name}</span><strong className="tabular-nums text-emerald-100">{recipeConcentrateMassLabel(saltMassMg / 1000)}</strong></div>
