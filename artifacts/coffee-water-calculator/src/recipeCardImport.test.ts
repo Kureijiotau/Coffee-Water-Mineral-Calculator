@@ -107,4 +107,36 @@ describe('Watermancer recipe-card imports', () => {
       citrates: 0,
     });
   });
+
+  it('keeps valid salt rows while ignoring unreadable, invalid, unknown, and duplicate rows', () => {
+    const recipe = recipeCardSaltRecipe({
+      name: 'Partially readable recipe',
+      salts: [
+        { saltId: 'mgso4', targetPpm: '12.5', formLabel: 'Heptahydrate' },
+        { saltId: 'mgso4', targetPpm: 99, formLabel: 'Anhydrous' },
+        { saltId: 'nacl', targetPpm: null, formLabel: 'Sodium chloride' },
+        { saltId: 'nacl', targetPpm: '', formLabel: 'Sodium chloride' },
+        { saltId: 'nacl', targetPpm: 4, formLabel: 'Sodium chloride' },
+        { saltId: 'cacl2', targetPpm: -1, formLabel: 'Dihydrate' },
+        { saltId: 'mgcl2', targetPpm: 'NaN', formLabel: 'Hexahydrate' },
+        { saltId: 'not-a-salt', targetPpm: 8, formLabel: 'Unknown' },
+        { saltId: 'cacl2', targetPpm: 3, formLabel: 'Dihydrate' },
+        { saltId: 'khco3', targetPpm: true, formLabel: 'Anhydrous' },
+      ],
+    });
+
+    expect(recipe).not.toBeNull();
+    if (!recipe) return;
+
+    expect(recipe.salts).toEqual({
+      mgso4: { target: '12.5', formIdx: 1 },
+      nacl: { target: '4', formIdx: 0 },
+      cacl2: { target: '3', formIdx: 1 },
+    });
+    expect(positiveSaltIdsFromRows(restoreRecipeSaltRows(recipe))).toEqual([
+      'mgso4',
+      'cacl2',
+      'nacl',
+    ]);
+  });
 });

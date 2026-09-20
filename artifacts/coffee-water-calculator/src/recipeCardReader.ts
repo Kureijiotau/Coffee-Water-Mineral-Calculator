@@ -30,6 +30,15 @@ export function recipeCardIonTargets(value: unknown): Partial<Record<IonId, numb
   return targets;
 }
 
+function recipeCardSaltTarget(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const target = Number(value);
+  return Number.isFinite(target) && target >= 0 ? target : null;
+}
+
 export function recipeCardSaltRecipe(scan: RecipeCardScanResult): SaltRecipe | null {
   if (typeof scan.name !== 'string' || !scan.name.trim() || !Array.isArray(scan.salts)) return null;
   const salts: Record<string, SaltRecipeEntry> = {};
@@ -37,8 +46,8 @@ export function recipeCardSaltRecipe(scan: RecipeCardScanResult): SaltRecipe | n
     const entry = recipeCardRecord(rawSalt);
     if (!entry || typeof entry.saltId !== 'string') continue;
     const salt = SALTS.find(item => item.id === entry.saltId);
-    const target = typeof entry.targetPpm === 'number' ? entry.targetPpm : Number(entry.targetPpm);
-    if (!salt || !Number.isFinite(target) || target < 0) continue;
+    const target = recipeCardSaltTarget(entry.targetPpm);
+    if (!salt || target === null || salts[salt.id]) continue;
     const formLabel = typeof entry.formLabel === 'string' ? entry.formLabel.trim().toLowerCase() : '';
     const formIdx = formLabel
       ? salt.hydrationForms.findIndex(form => form.label.toLowerCase() === formLabel || form.label.toLowerCase().includes(formLabel) || formLabel.includes(form.label.toLowerCase()))
