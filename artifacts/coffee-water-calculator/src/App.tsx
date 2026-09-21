@@ -1390,6 +1390,8 @@ type DiyConcentrateStoredInputs = {
   calibrationDropsInput?: string;
   calibrationWeightInput?: string;
   desiredPpmInput?: string;
+  desiredSaltMgInput?: string;
+  desiredDoseBasis?: 'caco3' | 'salt-mg';
 };
 
 function loadDiyConcentrateInputs(): DiyConcentrateStoredInputs {
@@ -11011,6 +11013,10 @@ function DiySingleSaltConcentratePanel({
   const [calibrationDropsInput, setCalibrationDropsInput] = useState(storedInputs.calibrationDropsInput ?? '');
   const [calibrationWeightInput, setCalibrationWeightInput] = useState(storedInputs.calibrationWeightInput ?? '');
   const [desiredPpmInput, setDesiredPpmInput] = useState(storedInputs.desiredPpmInput ?? '');
+  const [desiredSaltMgInput, setDesiredSaltMgInput] = useState(storedInputs.desiredSaltMgInput ?? '');
+  const [desiredDoseBasis, setDesiredDoseBasis] = useState<'caco3' | 'salt-mg'>(
+    storedInputs.desiredDoseBasis === 'salt-mg' ? 'salt-mg' : 'caco3',
+  );
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -11033,14 +11039,18 @@ function DiySingleSaltConcentratePanel({
     finalLiters: 1,
   });
   const defaultDesiredPpm = 5;
+  const defaultDesiredSaltMg = 1;
   const desiredPpm = Math.max(0, Number(desiredPpmInput) || defaultDesiredPpm);
+  const desiredSaltMg = Math.max(0, Number(desiredSaltMgInput) || defaultDesiredSaltMg);
   const dropWeightG = hasCalibration
     ? calibrationWeightG / calibrationDrops
     : (activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0);
   const caCo3EquivalentPerPhysicalGram = diyCaCo3EquivalentPerPhysicalGram(salt, form.molarMass);
-  const saltMassMg = desiredPpm > 0 && finalLiters > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
-    ? desiredPpm * finalLiters * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
-    : 0;
+  const saltMassMg = desiredDoseBasis === 'salt-mg'
+    ? desiredSaltMg * activeDropsPerMl * stockVolumeMl
+    : desiredPpm > 0 && finalLiters > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
+      ? desiredPpm * finalLiters * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
+      : 0;
   const baseSaltMassMg = computeRecipeStockSaltMassMg(
     targetPpm,
     1,
@@ -11048,7 +11058,12 @@ function DiySingleSaltConcentratePanel({
     salt.anhydrousMass,
   );
   const strength = baseSaltMassMg > 0 ? saltMassMg / baseSaltMassMg : 0;
-  const doseDrops = desiredPpm > 0 ? targetCaCo3Ppm / desiredPpm : 0;
+  const targetPhysicalSaltMgForBatch = targetPpm > 0 && finalLiters > 0
+    ? targetPpm * finalLiters * form.molarMass / salt.anhydrousMass
+    : 0;
+  const doseDrops = desiredDoseBasis === 'salt-mg'
+    ? desiredSaltMg > 0 ? targetPhysicalSaltMgForBatch / desiredSaltMg : 0
+    : desiredPpm > 0 ? targetCaCo3Ppm / desiredPpm : 0;
   const doseMl = activeDropsPerMl > 0 ? doseDrops / activeDropsPerMl : 0;
   const practicalDoseDrops = doseDrops > 0 ? Math.max(1, Math.round(doseDrops)) : 0;
   const practicalDoseMl = activeDropsPerMl > 0 ? practicalDoseDrops / activeDropsPerMl : 0;
@@ -11069,6 +11084,8 @@ function DiySingleSaltConcentratePanel({
         calibrationDropsInput,
         calibrationWeightInput,
         desiredPpmInput,
+        desiredSaltMgInput,
+        desiredDoseBasis,
       } satisfies DiyConcentrateStoredInputs));
     } catch {
       // The DIY tab remains functional when local storage is unavailable.
@@ -11077,6 +11094,8 @@ function DiySingleSaltConcentratePanel({
     calibrationDropsInput,
     calibrationWeightInput,
     desiredPpmInput,
+    desiredSaltMgInput,
+    desiredDoseBasis,
     finalVolumeInput,
     stockVolumeInput,
   ]);
@@ -11090,7 +11109,7 @@ function DiySingleSaltConcentratePanel({
       strategy: 'individual',
       strategyLabel: 'Single salt',
       strength,
-      physicalSaltPpmPerDropInput: desiredPpm > 0 ? String(desiredPpm) : null,
+      physicalSaltPpmPerDropInput: desiredDoseBasis === 'caco3' && desiredPpm > 0 ? String(desiredPpm) : null,
       maxSafeStrength: null,
       dropperStyle,
       straightDropsPerMl,
@@ -11132,6 +11151,8 @@ function DiySingleSaltConcentratePanel({
     strength,
     targetPpm,
     desiredPpm,
+    desiredSaltMg,
+    desiredDoseBasis,
   ]);
 
   const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
@@ -11237,11 +11258,51 @@ function DiySingleSaltConcentratePanel({
           <Sparkles className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
           <span>Desired dose</span>
         </div>
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-cyan-200/15 bg-slate-950/30 p-1" role="group" aria-label="Desired dose basis">
+          <button
+            type="button"
+            onClick={() => setDesiredDoseBasis('caco3')}
+            aria-pressed={desiredDoseBasis === 'caco3'}
+            className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+              desiredDoseBasis === 'caco3'
+                ? 'bg-cyan-400/15 text-cyan-100 shadow-sm'
+                : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+            }`}
+          >
+            ppm as CaCO₃
+          </button>
+          <button
+            type="button"
+            onClick={() => setDesiredDoseBasis('salt-mg')}
+            aria-pressed={desiredDoseBasis === 'salt-mg'}
+            className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+              desiredDoseBasis === 'salt-mg'
+                ? 'bg-cyan-400/15 text-cyan-100 shadow-sm'
+                : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+            }`}
+          >
+            mg salt per drop
+          </button>
+        </div>
         <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired ppm as CaCO₃ per drop</span>
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+            {desiredDoseBasis === 'caco3' ? 'Desired ppm as CaCO₃ per drop' : 'Desired physical salt mass per drop'}
+          </span>
           <span className="mt-1 flex items-center gap-2">
-            <StableNumberInput min="0.01" step="0.01" value={desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)} onChange={event => setDesiredPpmInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Desired CaCO3 ppm per drop" />
-            <span className="text-sm text-slate-400">ppm</span>
+            <StableNumberInput
+              min="0.01"
+              step="0.01"
+              value={desiredDoseBasis === 'caco3'
+                ? desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)
+                : desiredSaltMgInput || recipeConcentrateNumber(defaultDesiredSaltMg, 3)}
+              onChange={event => {
+                if (desiredDoseBasis === 'caco3') setDesiredPpmInput(event.target.value);
+                else setDesiredSaltMgInput(event.target.value);
+              }}
+              className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
+              aria-label={desiredDoseBasis === 'caco3' ? 'Desired CaCO3 ppm per drop' : 'Desired physical salt milligrams per drop'}
+            />
+            <span className="text-sm text-slate-400">{desiredDoseBasis === 'caco3' ? 'ppm' : 'mg'}</span>
           </span>
         </label>
       </section>
