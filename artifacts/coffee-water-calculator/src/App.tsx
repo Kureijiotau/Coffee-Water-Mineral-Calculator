@@ -6387,15 +6387,15 @@ function App() {
             </div>
          <>
            <div className="mineral-recipe-table__header hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider">
-            <span>Salt</span>
-            <span>
+             <span className="font-bold text-white">Salt</span>
+             <span className="font-bold text-white">
                {publishedTargetLabel === 'Salt target (ppm)' ? (
                  <span title="Anhydrous-equivalent salt concentration in mg/L; for water, ppm is approximately mg/L.">
                    Salt target (ppm)
                  </span>
                ) : publishedTargetLabel}
             </span>
-              <span>{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
+               <span className="font-bold text-white">{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
            {mineralRecipeSaltRows.map(({ salt, index: i }) => {
              const isMemeSalt = MEME_SALT_IDS.has(salt.id);
