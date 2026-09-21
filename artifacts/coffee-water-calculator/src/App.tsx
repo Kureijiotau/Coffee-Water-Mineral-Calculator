@@ -11068,6 +11068,8 @@ function DiySingleSaltConcentratePanel({
   const practicalDoseDrops = doseDrops > 0 ? Math.max(1, Math.round(doseDrops)) : 0;
   const practicalDoseMl = activeDropsPerMl > 0 ? practicalDoseDrops / activeDropsPerMl : 0;
   const waterVolumeMl = stockVolumeMl;
+  const totalConcentrateMassG = stockVolumeMl;
+  const waterMassG = Math.max(0, totalConcentrateMassG - saltMassMg / 1000);
   const saltGPer100MlWater = waterVolumeMl > 0 ? (saltMassMg / 1000) / waterVolumeMl * 100 : 0;
   const solubilityLimitGPer100Ml = getSaltSolubilityLimitGPer100Ml(salt.id, formIdx);
   const willDissolve = solubilityLimitGPer100Ml == null || saltGPer100MlWater <= solubilityLimitGPer100Ml;
@@ -11352,8 +11354,8 @@ function DiySingleSaltConcentratePanel({
             <strong className="tabular-nums text-emerald-100">{recipeConcentrateMassLabel(saltMassMg / 1000)}</strong>
           </div>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3">
-            <span>2. Add RO or distilled water</span>
-            <strong className="tabular-nums text-emerald-100">{waterVolumeMl.toFixed(2)} g</strong>
+            <span>2. Add RO or distilled water to {totalConcentrateMassG.toFixed(3)} g total</span>
+            <strong className="text-right tabular-nums text-emerald-100">{waterMassG.toFixed(3)} g water</strong>
           </div>
           <div className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${
             willDissolve
