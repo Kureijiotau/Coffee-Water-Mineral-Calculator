@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -11174,7 +11174,7 @@ function DiySingleSaltConcentratePanel({
 
       <section className="rounded-2xl border border-amber-300/35 bg-gradient-to-br from-amber-400/[0.12] via-slate-800/80 to-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex items-start gap-3">
-          <Ruler className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
+          <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-100/80">Dropper calibration</div>
             <h2 className="mt-1 text-base font-semibold text-white">Measure this before dosing</h2>
@@ -14202,7 +14202,7 @@ function BrewerSimpleRecipeCard({
           {prepMethod === 'dropper' && (
             <div className="mt-3 rounded-xl border border-amber-300/25 bg-amber-400/[0.06] p-3">
               <div className="flex items-start gap-2.5">
-                <Ruler className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
+                <Pipette className="mt-0.5 h-4 w-4 shrink-0 text-amber-200" aria-hidden="true" />
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-amber-100/80">Dropper calibration</div>
                   <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
