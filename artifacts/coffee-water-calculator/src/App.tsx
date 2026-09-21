@@ -8523,7 +8523,7 @@ function DiySingleSaltConcentrateBuilder({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-fuchsia-100">
-              <FlaskConical className="h-4 w-4 text-fuchsia-300" aria-hidden="true" />
+              <GiSaltShaker className="h-4 w-4 text-fuchsia-300" aria-hidden="true" />
               DIY single-salt concentrate
             </div>
             <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-400">
@@ -11205,7 +11205,7 @@ function DiySingleSaltConcentratePanel({
     <main ref={preparationCardRef} className="space-y-3">
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
-          <Gauge className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
+          <Beaker className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
           <span>Concentrate and batch volume</span>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
