@@ -10999,8 +10999,8 @@ function DiySingleSaltConcentratePanel({
     ? calibrationWeightG / calibrationDrops
     : (activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0);
   const caCo3EquivalentPerPhysicalGram = diyCaCo3EquivalentPerPhysicalGram(salt, form.molarMass);
-  const saltMassMg = desiredPpm > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
-    ? desiredPpm * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
+  const saltMassMg = desiredPpm > 0 && finalLiters > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
+    ? desiredPpm * finalLiters * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
     : 0;
   const baseSaltMassMg = computeRecipeStockSaltMassMg(
     targetPpm,
@@ -11215,7 +11215,7 @@ function DiySingleSaltConcentratePanel({
             </span>
           </label>
           <div className="rounded-xl border border-cyan-200/20 bg-cyan-400/[0.08] px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-100/70">Drops needed to reach target</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-100/70">Drops needed for this recipe target</span>
             <div
               className="mt-1 cursor-help text-xl font-semibold tabular-nums text-white"
               title={`Exact calculation: ${recipeConcentrateNumber(doseDrops, 2)} drops (${recipeConcentrateNumber(doseMl, 2)} mL)`}
@@ -11225,6 +11225,9 @@ function DiySingleSaltConcentratePanel({
             </div>
             <div className="mt-1 text-[10px] text-cyan-100/60">
               {recipeConcentrateNumber(practicalDoseMl, 2)} mL for {recipeConcentrateNumber(finalLiters, 2)} L
+            </div>
+            <div className="mt-1 text-[10px] text-slate-500">
+              Recipe target: {recipeConcentrateNumber(targetPpm, 1)} ppm/L
             </div>
             {Math.abs(practicalDoseDrops - doseDrops) > 0.01 && (
               <div className="mt-1 text-[10px] text-slate-500">
