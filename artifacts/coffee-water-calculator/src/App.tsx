@@ -11270,11 +11270,6 @@ function DiySingleSaltConcentratePanel({
               {saltGPer100MlWater.toFixed(2)} / {solubilityLimitGPer100Ml == null ? '—' : solubilityLimitGPer100Ml.toFixed(2)} g per 100 mL
             </strong>
           </div>
-          <div className="rounded-xl border border-emerald-200/20 bg-emerald-400/[0.08] px-3 py-3 text-emerald-50">
-            <strong>
-              3. Dose {recipeConcentrateNumber(doseDrops, 2)} drops (≈ {practicalDoseDrops} drops, {recipeConcentrateNumber(doseMl, 2)} mL)
-            </strong> into each {recipeConcentrateNumber(finalLiters, 2)} {volumeLabel} batch.
-          </div>
         </div>
       </section>
     </main>
