@@ -11139,16 +11139,6 @@ function DiySingleSaltConcentratePanel({
 
   return (
     <main ref={preparationCardRef} className="space-y-3">
-      <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-4 shadow-xl sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-fuchsia-200/70">DIY single-salt concentrate</div>
-            <h2 className="mt-1 text-lg font-semibold text-white">{salt.name}</h2>
-            <p className="mt-1 text-xs text-slate-400">{form.label} · complete preparation guide</p>
-          </div>
-          <FlaskConical className="mt-1 h-5 w-5 text-fuchsia-200/80" aria-hidden="true" />
-        </div>
-      </section>
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
           <Gauge className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
