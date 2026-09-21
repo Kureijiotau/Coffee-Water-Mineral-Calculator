@@ -11183,21 +11183,21 @@ function DiySingleSaltConcentratePanel({
         </div>
       </section>
 
-      <section className="rounded-2xl border border-amber-300/35 bg-gradient-to-br from-amber-400/[0.12] via-slate-800/80 to-slate-800/70 p-4 shadow-xl sm:p-5">
+      <section className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/[0.08] via-slate-800/80 to-blue-500/[0.06] p-4 shadow-xl sm:p-5">
         <div className="flex items-start gap-3">
-          <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-amber-200" aria-hidden="true" />
+          <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" aria-hidden="true" />
           <div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-100/80">Dropper calibration</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Dropper calibration</div>
             <h2 className="mt-1 text-base font-semibold text-white">Measure this before dosing</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-300">Drop size varies by bottle and tip. We use these two measurements to calculate the actual contribution of every drop.</p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="rounded-xl border border-amber-200/20 bg-slate-950/25 px-3 py-2.5">
+          <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
             <StableNumberInput min="1" step="1" value={calibrationDropsInput} onChange={event => setCalibrationDropsInput(event.target.value)} placeholder="e.g. 100" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured number of drops" />
           </label>
-          <label className="rounded-xl border border-amber-200/20 bg-slate-950/25 px-3 py-2.5">
+          <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
             <span className="mt-1 flex items-center gap-2">
               <StableNumberInput min="0.01" step="0.01" value={calibrationWeightInput} onChange={event => setCalibrationWeightInput(event.target.value)} placeholder="e.g. 5" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured drop weight in grams" />
