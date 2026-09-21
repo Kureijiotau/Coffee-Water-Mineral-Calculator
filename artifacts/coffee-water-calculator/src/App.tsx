@@ -409,15 +409,15 @@ function diyCaCo3EquivalentPerPhysicalGram(
 export function computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
   saltId,
   targetPpm,
-  stockVolumeMl,
-  dropsPerMl,
+  stockWeightG,
+  dropWeightG,
   finalLiters,
   caCo3PpmPerDrop,
 }: {
   saltId: string;
   targetPpm: number;
-  stockVolumeMl: number;
-  dropsPerMl: number;
+  stockWeightG: number;
+  dropWeightG: number;
   finalLiters: number;
   caCo3PpmPerDrop: number;
 }): number {
@@ -428,8 +428,8 @@ export function computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
   if (
     !salt
     || !Number.isFinite(targetPpm) || targetPpm <= 0
-    || !Number.isFinite(stockVolumeMl) || stockVolumeMl <= 0
-    || !Number.isFinite(dropsPerMl) || dropsPerMl <= 0
+    || !Number.isFinite(stockWeightG) || stockWeightG <= 0
+    || !Number.isFinite(dropWeightG) || dropWeightG <= 0
     || !Number.isFinite(finalLiters) || finalLiters <= 0
     || !Number.isFinite(caCo3PpmPerDrop) || caCo3PpmPerDrop <= 0
     || caCo3EquivalentPerAnhydrousGram <= 0
@@ -438,8 +438,8 @@ export function computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
   }
   const caCo3PpmPerDropAtStrengthOne = targetPpm
     * caCo3EquivalentPerAnhydrousGram
-    / stockVolumeMl
-    / dropsPerMl
+    * dropWeightG
+    / stockWeightG
     / finalLiters;
   return caCo3PpmPerDropAtStrengthOne > 0
     ? caCo3PpmPerDrop / caCo3PpmPerDropAtStrengthOne
@@ -1385,6 +1385,7 @@ function loadHasSavedDropperCalibration(): boolean {
 }
 
 type DiyConcentrateStoredInputs = {
+  stockWeightInput?: string;
   stockVolumeInput?: string;
   finalVolumeInput?: string;
   calibrationDropsInput?: string;
@@ -11005,7 +11006,9 @@ function DiySingleSaltConcentratePanel({
   const formIdx = handoff.salts[salt.id]?.formIdx ?? salt.defaultFormIdx ?? 0;
   const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
   const [storedInputs] = useState(loadDiyConcentrateInputs);
-  const [stockVolumeInput, setStockVolumeInput] = useState(storedInputs.stockVolumeInput ?? '100');
+  const [stockWeightInput, setStockWeightInput] = useState(
+    storedInputs.stockWeightInput ?? storedInputs.stockVolumeInput ?? '100',
+  );
   const [finalVolumeInput, setFinalVolumeInput] = useState(
     storedInputs.finalVolumeInput
       ?? String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
@@ -11020,7 +11023,7 @@ function DiySingleSaltConcentratePanel({
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  const stockVolumeMl = Math.max(0, Number(stockVolumeInput) || 0);
+  const stockWeightG = Math.max(0, Number(stockWeightInput) || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
   const calibrationDrops = Number(calibrationDropsInput);
   const calibrationWeightG = Number(calibrationWeightInput);
@@ -11047,9 +11050,9 @@ function DiySingleSaltConcentratePanel({
     : (activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0);
   const caCo3EquivalentPerPhysicalGram = diyCaCo3EquivalentPerPhysicalGram(salt, form.molarMass);
   const saltMassMg = desiredDoseBasis === 'salt-mg'
-    ? desiredSaltMg * activeDropsPerMl * stockVolumeMl
-    : desiredPpm > 0 && finalLiters > 0 && stockVolumeMl > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
-      ? desiredPpm * finalLiters * stockVolumeMl / dropWeightG / caCo3EquivalentPerPhysicalGram
+    ? desiredSaltMg * stockWeightG / dropWeightG
+    : desiredPpm > 0 && finalLiters > 0 && stockWeightG > 0 && dropWeightG > 0 && caCo3EquivalentPerPhysicalGram > 0
+      ? desiredPpm * finalLiters * stockWeightG / dropWeightG / caCo3EquivalentPerPhysicalGram
       : 0;
   const baseSaltMassMg = computeRecipeStockSaltMassMg(
     targetPpm,
@@ -11067,23 +11070,20 @@ function DiySingleSaltConcentratePanel({
   const doseMl = activeDropsPerMl > 0 ? doseDrops / activeDropsPerMl : 0;
   const practicalDoseDrops = doseDrops > 0 ? Math.max(1, Math.round(doseDrops)) : 0;
   const practicalDoseMl = activeDropsPerMl > 0 ? practicalDoseDrops / activeDropsPerMl : 0;
-  const waterVolumeMl = stockVolumeMl;
-  const totalConcentrateMassG = stockVolumeMl;
-  const waterMassG = desiredDoseBasis === 'salt-mg'
-    ? Math.max(0, totalConcentrateMassG - saltMassMg / 1000)
-    : waterVolumeMl;
-  const saltGPer100MlWater = waterVolumeMl > 0 ? (saltMassMg / 1000) / waterVolumeMl * 100 : 0;
+  const totalConcentrateMassG = stockWeightG;
+  const waterMassG = Math.max(0, totalConcentrateMassG - saltMassMg / 1000);
+  const saltGPer100MlWater = waterMassG > 0 ? (saltMassMg / 1000) / waterMassG * 100 : 0;
   const solubilityLimitGPer100Ml = getSaltSolubilityLimitGPer100Ml(salt.id, formIdx);
   const willDissolve = solubilityLimitGPer100Ml == null || saltGPer100MlWater <= solubilityLimitGPer100Ml;
-  const effectiveSaltMgPerDrop = activeDropsPerMl > 0
-    ? saltMassMg / activeDropsPerMl / stockVolumeMl
+  const effectiveSaltMgPerDrop = stockWeightG > 0 && dropWeightG > 0
+    ? saltMassMg * dropWeightG / stockWeightG
     : 0;
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
 
   useEffect(() => {
     try {
       localStorage.setItem(DIY_CONCENTRATE_INPUTS_STORAGE_KEY, JSON.stringify({
-        stockVolumeInput,
+        stockWeightInput,
         finalVolumeInput,
         calibrationDropsInput,
         calibrationWeightInput,
@@ -11101,7 +11101,7 @@ function DiySingleSaltConcentratePanel({
     desiredSaltMgInput,
     desiredDoseBasis,
     finalVolumeInput,
-    stockVolumeInput,
+    stockWeightInput,
   ]);
 
   useEffect(() => {
@@ -11122,17 +11122,17 @@ function DiySingleSaltConcentratePanel({
       calibrationWeightG: hasCalibration ? calibrationWeightG : null,
       activeDropsPerMl,
       finalLiters,
-      totalSaltMgPerMl: stockVolumeMl > 0 ? saltMassMg / stockVolumeMl : 0,
+      totalSaltMgPerMl: stockWeightG > 0 ? saltMassMg / stockWeightG : 0,
       totalSaltMgPerDrop: effectiveSaltMgPerDrop,
-      saltEquivalentPpmPerDrop: stockVolumeMl > 0 && activeDropsPerMl > 0 && finalLiters > 0
-        ? targetPpm * strength / stockVolumeMl / activeDropsPerMl / finalLiters
+      saltEquivalentPpmPerDrop: stockWeightG > 0 && dropWeightG > 0 && finalLiters > 0
+        ? targetPpm * strength * dropWeightG / stockWeightG / finalLiters
         : 0,
       dropsPerLiter: doseDrops,
       batchDrops: doseDrops,
       groups: [{
         id: `salt:${salt.id}`,
         name: `${salt.name} Concentrate`,
-        volumeMl: stockVolumeMl,
+        volumeMl: stockWeightG,
         strength,
         maxSafeStrength: 0,
         saltIds: [salt.id],
@@ -11150,7 +11150,7 @@ function DiySingleSaltConcentratePanel({
     onPlanChange,
     salt.id,
     saltMassMg,
-    stockVolumeMl,
+    stockWeightG,
     straightDropsPerMl,
     strength,
     targetPpm,
@@ -11208,14 +11208,14 @@ function DiySingleSaltConcentratePanel({
       <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
           <Beaker className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
-          <span>Concentrate and batch volume</span>
+          <span>Concentrate weight and batch volume</span>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate volume</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Concentrate weight</span>
             <span className="mt-1 flex items-center gap-2">
-              <StableNumberInput min="1" step="10" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="DIY concentrate volume in milliliters" />
-              <span className="text-sm text-slate-400">mL</span>
+              <StableNumberInput min="1" step="1" value={stockWeightInput} onChange={event => setStockWeightInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="DIY concentrate weight in grams" />
+              <span className="text-sm text-slate-400">g</span>
             </span>
           </label>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
@@ -11508,8 +11508,8 @@ function RecipeConcentrateBuilder({
       ? computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
         saltId: activeSaltIds[0] ?? '',
         targetPpm: saltTargets[activeSaltIds[0] ?? ''] ?? 0,
-        stockVolumeMl: allInOneStockVolumeMl,
-        dropsPerMl: activeDropsPerMl,
+        stockWeightG: allInOneStockVolumeMl,
+        dropWeightG: activeDropsPerMl > 0 ? 1 / activeDropsPerMl : 0,
         finalLiters,
         caCo3PpmPerDrop: Number(physicalSaltPpmPerDropInput),
       })

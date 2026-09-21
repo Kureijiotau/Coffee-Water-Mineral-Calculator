@@ -84,8 +84,8 @@ describe('DIY concentrate workbook-style conversion', () => {
     const strength = computeDiyConcentrateStrengthForCaCo3PpmPerDrop({
       saltId: salt.id,
       targetPpm: 40,
-      stockVolumeMl: 100,
-      dropsPerMl: 100 / 3.5,
+      stockWeightG: 100,
+      dropWeightG: 3.5 / 100,
       finalLiters: 1,
       caCo3PpmPerDrop: 5,
     });
