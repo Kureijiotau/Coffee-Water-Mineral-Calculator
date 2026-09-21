@@ -11263,7 +11263,7 @@ function DiySingleSaltConcentratePanel({
             type="button"
             onClick={() => setDesiredDoseBasis('caco3')}
             aria-pressed={desiredDoseBasis === 'caco3'}
-            className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+            className={`whitespace-nowrap rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition ${
               desiredDoseBasis === 'caco3'
                 ? 'bg-cyan-400/15 text-cyan-100 shadow-sm'
                 : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
@@ -11275,7 +11275,7 @@ function DiySingleSaltConcentratePanel({
             type="button"
             onClick={() => setDesiredDoseBasis('salt-mg')}
             aria-pressed={desiredDoseBasis === 'salt-mg'}
-            className={`rounded-md px-2 py-1.5 text-[10px] font-semibold transition ${
+            className={`whitespace-nowrap rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition ${
               desiredDoseBasis === 'salt-mg'
                 ? 'bg-cyan-400/15 text-cyan-100 shadow-sm'
                 : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
