@@ -15373,7 +15373,7 @@ function BrewerRecipeStepsModal({
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Verify and brew</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">
-                  Check for approximately <span className="inline-flex rounded-md border border-emerald-300/45 bg-emerald-400/20 px-1.5 py-0.5 font-mono font-bold tabular-nums text-emerald-100">{tdsTarget.toFixed(0)} ppm TDS</span>. The water should be clear and all minerals fully dissolved. Proceed with your brew method and adjust extraction to taste.
+                  Confirm the water is clear and all salts are fully dissolved. Proceed with your brew method and adjust extraction to taste.
                 </div>
               </div>
             </li>
