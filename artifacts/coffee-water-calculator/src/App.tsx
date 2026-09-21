@@ -8494,6 +8494,8 @@ function DiySingleSaltConcentrateBuilder({
     Math.max(0, requestedFormIdx),
     Math.max(0, selectedSalt.hydrationForms.length - 1),
   );
+  const selectedHydration = selectedSalt.hydrationForms[safeFormIdx] ?? selectedSalt.hydrationForms[0];
+  const selectedHydrationIsAnhydrous = selectedHydration?.label.toLowerCase().includes('anhydrous') ?? false;
   const targetFromCalculator = Number(diySaltTargets[saltId] ?? 0);
   const target = targetFromCalculator > 0 ? targetFromCalculator : 10;
   const handoff = useMemo<ConcentrateRecipeHandoff>(() => ({
@@ -8566,22 +8568,38 @@ function DiySingleSaltConcentrateBuilder({
               })}
             </select>
           </label>
-          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Hydration form</span>
+          <label className={`rounded-xl border bg-slate-950/25 px-3 py-2.5 transition-colors ${
+            selectedHydrationIsAnhydrous ? 'border-slate-700/60' : 'border-emerald-300/25'
+          }`}>
+            <span className={`block text-[10px] font-semibold uppercase tracking-wider ${
+              selectedHydrationIsAnhydrous ? 'text-slate-500' : 'text-emerald-200'
+            }`}>Hydration form</span>
             <select
               value={safeFormIdx}
               onChange={event => setDiyFormIdxBySaltId(previous => ({
                 ...previous,
                 [saltId]: Number(event.target.value),
               }))}
-              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              className={`mt-1 w-full bg-transparent text-sm font-semibold outline-none ${
+                selectedHydrationIsAnhydrous ? 'text-white' : 'text-emerald-100'
+              }`}
               aria-label="DIY concentrate hydration form"
             >
-              {selectedSalt.hydrationForms.map((hydration, index) => (
-                <option key={`${selectedSalt.id}-${hydration.label}`} value={index}>
-                  {hydration.label}
-                </option>
-              ))}
+              {selectedSalt.hydrationForms.map((hydration, index) => {
+                const isAnhydrous = hydration.label.toLowerCase().includes('anhydrous');
+                return (
+                  <option
+                    key={`${selectedSalt.id}-${hydration.label}`}
+                    value={index}
+                    style={{
+                      color: isAnhydrous ? '#f8fafc' : '#a7f3d0',
+                      backgroundColor: '#0f172a',
+                    }}
+                  >
+                    {hydration.label}
+                  </option>
+                );
+              })}
             </select>
             <span className="mt-1 block text-[9px] text-slate-600">Controls the salt mass to weigh</span>
           </label>
@@ -11210,7 +11228,7 @@ function DiySingleSaltConcentratePanel({
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <SummaryMetric label="Weight per drop" value={hasCalibration ? `${weightPerDrop.toFixed(4)} g` : 'Not measured'} detail="calibrated" tone="sky" />
           <SummaryMetric label="Drops per mL" value={hasCalibration ? activeDropsPerMl.toFixed(1) : assumedDropsPerMl.toFixed(1)} detail={hasCalibration ? 'measured' : 'assumed'} tone="sky" />
-          <SummaryMetric label="Calibration status" value={hasCalibration ? 'Active' : 'Assumption'} detail={hasCalibration ? 'used in dose' : 'measure for accuracy'} tone="slate" />
+          <SummaryMetric label="Calibration status" value={hasCalibration ? 'Active' : 'Assumption'} detail={hasCalibration ? 'used in dose' : 'measure for accuracy'} tone={hasCalibration ? 'emerald' : 'slate'} />
         </div>
       </section>
 
@@ -11869,13 +11887,15 @@ function SummaryMetric({
   label: string;
   value: string;
   detail: string;
-  tone: 'fuchsia' | 'sky' | 'slate';
+  tone: 'emerald' | 'fuchsia' | 'sky' | 'slate';
 }) {
-  const toneClass = tone === 'fuchsia'
-    ? 'border-fuchsia-400/20 bg-fuchsia-500/[0.06] text-fuchsia-200'
-    : tone === 'sky'
-      ? 'border-sky-400/20 bg-sky-500/[0.06] text-sky-200'
-      : 'border-slate-700/60 bg-slate-950/25 text-slate-100';
+  const toneClass = tone === 'emerald'
+    ? 'border-emerald-400/25 bg-emerald-500/[0.08] text-emerald-200'
+    : tone === 'fuchsia'
+      ? 'border-fuchsia-400/20 bg-fuchsia-500/[0.06] text-fuchsia-200'
+      : tone === 'sky'
+        ? 'border-sky-400/20 bg-sky-500/[0.06] text-sky-200'
+        : 'border-slate-700/60 bg-slate-950/25 text-slate-100';
   return (
     <div className={`rounded-xl border px-3 py-3 ${toneClass}`}>
       <div className="text-[10px] uppercase tracking-wider text-slate-500">{label}</div>
