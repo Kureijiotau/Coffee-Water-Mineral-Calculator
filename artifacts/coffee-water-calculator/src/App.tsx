@@ -11206,36 +11206,13 @@ function DiySingleSaltConcentratePanel({
           <Sparkles className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
           <span>Desired dose</span>
         </div>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired ppm as CaCO₃ per drop</span>
-            <span className="mt-1 flex items-center gap-2">
-              <StableNumberInput min="0.01" step="0.01" value={desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)} onChange={event => setDesiredPpmInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Desired CaCO3 ppm per drop" />
-              <span className="text-sm text-slate-400">ppm</span>
-            </span>
-          </label>
-          <div className="rounded-xl border border-cyan-200/20 bg-cyan-400/[0.08] px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-100/70">Drops needed for this recipe target</span>
-            <div
-              className="mt-1 cursor-help text-xl font-semibold tabular-nums text-white"
-              title={`Exact calculation: ${recipeConcentrateNumber(doseDrops, 2)} drops (${recipeConcentrateNumber(doseMl, 2)} mL)`}
-            >
-              {recipeConcentrateNumber(doseDrops, 2)} drops
-              <span className="ml-2 text-sm font-medium text-cyan-100/70">≈ {practicalDoseDrops} drops</span>
-            </div>
-            <div className="mt-1 text-[10px] text-cyan-100/60">
-              {recipeConcentrateNumber(practicalDoseMl, 2)} mL for {recipeConcentrateNumber(finalLiters, 2)} L
-            </div>
-            <div className="mt-1 text-[10px] text-slate-500">
-              Recipe target: {recipeConcentrateNumber(targetPpm, 1)} ppm/L
-            </div>
-            {Math.abs(practicalDoseDrops - doseDrops) > 0.01 && (
-              <div className="mt-1 text-[10px] text-slate-500">
-                Exact calculation: {recipeConcentrateNumber(doseDrops, 2)} drops
-              </div>
-            )}
-          </div>
-        </div>
+        <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired ppm as CaCO₃ per drop</span>
+          <span className="mt-1 flex items-center gap-2">
+            <StableNumberInput min="0.01" step="0.01" value={desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)} onChange={event => setDesiredPpmInput(event.target.value)} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Desired CaCO3 ppm per drop" />
+            <span className="text-sm text-slate-400">ppm</span>
+          </span>
+        </label>
       </section>
 
       <section className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
