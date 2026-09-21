@@ -11083,7 +11083,9 @@ function DiySingleSaltConcentratePanel({
       finalLiters,
       totalSaltMgPerMl: stockVolumeMl > 0 ? saltMassMg / stockVolumeMl : 0,
       totalSaltMgPerDrop: effectiveSaltMgPerDrop,
-      saltEquivalentPpmPerDrop: targetPpm * strength / Math.max(stockVolumeMl, 1) / Math.max(activeDropsPerMl, 1) / Math.max(finalLiters, 1),
+      saltEquivalentPpmPerDrop: stockVolumeMl > 0 && activeDropsPerMl > 0 && finalLiters > 0
+        ? targetPpm * strength / stockVolumeMl / activeDropsPerMl / finalLiters
+        : 0,
       dropsPerLiter: doseDrops,
       batchDrops: doseDrops,
       groups: [{
