@@ -11257,7 +11257,7 @@ function DiySingleSaltConcentratePanel({
 
       <section className="rounded-2xl border border-cyan-300/25 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
-          <Sparkles className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
+          <Droplet className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
           <span>Desired dose</span>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-cyan-200/15 bg-slate-950/30 p-1" role="group" aria-label="Desired dose basis">
