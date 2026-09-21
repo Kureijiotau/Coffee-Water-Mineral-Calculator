@@ -6141,7 +6141,7 @@ function App() {
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Detail level</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {nerdLevel === 'alchemist'
-                    ? 'Use mineral salts to craft your recipe. Pick, save, share, or import recipes. Make all in one, separate GH KH or separate salt concentrates.'
+                    ? <>Use <strong className="font-semibold text-white">mineral salts</strong> to craft your recipe. Pick, save, share, or import recipes. Make all in one, separate GH KH or separate salt concentrates.</>
                     : nerdLevel === 'watermancer'
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
                       : 'Choose how much detail to show for your water recipe.'}
