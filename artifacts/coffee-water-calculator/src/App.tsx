@@ -8532,17 +8532,38 @@ function DiySingleSaltConcentrateBuilder({
           </span>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Mineral</span>
+          <label
+            className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 transition-colors"
+            style={saltVisualStyle(selectedSalt)}
+          >
+            <span
+              className="block text-[10px] font-semibold uppercase tracking-wider text-[color:var(--salt-primary)]"
+              style={{ '--salt-primary': getSaltColorTokens(selectedSalt).primary } as CSSProperties}
+            >
+              Mineral
+            </span>
             <select
               value={saltId}
               onChange={event => setSaltId(event.target.value)}
-              className="mt-1 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+              className="mt-1 w-full bg-transparent text-sm font-semibold text-[color:var(--salt-primary)] outline-none"
+              style={{ '--salt-primary': getSaltColorTokens(selectedSalt).primary } as CSSProperties}
               aria-label="DIY concentrate mineral"
             >
-              {SALTS.map(salt => (
-                <option key={salt.id} value={salt.id}>{salt.name}</option>
-              ))}
+              {SALTS.map(optionSalt => {
+                const optionColors = getSaltColorTokens(optionSalt);
+                return (
+                <option
+                  key={optionSalt.id}
+                  value={optionSalt.id}
+                  style={{
+                    color: optionColors.primary,
+                    backgroundColor: '#0f172a',
+                  }}
+                >
+                  {optionSalt.name}
+                </option>
+                );
+              })}
             </select>
           </label>
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
