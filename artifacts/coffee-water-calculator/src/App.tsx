@@ -11238,7 +11238,15 @@ function DiySingleSaltConcentratePanel({
         <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
         <div className="mt-3 space-y-2 text-xs text-slate-300">
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3">
-            <span>1. Weigh {form.label} {salt.name}</span>
+            <span>
+              1. Weigh {form.label}{' '}
+              <strong
+                className="font-semibold text-[color:var(--salt-primary)]"
+                style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}
+              >
+                {salt.name}
+              </strong>
+            </span>
             <strong className="tabular-nums text-emerald-100">{recipeConcentrateMassLabel(saltMassMg / 1000)}</strong>
           </div>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3">
