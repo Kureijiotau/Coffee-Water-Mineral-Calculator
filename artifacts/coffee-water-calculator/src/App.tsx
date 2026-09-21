@@ -8562,7 +8562,7 @@ function DiySingleSaltConcentrateBuilder({
                     backgroundColor: '#0f172a',
                   }}
                 >
-                  {optionSalt.name}
+                  {optionSalt.name}{MEME_SALT_IDS.has(optionSalt.id) ? ' (memes)' : ''}
                 </option>
                 );
               })}
