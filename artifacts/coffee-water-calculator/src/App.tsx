@@ -2923,6 +2923,15 @@ function App() {
   const [autoCraftPreset, setAutoCraftPreset] = useState<AutoCraftPreset>('closest-match');
   const [watermancerSaltObjective, setWatermancerSaltObjective] = useState<AutoCraftObjective>('balanced');
   const [watermancerMatchingMode, setWatermancerMatchingMode] = useState<WatermancerMatchingMode>('target-values');
+  const [watermancerRatioSwaps, setWatermancerRatioSwaps] = useState<Record<RatioSwapKey, boolean>>({
+    'gh-kh': false,
+    'na-k': false,
+    'mg-ca': false,
+    'cl-so4': false,
+  });
+  const swapWatermancerRatio = (key: RatioSwapKey) => {
+    setWatermancerRatioSwaps(previous => ({ ...previous, [key]: !previous[key] }));
+  };
   const [watermancerRecalculationNonce, setWatermancerRecalculationNonce] = useState(0);
   const [watermancerBestMatchDeviationMode, setWatermancerBestMatchDeviationMode] = useState<WatermancerBestMatchDeviationMode | null>(null);
   const [watermancerIonSourcePreferences, setWatermancerIonSourcePreferences] = useState<Record<IonId, WatermancerIonSourcePreference>>(
@@ -7151,7 +7160,11 @@ function App() {
                     </div>
                   ))}
                 </div>
-                <WaterHardnessRatioFooter ions={entry.ions} />
+               <WaterHardnessRatioFooter
+                 ions={entry.ions}
+                 swappedRatios={watermancerRatioSwaps}
+                 onSwapRatio={swapWatermancerRatio}
+               />
                 <WaterMetadataFields
                   metadata={entry.metadata}
                   onChange={metadata => updateMineralWater(entry.id, { metadata })}
@@ -7395,6 +7408,8 @@ function App() {
                onDockPositionChange={setWatermancerResultDock}
                onToggleFeedback={toggleWatermancerFeedback}
                onToggleFollow={toggleWatermancerFollow}
+                swappedRatios={watermancerRatioSwaps}
+                onSwapRatio={swapWatermancerRatio}
             />
           </div>
         )}
@@ -13028,6 +13043,8 @@ function WatermancerIonReadingRow({
   );
 }
 
+type RatioSwapKey = 'gh-kh' | 'na-k' | 'mg-ca' | 'cl-so4';
+
 function WatermancerIonCoverageBars({
   actualIons,
   supplementalIons,
@@ -13043,6 +13060,8 @@ function WatermancerIonCoverageBars({
   onDockPositionChange,
   onToggleFeedback,
   onToggleFollow,
+  swappedRatios,
+  onSwapRatio,
 }: {
   actualIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
@@ -13058,6 +13077,8 @@ function WatermancerIonCoverageBars({
   onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
   onToggleFeedback: () => void;
   onToggleFollow: () => void;
+  swappedRatios: Record<RatioSwapKey, boolean>;
+  onSwapRatio: (key: RatioSwapKey) => void;
 }) {
   const followPositionClass = dockPosition === 'left'
     ? 'fixed inset-x-3 top-3 sm:left-3 sm:right-auto sm:w-[calc(100%-3rem)] sm:max-w-xl sm:translate-x-0'
@@ -13074,20 +13095,28 @@ function WatermancerIonCoverageBars({
   const completeActualIons = completeIonTotals(actualIons);
   const gh = computeGH(completeActualIons);
   const kh = computeKH(completeActualIons);
-  const ghKhRatio = kh > 0 && Number.isFinite(gh / kh)
-    ? `${(gh / kh).toFixed(1)}:1`
+  const ghKhFirst = swappedRatios['gh-kh'] ? kh : gh;
+  const ghKhSecond = swappedRatios['gh-kh'] ? gh : kh;
+  const ghKhRatio = ghKhSecond > 0 && Number.isFinite(ghKhFirst / ghKhSecond)
+    ? `${(ghKhFirst / ghKhSecond).toFixed(1)}:1`
     : '—';
   const ratioSummaries = [
     { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
-  ].map(({ first, second, label }) => {
-    const firstValue = completeActualIons[first] ?? 0;
-    const secondValue = completeActualIons[second] ?? 0;
+  ].map(({ first, second, label }, index) => {
+    const key = (['na-k', 'mg-ca', 'cl-so4'] as const)[index];
+    const displayedFirst = swappedRatios[key] ? second : first;
+    const displayedSecond = swappedRatios[key] ? first : second;
+    const firstValue = completeActualIons[displayedFirst] ?? 0;
+    const secondValue = completeActualIons[displayedSecond] ?? 0;
     return {
-      first,
-      second,
-      label,
+      first: displayedFirst,
+      second: displayedSecond,
+      key,
+      label: swappedRatios[key]
+        ? `${ION_MAP[second].formula}:${ION_MAP[first].formula}`
+        : label,
       ratio: secondValue > 0 && Number.isFinite(firstValue / secondValue)
         ? `${(firstValue / secondValue).toFixed(1)}:1`
         : '—',
@@ -13271,34 +13300,34 @@ function WatermancerIonCoverageBars({
        })}
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ratios</span>
-          <span className="whitespace-nowrap">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">GH:KH</span>
-            <span className="ml-1" style={{ color: ION_MAP.magnesium.color.foreground }}>GH</span>
-            <span className="text-slate-500">:</span>
-            <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>KH</span>
-            <span className="ml-1 text-slate-300">{ghKhRatio}</span>
-          </span>
-          <span className="whitespace-nowrap">
-             <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
+           <button type="button" onClick={() => onSwapRatio('gh-kh')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap GH and KH">
+             <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{swappedRatios['gh-kh'] ? 'KH:GH' : 'GH:KH'}</span>
+             <span className="ml-1" style={{ color: ION_MAP.magnesium.color.foreground }}>{swappedRatios['gh-kh'] ? 'KH' : 'GH'}</span>
              <span className="text-slate-500">:</span>
-             <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
+             <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>{swappedRatios['gh-kh'] ? 'GH' : 'KH'}</span>
+             <span className="ml-1 text-slate-300">{ghKhRatio}</span>
+           </button>
+           <button type="button" onClick={() => onSwapRatio('na-k')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Na and K">
+              <span style={{ color: ION_MAP[ratioSummaries[0].first].color.foreground }}>{ratioSummaries[0].label.split(':')[0]}</span>
+              <span className="text-slate-500">:</span>
+              <span style={{ color: ION_MAP[ratioSummaries[0].second].color.foreground }}>{ratioSummaries[0].label.split(':')[1]}</span>
              <span className="ml-1 text-slate-300">{ratioSummaries[0]?.ratio}</span>
              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[0]?.total ?? 0)} ppm)</span>
-           </span>
-           <span className="whitespace-nowrap">
-            <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
+           </button>
+           <button type="button" onClick={() => onSwapRatio('mg-ca')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Mg and Ca">
+             <span style={{ color: ION_MAP[ratioSummaries[1].first].color.foreground }}>{ratioSummaries[1].label.split(':')[0]}</span>
             <span className="text-slate-500">:</span>
-            <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
+             <span style={{ color: ION_MAP[ratioSummaries[1].second].color.foreground }}>{ratioSummaries[1].label.split(':')[1]}</span>
              <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
-          </span>
-          <span className="whitespace-nowrap">
-             <span style={{ color: ION_MAP.chloride.color.foreground }}>Cl</span>
+           </button>
+           <button type="button" onClick={() => onSwapRatio('cl-so4')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Cl and SO₄">
+              <span style={{ color: ION_MAP[ratioSummaries[2].first].color.foreground }}>{ratioSummaries[2].label.split(':')[0]}</span>
             <span className="text-slate-500">:</span>
-             <span style={{ color: ION_MAP.sulfate.color.foreground }}>SO₄</span>
+              <span style={{ color: ION_MAP[ratioSummaries[2].second].color.foreground }}>{ratioSummaries[2].label.split(':')[1]}</span>
              <span className="ml-1 text-slate-300">{ratioSummaries[2]?.ratio}</span>
              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[2]?.total ?? 0)} ppm)</span>
-          </span>
+           </button>
        </div>
       </div>
       </div>
@@ -16402,26 +16431,40 @@ function WaterMetadataFields({
 
 function WaterHardnessRatioFooter({
   ions,
+  swappedRatios,
+  onSwapRatio,
 }: {
   ions: Partial<Record<IonId, string>>;
+  swappedRatios: Record<RatioSwapKey, boolean>;
+  onSwapRatio: (key: RatioSwapKey) => void;
 }) {
   const waterIons = completeIonTotals(
     numericIons(ions) as Partial<Record<IonId, number>>,
   );
   const gh = computeGH(waterIons);
   const kh = computeKH(waterIons);
-  const ratio = kh > 0 && Number.isFinite(gh / kh)
-    ? `${(gh / kh).toFixed(2)} : 1`
+  const ghKhFirst = swappedRatios['gh-kh'] ? kh : gh;
+  const ghKhSecond = swappedRatios['gh-kh'] ? gh : kh;
+  const ratio = ghKhSecond > 0 && Number.isFinite(ghKhFirst / ghKhSecond)
+    ? `${(ghKhFirst / ghKhSecond).toFixed(2)} : 1`
     : '—';
   const ratioSummaries = [
     { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
-  ].map(({ first, second, label }) => {
-    const firstValue = waterIons[first] ?? 0;
-    const secondValue = waterIons[second] ?? 0;
+  ].map(({ first, second, label }, index) => {
+    const key = (['na-k', 'mg-ca', 'cl-so4'] as const)[index];
+    const displayedFirst = swappedRatios[key] ? second : first;
+    const displayedSecond = swappedRatios[key] ? first : second;
+    const firstValue = waterIons[displayedFirst] ?? 0;
+    const secondValue = waterIons[displayedSecond] ?? 0;
     return {
-      label,
+      key,
+      first: displayedFirst,
+      second: displayedSecond,
+      label: swappedRatios[key]
+        ? `${ION_MAP[second].formula}:${ION_MAP[first].formula}`
+        : label,
       ratio: secondValue > 0 && Number.isFinite(firstValue / secondValue)
         ? `${(firstValue / secondValue).toFixed(1)} : 1`
         : '—',
@@ -16433,9 +16476,14 @@ function WaterHardnessRatioFooter({
       className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-700/40 pt-2"
       aria-label={`Water hardness balance: GH ${fmt(gh)} ppm, KH ${kh > 0 ? `${fmt(kh)} ppm` : 'not available'}, ratio ${ratio}`}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-        GH : KH balance
-      </span>
+      <button
+        type="button"
+        onClick={() => onSwapRatio('gh-kh')}
+        className="rounded px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500 transition hover:bg-sky-500/10 hover:text-slate-300"
+        title="Swap GH and KH"
+      >
+        {swappedRatios['gh-kh'] ? 'KH : GH' : 'GH : KH'} balance
+      </button>
       <div className="flex flex-wrap items-center gap-2 text-[11px] tabular-nums">
         <span className="font-semibold text-[color:var(--ion-fg)]" style={ionVisualStyle('magnesium')}>
           GH {fmt(gh)}
@@ -16450,10 +16498,17 @@ function WaterHardnessRatioFooter({
         </span>
       </div>
       <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-700/30 pt-1.5 text-[11px] tabular-nums">
-        {ratioSummaries.map(({ label, ratio: relationshipRatio }) => (
-          <span key={label} className="text-slate-500">
-            {label} <span className="font-semibold text-sky-300">{relationshipRatio}</span>
-          </span>
+        {ratioSummaries.map(({ key, first, second, ratio: relationshipRatio }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onSwapRatio(key)}
+            className="rounded px-1 text-slate-500 transition hover:bg-sky-500/10 hover:text-slate-300"
+            title={`Swap ${ION_MAP[first].formula} and ${ION_MAP[second].formula}`}
+          >
+            {ION_MAP[first].formula}:{ION_MAP[second].formula}{' '}
+            <span className="font-semibold text-sky-300">{relationshipRatio}</span>
+          </button>
         ))}
       </div>
     </div>
