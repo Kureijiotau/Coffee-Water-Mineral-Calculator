@@ -16413,6 +16413,20 @@ function WaterHardnessRatioFooter({
   const ratio = kh > 0 && Number.isFinite(gh / kh)
     ? `${(gh / kh).toFixed(2)} : 1`
     : '—';
+  const ratioSummaries = [
+    { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
+    { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
+    { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
+  ].map(({ first, second, label }) => {
+    const firstValue = waterIons[first] ?? 0;
+    const secondValue = waterIons[second] ?? 0;
+    return {
+      label,
+      ratio: secondValue > 0 && Number.isFinite(firstValue / secondValue)
+        ? `${(firstValue / secondValue).toFixed(1)} : 1`
+        : '—',
+    };
+  });
 
   return (
     <div
@@ -16434,6 +16448,13 @@ function WaterHardnessRatioFooter({
         <span className="text-slate-500">
           Ratio <span className="font-semibold text-sky-300">{ratio}</span>
         </span>
+      </div>
+      <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-700/30 pt-1.5 text-[11px] tabular-nums">
+        {ratioSummaries.map(({ label, ratio: relationshipRatio }) => (
+          <span key={label} className="text-slate-500">
+            {label} <span className="font-semibold text-sky-300">{relationshipRatio}</span>
+          </span>
+        ))}
       </div>
     </div>
   );
