@@ -2925,7 +2925,6 @@ function App() {
   const [watermancerMatchingMode, setWatermancerMatchingMode] = useState<WatermancerMatchingMode>('target-values');
   const [watermancerRatioSwaps, setWatermancerRatioSwaps] = useState<Record<RatioSwapKey, boolean>>({
     'gh-kh': false,
-    'na-k': false,
     'mg-ca': false,
     'cl-so4': false,
   });
@@ -13043,7 +13042,7 @@ function WatermancerIonReadingRow({
   );
 }
 
-type RatioSwapKey = 'gh-kh' | 'na-k' | 'mg-ca' | 'cl-so4';
+type RatioSwapKey = 'gh-kh' | 'mg-ca' | 'cl-so4';
 
 function WatermancerIonCoverageBars({
   actualIons,
@@ -13100,12 +13099,16 @@ function WatermancerIonCoverageBars({
   const ghKhRatio = ghKhSecond > 0 && Number.isFinite(ghKhFirst / ghKhSecond)
     ? `${(ghKhFirst / ghKhSecond).toFixed(1)}:1`
     : '—';
+  const monovalentTotal = (completeActualIons.sodium ?? 0) + (completeActualIons.potassium ?? 0);
+  const divalentTotal = (completeActualIons.magnesium ?? 0) + (completeActualIons.calcium ?? 0);
+  const monovalentPercent = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
+    ? `${((monovalentTotal / divalentTotal) * 100).toFixed(1)}%`
+    : '—';
   const ratioSummaries = [
-    { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
   ].map(({ first, second, label }, index) => {
-    const key = (['na-k', 'mg-ca', 'cl-so4'] as const)[index];
+    const key = (['mg-ca', 'cl-so4'] as const)[index];
     const displayedFirst = swappedRatios[key] ? second : first;
     const displayedSecond = swappedRatios[key] ? first : second;
     const firstValue = completeActualIons[displayedFirst] ?? 0;
@@ -13307,26 +13310,24 @@ function WatermancerIonCoverageBars({
              <span style={{ color: ION_MAP.bicarbonate.color.foreground }}>{swappedRatios['gh-kh'] ? 'GH' : 'KH'}</span>
              <span className="ml-1 text-slate-300">{ghKhRatio}</span>
            </button>
-           <button type="button" onClick={() => onSwapRatio('na-k')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Na and K">
-              <span style={{ color: ION_MAP[ratioSummaries[0].first].color.foreground }}>{ratioSummaries[0].label.split(':')[0]}</span>
-              <span className="text-slate-500">:</span>
-              <span style={{ color: ION_MAP[ratioSummaries[0].second].color.foreground }}>{ratioSummaries[0].label.split(':')[1]}</span>
-             <span className="ml-1 text-slate-300">{ratioSummaries[0]?.ratio}</span>
-             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[0]?.total ?? 0)} ppm)</span>
-           </button>
+           <span className="whitespace-nowrap rounded px-1">
+             <span className="text-slate-500">Na + K</span>
+             <span className="ml-1 text-slate-300">{monovalentPercent}</span>
+             <span className="ml-1 text-[10px] font-normal text-slate-500">vs Mg + Ca</span>
+           </span>
            <button type="button" onClick={() => onSwapRatio('mg-ca')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Mg and Ca">
-             <span style={{ color: ION_MAP[ratioSummaries[1].first].color.foreground }}>{ratioSummaries[1].label.split(':')[0]}</span>
+              <span style={{ color: ION_MAP[ratioSummaries[0].first].color.foreground }}>{ratioSummaries[0].label.split(':')[0]}</span>
             <span className="text-slate-500">:</span>
-             <span style={{ color: ION_MAP[ratioSummaries[1].second].color.foreground }}>{ratioSummaries[1].label.split(':')[1]}</span>
-             <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
-             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
+              <span style={{ color: ION_MAP[ratioSummaries[0].second].color.foreground }}>{ratioSummaries[0].label.split(':')[1]}</span>
+              <span className="ml-1 text-slate-300">{ratioSummaries[0]?.ratio}</span>
+              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[0]?.total ?? 0)} ppm)</span>
            </button>
            <button type="button" onClick={() => onSwapRatio('cl-so4')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Cl and SO₄">
-              <span style={{ color: ION_MAP[ratioSummaries[2].first].color.foreground }}>{ratioSummaries[2].label.split(':')[0]}</span>
+               <span style={{ color: ION_MAP[ratioSummaries[1].first].color.foreground }}>{ratioSummaries[1].label.split(':')[0]}</span>
             <span className="text-slate-500">:</span>
-              <span style={{ color: ION_MAP[ratioSummaries[2].second].color.foreground }}>{ratioSummaries[2].label.split(':')[1]}</span>
-             <span className="ml-1 text-slate-300">{ratioSummaries[2]?.ratio}</span>
-             <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[2]?.total ?? 0)} ppm)</span>
+               <span style={{ color: ION_MAP[ratioSummaries[1].second].color.foreground }}>{ratioSummaries[1].label.split(':')[1]}</span>
+              <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
+              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
            </button>
        </div>
       </div>
@@ -16448,12 +16449,16 @@ function WaterHardnessRatioFooter({
   const ratio = ghKhSecond > 0 && Number.isFinite(ghKhFirst / ghKhSecond)
     ? `${(ghKhFirst / ghKhSecond).toFixed(2)} : 1`
     : '—';
+  const monovalentTotal = (waterIons.sodium ?? 0) + (waterIons.potassium ?? 0);
+  const divalentTotal = (waterIons.magnesium ?? 0) + (waterIons.calcium ?? 0);
+  const monovalentPercent = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
+    ? `${((monovalentTotal / divalentTotal) * 100).toFixed(1)}%`
+    : '—';
   const ratioSummaries = [
-    { first: 'sodium' as const, second: 'potassium' as const, label: 'Na:K' },
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
   ].map(({ first, second, label }, index) => {
-    const key = (['na-k', 'mg-ca', 'cl-so4'] as const)[index];
+    const key = (['mg-ca', 'cl-so4'] as const)[index];
     const displayedFirst = swappedRatios[key] ? second : first;
     const displayedSecond = swappedRatios[key] ? first : second;
     const firstValue = waterIons[displayedFirst] ?? 0;
@@ -16498,6 +16503,10 @@ function WaterHardnessRatioFooter({
         </span>
       </div>
       <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-700/30 pt-1.5 text-[11px] tabular-nums">
+        <span className="rounded px-1 text-slate-500">
+          Na + K <span className="font-semibold text-sky-300">{monovalentPercent}</span>
+          <span className="ml-1">vs Mg + Ca</span>
+        </span>
         {ratioSummaries.map(({ key, first, second, ratio: relationshipRatio }) => (
           <button
             key={key}
