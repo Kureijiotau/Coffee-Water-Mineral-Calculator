@@ -13092,6 +13092,7 @@ function WatermancerIonCoverageBars({
     id !== 'citrates' || (actualIons[id] ?? 0) > 0
   ));
   const completeActualIons = completeIonTotals(actualIons);
+  const hasModeledIons = ACTIVE_ION_IDS.some(id => (completeActualIons[id] ?? 0) > 0);
   const gh = computeGH(completeActualIons);
   const kh = computeKH(completeActualIons);
   const ghKhFirst = swappedRatios['gh-kh'] ? kh : gh;
@@ -13143,8 +13144,10 @@ function WatermancerIonCoverageBars({
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Current ion readings</h2>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
-               Final mineral contribution from the current waters and salt doses.
+             <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                {hasModeledIons
+                  ? 'Final mineral contribution from the current waters and salt doses.'
+                  : 'Ratios are ready to calculate. Add water or salts to populate the ion readings.'}
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
@@ -13309,7 +13312,7 @@ function WatermancerIonCoverageBars({
            </div>
          );
        })}
-        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
+         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ratios</span>
            <button type="button" onClick={() => onSwapRatio('gh-kh')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap GH and KH">
              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{swappedRatios['gh-kh'] ? 'KH:GH' : 'GH:KH'}</span>
