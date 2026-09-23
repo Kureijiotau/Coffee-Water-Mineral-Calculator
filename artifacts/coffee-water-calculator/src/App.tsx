@@ -13093,15 +13093,18 @@ function WatermancerIonCoverageBars({
   ));
   const completeActualIons = completeIonTotals(actualIons);
   const hasModeledIons = ACTIVE_ION_IDS.some(id => (completeActualIons[id] ?? 0) > 0);
-  const gh = computeGH(completeActualIons);
-  const kh = computeKH(completeActualIons);
+  const ratioIons = hasModeledIons
+    ? completeActualIons
+    : completeIonTotals(targetIons);
+  const gh = computeGH(ratioIons);
+  const kh = computeKH(ratioIons);
   const ghKhFirst = swappedRatios['gh-kh'] ? kh : gh;
   const ghKhSecond = swappedRatios['gh-kh'] ? gh : kh;
   const ghKhRatio = ghKhSecond > 0 && Number.isFinite(ghKhFirst / ghKhSecond)
     ? `${(ghKhFirst / ghKhSecond).toFixed(1)}:1`
     : '—';
-  const monovalentTotal = (completeActualIons.sodium ?? 0) + (completeActualIons.potassium ?? 0);
-  const divalentTotal = (completeActualIons.magnesium ?? 0) + (completeActualIons.calcium ?? 0);
+  const monovalentTotal = (ratioIons.sodium ?? 0) + (ratioIons.potassium ?? 0);
+  const divalentTotal = (ratioIons.magnesium ?? 0) + (ratioIons.calcium ?? 0);
   const monovalentPercentValue = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
     ? (monovalentTotal / divalentTotal) * 100
     : null;
@@ -13120,8 +13123,8 @@ function WatermancerIonCoverageBars({
     const key = (['mg-ca', 'cl-so4'] as const)[index];
     const displayedFirst = swappedRatios[key] ? second : first;
     const displayedSecond = swappedRatios[key] ? first : second;
-    const firstValue = completeActualIons[displayedFirst] ?? 0;
-    const secondValue = completeActualIons[displayedSecond] ?? 0;
+    const firstValue = ratioIons[displayedFirst] ?? 0;
+    const secondValue = ratioIons[displayedSecond] ?? 0;
     return {
       first: displayedFirst,
       second: displayedSecond,
@@ -13147,7 +13150,7 @@ function WatermancerIonCoverageBars({
              <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
                 {hasModeledIons
                   ? 'Final mineral contribution from the current waters and salt doses.'
-                  : 'Ratios are ready to calculate. Add water or salts to populate the ion readings.'}
+                  : 'Preview ratios use the selected ion targets until you add water or salts.'}
             </p>
           </div>
           <span className="text-right text-[10px] uppercase tracking-wider text-slate-500">
@@ -13313,7 +13316,9 @@ function WatermancerIonCoverageBars({
          );
        })}
          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Ratios</span>
+           <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+             Ratios{!hasModeledIons && <span className="ml-1 normal-case tracking-normal text-indigo-300/70">(preview)</span>}
+           </span>
            <button type="button" onClick={() => onSwapRatio('gh-kh')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap GH and KH">
              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{swappedRatios['gh-kh'] ? 'KH:GH' : 'GH:KH'}</span>
              <span className="ml-1" style={{ color: ION_MAP.magnesium.color.foreground }}>{swappedRatios['gh-kh'] ? 'KH' : 'GH'}</span>
