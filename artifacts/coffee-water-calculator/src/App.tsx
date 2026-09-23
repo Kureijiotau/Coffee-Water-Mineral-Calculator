@@ -13101,9 +13101,17 @@ function WatermancerIonCoverageBars({
     : '—';
   const monovalentTotal = (completeActualIons.sodium ?? 0) + (completeActualIons.potassium ?? 0);
   const divalentTotal = (completeActualIons.magnesium ?? 0) + (completeActualIons.calcium ?? 0);
-  const monovalentPercent = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
-    ? `${((monovalentTotal / divalentTotal) * 100).toFixed(1)}%`
-    : '—';
+  const monovalentPercentValue = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
+    ? (monovalentTotal / divalentTotal) * 100
+    : null;
+  const monovalentPercent = monovalentPercentValue == null
+    ? '—'
+    : `${monovalentPercentValue.toFixed(1)}%`;
+  const monovalentPercentClass = monovalentPercentValue != null && monovalentPercentValue > 50
+    ? 'text-rose-300'
+    : monovalentPercentValue != null && monovalentPercentValue > 30
+      ? 'text-amber-300'
+      : 'text-slate-300';
   const ratioSummaries = [
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
@@ -13312,7 +13320,7 @@ function WatermancerIonCoverageBars({
            </button>
            <span className="whitespace-nowrap rounded px-1">
              <span className="text-slate-500">Na + K</span>
-             <span className="ml-1 text-slate-300">{monovalentPercent}</span>
+             <span className={`ml-1 ${monovalentPercentClass}`}>{monovalentPercent}</span>
              <span className="ml-1 text-[10px] font-normal text-slate-500">vs Mg + Ca</span>
            </span>
            <button type="button" onClick={() => onSwapRatio('mg-ca')} className="whitespace-nowrap rounded px-1 transition hover:bg-cyan-500/10" title="Swap Mg and Ca">
@@ -16451,9 +16459,17 @@ function WaterHardnessRatioFooter({
     : '—';
   const monovalentTotal = (waterIons.sodium ?? 0) + (waterIons.potassium ?? 0);
   const divalentTotal = (waterIons.magnesium ?? 0) + (waterIons.calcium ?? 0);
-  const monovalentPercent = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
-    ? `${((monovalentTotal / divalentTotal) * 100).toFixed(1)}%`
-    : '—';
+  const monovalentPercentValue = divalentTotal > 0 && Number.isFinite(monovalentTotal / divalentTotal)
+    ? (monovalentTotal / divalentTotal) * 100
+    : null;
+  const monovalentPercent = monovalentPercentValue == null
+    ? '—'
+    : `${monovalentPercentValue.toFixed(1)}%`;
+  const monovalentPercentClass = monovalentPercentValue != null && monovalentPercentValue > 50
+    ? 'text-rose-300'
+    : monovalentPercentValue != null && monovalentPercentValue > 30
+      ? 'text-amber-300'
+      : 'text-slate-300';
   const ratioSummaries = [
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
@@ -16504,7 +16520,7 @@ function WaterHardnessRatioFooter({
       </div>
       <div className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-700/30 pt-1.5 text-[11px] tabular-nums">
         <span className="rounded px-1 text-slate-500">
-          Na + K <span className="font-semibold text-sky-300">{monovalentPercent}</span>
+          Na + K <span className={`font-semibold ${monovalentPercentClass}`}>{monovalentPercent}</span>
           <span className="ml-1">vs Mg + Ca</span>
         </span>
         {ratioSummaries.map(({ key, first, second, ratio: relationshipRatio }) => (
