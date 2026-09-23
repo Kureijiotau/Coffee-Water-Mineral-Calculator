@@ -16537,27 +16537,6 @@ function WaterHardnessRatioFooter({
             <span className="font-semibold text-sky-300">{relationshipRatio}</span>
           </button>
         ))}
-        <span className="rounded px-1 text-slate-500">
-          <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
-          <span> + </span>
-          <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
-          <span className="mx-1">relative to</span>
-          <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
-          <span> + </span>
-          <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
-          <span className={`ml-1 font-semibold ${monovalentPercentClass}`}>{monovalentPercent}</span>
-          <span className="ml-1 text-[10px]">({fmt(monovalentTotal)} ppm)</span>
-        </span>
-        <span className="rounded px-1 text-slate-500">
-          <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
-          <span> + </span>
-          <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
-          <span className="mx-1">relative to</span>
-          <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
-          <span> + </span>
-          <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
-          <span className={`ml-1 font-semibold ${monovalentPercentClass}`}>{monovalentPercent}</span>
-        </span>
       </div>
     </div>
   );
