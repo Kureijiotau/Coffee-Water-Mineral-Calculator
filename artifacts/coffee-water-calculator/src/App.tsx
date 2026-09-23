@@ -16533,7 +16533,9 @@ function WaterHardnessRatioFooter({
             className="rounded px-1 text-slate-500 transition hover:bg-sky-500/10 hover:text-slate-300"
             title={`Swap ${ION_MAP[first].formula} and ${ION_MAP[second].formula}`}
           >
-            {ION_MAP[first].formula}:{ION_MAP[second].formula}{' '}
+            <span style={{ color: ION_MAP[first].color.foreground }}>{ION_MAP[first].formula}</span>
+            <span className="text-slate-500">:</span>
+            <span style={{ color: ION_MAP[second].color.foreground }}>{ION_MAP[second].formula}</span>{' '}
             <span className="font-semibold text-sky-300">{relationshipRatio}</span>
           </button>
         ))}
