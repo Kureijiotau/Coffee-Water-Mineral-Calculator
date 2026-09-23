@@ -13341,6 +13341,7 @@ function WatermancerIonCoverageBars({
               <span className="text-slate-500"> + </span>
               <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
               <span className={`ml-1 ${monovalentPercentClass}`}>{monovalentPercent}</span>
+              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(monovalentTotal)} ppm)</span>
             </span>
        </div>
       </div>
@@ -16545,6 +16546,7 @@ function WaterHardnessRatioFooter({
           <span> + </span>
           <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
           <span className={`ml-1 font-semibold ${monovalentPercentClass}`}>{monovalentPercent}</span>
+          <span className="ml-1 text-[10px]">({fmt(monovalentTotal)} ppm)</span>
         </span>
         <span className="rounded px-1 text-slate-500">
           <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
