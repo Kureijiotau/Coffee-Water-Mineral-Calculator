@@ -4222,8 +4222,9 @@ function App() {
     (finalMixtureTargetIons.sodium ?? 0) - (suggestedIonTotalsBeforeSodiumCorrection.sodium ?? 0),
     0,
   );
-  const sodiumCorrectionAllowed = !showWatermancer
-    || watermancerUsedSaltIds.includes('nacl');
+   const sodiumCorrectionAllowed = showWatermancer
+     ? watermancerUsedSaltIds.includes('nacl')
+     : (saltTargets.nacl ?? 0) > 0.000001;
   const sodiumCorrectionTarget = hasMineralWater && sodiumCorrectionAllowed && (showAlchemist || sodiumCorrectionOn)
     ? computeNaClTargetForSodiumGap(sodiumCorrectionGap)
     : 0;
@@ -6410,6 +6411,10 @@ function App() {
             const publishedTargetEntry = publishedTargetRecipe?.salts[salt.id];
             const displayedRecipeTarget = publishedTargetEntry?.sourceTarget ?? recipeTarget;
             const displayedRecipeTargetValue = Number(displayedRecipeTarget);
+             const coveredByMineralWater = showAlchemist
+               && hasMineralWater
+               && displayedRecipeTargetValue > 0
+               && target <= 0.000001;
              const targetInputValue = Object.prototype.hasOwnProperty.call(targetInputDrafts, salt.id)
                ? targetInputDrafts[salt.id]
                : (displayedRecipeTargetValue > 0 ? String(displayedRecipeTarget) : '');
@@ -6511,28 +6516,35 @@ function App() {
                 </div>
                  <div className="mineral-recipe-table__target-cell">
                    <label htmlFor={`salt-target-${salt.id}`} className="sm:hidden block text-[10px] uppercase tracking-wider text-slate-500 mb-1">{publishedTargetLabel}</label>
-                   <StableNumberInput
-                    id={`salt-target-${salt.id}`}
-                    inputMode="decimal"
-                    min="0"
-                    aria-label={`${salt.name} target ppm`}
-                     value={targetInputValue}
-                     onFocus={() => setTargetInputDrafts(current => ({
-                       ...current,
-                       [salt.id]: targetInputValue,
-                     }))}
-                     onBlur={() => setTargetInputDrafts(current => {
-                       const next = { ...current };
-                       delete next[salt.id];
-                       return next;
-                     })}
-                    onChange={e => updateTargetValue(e.target.value)}
-                    onKeyDown={e => {
-                       if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
-                    }}
-                    placeholder="0"
-                     className="mineral-recipe-table__input mineral-recipe-table__input--target w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
-                  />
+                    <div className="relative">
+                      <StableNumberInput
+                       id={`salt-target-${salt.id}`}
+                       inputMode="decimal"
+                       min="0"
+                       aria-label={`${salt.name} target ppm`}
+                        value={targetInputValue}
+                        onFocus={() => setTargetInputDrafts(current => ({
+                          ...current,
+                          [salt.id]: targetInputValue,
+                        }))}
+                        onBlur={() => setTargetInputDrafts(current => {
+                          const next = { ...current };
+                          delete next[salt.id];
+                          return next;
+                        })}
+                       onChange={e => updateTargetValue(e.target.value)}
+                       onKeyDown={e => {
+                         if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
+                       }}
+                       placeholder="0"
+                        className="mineral-recipe-table__input mineral-recipe-table__input--target w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                     />
+                      {coveredByMineralWater && (
+                        <span className="mt-1 block text-[10px] font-semibold text-emerald-400">
+                          covered by mineral water
+                        </span>
+                      )}
+                    </div>
                 </div>
                  <div className="mineral-recipe-table__dose-cell col-span-2 sm:col-span-1 flex items-center justify-center gap-2">
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
