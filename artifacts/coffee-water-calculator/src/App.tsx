@@ -6431,8 +6431,8 @@ function App() {
             const mg = L > 0 && target > 0
               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
-            const recipeMass = L > 0 && recipeTarget > 0
-              ? computeSaltMg(recipeTarget, L, form.molarMass, salt.anhydrousMass)
+             const recipeMass = L > 0 && target > 0
+               ? computeSaltMg(target, L, form.molarMass, salt.anhydrousMass)
               : 0;
             const concMg = concentrateOn && target > 0 && concentrateStrength > 0
               ? computeRecipeStockSaltMassMg(target, concentrateStrength, form.molarMass, salt.anhydrousMass)
