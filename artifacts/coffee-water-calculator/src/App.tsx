@@ -4583,7 +4583,7 @@ function App() {
     && Object.values(activeRecipe.salts).some(entry => entry.sourceTarget !== undefined)
     ? activeRecipe
     : undefined;
-  const publishedTargetLabel = publishedTargetRecipe ? 'Published target' : 'Salt target (ppm)';
+  const publishedTargetLabel = publishedTargetRecipe ? 'Published target' : 'Mineral target (ppm)';
   const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
   const autoFillTargets = showAlchemist && hasSaltRecipeTargets
     ? saltOnlyIons
@@ -6374,7 +6374,7 @@ function App() {
           </div>
              <div className="mineral-recipe-table">
              <div className="mineral-recipe-table__intro flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 text-[11px] leading-relaxed sm:px-6">
-               <span>Enter salt amounts in PPM or milligrams; Direct dose shows the amount to add for the selected final batch volume.</span>
+               <span>Enter mineral targets in PPM or milligrams; Direct dose shows the amount to add for the selected final batch volume.</span>
                <button
                  type="button"
                  onClick={() => setShowAdvancedHydrationForms(value => !value)}
@@ -6389,9 +6389,9 @@ function App() {
            <div className="mineral-recipe-table__header hidden sm:grid grid-cols-[1.7fr_1fr_1fr] gap-3 px-6 py-3 text-[10px] font-semibold uppercase tracking-wider">
              <span className="font-bold text-white">Salt</span>
              <span className="font-bold text-white">
-               {publishedTargetLabel === 'Salt target (ppm)' ? (
-                 <span title="Anhydrous-equivalent salt concentration in mg/L; for water, ppm is approximately mg/L.">
-                   Salt target (ppm)
+                {publishedTargetLabel === 'Mineral target (ppm)' ? (
+                  <span title="Mineral contribution in mg/L; for water, ppm is approximately mg/L.">
+                    Mineral target (ppm)
                  </span>
                ) : publishedTargetLabel}
             </span>
@@ -7118,6 +7118,7 @@ function App() {
                     onChange={volumeMl => updateMineralWater(entry.id, { volumeMl })}
                   />
                 </div>
+                 <MineralWaterContributionSummary ions={entry.ions} />
                 {/* Ion inputs */}
                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                    {ACTIVE_ION_IDS.map(id => (
@@ -7247,121 +7248,6 @@ function App() {
               </div>
             ))}
 
-             {/* Alchemist recommendation — simple recipe completion view */}
-             {showAlchemist && batchMl > 0 && (
-               <div className="border-t border-slate-700/40 pt-4">
-                 <div className="flex flex-wrap items-center justify-between gap-2">
-                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                      Salt contribution
-                   </span>
-                   <span className="text-[10px] text-slate-500">
-                     {activeProfile.name} safe limits
-                   </span>
-                 </div>
-                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                   {ACTIVE_ION_IDS.map(id => {
-                     const target = saltOnlyIons[id] ?? 0;
-                     const covered = bottledIons[id] ?? 0;
-                     const remaining = Math.max(target - covered, 0);
-                     if (target <= 0) return null;
-                     return (
-                        <div
-                          key={id}
-                          className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2"
-                          style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
-                        >
-                          <span className="block text-[10px] font-semibold text-[color:var(--ion-fg)]" title={ION_MAP[id].name}>{ION_MAP[id].formula}</span>
-                         {covered >= target - 0.01 ? (
-                           <span className="flex items-center gap-1 text-sm font-semibold tabular-nums text-emerald-300">
-                             <Check className="h-3.5 w-3.5" /> Covered
-                           </span>
-                         ) : (
-                            <span className="text-sm font-semibold tabular-nums text-[color:var(--ion-fg)]">
-                             {remaining.toFixed(1)} ppm
-                           </span>
-                         )}
-                       </div>
-                     );
-                   })}
-                 </div>
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">3. Choose salts</span>
-                    <div className="flex flex-wrap items-center gap-1.5" aria-label="Magnesium salt preference">
-                      {([
-                        {
-                          value: 'sulfates' as const,
-                          label: 'Prefer sulfate',
-                          explanation: 'Favor magnesium sulfate to add more sulfate and a brighter, crisper mineral balance.',
-                        },
-                        {
-                          value: 'chlorides' as const,
-                          label: 'Prefer chloride',
-                          explanation: 'Favor magnesium chloride to add more chloride and a rounder, fuller mineral balance.',
-                        },
-                        {
-                          value: 'original' as const,
-                          label: 'Don’t care',
-                          explanation: 'No preference between sulfate and chloride.',
-                        },
-                      ]).map(option => {
-                        const selected = magnesiumPreference === option.value;
-                        return (
-                          <span key={option.value} className="group relative">
-                            <button
-                              type="button"
-                              onClick={() => setMagnesiumPreference(option.value)}
-                              aria-pressed={selected}
-                              className={`rounded-md border px-2.5 py-1.5 text-[10px] font-medium transition-all ${
-                                selected
-                                  ? 'border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_12px_rgba(139,92,246,0.55)]'
-                                  : 'border-slate-700/70 bg-slate-900/40 text-slate-400 hover:border-violet-400/45 hover:bg-violet-500/10 hover:text-violet-200'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                            <span
-                              role="tooltip"
-                              className="pointer-events-none absolute bottom-full right-0 z-20 mb-2 hidden w-56 rounded-md border border-violet-400/25 bg-slate-950 px-2.5 py-2 text-left text-[10px] leading-relaxed text-slate-300 shadow-xl group-hover:block group-focus-within:hidden group-focus-visible:block"
-                            >
-                              {option.explanation}
-                            </span>
-                          </span>
-                        );
-                      })}
-                    </div>
-                 </div>
-                 <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                   {SALTS.map((salt, index) => {
-                     const target = dosingSaltTargets[salt.id] ?? 0;
-                     if (target <= 0) return null;
-                      const form = salt.hydrationForms[safeRows[index].formIdx];
-                     const mg = computeSaltMg(target, L, form.molarMass, salt.anhydrousMass);
-                     const affectsGH = salt.ions.some(contribution => contribution.ionId === 'calcium' || contribution.ionId === 'magnesium');
-                     const affectsKH = salt.ions.some(contribution => contribution.ionId === 'bicarbonate');
-                     const role = affectsGH && affectsKH ? 'GH + KH' : affectsGH ? 'GH' : affectsKH ? 'KH' : 'Neutral';
-                     return (
-                       <div key={salt.id} className="rounded-lg border border-slate-700/50 bg-slate-900/40 px-3 py-2">
-                         <div className="flex items-center justify-between gap-2">
-                           <span className="text-[10px] text-slate-500">{salt.formula} · {form.label}</span>
-                           <span className={`text-[10px] font-medium ${
-                             role === 'Neutral' ? 'text-emerald-400' : 'text-slate-500'
-                           }`}>
-                             {role}
-                           </span>
-                         </div>
-                         <span className="text-sm font-semibold tabular-nums text-sky-300">
-                           {mg.toFixed(1)} mg
-                         </span>
-                       </div>
-                     );
-                   })}
-                 </div>
-                  <IonDeviationDisclosure
-                    actual={suggestedIonTotals}
-                    target={saltOnlyIons}
-                  />
-               </div>
-             )}
            </div>
            )}
         </div>}
@@ -16524,6 +16410,40 @@ function WaterHardnessRatioFooter({
           <span className={`ml-1 font-semibold ${monovalentPercentClass}`}>{monovalentPercent}</span>
           <span className="ml-1 text-[10px]">({fmt(monovalentTotal)} ppm)</span>
         </span>
+      </div>
+    </div>
+  );
+}
+
+function MineralWaterContributionSummary({
+  ions,
+}: {
+  ions: Partial<Record<IonId, string>>;
+}) {
+  const totals = completeIonTotals(
+    numericIons(ions) as Partial<Record<IonId, number>>,
+  );
+  const minerals: IonId[] = ['calcium', 'magnesium', 'sodium', 'potassium', 'bicarbonate'];
+  const gh = computeGH(totals);
+  const kh = computeKH(totals);
+
+  return (
+    <div className="rounded-lg border border-cyan-400/15 bg-slate-950/25 px-3 py-2.5">
+      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          Mineral contribution
+        </span>
+        <span className="text-[10px] tabular-nums text-slate-400">
+          GH {fmt(gh)} · KH {fmt(kh)} ppm as CaCO₃
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] tabular-nums">
+        {minerals.map(id => (
+          <span key={id} className="inline-flex items-center gap-1" style={ionVisualStyle(id)}>
+            <span className="font-semibold text-[color:var(--ion-fg)]">{ION_MAP[id].name}</span>
+            <span className="text-slate-300">{fmt(totals[id] ?? 0)} ppm</span>
+          </span>
+        ))}
       </div>
     </div>
   );
