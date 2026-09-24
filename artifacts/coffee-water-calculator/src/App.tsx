@@ -2826,6 +2826,7 @@ function App() {
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
+  const [editingSavedWaterIds, setEditingSavedWaterIds] = useState<Set<string>>(() => new Set());
   const saveWaters = useCallback((waters: LocalWater[]) => {
     setLocalWaters(waters);
     saveLocalWaters(waters);
@@ -7089,7 +7090,15 @@ function App() {
 
             {/* Entry list */}
             {mineralWaters.map(entry => (
-              <div key={entry.id} className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
+               (() => {
+                 const savedWater = entry.sourceLocalId
+                   ? localWaters.find(water => water.id === entry.sourceLocalId)
+                   : undefined;
+                 const isSavedWater = Boolean(savedWater);
+                 const isEditingSavedWater = editingSavedWaterIds.has(entry.id);
+                 const ionsLocked = isSavedWater && !isEditingSavedWater;
+                 return (
+               <div key={entry.id} className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
                 {/* Entry header: name + volume + remove */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -7148,11 +7157,12 @@ function App() {
                        <StableNumberInput
                         inputMode="decimal"
                         value={entry.ions[id] ?? ''}
+                         disabled={ionsLocked}
                         onChange={e => updateMineralWater(entry.id, {
                           ions: { ...entry.ions, [id]: e.target.value }
                         })}
                         placeholder="0"
-                        className="w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
+                         className={`w-full bg-slate-900/60 border border-slate-600/60 rounded-lg px-2 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition ${ionsLocked ? 'cursor-not-allowed opacity-60' : ''}`}
                       />
                     </div>
                   ))}
@@ -7177,17 +7187,37 @@ function App() {
                         l.name === entry.name.trim() &&
                         Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
                       );
-                      if (alreadySaved) return;
-                  saveWaters([...localWaters, {
-                        id: newLocalWaterId(),
-                        name: entry.name.trim(),
-                    metadata: metadataToNumbers(entry.metadata),
-                        ions: Object.fromEntries(
-                          Object.entries(entry.ions)
-                            .filter(([, v]) => parseFloat(v || '0') > 0)
-                            .map(([k, v]) => [k, parseFloat(v || '0')])
-                        ) as Record<string, number>,
-                      }]);
+                       if (isSavedWater && savedWater) {
+                         saveWaters(localWaters.map(water => water.id === savedWater.id ? {
+                           ...water,
+                           name: entry.name.trim(),
+                           metadata: metadataToNumbers(entry.metadata),
+                           ions: Object.fromEntries(
+                             Object.entries(entry.ions)
+                               .filter(([, v]) => parseFloat(v || '0') > 0)
+                               .map(([k, v]) => [k, parseFloat(v || '0')])
+                           ) as Record<string, number>,
+                         } : water));
+                         setEditingSavedWaterIds(current => {
+                           const next = new Set(current);
+                           next.delete(entry.id);
+                           return next;
+                         });
+                         return;
+                       }
+                       if (alreadySaved) return;
+                       const savedId = newLocalWaterId();
+                       saveWaters([...localWaters, {
+                         id: savedId,
+                         name: entry.name.trim(),
+                         metadata: metadataToNumbers(entry.metadata),
+                         ions: Object.fromEntries(
+                           Object.entries(entry.ions)
+                             .filter(([, v]) => parseFloat(v || '0') > 0)
+                             .map(([k, v]) => [k, parseFloat(v || '0')])
+                         ) as Record<string, number>,
+                       }]);
+                       updateMineralWater(entry.id, { sourceLocalId: savedId });
                     }}
                     className={`text-xs font-medium rounded-lg px-3 py-1.5 transition shrink-0 ${
                       (!entry.name.trim() || !Object.values(entry.ions).some(v => parseFloat(v || '0') > 0))
@@ -7200,12 +7230,13 @@ function App() {
                         : 'text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30'
                     }`}
                   >
-                    {localWaters.some(l =>
+                     {isSavedWater && !isEditingSavedWater ? (
+                       <><Check className="w-3 h-3 inline mr-1" />Saved</>
+                     ) : (
+                       isSavedWater ? 'Save changes' : localWaters.some(l =>
                       l.name === entry.name.trim() &&
                       Object.entries(entry.ions).every(([k, v]) => Math.abs((l.ions[k] ?? 0) - parseFloat(v || '0')) < 0.5)
-                    ) && entry.name.trim() ? (
-                      <><Check className="w-3 h-3 inline mr-1" />Saved</>
-                    ) : 'Save'}
+                     ) && entry.name.trim() ? <><Check className="w-3 h-3 inline mr-1" />Saved</> : 'Save')}
                   </button>
                   <button
                     type="button"
@@ -7265,9 +7296,26 @@ function App() {
                           ? 'Retry share'
                           : <><Share2 className="w-3 h-3 inline mr-1" />Share</>}
                   </button>
+                  {isSavedWater && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingSavedWaterIds(current => {
+                        const next = new Set(current);
+                        if (next.has(entry.id)) next.delete(entry.id);
+                        else next.add(entry.id);
+                        return next;
+                      })}
+                      className="text-xs font-medium rounded-lg px-3 py-1.5 text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition shrink-0"
+                    >
+                      <Pencil className="w-3 h-3 inline mr-1" />
+                      {isEditingSavedWater ? 'Cancel edit' : 'Edit'}
+                    </button>
+                  )}
                 </div>
               </div>
-            ))}
+                 );
+               })()
+             ))}
 
            </div>
            )}
@@ -16469,7 +16517,7 @@ function MineralWaterContributionSummary({
         {minerals.map(id => (
           <span key={id} className="inline-flex items-center gap-1" style={ionVisualStyle(id)}>
             <span className="font-semibold text-[color:var(--ion-fg)]">{ION_MAP[id].name}</span>
-            <span className="text-slate-300">{fmt(totals[id] ?? 0)} ppm</span>
+            <span className="text-slate-300">{(totals[id] ?? 0).toFixed(1)} ppm</span>
           </span>
         ))}
       </div>
