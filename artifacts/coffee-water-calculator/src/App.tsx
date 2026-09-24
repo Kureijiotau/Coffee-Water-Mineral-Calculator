@@ -4391,19 +4391,6 @@ function App() {
     return { level: 'green', label: 'Single stock OK' };
   }, [concWarnings]);
 
-  const handleAllInOneConcentrateToggle = (enabled: boolean) => {
-    setConcentrateOn(enabled);
-    if (!enabled) return;
-    setConcentrateMl('100');
-    setConcentrateStrength(findStrongestSafeConcentrateStrength(
-      concSaltTargets,
-      undefined,
-      concFormIdxBySaltId,
-      { stockVolumeMl: 100 },
-    ));
-    setSplitMode(false);
-  };
-
   // ── Reset state ────────────────────────────────────
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showWatermancerResetConfirm, setShowWatermancerResetConfirm] = useState(false);
@@ -6613,19 +6600,6 @@ function App() {
                title={showAlchemist ? '1. Batch volume' : '2. Add waters — Batch volume'}
              after={
                <div className="flex items-center gap-2">
-                 {showAlchemist ? <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer select-none">
-                  <span className={`transition-colors ${concentrateOn ? 'text-cyan-200' : 'text-slate-400'}`}>All-in-one concentrate</span>
-                 <div className={`relative w-9 h-5 rounded-full transition-colors ${concentrateOn ? 'bg-cyan-500 shadow-[0_0_10px_-2px_rgba(34,211,238,0.8)]' : 'bg-slate-600'}`}>
-                  <input
-                    type="checkbox"
-                    checked={concentrateOn}
-                     onChange={e => handleAllInOneConcentrateToggle(e.target.checked)}
-                     aria-label="Use all-in-one concentrate"
-                    className="sr-only"
-           />
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${concentrateOn ? 'translate-x-4' : 'translate-x-0'}`} />
-                </div>
-               </label> : undefined}
                   {showWatermancer ? (
                     <button
                       type="button"
