@@ -6415,6 +6415,9 @@ function App() {
                && hasMineralWater
                && displayedRecipeTargetValue > 0
                && target <= 0.000001;
+             const coverageMessage = salt.id === 'nahco3' || salt.id === 'khco3'
+               ? 'Bicarbonates are covered by the mineral water'
+               : `${ION_MAP[salt.ions[0]?.ionId]?.name ?? 'The cation'} is covered by the mineral water`;
              const targetInputValue = Object.prototype.hasOwnProperty.call(targetInputDrafts, salt.id)
                ? targetInputDrafts[salt.id]
                : (displayedRecipeTargetValue > 0 ? String(displayedRecipeTarget) : '');
@@ -6541,7 +6544,7 @@ function App() {
                      />
                       {coveredByMineralWater && (
                         <span className="mt-1 block text-[10px] font-semibold text-emerald-400">
-                          covered by mineral water
+                          {coverageMessage}
                         </span>
                       )}
                     </div>
