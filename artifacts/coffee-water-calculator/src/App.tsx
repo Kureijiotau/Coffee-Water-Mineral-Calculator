@@ -15119,18 +15119,8 @@ function BrewerRecipeStepsModal({
   const stepSaltTargets = mergeRecipeStepTargets(saltTargets, suggestedSaltTargets);
   const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
-  const sulfateSalts = stepSalts.filter(salt => salt.formula.includes('SO₄'));
-  const chlorideSalts = stepSalts.filter(salt => salt.formula.includes('Cl') && !salt.formula.includes('SO₄'));
-  const alkalinitySalts = stepSalts.filter(salt => salt.formula.includes('HCO₃') || salt.formula.includes('CO₃'));
-  const otherSalts = stepSalts.filter(salt =>
-    !salt.formula.includes('SO₄')
-    && !salt.formula.includes('Cl')
-    && !salt.formula.includes('HCO₃')
-    && !salt.formula.includes('CO₃'),
-  );
-  const orderedRecipeSalts = allInOneConcentrate
-    ? [...sulfateSalts, ...chlorideSalts, ...otherSalts, ...alkalinitySalts]
-    : [...sulfateSalts, ...chlorideSalts, ...alkalinitySalts, ...otherSalts];
+  // Keep recipe cards in the same canonical order as the main salt table.
+  const orderedRecipeSalts = stepSalts;
   const finalProfileWaterIons = computeWatermancerBottledIons(
     [...configuredBaseWaters, ...configuredAdditionWaters].map(water => ({
       ...water,
