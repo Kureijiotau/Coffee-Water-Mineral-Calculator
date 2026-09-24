@@ -4693,15 +4693,17 @@ function App() {
     wmProfiles,
   ]);
   // Recipe steps must describe the same salts the active tab will actually
-  // prepare. Alchemist uses the source-water-adjusted dosing map (not the
-  // untouched recipe rows); Watermancer uses its live route and dose
-  // overrides; Brewer stays on its flavor/lesson recipe map.
-  const recipeStepsSaltTargets = selectRecipePreparationTargets(
-    nerdLevel,
-    brewerModeSaltTargets,
-    dosingSaltTargets,
-    effectiveSuggestedSaltTargets,
-  );
+  // prepare. Alchemist preserves the user's explicit custom salt targets;
+  // Watermancer uses its live route and dose overrides; Brewer stays on its
+  // flavor/lesson recipe map.
+  const recipeStepsSaltTargets = nerdLevel === 'alchemist'
+    ? saltTargets
+    : selectRecipePreparationTargets(
+      nerdLevel,
+      brewerModeSaltTargets,
+      dosingSaltTargets,
+      effectiveSuggestedSaltTargets,
+    );
   const recipeStepsSuggestedSaltTargets = recipeStepsSaltTargets;
   const applyRecipeObject = (
     recipe: SaltRecipe,
