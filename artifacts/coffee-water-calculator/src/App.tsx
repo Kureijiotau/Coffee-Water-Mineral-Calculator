@@ -6850,23 +6850,14 @@ function App() {
         </div>}
 
         {/* Mineral Water Base */}
-          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border-t border-emerald-400/20 bg-transparent shadow-none rounded-none' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border border-emerald-400/25 bg-slate-800/70 shadow-xl shadow-emerald-950/15 rounded-2xl' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}>
           <SharedSectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title={showWatermancer ? '2. Add waters — Mineral water base' : 'Craft with mineral water as a base.'}
+            onClick={showAlchemist ? () => setAlchemistMineralWaterOpen(open => !open) : undefined}
+            expanded={showAlchemist ? alchemistMineralWaterOpen : undefined}
+            ariaControls={showAlchemist ? 'alchemist-mineral-water-content' : undefined}
             after={<div className="flex items-center gap-2">
-              {showAlchemist && (
-                <button
-                  type="button"
-                  onClick={() => setAlchemistMineralWaterOpen(open => !open)}
-                  aria-expanded={alchemistMineralWaterOpen}
-                  aria-controls="alchemist-mineral-water-content"
-                  className="flex items-center gap-1.5 rounded-lg border border-emerald-300/25 bg-emerald-500/10 px-2.5 py-1.5 text-[11px] font-medium text-emerald-200 transition hover:border-emerald-200/50 hover:bg-emerald-500/20"
-                >
-                  <span className={`transition-transform ${alchemistMineralWaterOpen ? 'rotate-90' : ''}`}>▶</span>
-                  {alchemistMineralWaterOpen ? 'Hide waters' : 'Show waters'}
-                </button>
-              )}
              {showWatermancer && (
                <button
                  onClick={() => {
@@ -6888,6 +6879,14 @@ function App() {
            />
            {(!showAlchemist || alchemistMineralWaterOpen) && (
             <div id="alchemist-mineral-water-content" className="app-card-body space-y-4">
+             {showAlchemist && (
+               <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] px-4 py-3">
+                 <p className="text-xs font-semibold text-emerald-100">How mineral water works</p>
+                 <p className="mt-1 text-[11px] leading-relaxed text-slate-300">
+                   Add the amount of bottled or mineral water you want in the final batch. The rest of the batch is treated as 0-TDS RO or distilled water, and only the minerals supplied by this water are counted toward your targets.
+                 </p>
+               </div>
+             )}
             {showWatermancer && waterComparisonOpen && (
                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/10 p-3 sm:p-4 space-y-3">
                  <div className="flex flex-wrap items-center justify-between gap-2">

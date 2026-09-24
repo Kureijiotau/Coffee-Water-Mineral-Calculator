@@ -4,14 +4,33 @@ export function SectionHeader({
   icon,
   title,
   after,
+  onClick,
+  expanded,
+  ariaControls,
 }: {
   icon: ReactNode;
   title: string;
   after?: ReactNode;
+  onClick?: () => void;
+  expanded?: boolean;
+  ariaControls?: string;
 }) {
   const numberedTitle = title.match(/^(\d+)\.\s+(.+)$/);
   return (
-    <div className="app-section-header flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/40 px-4 text-slate-300 sm:px-6">
+    <div
+      className={`app-section-header flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/40 px-4 text-slate-300 sm:px-6 ${onClick ? 'cursor-pointer select-none hover:bg-emerald-500/[0.04]' : ''}`}
+      onClick={onClick}
+      onKeyDown={onClick ? e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      } : undefined}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      aria-expanded={onClick ? expanded : undefined}
+      aria-controls={onClick ? ariaControls : undefined}
+    >
       <div className="app-section-header__title flex min-w-0 items-center gap-2">
         {icon}
         <h2
