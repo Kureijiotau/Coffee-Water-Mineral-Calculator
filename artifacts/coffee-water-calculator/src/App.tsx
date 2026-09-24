@@ -16443,12 +16443,9 @@ function MineralWaterContributionSummary({
 
   return (
     <div className="rounded-lg border border-cyan-400/15 bg-slate-950/25 px-3 py-2.5">
-      <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
           Mineral contribution
-        </span>
-        <span className="text-[10px] tabular-nums text-slate-400">
-          GH {fmt(gh)} · KH {fmt(kh)} ppm as CaCO₃ in final batch
         </span>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] tabular-nums">
@@ -16458,6 +16455,17 @@ function MineralWaterContributionSummary({
             <span className="text-slate-300">{fmt(totals[id] ?? 0)} ppm</span>
           </span>
         ))}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-slate-800/80 pt-2 text-[11px] tabular-nums">
+        <span className="inline-flex items-center gap-1 text-amber-200">
+          <span className="font-semibold text-amber-300">GH</span>
+          <span className="text-slate-300">{fmt(gh)} ppm</span>
+        </span>
+        <span className="inline-flex items-center gap-1 text-emerald-200">
+          <span className="font-semibold text-emerald-300">KH</span>
+          <span className="text-slate-300">{fmt(kh)} ppm</span>
+        </span>
+        <span className="text-[10px] text-slate-500">as CaCO₃ in final batch</span>
       </div>
     </div>
   );
