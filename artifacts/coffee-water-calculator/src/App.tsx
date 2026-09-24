@@ -4237,12 +4237,15 @@ function App() {
     nacl: (selectedSuggestedSaltTargets.nacl ?? 0) + practicalSodiumCorrectionTarget,
   }), [practicalSodiumCorrectionTarget, selectedSuggestedSaltTargets]);
 
-  // One dosing target map for every user-facing preparation surface. With
-  // source water, this is the final salt contribution still needed after
-  // water coverage, the bicarbonate ceiling, and any optional sodium correction.
-  const dosingSaltTargets = (hasMineralWater || showWatermancer)
+  // Keep the two workspaces explicit. Alchemist subtracts visible source-water
+  // coverage from the user's salt recipe; Watermancer owns its live route and
+  // salt-dose overrides. Neither workspace should consume the other's map.
+  const alchemistDosingSaltTargets = hasMineralWater
     ? effectiveSuggestedSaltTargets
     : saltTargets;
+  const dosingSaltTargets = showWatermancer
+    ? effectiveSuggestedSaltTargets
+    : alchemistDosingSaltTargets;
 
   const suggestedIonTotals = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
@@ -4680,11 +4683,11 @@ function App() {
     wmProfiles,
   ]);
   // Recipe steps must describe the same salts the active tab will actually
-  // prepare. Alchemist preserves the user's explicit custom salt targets;
-  // Watermancer uses its live route and dose overrides; Brewer stays on its
-  // flavor/lesson recipe map.
+  // prepare. Alchemist uses its source-water-adjusted recipe map; Watermancer
+  // uses its live route and dose overrides; Brewer stays on its flavor/lesson
+  // recipe map.
   const recipeStepsSaltTargets = nerdLevel === 'alchemist'
-    ? dosingSaltTargets
+    ? alchemistDosingSaltTargets
     : selectRecipePreparationTargets(
       nerdLevel,
       brewerModeSaltTargets,
