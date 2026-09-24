@@ -6850,7 +6850,7 @@ function App() {
         </div>}
 
         {/* Mineral Water Base */}
-          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-3' : 'order-2'} ${showAlchemist ? 'border-emerald-400/25' : 'border-indigo-400/25'} bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border-t border-emerald-400/20 bg-transparent shadow-none rounded-none' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}>
           <SharedSectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title={showWatermancer ? '2. Add waters — Mineral water base' : 'Craft with mineral water as a base.'}
