@@ -4684,7 +4684,7 @@ function App() {
   // Watermancer uses its live route and dose overrides; Brewer stays on its
   // flavor/lesson recipe map.
   const recipeStepsSaltTargets = nerdLevel === 'alchemist'
-    ? saltTargets
+    ? dosingSaltTargets
     : selectRecipePreparationTargets(
       nerdLevel,
       brewerModeSaltTargets,
