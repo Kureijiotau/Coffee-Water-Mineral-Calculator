@@ -7118,7 +7118,11 @@ function App() {
                     onChange={volumeMl => updateMineralWater(entry.id, { volumeMl })}
                   />
                 </div>
-                 <MineralWaterContributionSummary ions={entry.ions} />
+                 <MineralWaterContributionSummary
+                   ions={entry.ions}
+                   volumeMl={num(entry.volumeMl)}
+                   batchMl={batchMl}
+                 />
                 {/* Ion inputs */}
                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                    {ACTIVE_ION_IDS.map(id => (
@@ -16417,11 +16421,21 @@ function WaterHardnessRatioFooter({
 
 function MineralWaterContributionSummary({
   ions,
+  volumeMl,
+  batchMl,
 }: {
   ions: Partial<Record<IonId, string>>;
+  volumeMl: number;
+  batchMl: number;
 }) {
-  const totals = completeIonTotals(
+  const sourceTotals = completeIonTotals(
     numericIons(ions) as Partial<Record<IonId, number>>,
+  );
+  const batchFraction = batchMl > 0 ? Math.max(volumeMl, 0) / batchMl : 0;
+  const totals = completeIonTotals(
+    Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, (sourceTotals[id] ?? 0) * batchFraction]),
+    ) as Partial<Record<IonId, number>>,
   );
   const minerals: IonId[] = ['calcium', 'magnesium', 'sodium', 'potassium', 'bicarbonate'];
   const gh = computeGH(totals);
@@ -16434,7 +16448,7 @@ function MineralWaterContributionSummary({
           Mineral contribution
         </span>
         <span className="text-[10px] tabular-nums text-slate-400">
-          GH {fmt(gh)} · KH {fmt(kh)} ppm as CaCO₃
+          GH {fmt(gh)} · KH {fmt(kh)} ppm as CaCO₃ in final batch
         </span>
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] tabular-nums">
