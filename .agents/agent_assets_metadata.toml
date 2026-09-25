@@ -50,7 +50,7 @@ content_type = "application/octet-stream"
 [[outputs]]
 id = "X-43E3NrmfoCV3zEK-YVo"
 uri = "file://.superpowers/brainstorm/7493-1788494979/content/mixer-layout-preview.html"
-type = "text"
+type = "html"
 title = "Mixer layout options preview"
 description = "Two visual directions for deleting saved Mixer recipes and keeping live final readings visible while editing salts."
 logical_id = "948739af-3a2c-49a1-9e5e-86206a25655e"
@@ -88,3 +88,17 @@ mtime_ms = 1789613630534
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/fe145bad-f16f-4f07-ac3b-fd90a6ba26ad/6a81ff09-902d-419e-b628-e92be0440cde"
 storage_version_token = "1789613711254217"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "wBm95994KvuqmTLx3h4ZQ"
+uri = "file://previews/version-39-blue-gray-outline.png"
+type = "image"
+title = "Version 39 — ion outline preview"
+description = "Sample exported card with the colored ion text edged in muted blue-gray."
+logical_id = "410ef0bd-7708-4e03-95b5-7b0729cd7201"
+content_hash = "sha256:dd954acc8afd4816a461a9950003ab4fc1499b2f7c38f03a9a680604dee17026"
+size = 167142
+mtime_ms = 1790310397432
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/410ef0bd-7708-4e03-95b5-7b0729cd7201/200bd3c7-9707-4b7d-acd4-7390cd1c89a8"
+storage_version_token = "1790310457131867"
+content_type = "image/png"

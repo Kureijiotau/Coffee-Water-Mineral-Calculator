@@ -719,6 +719,9 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
 function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
   const innerX = x + 26;
   const innerWidth = width - 52;
+  // A hairline blue-gray keyline keeps the ion palette readable on the pale card
+  // without the weight of a black outline or drop shadow.
+  const ionTextOutline = { stroke: '#4b6970', strokeWidth: 0.7, strokeOpacity: 0.85 };
   const analysisText = (
     textX: number,
     textY: number,
@@ -775,7 +778,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         fill: recipeIonColor(ion.id),
         size: 13,
         weight: 700,
-        filter: 'url(#recipe-ion-text-shadow)',
+        ...ionTextOutline,
       });
       svg += svgText(innerX, cursor + 36, ion.name, {
         fill: '#0b1117',
@@ -788,6 +791,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         weight: 700,
         family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
         anchor: 'end',
+        ...ionTextOutline,
       });
       svg += svgText(innerX + innerWidth, cursor + rowHeight / 2 + 20, 'mg/L', {
         fill: '#47737a',
@@ -857,9 +861,6 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         <path d="M 0 8 L 0 0 L 8 0" fill="none" stroke="#0d6170" stroke-opacity="0.12" stroke-width="1"/>
         <path d="M 8 0 L 8 8 L 0 8" fill="none" stroke="#0d6170" stroke-opacity="0.08" stroke-width="1"/>
       </pattern>
-      <filter id="recipe-ion-text-shadow" x="-20%" y="-30%" width="140%" height="170%">
-        <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="#0b1117" flood-opacity="0.46"/>
-      </filter>
     </defs>
     <rect x="${x}" y="${y}" width="${width}" height="${height}" rx="18" fill="url(#${gridPatternId})" opacity="0.3"/>
   `;
