@@ -9,5 +9,7 @@ export const modules: ModuleMap = {
   "./components/mockups/recipe-mineral-label/RecipeStepsMineralLabel.tsx": () => import("../components/mockups/recipe-mineral-label/RecipeStepsMineralLabel.tsx"),
   "./components/mockups/water-browser/MineralFingerprint.tsx": () => import("../components/mockups/water-browser/MineralFingerprint.tsx"),
   "./components/mockups/water-browser/SortableTable.tsx": () => import("../components/mockups/water-browser/SortableTable.tsx"),
+  "./components/mockups/watermancer-readings/Compact.tsx": () => import("../components/mockups/watermancer-readings/Compact.tsx"),
+  "./components/mockups/watermancer-readings/Current.tsx": () => import("../components/mockups/watermancer-readings/Current.tsx"),
   "./components/mockups/workframe/WorkframeProfileBuilder.tsx": () => import("../components/mockups/workframe/WorkframeProfileBuilder.tsx")
 };
