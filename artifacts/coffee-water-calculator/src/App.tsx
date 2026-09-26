@@ -55,6 +55,7 @@ import {
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
 import { IonRatioTable } from './IonRatioTable';
+import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
 import {
   embedWaterRecipeJsonInPng,
@@ -758,6 +759,7 @@ const WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-ion-f
 const WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-follow-enabled';
 const WATERMANCER_RESULT_DOCK_STORAGE_KEY = 'coffee-water-watermancer-result-dock';
 const WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY = 'coffee-water-watermancer-feedback-before-follow';
+const WATERMANCER_READINGS_VIEW_STORAGE_KEY = 'coffee-water-watermancer-readings-view';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
   label: string;
@@ -826,6 +828,16 @@ function loadWatermancerBooleanPreference(key: string, fallback: boolean): boole
     // Use the default when localStorage is unavailable.
   }
   return fallback;
+}
+
+function loadWatermancerReadingsView(): 'compact' | 'classic' {
+  try {
+    return localStorage.getItem(WATERMANCER_READINGS_VIEW_STORAGE_KEY) === 'classic'
+      ? 'classic'
+      : 'compact';
+  } catch {
+    return 'compact';
+  }
 }
 
 function loadWatermancerResultDock(): 'center' | 'left' | 'right' {
@@ -2585,6 +2597,12 @@ function App() {
   const [watermancerFollowEnabled, setWatermancerFollowEnabled] = useState(
     () => loadWatermancerBooleanPreference(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, false),
   );
+  const [watermancerReadingsView, setWatermancerReadingsView] = useState<'compact' | 'classic'>(() => (
+    loadWatermancerBooleanPreference(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, false)
+      ? 'classic'
+      : loadWatermancerReadingsView()
+  ));
+  const [watermancerCompactBreakdownExpanded, setWatermancerCompactBreakdownExpanded] = useState(false);
   const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>(
     () => loadWatermancerResultDock(),
   );
@@ -2608,7 +2626,7 @@ function App() {
     setWatermancerSpotlightIonIds([]);
   }, []);
   const spotlightWatermancerIons = useCallback((ionIds: IonId[]) => {
-    if (!watermancerFeedbackEnabled) return;
+    if (!watermancerFeedbackEnabled || watermancerReadingsView !== 'classic') return;
     const nextIonIds = ACTIVE_ION_IDS.filter(id => ionIds.includes(id));
     if (nextIonIds.length === 0) return;
     if (watermancerSpotlightTimerRef.current !== null) {
@@ -2619,7 +2637,7 @@ function App() {
       setWatermancerSpotlightIonIds([]);
       watermancerSpotlightTimerRef.current = null;
     }, 3200);
-  }, [watermancerFeedbackEnabled]);
+  }, [watermancerFeedbackEnabled, watermancerReadingsView]);
   useEffect(() => () => {
     if (watermancerSpotlightTimerRef.current !== null) {
       window.clearTimeout(watermancerSpotlightTimerRef.current);
@@ -2647,6 +2665,17 @@ function App() {
         setWatermancerFeedbackEnabled(previousFeedbackEnabled);
       }
     }
+  };
+  const selectWatermancerReadingsView = (view: 'compact' | 'classic') => {
+    if (view === watermancerReadingsView) return;
+    if (view === 'compact' && watermancerFollowEnabled) {
+      toggleWatermancerFollow();
+    }
+    if (view === 'compact') {
+      clearWatermancerFeedback();
+      setWatermancerCompactBreakdownExpanded(false);
+    }
+    setWatermancerReadingsView(view);
   };
   const [magnesiumPreference, setMagnesiumPreference] = useState<MagnesiumPreference>('original');
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
@@ -2813,6 +2842,7 @@ function App() {
   useDebouncedPersistence(() => {
     localStorage.setItem(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, String(watermancerFeedbackEnabled));
     localStorage.setItem(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, String(watermancerFollowEnabled));
+    localStorage.setItem(WATERMANCER_READINGS_VIEW_STORAGE_KEY, watermancerReadingsView);
     localStorage.setItem(WATERMANCER_RESULT_DOCK_STORAGE_KEY, watermancerResultDock);
     if (watermancerFollowEnabled && watermancerFeedbackBeforeFollowRef.current !== null) {
       localStorage.setItem(
@@ -2822,7 +2852,7 @@ function App() {
     } else {
       localStorage.removeItem(WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY);
     }
-  }, [watermancerFeedbackEnabled, watermancerFollowEnabled, watermancerResultDock]);
+  }, [watermancerFeedbackEnabled, watermancerFollowEnabled, watermancerReadingsView, watermancerResultDock]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -7334,6 +7364,10 @@ function App() {
                spotlightIonIds={watermancerSpotlightIonIds}
                feedbackEnabled={watermancerFeedbackEnabled}
                followEnabled={watermancerFollowEnabled}
+               readingsView={watermancerReadingsView}
+               onChangeReadingsView={selectWatermancerReadingsView}
+               compactBreakdownExpanded={watermancerCompactBreakdownExpanded}
+               onToggleCompactBreakdown={() => setWatermancerCompactBreakdownExpanded(current => !current)}
                dockPosition={watermancerResultDock}
                onDockPositionChange={setWatermancerResultDock}
                onToggleFeedback={toggleWatermancerFeedback}
@@ -12986,6 +13020,10 @@ function WatermancerIonCoverageBars({
   spotlightIonIds,
   feedbackEnabled,
   followEnabled,
+  readingsView,
+  onChangeReadingsView,
+  compactBreakdownExpanded,
+  onToggleCompactBreakdown,
   dockPosition,
   onDockPositionChange,
   onToggleFeedback,
@@ -13003,6 +13041,10 @@ function WatermancerIonCoverageBars({
   spotlightIonIds: IonId[];
   feedbackEnabled: boolean;
   followEnabled: boolean;
+  readingsView: 'compact' | 'classic';
+  onChangeReadingsView: (view: 'compact' | 'classic') => void;
+  compactBreakdownExpanded: boolean;
+  onToggleCompactBreakdown: () => void;
   dockPosition: 'center' | 'left' | 'right';
   onDockPositionChange: (position: 'center' | 'left' | 'right') => void;
   onToggleFeedback: () => void;
@@ -13071,10 +13113,73 @@ function WatermancerIonCoverageBars({
   });
   return (
     <>
+      <div className="mb-2 flex items-center justify-end">
+        <div className="inline-flex items-center gap-0.5 rounded-lg border border-cyan-300/15 bg-slate-950/40 p-0.5" role="group" aria-label="Ion readings display">
+          {([
+            ['compact', 'Compact'],
+            ['classic', 'Classic'],
+          ] as const).map(([view, label]) => (
+            <button
+              key={view}
+              type="button"
+              onClick={() => onChangeReadingsView(view)}
+              aria-pressed={readingsView === view}
+              className={`min-h-9 rounded-md px-3 text-[11px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-cyan-200 ${
+                readingsView === view
+                  ? 'bg-cyan-500/20 text-cyan-100'
+                  : 'text-slate-400 hover:bg-cyan-500/10 hover:text-cyan-100'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {readingsView === 'compact' && (
+        <WatermancerCompactReadings
+          actualIons={actualIons}
+          targetIons={targetIons}
+          targetLabel={targetLabel}
+          previewRatios={!hasModeledIons}
+          ratios={[
+            {
+              id: 'gh-kh',
+              label: swappedRatios['gh-kh'] ? 'KH:GH' : 'GH:KH',
+              value: ghKhRatio,
+            },
+            {
+              id: 'mg-ca',
+              label: ratioSummaries[0].label,
+              value: ratioSummaries[0].ratio,
+              detail: `${formatLiveIonPpm(ratioSummaries[0].total)} ppm total`,
+            },
+            {
+              id: 'cl-so4',
+              label: ratioSummaries[1].label,
+              value: ratioSummaries[1].ratio,
+              detail: `${formatLiveIonPpm(ratioSummaries[1].total)} ppm total`,
+            },
+          ]}
+          monovalentRatio={{
+            value: monovalentPercent,
+            total: monovalentTotal,
+            severity: monovalentPercentValue != null && monovalentPercentValue > 50
+              ? 'high'
+              : monovalentPercentValue != null && monovalentPercentValue > 30
+                ? 'warning'
+                : 'normal',
+          }}
+          onSwapRatio={onSwapRatio}
+          expanded={compactBreakdownExpanded}
+          onToggleExpanded={onToggleCompactBreakdown}
+        />
+      )}
+      {(readingsView === 'classic' || compactBreakdownExpanded) && (
       <div
+        id={readingsView === 'compact' ? 'watermancer-ion-breakdown' : undefined}
         className={`${positionClass} ${followHeightClass} app-card z-50 flex flex-col overflow-hidden rounded-2xl border border-cyan-400/25 bg-slate-900/95 shadow-2xl shadow-slate-950/40 backdrop-blur-md transition-[width,max-height] duration-200`}
       >
-      <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
+      {readingsView === 'classic' && <div className="app-section-header flex shrink-0 items-center justify-between gap-3 border-b border-cyan-400/15 bg-gradient-to-r from-cyan-500/10 via-indigo-500/10 to-transparent px-4 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <div>
             <h2 className="text-xs font-semibold uppercase tracking-wider text-cyan-100">Current ion readings</h2>
@@ -13149,7 +13254,7 @@ function WatermancerIonCoverageBars({
             Live
           </span>
         </div>
-      </div>
+      </div>}
          <div className={`app-card-body min-h-0 flex-1 space-y-3 ${followEnabled ? 'overflow-y-auto overscroll-contain' : ''}`}>
         {visibleIonIds.map(id => (
           <WatermancerIonReadingRow
@@ -13285,7 +13390,8 @@ function WatermancerIonCoverageBars({
        </div>
       </div>
       </div>
-      {feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
+      )}
+      {readingsView === 'classic' && feedbackEnabled && spotlightIonIds.length > 0 && createPortal(
         <div
           className="pointer-events-auto fixed bottom-3 left-1/2 z-[70] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 rounded-2xl border border-cyan-300/35 bg-slate-900/95 p-2.5 shadow-2xl shadow-slate-950/50 backdrop-blur-md sm:p-3"
           aria-label="Recently changed ion readings"
