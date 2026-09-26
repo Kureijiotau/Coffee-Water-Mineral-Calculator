@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pin, PinOff } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_MAP, type IonId } from './waterData';
 
 type RatioSummary = {
@@ -19,6 +19,8 @@ export function WatermancerCompactReadings({
   targetIons,
   targetLabel,
   previewRatios,
+  followEnabled,
+  onToggleFollow,
   ratios,
   monovalentRatio,
   onSwapRatio,
@@ -29,6 +31,8 @@ export function WatermancerCompactReadings({
   targetIons: Partial<Record<IonId, number>>;
   targetLabel: string;
   previewRatios: boolean;
+  followEnabled: boolean;
+  onToggleFollow: () => void;
   ratios: RatioSummary[];
   monovalentRatio: { value: string; total: number; severity: 'normal' | 'warning' | 'high' };
   onSwapRatio: (key: RatioSummary['id']) => void;
@@ -36,103 +40,165 @@ export function WatermancerCompactReadings({
   onToggleExpanded: () => void;
 }) {
   const [changedIonIds, setChangedIonIds] = useState<IonId[]>([]);
-  const previousIonsRef = useRef(actualIons);
+  const [changedRatioIds, setChangedRatioIds] = useState<RatioSummary['id'][]>([]);
+  const previousReadingsRef = useRef({ actualIons, targetIons, ratios });
   const changeTimerRef = useRef<number | null>(null);
-  const visibleIonIds = ACTIVE_ION_IDS.filter(id => id !== 'citrates' || (actualIons[id] ?? 0) > 0);
+  const railRef = useRef<HTMLDivElement | null>(null);
+  const visibleIonIds = ACTIVE_ION_IDS.filter(id => (
+    id !== 'citrates' || (actualIons[id] ?? 0) > 0 || (targetIons[id] ?? 0) > 0
+  ));
 
   useEffect(() => {
+    const previous = previousReadingsRef.current;
     const changed = visibleIonIds.filter(id => (
-      Math.abs((actualIons[id] ?? 0) - (previousIonsRef.current[id] ?? 0)) > 0.00005
+      Math.abs((actualIons[id] ?? 0) - (previous.actualIons[id] ?? 0)) > 0.00005
+      || Math.abs((targetIons[id] ?? 0) - (previous.targetIons[id] ?? 0)) > 0.00005
     ));
-    previousIonsRef.current = actualIons;
-    if (changed.length === 0) return;
+    const changedRatios = ratios
+      .filter(ratio => {
+        const old = previous.ratios.find(previousRatio => previousRatio.id === ratio.id);
+        return !old || old.label !== ratio.label || old.value !== ratio.value || old.detail !== ratio.detail;
+      })
+      .map(ratio => ratio.id);
+    previousReadingsRef.current = { actualIons, targetIons, ratios };
+    if (changed.length === 0 && changedRatios.length === 0) return;
     setChangedIonIds(changed);
+    setChangedRatioIds(changedRatios);
     if (changeTimerRef.current !== null) window.clearTimeout(changeTimerRef.current);
     changeTimerRef.current = window.setTimeout(() => {
       setChangedIonIds([]);
+      setChangedRatioIds([]);
       changeTimerRef.current = null;
     }, 1800);
-  }, [actualIons]);
+  }, [actualIons, targetIons, ratios]);
+
+  useEffect(() => {
+    const firstChangedIon = changedIonIds[0];
+    const rail = railRef.current;
+    const item = firstChangedIon
+      ? rail?.querySelector<HTMLElement>(`[data-watermancer-ion="${firstChangedIon}"]`)
+      : null;
+    if (!rail || !item) return;
+    const itemLeft = item.offsetLeft - rail.offsetLeft;
+    rail.scrollTo({
+      left: Math.max(0, itemLeft - (rail.clientWidth - item.clientWidth) / 2),
+      behavior: 'smooth',
+    });
+  }, [changedIonIds]);
 
   useEffect(() => () => {
     if (changeTimerRef.current !== null) window.clearTimeout(changeTimerRef.current);
   }, []);
 
+  const updateSummary = changedIonIds.length > 0
+    ? `Updated ${changedIonIds.map(id => `${ION_MAP[id].formula} ${formatPpm(actualIons[id] ?? 0)}/${formatPpm(targetIons[id] ?? 0)}`).join(' · ')}`
+    : changedRatioIds.length > 0 ? 'Ratios updated' : 'Live';
+
   return (
     <section
       aria-label="Current ion readings"
-      className="app-card overflow-hidden rounded-2xl border border-cyan-300/25 bg-slate-900/95 shadow-xl shadow-slate-950/30"
+      className={`${followEnabled
+        ? 'fixed inset-x-3 bottom-3 z-[65] mx-auto w-[calc(100%-1.5rem)] max-w-[1500px] shadow-2xl shadow-slate-950/50'
+        : 'relative'
+      } app-card rounded-2xl border border-cyan-300/25 bg-slate-900/95 shadow-xl shadow-slate-950/30`}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-cyan-300/10 px-4 py-3 sm:px-5">
-        <div className="min-w-0">
+      <div className="flex min-h-10 items-center justify-between gap-2 px-2.5 py-1.5 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200">
-            Current ion readings <span className="ml-1 text-cyan-300/60">· live</span>
+            <span className="sm:hidden">Ions</span>
+            <span className="hidden sm:inline">Current ion readings</span>
           </div>
-          <p className="mt-1 text-[11px] text-slate-400">Final mix · mg/L · {targetLabel} ion targets</p>
+          <span
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className={`max-w-[34vw] shrink-0 truncate text-[9px] font-semibold uppercase tracking-wider sm:max-w-[20rem] ${updateSummary === 'Live' ? 'text-emerald-300/80' : 'text-cyan-200'}`}
+          >
+            {updateSummary}
+          </span>
+          <span className="hidden truncate text-[9px] text-slate-500 lg:inline">Final mix · mg/L · {targetLabel} targets</span>
         </div>
-        <button
-          type="button"
-          aria-expanded={expanded}
-          aria-controls="watermancer-ion-breakdown"
-          onClick={onToggleExpanded}
-          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-3 text-xs font-semibold text-cyan-100 transition hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
-        >
-          {expanded ? 'Less detail' : 'Full breakdown'}
-          <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={onToggleFollow}
+            aria-pressed={followEnabled}
+            aria-label={followEnabled ? 'Unpin compact ion readings from the screen' : 'Keep compact ion readings visible while scrolling'}
+            title={followEnabled ? 'Unpin readings' : 'Keep readings visible while scrolling'}
+            className={`inline-flex h-8 w-9 items-center justify-center rounded-lg border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200 sm:w-auto sm:gap-1.5 sm:px-2 ${
+              followEnabled
+                ? 'border-emerald-300/40 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25'
+                : 'border-cyan-300/20 bg-slate-950/30 text-cyan-100 hover:bg-cyan-500/10'
+            }`}
+          >
+            {followEnabled ? <PinOff className="h-4 w-4" aria-hidden="true" /> : <Pin className="h-4 w-4" aria-hidden="true" />}
+            <span className="hidden text-[10px] font-semibold sm:inline">{followEnabled ? 'Pinned' : 'Pin'}</span>
+          </button>
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="watermancer-ion-breakdown"
+            onClick={onToggleExpanded}
+            aria-label={expanded ? 'Hide full ion breakdown' : 'Show full ion breakdown'}
+            className="inline-flex h-8 items-center gap-1 rounded-lg border border-cyan-300/20 bg-cyan-500/10 px-2 text-[10px] font-semibold text-cyan-100 transition hover:bg-cyan-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-200"
+          >
+            <span className="hidden sm:inline">{expanded ? 'Less detail' : 'Full breakdown'}</span>
+            <span className="sm:hidden">{expanded ? 'Close' : 'Details'}</span>
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+          </button>
+        </div>
       </div>
 
-      <div className={`grid grid-cols-4 gap-px bg-cyan-300/10 ${visibleIonIds.length % 4 === 3 ? 'sm:[&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-2' : ''} xl:grid-cols-8`}>
-        {visibleIonIds.map(id => {
-          const ion = ION_MAP[id];
-          const actual = Math.max(actualIons[id] ?? 0, 0);
-          const target = Math.max(targetIons[id] ?? 0, 0);
-          const overshoot = target > 0 ? actual > target + 0.05 : actual > 0.05;
-          const changed = changedIonIds.includes(id);
-          const changeDescription = changed ? 'Updated. ' : '';
-          return (
-            <div
-              key={id}
-              role="group"
-              aria-label={`${changeDescription}${ion.name}: ${formatPpm(actual)} milligrams per liter, target ${formatPpm(target)} milligrams per liter${overshoot ? ', above target' : ''}`}
-              className={`min-w-0 bg-slate-900/95 px-2 py-3 text-center transition-colors duration-300 ${changed ? 'bg-cyan-500/15' : ''}`}
-            >
-              <div className="text-[11px] font-semibold leading-tight" style={{ color: ion.color.foreground }}>{ion.formula}</div>
-              <div className={`mt-1 text-base font-semibold tabular-nums tracking-tight ${overshoot ? 'text-rose-300' : 'text-slate-100'}`}>
-                {formatPpm(actual)}
+      <div
+        ref={railRef}
+        className="overflow-x-auto border-t border-cyan-300/10 px-2 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        aria-label={previewRatios ? 'Live ions and ratio preview based on selected targets' : 'Live ions and current mixture ratios'}
+      >
+        <div className="flex w-max min-w-full items-center gap-1.5">
+          {visibleIonIds.map(id => {
+            const ion = ION_MAP[id];
+            const actual = Math.max(actualIons[id] ?? 0, 0);
+            const target = Math.max(targetIons[id] ?? 0, 0);
+            const overshoot = target > 0 ? actual > target + 0.05 : actual > 0.05;
+            const changed = changedIonIds.includes(id);
+            return (
+              <div
+                key={id}
+                data-watermancer-ion={id}
+                role="group"
+                aria-label={`${changed ? 'Updated. ' : ''}${ion.name}: ${formatPpm(actual)} milligrams per liter, target ${formatPpm(target)} milligrams per liter${overshoot ? ', above target' : ''}`}
+                className={`flex h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px] tabular-nums transition-colors duration-300 ${changed ? 'bg-cyan-500/20 ring-1 ring-cyan-300/30' : 'hover:bg-slate-800/80'}`}
+              >
+                <span className="font-semibold" style={{ color: ion.color.foreground }}>{ion.formula}</span>
+                <span className={`font-semibold ${overshoot ? 'text-rose-300' : 'text-slate-100'}`}>{formatPpm(actual)}</span>
+                <span className="text-slate-500">/{formatPpm(target)}</span>
               </div>
-              <div className="mt-0.5 truncate text-[9px] text-slate-500">/ {formatPpm(target)} target</div>
-              {changed && <span className="sr-only">Updated</span>}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="border-t border-cyan-300/10 bg-slate-950/20">
-        <div className="px-3 pt-2 text-center text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-          {previewRatios ? 'Ratio preview · based on selected ion targets' : 'Ratios · current mixture'}
-        </div>
-        <div className="flex flex-wrap items-stretch divide-x divide-cyan-300/10">
+            );
+          })}
+          <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-cyan-300/20" />
+          <span className="shrink-0 px-1 text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+            {previewRatios ? 'Preview' : 'Ratios'}
+          </span>
           {ratios.map(ratio => (
             <button
               key={ratio.id}
               type="button"
+              data-watermancer-ratio={ratio.id}
               onClick={() => onSwapRatio(ratio.id)}
               aria-label={`${ratio.label} ratio ${ratio.value}${ratio.detail ? `, ${ratio.detail}` : ''}. Activate to reverse the ratio order.`}
               title={`Reverse ${ratio.label} order · current value ${ratio.value}`}
-              className="min-h-12 flex-1 basis-1/3 px-2 py-2 text-center transition hover:bg-cyan-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-200"
+              className={`flex h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px] tabular-nums transition-colors hover:bg-cyan-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-cyan-200 ${changedRatioIds.includes(ratio.id) ? 'bg-cyan-500/20 ring-1 ring-cyan-300/30' : ''}`}
             >
-              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">{ratio.label}</span>
-              <span className="mt-0.5 block text-xs font-semibold tabular-nums text-slate-100">{ratio.value}</span>
-              {ratio.detail && <span className="block text-[9px] tabular-nums text-slate-500">{ratio.detail}</span>}
+              <span className="font-semibold uppercase tracking-wide text-slate-500">{ratio.label}</span>
+              <span className="font-semibold text-slate-100">{ratio.value}</span>
             </button>
           ))}
-          <div className="min-h-12 flex-1 basis-full px-3 py-2 text-center text-[10px] text-slate-400 sm:basis-1/4">
-            <span className="font-semibold uppercase tracking-wide text-slate-500">Na + K / Mg + Ca</span>
-            <span className={`ml-2 font-semibold tabular-nums ${monovalentRatio.severity === 'high' ? 'text-rose-300' : monovalentRatio.severity === 'warning' ? 'text-amber-200' : 'text-slate-200'}`}>
+          <div className="flex h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px]">
+            <span className="font-semibold uppercase tracking-wide text-slate-500">Na+K/Mg+Ca</span>
+            <span className={`font-semibold tabular-nums ${monovalentRatio.severity === 'high' ? 'text-rose-300' : monovalentRatio.severity === 'warning' ? 'text-amber-200' : 'text-slate-200'}`}>
               {monovalentRatio.value}
             </span>
-            <span className="ml-1 text-slate-500">({formatPpm(monovalentRatio.total)} ppm Na + K)</span>
+            <span className="text-slate-500">({formatPpm(monovalentRatio.total)} ppm)</span>
           </div>
         </div>
       </div>

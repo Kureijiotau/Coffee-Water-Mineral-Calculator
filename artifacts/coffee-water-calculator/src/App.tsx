@@ -760,6 +760,7 @@ const WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY = 'coffee-water-watermancer-follow-
 const WATERMANCER_RESULT_DOCK_STORAGE_KEY = 'coffee-water-watermancer-result-dock';
 const WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY = 'coffee-water-watermancer-feedback-before-follow';
 const WATERMANCER_READINGS_VIEW_STORAGE_KEY = 'coffee-water-watermancer-readings-view';
+const WATERMANCER_COMPACT_FOLLOW_STORAGE_KEY = 'coffee-water-watermancer-compact-follow';
 const WATERMANCER_ION_SOURCE_OPTIONS: Array<{
   value: WatermancerIonSourcePreference;
   label: string;
@@ -2602,6 +2603,9 @@ function App() {
       ? 'classic'
       : loadWatermancerReadingsView()
   ));
+  const [watermancerCompactFollowEnabled, setWatermancerCompactFollowEnabled] = useState(
+    () => loadWatermancerBooleanPreference(WATERMANCER_COMPACT_FOLLOW_STORAGE_KEY, true),
+  );
   const [watermancerCompactBreakdownExpanded, setWatermancerCompactBreakdownExpanded] = useState(false);
   const [watermancerResultDock, setWatermancerResultDock] = useState<'center' | 'left' | 'right'>(
     () => loadWatermancerResultDock(),
@@ -2665,6 +2669,9 @@ function App() {
         setWatermancerFeedbackEnabled(previousFeedbackEnabled);
       }
     }
+  };
+  const toggleWatermancerCompactFollow = () => {
+    setWatermancerCompactFollowEnabled(current => !current);
   };
   const selectWatermancerReadingsView = (view: 'compact' | 'classic') => {
     if (view === watermancerReadingsView) return;
@@ -2843,6 +2850,7 @@ function App() {
     localStorage.setItem(WATERMANCER_FEEDBACK_ENABLED_STORAGE_KEY, String(watermancerFeedbackEnabled));
     localStorage.setItem(WATERMANCER_FOLLOW_ENABLED_STORAGE_KEY, String(watermancerFollowEnabled));
     localStorage.setItem(WATERMANCER_READINGS_VIEW_STORAGE_KEY, watermancerReadingsView);
+    localStorage.setItem(WATERMANCER_COMPACT_FOLLOW_STORAGE_KEY, String(watermancerCompactFollowEnabled));
     localStorage.setItem(WATERMANCER_RESULT_DOCK_STORAGE_KEY, watermancerResultDock);
     if (watermancerFollowEnabled && watermancerFeedbackBeforeFollowRef.current !== null) {
       localStorage.setItem(
@@ -2852,7 +2860,7 @@ function App() {
     } else {
       localStorage.removeItem(WATERMANCER_FEEDBACK_BEFORE_FOLLOW_STORAGE_KEY);
     }
-  }, [watermancerFeedbackEnabled, watermancerFollowEnabled, watermancerReadingsView, watermancerResultDock]);
+  }, [watermancerCompactFollowEnabled, watermancerFeedbackEnabled, watermancerFollowEnabled, watermancerReadingsView, watermancerResultDock]);
 
   // ── Local waters (curated by user, stored in localStorage) ──
   const [localWaters, setLocalWaters] = useState<LocalWater[]>(() => loadLocalWaters());
@@ -7365,6 +7373,8 @@ function App() {
                feedbackEnabled={watermancerFeedbackEnabled}
                followEnabled={watermancerFollowEnabled}
                readingsView={watermancerReadingsView}
+               compactFollowEnabled={watermancerCompactFollowEnabled}
+               onToggleCompactFollow={toggleWatermancerCompactFollow}
                onChangeReadingsView={selectWatermancerReadingsView}
                compactBreakdownExpanded={watermancerCompactBreakdownExpanded}
                onToggleCompactBreakdown={() => setWatermancerCompactBreakdownExpanded(current => !current)}
@@ -13021,6 +13031,8 @@ function WatermancerIonCoverageBars({
   feedbackEnabled,
   followEnabled,
   readingsView,
+  compactFollowEnabled,
+  onToggleCompactFollow,
   onChangeReadingsView,
   compactBreakdownExpanded,
   onToggleCompactBreakdown,
@@ -13042,6 +13054,8 @@ function WatermancerIonCoverageBars({
   feedbackEnabled: boolean;
   followEnabled: boolean;
   readingsView: 'compact' | 'classic';
+  compactFollowEnabled: boolean;
+  onToggleCompactFollow: () => void;
   onChangeReadingsView: (view: 'compact' | 'classic') => void;
   compactBreakdownExpanded: boolean;
   onToggleCompactBreakdown: () => void;
@@ -13141,6 +13155,8 @@ function WatermancerIonCoverageBars({
           targetIons={targetIons}
           targetLabel={targetLabel}
           previewRatios={!hasModeledIons}
+          followEnabled={compactFollowEnabled}
+          onToggleFollow={onToggleCompactFollow}
           ratios={[
             {
               id: 'gh-kh',

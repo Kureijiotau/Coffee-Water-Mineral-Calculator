@@ -1,10 +1,10 @@
 ---
-name: Watermancer transient ion tray
-description: Show recently affected final-ion rows in a temporary bottom tray while editing Watermancer inputs.
+name: Watermancer compact live dock
+description: Keep compact final-ion readings visible across the Watermancer tab while inputs change.
 ---
 
-Watermancer’s final ion-reading rows are shared between the full result card and an optional transient bottom-of-viewport tray. The tray shows active ions affected by a positive dose change, resets its inactivity timer while editing continues, and disappears after roughly three seconds. Users can turn feedback off or enable the original fixed Follow screen behavior independently.
+The Compact readings view is pinned to the bottom of the viewport by default while the user works anywhere in Watermancer. It continuously reflects final ion amounts, targets, and ratios; affected values highlight briefly after changes. Users can unpin the compact card to return it to the normal document flow. The Classic readings view keeps its existing Follow and transient feedback behavior.
 
-**Why:** The original PiP/follow-screen result is useful for users who want the live result always visible, while the feedback tray is a separate short-lived cue. They should be independent so users can use both at once.
+**Why:** The user clarified that the point of compact readings is to see the effect of any adjustment without scrolling back to the readings section.
 
-**How to apply:** Keep the full Final ion-reading card in normal document flow unless the user enables Follow mode, which restores the fixed card with left/center/right dock choices and a compact-on-scroll summary. Reuse its exact row renderer for the tray, render the tray through a portal into `document.body` so card-level blur/overflow styles cannot contain it, size it to the calculator card’s max width, and use one full-width compact row per affected ion so labels and ppm values remain readable. Feedback is static with no animation; any real salt-dose or water-volume/ion-value adjustment in either direction should open it. Follow temporarily forces feedback off and restores the user’s prior feedback preference when disabled; persist that prior preference if Follow remains enabled across refreshes.
+**How to apply:** Keep the compact dock pinned while the Compact view is selected, with a visible unpin control. Compare both actual ion values and targets so every displayed change is highlighted; refresh the same dock from all Watermancer inputs. Do not change Classic’s separate Follow preference when toggling the compact dock.
