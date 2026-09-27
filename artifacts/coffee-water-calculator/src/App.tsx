@@ -6163,7 +6163,11 @@ function App() {
   return (
     <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
       <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
-      <div className="app-page-stack flex w-full max-w-5xl flex-col">
+      <div className={`app-page-stack flex w-full max-w-5xl flex-col ${
+        showWatermancer && watermancerReadingsView === 'compact' && watermancerCompactFollowEnabled
+          ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]'
+          : ''
+      }`}>
         {/* Header */}
         {appHeader}
          {sharedRecipeNotice && (

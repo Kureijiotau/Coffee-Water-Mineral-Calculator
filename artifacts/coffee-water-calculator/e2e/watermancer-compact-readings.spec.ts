@@ -31,6 +31,25 @@ async function readTop(element: Locator) {
   return element.evaluate(node => node.getBoundingClientRect().top);
 }
 
+async function expectClearOfPinnedDock(control: Locator, readings: Locator) {
+  await control.scrollIntoViewIfNeeded();
+  const controlBox = await control.boundingBox();
+  const dockBox = await readings.boundingBox();
+  expect(controlBox).not.toBeNull();
+  expect(dockBox).not.toBeNull();
+  expect(controlBox!.y + controlBox!.height).toBeLessThanOrEqual(dockBox!.y);
+}
+
+async function isFullyVisibleWithinRail(item: Locator, rail: Locator) {
+  return item.evaluate(element => {
+    const railElement = element.closest('[aria-label="Live ions and current mixture ratios"]');
+    if (!railElement) return false;
+    const itemRect = element.getBoundingClientRect();
+    const railRect = railElement.getBoundingClientRect();
+    return itemRect.left >= railRect.left && itemRect.right <= railRect.right;
+  });
+}
+
 async function expectPinnedAndCompact(page: Page, readings: Locator) {
   await expect.poll(() => readPosition(readings)).toBe('fixed');
   const box = await readings.boundingBox();
@@ -133,4 +152,49 @@ test('shows mobile live changes and scrolls changed ions into the visible rail',
     const railRect = (railElement as HTMLElement).getBoundingClientRect();
     return itemRect.left >= railRect.left && itemRect.right <= railRect.right;
   })).toBe(true);
+});
+
+test('keeps pinned readings and Watermancer controls usable on short landscape screens', async ({ page }) => {
+  await page.setViewportSize({ width: 667, height: 375 });
+  const readings = await openWatermancer(page);
+
+  await expectPinnedAndCompact(page, readings);
+  const { magnesiumDose, magnesiumReading } = await createLiveSaltReadings(page);
+
+  const magnesiumBefore = await magnesiumReading.innerText();
+  await magnesiumDose.fill('200');
+  await expect.poll(() => magnesiumReading.innerText()).not.toBe(magnesiumBefore);
+  await expect(magnesiumReading).toHaveAttribute('aria-label', /Updated\. Magnesium:/);
+  await expectClearOfPinnedDock(magnesiumDose, readings);
+
+  const rail = readings.locator('[aria-label="Live ions and current mixture ratios"]');
+  await expect.poll(() => isFullyVisibleWithinRail(magnesiumReading, rail)).toBe(true);
+
+  const targetStage = page.locator('[data-watermancer-stage="target"]');
+  const calciumTargetCard = targetStage
+    .locator('[class~="group/ion"]')
+    .filter({ has: targetStage.getByText('Calcium', { exact: true }) });
+  await expect(calciumTargetCard).toHaveAttribute('aria-label', 'Edit Calcium target');
+  await calciumTargetCard.click();
+
+  const calciumTargetInput = calciumTargetCard.locator('input');
+  await expect(calciumTargetInput).toBeVisible();
+  await expectClearOfPinnedDock(calciumTargetInput, readings);
+  const calciumTargetBefore = Number(await calciumTargetInput.inputValue());
+  await calciumTargetInput.fill(String(calciumTargetBefore + 1));
+  await expect(calciumTargetInput).toHaveValue(String(calciumTargetBefore + 1));
+
+  const sulfateRatio = readings.locator('[data-watermancer-ratio="cl-so4"]');
+  const railExtent = await rail.evaluate(element => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(railExtent.scrollWidth).toBeGreaterThan(railExtent.clientWidth);
+  await rail.evaluate(element => {
+    element.scrollLeft = element.scrollWidth;
+  });
+  await expect.poll(() => isFullyVisibleWithinRail(sulfateRatio, rail)).toBe(true);
+  await sulfateRatio.click();
+  await expect(sulfateRatio).toHaveAttribute('aria-label', /SO₄:Cl ratio/);
+  await expect.poll(() => readPosition(readings)).toBe('fixed');
 });
