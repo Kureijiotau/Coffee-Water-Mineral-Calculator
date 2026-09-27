@@ -3754,6 +3754,41 @@ function App() {
     setWatermancerActionMessage('Base waters filled toward the current target.');
     finishWatermancerActionAfterPaint();
   };
+  const focusWatermancerStage = (stageName: string) => {
+    const stage = document.querySelector<HTMLElement>(`[data-watermancer-stage="${stageName}"]`);
+    if (!stage) return;
+    const anchorSelector = stageName === 'target'
+      ? '[aria-label^="Edit "]'
+      : stageName === 'salts'
+        ? '.watermancer-salt-table__row'
+        : stageName === 'match'
+          ? 'details summary'
+          : null;
+    const anchor = anchorSelector ? stage.querySelector<HTMLElement>(anchorSelector) : null;
+    if (anchor) {
+      const dock = document.querySelector<HTMLElement>('[aria-label="Current ion readings"]');
+      const dockIsPinned = dock && getComputedStyle(dock).position === 'fixed';
+      const visibleBottom = dockIsPinned
+        ? Math.min(window.innerHeight, dock.getBoundingClientRect().top) - 12
+        : window.innerHeight - 16;
+      const visibleTop = 16;
+      const anchorHeight = Math.min(
+        anchor.getBoundingClientRect().height,
+        Math.max(0, visibleBottom - visibleTop),
+      );
+      const anchorTop = visibleTop + Math.max(
+        0,
+        (visibleBottom - visibleTop - anchorHeight) / 2,
+      );
+      window.scrollTo({
+        top: Math.max(0, window.scrollY + anchor.getBoundingClientRect().top - anchorTop),
+        behavior: 'smooth',
+      });
+    } else {
+      stage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    stage.focus({ preventScroll: true });
+  };
   const handleApplyWatermancerRecommendation = (recommendation: WatermancerMatchRecommendation) => {
     if (!beginWatermancerAction()) return;
     setWatermancerBestMatchMessage(null);
@@ -3782,9 +3817,7 @@ function App() {
       }));
       setWatermancerActionMessage(`${recommendation.label} applied. Recalculating the match.`);
     } else {
-      const stage = document.querySelector<HTMLElement>(`[data-watermancer-stage="${action.focus}"]`);
-      stage?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      stage?.focus({ preventScroll: true });
+      focusWatermancerStage(action.focus);
       setWatermancerActionMessage(`Review the ${action.focus} controls to adjust this constraint.`);
     }
     finishWatermancerActionAfterPaint();
@@ -6178,6 +6211,77 @@ function App() {
              {sharedRecipeNotice}
            </div>
          )}
+
+          {showWatermancer && (
+            <nav
+              aria-label="Watermancer workflow"
+              className="workflow-rail mb-3 rounded-2xl border border-indigo-400/20 bg-slate-950/35 px-2 py-2 shadow-sm sm:px-3"
+            >
+              <ol className="grid grid-cols-3 gap-1.5 min-[640px]:grid-cols-6">
+                {[
+                  { number: '1', label: 'Set target', stage: 'target' as const, complete: true, available: true },
+                  {
+                    number: '2',
+                    label: 'Add waters',
+                    stage: 'waters' as const,
+                    complete: mineralWaters.length + additionWaters.length > 0,
+                    available: true,
+                  },
+                  {
+                    number: '3',
+                    label: 'Add salts',
+                    stage: 'salts' as const,
+                    complete: watermancerUsedSaltIds.length > 0,
+                    available: batchMl > 0,
+                  },
+                  {
+                    number: '4',
+                    label: 'Choose route',
+                    stage: 'match' as const,
+                    complete: Boolean(watermancerAppliedBestMatchRoute),
+                    available: Boolean(watermancerLiveResult),
+                  },
+                  {
+                    number: '5',
+                    label: 'Closest match',
+                    stage: 'closest-match' as const,
+                    complete: Boolean(activeWatermancerRoute),
+                    available: Boolean(activeWatermancerRoute),
+                  },
+                  {
+                    number: '6',
+                    label: 'Final mixture',
+                    stage: 'final-mixture' as const,
+                    complete: Boolean(activeWatermancerRoute),
+                    available: Boolean(activeWatermancerRoute),
+                  },
+                ].filter(step => step.available).map(step => (
+                  <li
+                    key={step.number}
+                    className={`rounded-xl border text-[9px] min-[640px]:text-[10px] ${
+                      step.complete
+                        ? 'border-indigo-400/30 bg-indigo-500/10 text-indigo-100'
+                        : 'border-slate-700/60 bg-slate-900/35 text-slate-400'
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => focusWatermancerStage(step.stage)}
+                      className="flex min-h-9 w-full items-center gap-1.5 rounded-xl px-1.5 py-1.5 text-left transition hover:bg-indigo-500/10 focus:outline-none focus:ring-2 focus:ring-indigo-300/60 min-[640px]:gap-2 min-[640px]:px-2"
+                      aria-label={`Go to Watermancer step ${step.number}: ${step.label}`}
+                    >
+                      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                        step.complete ? 'bg-indigo-400/20 text-indigo-200' : 'bg-slate-800 text-slate-500'
+                      }`}>
+                        {step.number}
+                      </span>
+                      <span className="truncate">{step.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
 
         {/* Experience level */}
          <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">

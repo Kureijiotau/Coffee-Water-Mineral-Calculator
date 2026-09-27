@@ -3,8 +3,8 @@ name: Watermancer workflow navigation
 description: The Watermancer workflow rail scrolls to each matching stage
 ---
 
-Make the Watermancer workflow rail steps actionable: Set target, Add waters, Add salts, Choose route, and Review result smoothly scroll to their corresponding `data-watermancer-stage` sections and focus the destination.
+Make the Watermancer workflow rail steps actionable: scroll to the matching `data-watermancer-stage` section and focus it. For targets, salts, and matching, place the first actionable control in the visible space above the pinned compact readings dock; align other stages to their section start.
 
-**Why:** The rail is a navigation aid as well as a progress indicator, especially on the long Watermancer workspace.
+**Why:** A section heading can land in view while its controls remain under the pinned dock. Focusing the stage alone does not make those controls operable.
 
-**How to apply:** Preserve the existing stage mapping and keyboard-accessible button behavior when adding or rearranging Watermancer sections.
+**How to apply:** Preserve the stage mapping and keyboard-accessible button behavior when adding or rearranging sections. Keep shortcut tests waiting for smooth scrolling to settle, then check the chosen controls and focus above the dock.

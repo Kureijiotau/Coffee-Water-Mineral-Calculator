@@ -11,8 +11,8 @@ async function openWatermancer(page: Page) {
 }
 
 async function enableSaltAndSetDose(page: Page, saltName: string, doseMg: number) {
-  const dose = page.getByRole('spinbutton', { name: `${saltName} dose in milligrams` });
-  const row = page.locator('.watermancer-salt-table__row').filter({ has: dose });
+  const row = page.locator('.watermancer-salt-table__row').filter({ hasText: saltName });
+  const dose = row.getByLabel(`${saltName} dose in milligrams`, { exact: true });
   const notUsedButton = row.getByRole('button', { name: 'Not used', exact: true });
 
   if (await notUsedButton.count()) {
@@ -38,6 +38,42 @@ async function expectClearOfPinnedDock(control: Locator, readings: Locator) {
   expect(controlBox).not.toBeNull();
   expect(dockBox).not.toBeNull();
   expect(controlBox!.y + controlBox!.height).toBeLessThanOrEqual(dockBox!.y);
+}
+
+async function useWatermancerShortcut(
+  page: Page,
+  stepNumber: string,
+  label: string,
+  stage: Locator,
+  anchor: Locator,
+  readings: Locator,
+) {
+  await page.getByRole('button', {
+    name: `Go to Watermancer step ${stepNumber}: ${label}`,
+  }).click();
+  await expect(stage).toBeFocused();
+  await page.evaluate(() => new Promise<void>(resolve => {
+    let timer = window.setTimeout(finish, 160);
+    const onScroll = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(finish, 160);
+    };
+    function finish() {
+      window.removeEventListener('scroll', onScroll);
+      resolve();
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+  }));
+  await expect.poll(async () => {
+    const anchorBox = await anchor.boundingBox();
+    const dockBox = await readings.boundingBox();
+    return Boolean(
+      anchorBox
+      && dockBox
+      && anchorBox.y >= 0
+      && anchorBox.y + anchorBox.height <= dockBox.y - 12,
+    );
+  }).toBe(true);
 }
 
 async function isFullyVisibleWithinRail(item: Locator, rail: Locator) {
@@ -196,5 +232,38 @@ test('keeps pinned readings and Watermancer controls usable on short landscape s
   await expect.poll(() => isFullyVisibleWithinRail(sulfateRatio, rail)).toBe(true);
   await sulfateRatio.click();
   await expect(sulfateRatio).toHaveAttribute('aria-label', /SO₄:Cl ratio/);
+  await expect.poll(() => readPosition(readings)).toBe('fixed');
+});
+
+test('workflow shortcuts keep target, salt, and matching controls clear of the pinned dock', async ({ page }) => {
+  await page.setViewportSize({ width: 667, height: 375 });
+  const readings = await openWatermancer(page);
+  await expect.poll(() => readPosition(readings)).toBe('fixed');
+
+  const targetStage = page.locator('[data-watermancer-stage="target"]');
+  const sodiumTargetCard = targetStage.locator('[aria-label="Edit Sodium target"]');
+  await useWatermancerShortcut(page, '1', 'Set target', targetStage, sodiumTargetCard, readings);
+  await sodiumTargetCard.click();
+  const sodiumTargetInput = sodiumTargetCard.locator('input');
+  await expectClearOfPinnedDock(sodiumTargetInput, readings);
+  const sodiumTargetBefore = Number(await sodiumTargetInput.inputValue());
+  await sodiumTargetInput.fill(String(sodiumTargetBefore + 1));
+  await expect(sodiumTargetInput).toHaveValue(String(sodiumTargetBefore + 1));
+
+  const saltStage = page.locator('[data-watermancer-stage="salts"]');
+  const firstSaltRow = saltStage.locator('.watermancer-salt-table__row').first();
+  await useWatermancerShortcut(page, '3', 'Add salts', saltStage, firstSaltRow, readings);
+  const magnesiumDose = await enableSaltAndSetDose(page, 'Magnesium Chloride', 100);
+  await expectClearOfPinnedDock(magnesiumDose, readings);
+  await magnesiumDose.fill('125');
+  await expect(magnesiumDose).toHaveValue('125');
+
+  const matchingStage = page.locator('[data-watermancer-stage="match"]');
+  await expect(matchingStage).toBeVisible();
+  const guideMatch = matchingStage.locator('details').filter({ hasText: 'Guide the match' });
+  const guideMatchSummary = guideMatch.locator('summary');
+  await useWatermancerShortcut(page, '4', 'Choose route', matchingStage, guideMatchSummary, readings);
+  await guideMatchSummary.click();
+  await expect(guideMatch).toHaveAttribute('open', '');
   await expect.poll(() => readPosition(readings)).toBe('fixed');
 });
