@@ -56,9 +56,6 @@
 - [Watermancer ion source preferences](watermancer-ion-source-preferences.md) — source choices live in the unified plan and default to neutral Don’t care behavior
 - [Aiki hover reference range](aiki-hover-reference-range.md) — Watermancer bars compare to Aiki’s green ceiling only on hover/focus, with over-100% values and range markers
 - [Watermancer coverage disclosure](watermancer-coverage-disclosure.md) — keep mineral-water coverage details collapsed behind a visible rotating arrow
-- [Watermancer workflow navigation](watermancer-workflow-navigation.md) — workflow rail steps smooth-scroll to and focus their matching Watermancer sections
-- [Watermancer rail layout](watermancer-rail-layout.md) — six-step workflow rail becomes a sticky right-side column on wide desktop and stays horizontal on smaller screens
-- [Watermancer rail transition](watermancer-rail-transition.md) — rail starts inline, pins right after its original position leaves view, and returns inline when scrolling back
 - [Alchemist and Watermancer language](alchemist-watermancer-language.md) — shared workflow concepts use the same labels across both tabs
 - [Mode identity language](mode-identity-language.md) — Brewer is simple, Alchemist designs mineral recipes, Watermancer matches ion targets and source waters
 - [Gemini water assistant constraints](gemini-water-assistant-constraints.md) — keep the planner direct-key, one-shot, structured, rate-limited, and tolerant of Gemini model/latency changes
