@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make every profile available in the Alchemist profile collection and every saved Watermancer target profile selectable as context for a Water Tasting record.
+Make every profile available in the Alchemist profile collection and every saved Watermancer target profile selectable as context for a Water Tasting record. When a profile is selected, show the existing “Water profile / Mineral analysis” card without creating a new visual design.
 
 ## Current profile sources
 
@@ -32,6 +32,15 @@ The picker displays Built-in, Alchemist, and Watermancer optgroups. The Saved/un
 
 Options are derived from the current Alchemist and Watermancer profile state, not a separate registry or one-time list. When a profile is added to either collection, the picker receives the updated options through normal application state updates without requiring a second manual entry.
 
+## Mineral analysis card
+
+Reuse the existing `MineralAnalysisLabel` card and its visual treatment in Water Tasting. Show it after a selectable profile is chosen; do not render a replacement card or alter its design.
+
+- For Alchemist range profiles, use the current recipe's final ion values and summary metrics already supplied to the existing card. Do not display the selected profile's green/yellow guidance ranges as mineral readings.
+- For saved Watermancer profiles, use `finishedIons` when available, otherwise use the profile's `targets`; calculate the card's TDS, GH, and KH summaries from those values.
+- For the built-in Aiki safe profile and current salt table, use their existing source ion values.
+- If no profile is selected or an unavailable historical profile has no current ion data, do not show the card.
+
 ## Non-goals
 
 - Do not change the scorecard, ratings, descriptors, or tasting-history behavior.
@@ -44,4 +53,5 @@ Options are derived from the current Alchemist and Watermancer profile state, no
 - Verify that adding a profile to either source collection produces a picker option from the updated collection.
 - Verify the no-saved-Watermancer path still links to Watermancer.
 - Verify saved selections retain their ID/name snapshots across rename and deletion, and existing tasting records remain readable.
+- Verify selecting each profile source displays the existing MineralAnalysisLabel card with the correct source values, and switching profiles updates its readings.
 - Run the calculator typecheck, unit suite, production build, and relevant browser coverage.
