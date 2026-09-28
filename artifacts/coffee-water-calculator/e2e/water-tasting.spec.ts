@@ -178,6 +178,63 @@ test('selects a saved target, preserves its prior name snapshot, and keeps histo
   await expect(page.getByTestId('profile-tasting-older-saved-water-tasting')).toHaveText('Original E2E Water');
 });
 
+test('shows the existing mineral analysis card for each profile source', async ({ page }) => {
+  await page.addInitScript(profilesKey => {
+    localStorage.setItem(profilesKey, JSON.stringify([
+      {
+        id: 'e2e-finished-profile',
+        name: 'Finished E2E Water',
+        targets: { calcium: 40 },
+        finishedIons: { calcium: 25 },
+      },
+      {
+        id: 'e2e-target-profile',
+        name: 'Target E2E Water',
+        targets: { magnesium: 15 },
+      },
+    ]));
+  }, PROFILES_KEY);
+
+  await openWaterTasting(page);
+  const select = page.getByTestId('select-tasting-profile');
+  await expect(select.locator('optgroup[label="Built-in"]')).toHaveCount(1);
+  await expect(select.locator('optgroup[label="Alchemist"]')).toHaveCount(1);
+  await expect(select.locator('optgroup[label="Watermancer"]')).toHaveCount(1);
+  await expect(select.locator('optgroup[label="Alchemist"] option').first()).toHaveAttribute(
+    'value',
+    /^alchemist:/,
+  );
+
+  const analysis = page.getByTestId('panel-tasting-profile-analysis');
+  await select.selectOption('safe-profile');
+  await expect(analysis).toContainText('Aiki safe profile');
+  await expect(analysis).toContainText('Mineral analysis');
+  const safeCardText = await analysis.innerText();
+
+  await select.selectOption('salt-table');
+  await expect(analysis).toContainText('Current salt table');
+  const saltTableText = await analysis.innerText();
+  expect(saltTableText).not.toBe(safeCardText);
+
+  const alchemistOptionValue = await select
+    .locator('optgroup[label="Alchemist"] option')
+    .first()
+    .getAttribute('value');
+  expect(alchemistOptionValue).toMatch(/^alchemist:/);
+  await select.selectOption(alchemistOptionValue!);
+  await expect(analysis).toContainText('Current recipe');
+
+  await select.selectOption('saved:e2e-finished-profile');
+  await expect(analysis).toContainText('Finished E2E Water');
+  await expect(analysis).toContainText('25.0');
+  const finishedProfileText = await analysis.innerText();
+
+  await select.selectOption('saved:e2e-target-profile');
+  await expect(analysis).toContainText('Target E2E Water');
+  await expect(analysis).toContainText('15.0');
+  expect(await analysis.innerText()).not.toBe(finishedProfileText);
+});
+
 test('does not overwrite malformed saved tasting data', async ({ page }) => {
   await page.addInitScript(tastingsKey => {
     localStorage.setItem(tastingsKey, '{malformed');

@@ -82,15 +82,46 @@ describe('Water Tasting score model', () => {
 });
 
 describe('Water Tasting profile options', () => {
-  it('offers built-in targets and saved Watermancer target profiles', () => {
+  it('offers built-in, Alchemist, and Watermancer profiles in separate groups', () => {
     expect(buildWaterTastingProfileOptions(
+      [
+        { id: 'aiki-default', name: 'Aiki' },
+        { id: 'empirical-1', name: 'Empirical Water ionic profile' },
+        { id: 'custom-1', name: 'My custom profile' },
+      ],
       [{ id: 'water-1', name: 'Bright Water' }],
       'Aiki',
     )).toEqual([
       { sourceId: 'safe-profile', name: 'Aiki safe profile', group: 'Built-in' },
       { sourceId: 'salt-table', name: 'Current salt table', group: 'Built-in' },
-      { sourceId: 'saved:water-1', name: 'Bright Water', group: 'Saved' },
+      { sourceId: 'alchemist:aiki-default', name: 'Aiki', group: 'Alchemist' },
+      { sourceId: 'alchemist:empirical-1', name: 'Empirical Water ionic profile', group: 'Alchemist' },
+      { sourceId: 'alchemist:custom-1', name: 'My custom profile', group: 'Alchemist' },
+      { sourceId: 'saved:water-1', name: 'Bright Water', group: 'Watermancer' },
     ]);
+  });
+
+  it('reflects profiles added to either current source collection', () => {
+    const alchemistProfiles = [{ id: 'custom-1', name: 'First profile' }];
+    const watermancerProfiles: Array<{ id: string; name: string }> = [];
+    const initial = buildWaterTastingProfileOptions(alchemistProfiles, watermancerProfiles, 'Aiki');
+    expect(initial.some(option => option.sourceId === 'alchemist:custom-2')).toBe(false);
+    expect(initial.some(option => option.sourceId === 'saved:water-2')).toBe(false);
+
+    alchemistProfiles.push({ id: 'custom-2', name: 'New Alchemist profile' });
+    watermancerProfiles.push({ id: 'water-2', name: 'New Watermancer profile' });
+    const updated = buildWaterTastingProfileOptions(alchemistProfiles, watermancerProfiles, 'Aiki');
+
+    expect(updated).toContainEqual({
+      sourceId: 'alchemist:custom-2',
+      name: 'New Alchemist profile',
+      group: 'Alchemist',
+    });
+    expect(updated).toContainEqual({
+      sourceId: 'saved:water-2',
+      name: 'New Watermancer profile',
+      group: 'Watermancer',
+    });
   });
 });
 

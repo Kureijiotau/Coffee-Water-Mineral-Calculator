@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, BookOpen, Check, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -18,6 +18,7 @@ import {
 
 interface WaterTastingTabProps {
   profileOptions: WaterTastingProfileOption[];
+  renderProfileAnalysis: (sourceId: string) => ReactNode;
   onOpenWatermancer: () => void;
 }
 
@@ -52,7 +53,7 @@ function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(value));
 }
 
-export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTastingTabProps) {
+export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenWatermancer }: WaterTastingTabProps) {
   const [initialLoad] = useState(loadWaterTastings);
   const expectedRecordsRef = useRef<WaterTastingRecord[] | null>(
     initialLoad.ok ? initialLoad.records : null,
@@ -64,6 +65,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const formStart = useRef<HTMLDivElement>(null);
   const form = useForm<WaterTastingDraft>({ defaultValues: emptyDraft() });
+  const selectedProfileSourceId = form.watch('profileSourceId');
   const ratings = form.watch('ratings');
   const selectedDescriptors = form.watch('descriptorIds') ?? [];
   const total = calculateWaterTastingTotal(ratings ?? {});
@@ -80,6 +82,9 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       group: 'Saved' as const,
     }]
     : profileOptions;
+  const selectedProfileAnalysis = selectedProfileSourceId
+    ? renderProfileAnalysis(selectedProfileSourceId)
+    : null;
 
   function beginNew() {
     setEditingId(null);
@@ -108,8 +113,8 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
     }
     const option = profileChoices.find(choice => choice.sourceId === values.profileSourceId);
     if (!option) {
-      form.setError('profileSourceId', { message: 'Select a Watermancer target before saving.' });
-      setFeedback({ kind: 'error', text: 'Select a Watermancer target before saving this tasting.' });
+      form.setError('profileSourceId', { message: 'Select a water profile before saving.' });
+      setFeedback({ kind: 'error', text: 'Select a water profile before saving this tasting.' });
       return;
     }
     const snapshot = editingRecord?.profileSourceId === option.sourceId
@@ -212,12 +217,12 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
               <div className="mt-5 sm:pl-10">
                 <FormField control={form.control} name="profileSourceId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs font-semibold text-slate-300">Watermancer target</FormLabel>
+                    <FormLabel className="text-xs font-semibold text-slate-300">Water profile</FormLabel>
                     <FormControl>
                       <select {...field} value={field.value ?? ''} data-testid="select-tasting-profile" className={`${inputStyle} w-full appearance-auto border px-3 sm:max-w-md`}>
-                        {!profileChoices.length && <option value="">No targets available</option>}
-                        <option value="" disabled>Select a Watermancer target</option>
-                        {(['Built-in', 'Saved'] as const).map(group => {
+                        {!profileChoices.length && <option value="">No profiles available</option>}
+                        <option value="" disabled>Select a water profile</option>
+                        {(['Built-in', 'Alchemist', 'Watermancer', 'Saved'] as const).map(group => {
                           const options = profileChoices.filter(option => option.group === group);
                           return options.length ? <optgroup key={group} label={group}>
                             {options.map(option => <option key={option.sourceId} value={option.sourceId}>{option.name}</option>)}
@@ -228,12 +233,17 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                     <FormMessage />
                   </FormItem>
                 )} />
+                {selectedProfileAnalysis && (
+                  <div className="mt-5" data-testid="panel-tasting-profile-analysis">
+                    {selectedProfileAnalysis}
+                  </div>
+                )}
                 {editingRecord && profileOptions.some(option => option.sourceId === editingRecord.profileSourceId && option.name !== editingRecord.profileNameSnapshot) && (
                   <p className="mt-2 text-xs text-slate-400" data-testid="text-profile-snapshot">Originally saved as “{editingRecord.profileNameSnapshot}”. That name stays with this note.</p>
                 )}
-                {!profileOptions.some(option => option.group === 'Saved') && (
+                {!profileOptions.some(option => option.group === 'Watermancer') && (
                   <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
-                    <span>No saved targets yet. The built-in targets are ready to use.</span>
+                    <span>No saved Watermancer targets yet. The other profiles are ready to use.</span>
                     <button type="button" onClick={onOpenWatermancer} data-testid="button-open-watermancer" className="inline-flex min-h-11 items-center gap-1 font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
                       Create a target in Watermancer <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>

@@ -2948,8 +2948,8 @@ function App() {
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
   const waterTastingProfileOptions = useMemo(
-    () => buildWaterTastingProfileOptions(wmProfiles, AIKI_DEFAULT_PROFILE.name),
-    [wmProfiles],
+    () => buildWaterTastingProfileOptions(profiles, wmProfiles, AIKI_DEFAULT_PROFILE.name),
+    [profiles, wmProfiles],
   );
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
@@ -5998,6 +5998,60 @@ function App() {
             {appHeader}
             <WaterTastingTab
               profileOptions={waterTastingProfileOptions}
+              renderProfileAnalysis={sourceId => {
+                const option = waterTastingProfileOptions.find(item => item.sourceId === sourceId);
+                if (!option) return null;
+
+                let sourceIons: Partial<Record<IonId, number>>;
+                let summary = {
+                  tds: 0,
+                  gh: 0,
+                  kh: 0,
+                };
+                let recipeName = option.name;
+
+                if (sourceId === 'safe-profile') {
+                  sourceIons = Object.fromEntries(
+                    ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
+                  ) as Record<IonId, number>;
+                } else if (sourceId === 'salt-table') {
+                  sourceIons = saltOnlyIons;
+                } else if (sourceId.startsWith('alchemist:')) {
+                  sourceIons = reviewFinalIons;
+                  summary = {
+                    tds: reviewFinalTds,
+                    gh: reviewFinalGh,
+                    kh: reviewFinalKh,
+                  };
+                  recipeName = 'Current recipe';
+                } else if (sourceId.startsWith('saved:')) {
+                  const profileId = sourceId.slice('saved:'.length);
+                  const profile = wmProfiles.find(item => item.id === profileId);
+                  if (!profile) return null;
+                  sourceIons = Object.fromEntries(
+                    ACTIVE_ION_IDS.map(id => [
+                      id,
+                      Number(profile.finishedIons?.[id] ?? profile.targets[id] ?? 0),
+                    ]),
+                  ) as Record<IonId, number>;
+                } else {
+                  return null;
+                }
+
+                const finalIons = Object.fromEntries(
+                  ACTIVE_ION_IDS.map(id => [id, Number(sourceIons[id] ?? 0)]),
+                ) as Record<IonId, number>;
+                const totalIonPpm = Object.values(finalIons).reduce((total, value) => total + value, 0);
+                return (
+                  <MineralAnalysisLabel
+                    recipeName={recipeName}
+                    finalIons={finalIons}
+                    tds={summary.tds || totalIonPpm}
+                    gh={summary.gh || computeGH(finalIons)}
+                    kh={summary.kh || computeKH(finalIons)}
+                  />
+                );
+              }}
               onOpenWatermancer={() => {
                 setAppTab('calculator');
                 setNerdLevel('watermancer');

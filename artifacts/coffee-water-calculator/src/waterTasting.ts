@@ -63,7 +63,7 @@ export const WATER_TASTING_DESCRIPTORS = [
 
 export type WaterTastingDescriptorId =
   typeof WATER_TASTING_DESCRIPTORS[number]['options'][number]['id'];
-export type WaterTastingProfileGroup = 'Built-in' | 'Saved';
+export type WaterTastingProfileGroup = 'Built-in' | 'Alchemist' | 'Watermancer' | 'Saved';
 
 export interface WaterTastingProfileOption {
   sourceId: string;
@@ -237,7 +237,8 @@ export function updateWaterTastingRecord(
 }
 
 export function buildWaterTastingProfileOptions(
-  savedProfiles: ReadonlyArray<{ id: string; name: string }>,
+  alchemistProfiles: ReadonlyArray<{ id: string; name: string }>,
+  watermancerProfiles: ReadonlyArray<{ id: string; name: string }>,
   aikiProfileName: string,
 ): WaterTastingProfileOption[] {
   return [
@@ -251,10 +252,15 @@ export function buildWaterTastingProfileOptions(
       name: 'Current salt table',
       group: 'Built-in',
     },
-    ...savedProfiles.map(profile => ({
+    ...alchemistProfiles.map(profile => ({
+      sourceId: `alchemist:${profile.id}`,
+      name: profile.name,
+      group: 'Alchemist' as const,
+    })),
+    ...watermancerProfiles.map(profile => ({
       sourceId: `saved:${profile.id}`,
       name: profile.name,
-      group: 'Saved' as const,
+      group: 'Watermancer' as const,
     })),
   ];
 }
