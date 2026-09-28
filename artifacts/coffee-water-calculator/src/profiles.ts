@@ -4,7 +4,7 @@ import {
 } from '@/waterData';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 
-const PROFILES_KEY = 'cwm.profiles';
+export const PROFILES_KEY = 'cwm.profiles';
 const ACTIVE_KEY = 'cwm.activeProfileId';
 const INDICATOR_KEY = 'cwm.indicatorOn';
 const NERD_LEVEL_KEY = 'cwm.nerdLevel';

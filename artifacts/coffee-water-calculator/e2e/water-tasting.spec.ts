@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const TASTINGS_KEY = 'cwm.waterTastings.v1';
 const PROFILES_KEY = 'cwm.watermancerProfiles';
+const ALCHEMIST_PROFILES_KEY = 'cwm.profiles';
 
 async function openWaterTasting(page: import('@playwright/test').Page) {
   await page.goto('/');
@@ -10,13 +11,18 @@ async function openWaterTasting(page: import('@playwright/test').Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(({ tastingsKey, profilesKey }) => {
+  await page.addInitScript(({ tastingsKey, profilesKey, alchemistProfilesKey }) => {
     const clearedFlag = '__water_tasting_e2e_storage_cleared__';
     if (sessionStorage.getItem(clearedFlag) === 'yes') return;
     localStorage.removeItem(tastingsKey);
     localStorage.removeItem(profilesKey);
+    localStorage.removeItem(alchemistProfilesKey);
     sessionStorage.setItem(clearedFlag, 'yes');
-  }, { tastingsKey: TASTINGS_KEY, profilesKey: PROFILES_KEY });
+  }, {
+    tastingsKey: TASTINGS_KEY,
+    profilesKey: PROFILES_KEY,
+    alchemistProfilesKey: ALCHEMIST_PROFILES_KEY,
+  });
 });
 
 test('saves a partial tasting, edits it to a complete score, and deletes it', async ({ page }) => {
@@ -209,6 +215,7 @@ test('shows the existing mineral analysis card for each profile source', async (
   await select.selectOption('safe-profile');
   await expect(analysis).toContainText('Aiki safe profile');
   await expect(analysis).toContainText('Mineral analysis');
+  await expect(analysis).not.toContainText('NaN');
   const safeCardText = await analysis.innerText();
 
   await select.selectOption('salt-table');
@@ -227,6 +234,7 @@ test('shows the existing mineral analysis card for each profile source', async (
   await select.selectOption('saved:e2e-finished-profile');
   await expect(analysis).toContainText('Finished E2E Water');
   await expect(analysis).toContainText('25.0');
+  await expect(analysis).not.toContainText('NaN');
   const finishedProfileText = await analysis.innerText();
 
   await select.selectOption('saved:e2e-target-profile');
@@ -262,14 +270,99 @@ test('does not overwrite data corrupted after the form is opened', async ({ page
   expect(await page.evaluate(key => localStorage.getItem(key), TASTINGS_KEY)).toBe('{corrupted after load');
 });
 
-test('does not overwrite data corrupted after the form is opened', async ({ page }) => {
+test('saves and reopens the cup-shape spectrum and descriptors', async ({ page }) => {
   await openWaterTasting(page);
   await page.getByTestId('select-tasting-profile').selectOption('salt-table');
-  await page.getByTestId('input-tasting-name').fill('Unsaved cup');
-  await page.evaluate(key => localStorage.setItem(key, '{corrupted after load'), TASTINGS_KEY);
+
+  const acidity = page.getByTestId('input-spectrum-acidityFocus');
+  const body = page.getByTestId('input-spectrum-bodyWeight');
+  const structure = page.getByTestId('input-spectrum-structure');
+  const finish = page.getByTestId('input-spectrum-finish');
+  await expect(acidity).toHaveValue('0');
+  await expect(body).toHaveValue('0');
+  await expect(structure).toHaveValue('0');
+  await expect(finish).toHaveValue('0');
+
+  await acidity.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await body.focus();
+  await page.keyboard.press('ArrowLeft');
+  await structure.focus();
+  await page.keyboard.press('ArrowRight');
+
+  await page.getByTestId('toggle-descriptors-acidity-sweetness').click();
+  await page.getByTestId('button-descriptor-sparkling').click();
+  await page.getByTestId('toggle-descriptors-body-tactile').click();
+  await page.getByTestId('button-descriptor-hollow').click();
+  await page.getByTestId('toggle-descriptors-finish-defects').click();
+  await page.getByTestId('button-descriptor-clean-finish').click();
   await page.getByTestId('button-save-tasting').click();
 
-  await expect(page.getByTestId('status-tasting-feedback')).toContainText('could not be read');
-  await expect(page.getByTestId('empty-tasting-history')).toBeVisible();
-  expect(await page.evaluate(key => localStorage.getItem(key), TASTINGS_KEY)).toBe('{corrupted after load');
+  const card = page.locator('[data-testid^="card-tasting-"]').first();
+  const summary = card.locator('[data-testid^="spectrum-tasting-"]');
+  await expect(summary).toContainText('Acidity');
+  await expect(summary).toContainText('+2');
+  await expect(summary).toContainText('Body');
+  await expect(summary).toContainText('−1');
+  await expect(card).toContainText('Sparkling');
+  await expect(card).toContainText('Hollow');
+  await expect(card).toContainText('Clean finish');
+
+  await card.locator('[data-testid^="button-edit-tasting-"]').click();
+  await expect(acidity).toHaveValue('2');
+  await expect(body).toHaveValue('-1');
+  await expect(structure).toHaveValue('1');
+  await expect(finish).toHaveValue('0');
+});
+
+test('refreshes Watermancer picker options when another tab saves a profile', async ({ page }) => {
+  await openWaterTasting(page);
+  await page.evaluate(() => {
+    const trackedWindow = window as Window & { __profileStorageWrites?: number };
+    trackedWindow.__profileStorageWrites = 0;
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key === 'cwm.profiles' || key === 'cwm.watermancerProfiles') {
+        trackedWindow.__profileStorageWrites = (trackedWindow.__profileStorageWrites ?? 0) + 1;
+      }
+      originalSetItem.call(this, key, value);
+    };
+  });
+  await page.waitForTimeout(350);
+  const writesBeforeRemoteUpdate = await page.evaluate(
+    () => (window as Window & { __profileStorageWrites?: number }).__profileStorageWrites ?? 0,
+  );
+
+  const otherTab = await page.context().newPage();
+  await otherTab.goto('/');
+  await otherTab.waitForTimeout(350);
+  await otherTab.evaluate(({ alchemistKey, watermancerKey }) => {
+    localStorage.setItem(alchemistKey, JSON.stringify([{
+      id: 'cross-tab-alchemist',
+      name: 'Cross-tab Alchemist',
+      ranges: {},
+    }]));
+    localStorage.setItem(watermancerKey, JSON.stringify([{
+      id: 'cross-tab-water',
+      name: 'Cross-tab Water',
+      targets: { calcium: 25 },
+    }]));
+  }, {
+    alchemistKey: ALCHEMIST_PROFILES_KEY,
+    watermancerKey: PROFILES_KEY,
+  });
+
+  await expect(
+    page.getByTestId('select-tasting-profile').locator('option[value="saved:cross-tab-water"]'),
+  ).toHaveCount(1);
+  await expect(
+    page.getByTestId('select-tasting-profile').locator('option[value="alchemist:cross-tab-alchemist"]'),
+  ).toHaveCount(1);
+  await page.waitForTimeout(400);
+  const writesAfterRemoteUpdate = await page.evaluate(
+    () => (window as Window & { __profileStorageWrites?: number }).__profileStorageWrites ?? 0,
+  );
+  expect(writesAfterRemoteUpdate).toBe(writesBeforeRemoteUpdate);
+  await otherTab.close();
 });

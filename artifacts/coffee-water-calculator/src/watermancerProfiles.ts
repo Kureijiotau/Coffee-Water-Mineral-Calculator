@@ -14,11 +14,11 @@ export interface WatermancerProfile {
   details?: string;
 }
 
-const STORAGE_KEY = 'cwm.watermancerProfiles';
+export const WATERMANCER_PROFILES_STORAGE_KEY = 'cwm.watermancerProfiles';
 
 function readProfiles(): WatermancerProfile[] {
   try {
-    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as unknown;
+    const stored = JSON.parse(localStorage.getItem(WATERMANCER_PROFILES_STORAGE_KEY) ?? '[]') as unknown;
     if (!Array.isArray(stored)) return [];
     const profiles = stored.flatMap(item => {
       if (!item || typeof item !== 'object') return [];
@@ -58,7 +58,7 @@ export function loadWatermancerProfiles(): WatermancerProfile[] {
 
 export function saveWatermancerProfiles(profiles: WatermancerProfile[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(profiles));
+    localStorage.setItem(WATERMANCER_PROFILES_STORAGE_KEY, JSON.stringify(profiles));
   } catch {
     /* Ignore storage quota and privacy-mode failures. */
   }

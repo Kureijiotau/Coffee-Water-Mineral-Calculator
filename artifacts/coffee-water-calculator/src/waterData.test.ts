@@ -524,6 +524,12 @@ describe('computeKH', () => {
     expect(kh).toBeCloseTo(expectedHco3 * 0.820, 4);
   });
 
+  it('treats missing ions as zero for partial profile readings', () => {
+    const kh = computeKH({ bicarbonate: 10 });
+    expect(Number.isFinite(kh)).toBe(true);
+    expect(kh).toBeCloseTo(10 * 0.820, 4);
+  });
+
   it('returns 0 KH when no bicarbonate is present', () => {
     const totals = computeIonTotals({ mgso4: 10 }, {}, 0);
     expect(computeKH(totals)).toBeCloseTo(0, 5);

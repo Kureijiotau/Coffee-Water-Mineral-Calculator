@@ -31,6 +31,46 @@ export const WATER_TASTING_RATINGS = [
 export type WaterTastingRatingId = typeof WATER_TASTING_RATINGS[number]['id'];
 export type WaterTastingRatings = Partial<Record<WaterTastingRatingId, number>>;
 
+export const WATER_TASTING_SPECTRUM = [
+  {
+    id: 'acidityFocus',
+    historyLabel: 'Acidity',
+    label: 'Acidity focus',
+    leftLabel: 'Sharp / Articulate',
+    rightLabel: 'Mellow / Rounded',
+  },
+  {
+    id: 'bodyWeight',
+    historyLabel: 'Body',
+    label: 'Body / weight',
+    leftLabel: 'Tea-like / Weightless',
+    rightLabel: 'Heavy / Coating',
+  },
+  {
+    id: 'structure',
+    historyLabel: 'Structure',
+    label: 'Structure',
+    leftLabel: 'Isolated / Monotone',
+    rightLabel: 'Complex / Layered',
+  },
+  {
+    id: 'finish',
+    historyLabel: 'Finish',
+    label: 'Finish',
+    leftLabel: 'Fast / Fleeting',
+    rightLabel: 'Lingering / Long',
+  },
+] as const;
+
+export type WaterTastingSpectrumId = typeof WATER_TASTING_SPECTRUM[number]['id'];
+export type WaterTastingSpectrum = Record<WaterTastingSpectrumId, number>;
+
+export function createNeutralWaterTastingSpectrum(): WaterTastingSpectrum {
+  return Object.fromEntries(
+    WATER_TASTING_SPECTRUM.map(({ id }) => [id, 0]),
+  ) as WaterTastingSpectrum;
+}
+
 export const WATER_TASTING_DESCRIPTORS = [
   {
     id: 'water-character',
@@ -46,17 +86,39 @@ export const WATER_TASTING_DESCRIPTORS = [
     ],
   },
   {
-    id: 'cup-effect',
-    label: 'Cup effect',
+    id: 'acidity-sweetness',
+    label: 'Acidity/Sweetness',
     options: [
       { id: 'crisp', label: 'Crisp' },
       { id: 'rounded', label: 'Rounded' },
+      { id: 'sparkling', label: 'Sparkling' },
+      { id: 'tart', label: 'Tart' },
+      { id: 'jammy', label: 'Jammy' },
+    ],
+  },
+  {
+    id: 'body-tactile',
+    label: 'Body/Tactile',
+    options: [
       { id: 'thin', label: 'Thin' },
       { id: 'full-coating', label: 'Full / coating' },
       { id: 'drying', label: 'Drying' },
+      { id: 'hollow', label: 'Hollow' },
+      { id: 'juicy', label: 'Juicy' },
+      { id: 'syrupy', label: 'Syrupy' },
+    ],
+  },
+  {
+    id: 'finish-defects',
+    label: 'Finish/Defects',
+    options: [
       { id: 'muted', label: 'Muted' },
       { id: 'short-finish', label: 'Short finish' },
       { id: 'lingering-finish', label: 'Lingering finish' },
+      { id: 'tannic-astringent', label: 'Tannic / astringent' },
+      { id: 'muddy', label: 'Muddy' },
+      { id: 'flat', label: 'Flat' },
+      { id: 'clean-finish', label: 'Clean finish' },
     ],
   },
 ] as const;
@@ -83,10 +145,12 @@ export interface WaterTastingDraft {
   profileNameSnapshot: string;
   coffee: WaterTastingCoffeeDetails;
   ratings: WaterTastingRatings;
+  spectrum: WaterTastingSpectrum;
   descriptorIds: string[];
 }
 
-export interface WaterTastingRecord extends WaterTastingDraft {
+export interface WaterTastingRecord extends Omit<WaterTastingDraft, 'spectrum'> {
+  spectrum?: WaterTastingSpectrum;
   id: string;
   createdAt: string;
   updatedAt: string;
@@ -119,6 +183,7 @@ const DESCRIPTOR_IDS = new Set<string>(
     return ids;
   }, []),
 );
+const SPECTRUM_IDS = new Set<string>(WATER_TASTING_SPECTRUM.map(axis => axis.id));
 const COFFEE_FIELD_IDS = ['name', 'roast', 'origin', 'brewMethod'] as const;
 
 function resolveStorage(storage?: WaterTastingStorage): WaterTastingStorage | null {
@@ -145,6 +210,22 @@ function isValidRatings(value: unknown): value is WaterTastingRatings {
   ));
 }
 
+function isValidSpectrum(value: unknown): value is WaterTastingSpectrum {
+  if (!isObject(value)) return false;
+  const entries = Object.entries(value);
+  return entries.length === WATER_TASTING_SPECTRUM.length
+    && entries.every(([key, score]) => (
+      SPECTRUM_IDS.has(key)
+      && typeof score === 'number'
+      && Number.isInteger(score)
+      && score >= -5
+      && score <= 5
+    ))
+    && WATER_TASTING_SPECTRUM.every(({ id }) => (
+      Object.prototype.hasOwnProperty.call(value, id)
+    ));
+}
+
 function isValidCoffee(value: unknown): value is WaterTastingCoffeeDetails {
   if (!isObject(value)) return false;
   return Object.entries(value).every(([key, field]) => (
@@ -168,6 +249,7 @@ function isValidRecord(value: unknown): value is WaterTastingRecord {
     || !Number.isFinite(Date.parse(value.updatedAt))
     || !isValidCoffee(value.coffee)
     || !isValidRatings(value.ratings)
+    || (value.spectrum !== undefined && !isValidSpectrum(value.spectrum))
     || !Array.isArray(value.descriptorIds)
     || !value.descriptorIds.every(id => typeof id === 'string' && DESCRIPTOR_IDS.has(id))
   ) {
@@ -214,6 +296,7 @@ export function createWaterTastingRecord(
     ...draft,
     coffee: normalizeCoffee(draft.coffee),
     ratings: { ...draft.ratings },
+    spectrum: { ...draft.spectrum },
     descriptorIds: [...new Set(draft.descriptorIds)],
     id,
     createdAt: timestamp,
@@ -231,6 +314,7 @@ export function updateWaterTastingRecord(
     ...draft,
     coffee: normalizeCoffee(draft.coffee),
     ratings: { ...draft.ratings },
+    spectrum: { ...draft.spectrum },
     descriptorIds: [...new Set(draft.descriptorIds)],
     updatedAt: now.toISOString(),
   };

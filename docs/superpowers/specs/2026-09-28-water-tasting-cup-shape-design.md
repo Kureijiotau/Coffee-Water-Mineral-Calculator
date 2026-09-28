@@ -34,6 +34,12 @@ New tastings initialize all four controls to 0. In this scale, 0 means the user 
 
 The 0–10 rating section remains unchanged and continues to represent the user's personal water-contribution impression. The new spectrum does not change the total or any chemistry calculations.
 
+## Profile picker and mineral-analysis reliability
+
+Continue to list every profile present in the Alchemist and Watermancer collections. In addition to the current in-app state updates, listen for same-origin `storage` events for either collection and reload only the collection that changed, so profiles saved from another tab become selectable without a page reload.
+
+Mineral-analysis calculations must accept partial ion records. Treat a missing bicarbonate or carbonate value as zero when calculating KH, so a profile with bicarbonate but no carbonate does not display `NaN`.
+
 ## Descriptor organization
 
 Keep “Water character” and its existing options unchanged. Replace the single “Cup effect” group with three collapsible, horizontally arranged chip groups:
@@ -68,4 +74,5 @@ The existing `cwm.waterTastings.v1` key can remain because the optional field is
 - Confirm old descriptor IDs still validate after regrouping and each new descriptor ID is accepted.
 - Verify the four controls are keyboard-operable, display the selected values, and retain them through save, edit, reload, and history rendering.
 - Verify descriptor chips appear in the requested groups and remain toggleable.
+- Verify same-origin changes to either profile collection refresh the picker, and partial ion records produce a finite KH value.
 - Run the calculator typecheck, unit suite, production build, and focused Water Tasting browser coverage.

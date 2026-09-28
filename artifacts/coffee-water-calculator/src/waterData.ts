@@ -1346,7 +1346,7 @@ export function computeGH(totals: Record<IonId, number>): number {
        + totals.calcium   * (CACO3_FACTOR.calcium ?? 0);
 }
 
-export function computeKH(totals: Record<IonId, number>): number {
-  return totals.bicarbonate * (CACO3_FACTOR.bicarbonate ?? 0)
-       + totals.carbonate * (CACO3_FACTOR.carbonate ?? 0);
+export function computeKH(totals: Partial<Record<IonId, number>>): number {
+  return (totals.bicarbonate ?? 0) * (CACO3_FACTOR.bicarbonate ?? 0)
+       + (totals.carbonate ?? 0) * (CACO3_FACTOR.carbonate ?? 0);
 }

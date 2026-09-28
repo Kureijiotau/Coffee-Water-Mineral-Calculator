@@ -3,11 +3,14 @@ import {
   buildWaterTastingProfileOptions,
   calculateWaterTastingTotal,
   createWaterTastingRecord,
+  createNeutralWaterTastingSpectrum,
   loadWaterTastings,
   saveWaterTastings,
   sortWaterTastingsNewestFirst,
   updateWaterTastingRecord,
+  WATER_TASTING_DESCRIPTORS,
   WATER_TASTING_RATINGS,
+  WATER_TASTING_SPECTRUM,
   WATER_TASTING_STORAGE_KEY,
   type WaterTastingDraft,
   type WaterTastingRecord,
@@ -31,6 +34,7 @@ function makeDraft(overrides: Partial<WaterTastingDraft> = {}): WaterTastingDraf
     profileNameSnapshot: 'Bright Water',
     coffee: {},
     ratings: {},
+    spectrum: createNeutralWaterTastingSpectrum(),
     descriptorIds: [],
     ...overrides,
   };
@@ -78,6 +82,53 @@ describe('Water Tasting score model', () => {
       mouthfeel: 6,
       finish: 5,
     })).toBeNull();
+  });
+});
+
+describe('Water Tasting cup shape and descriptors', () => {
+  it('defaults all four spectrum directions to neutral zero', () => {
+    expect(createNeutralWaterTastingSpectrum()).toEqual({
+      acidityFocus: 0,
+      bodyWeight: 0,
+      structure: 0,
+      finish: 0,
+    });
+    expect(WATER_TASTING_SPECTRUM).toHaveLength(4);
+  });
+
+  it('keeps existing descriptor IDs and adds the requested groups and words', () => {
+    const groupIds = WATER_TASTING_DESCRIPTORS.map(group => group.id);
+    const descriptorIds = WATER_TASTING_DESCRIPTORS.flatMap(group => (
+      group.options.map(option => option.id)
+    ));
+
+    expect(groupIds).toEqual([
+      'water-character',
+      'acidity-sweetness',
+      'body-tactile',
+      'finish-defects',
+    ]);
+    expect(descriptorIds).toEqual(expect.arrayContaining([
+      'clean-neutral',
+      'crisp',
+      'rounded',
+      'thin',
+      'full-coating',
+      'drying',
+      'muted',
+      'short-finish',
+      'lingering-finish',
+      'sparkling',
+      'tart',
+      'jammy',
+      'hollow',
+      'juicy',
+      'syrupy',
+      'tannic-astringent',
+      'muddy',
+      'flat',
+      'clean-finish',
+    ]));
   });
 });
 
@@ -187,6 +238,65 @@ describe('Water Tasting local persistence', () => {
     expect(saveWaterTastings(records, [], storage)).toEqual({ ok: true });
     expect(storage.values[WATER_TASTING_STORAGE_KEY]).toContain('"profileNameSnapshot":"Bright Water"');
     expect(loadWaterTastings(storage)).toEqual({ ok: true, records });
+  });
+
+  it('round-trips spectrum values and copies them when records are created or updated', () => {
+    const spectrum = {
+      acidityFocus: -5,
+      bodyWeight: 2,
+      structure: 0,
+      finish: 5,
+    };
+    const record = createWaterTastingRecord(
+      makeDraft({ spectrum }),
+      new Date('2026-09-28T09:00:00.000Z'),
+      'tasting-spectrum',
+    );
+    spectrum.acidityFocus = 3;
+    expect(record.spectrum).toEqual({
+      acidityFocus: -5,
+      bodyWeight: 2,
+      structure: 0,
+      finish: 5,
+    });
+
+    const updated = updateWaterTastingRecord(
+      record,
+      makeDraft({ spectrum: { acidityFocus: 4, bodyWeight: -2, structure: 1, finish: 0 } }),
+      new Date('2026-09-28T10:00:00.000Z'),
+    );
+    expect(updated.spectrum).toEqual({
+      acidityFocus: 4,
+      bodyWeight: -2,
+      structure: 1,
+      finish: 0,
+    });
+
+    expect(saveWaterTastings([updated], [], storage)).toEqual({ ok: true });
+    expect(loadWaterTastings(storage)).toEqual({ ok: true, records: [updated] });
+  });
+
+  it('loads legacy records without spectrum without rewriting their stored data', () => {
+    const { spectrum: _ignored, ...legacyRecord } = makeRecord(
+      'legacy-tasting',
+      '2026-09-27T09:00:00.000Z',
+    );
+    const original = JSON.stringify([legacyRecord]);
+    storage.values[WATER_TASTING_STORAGE_KEY] = original;
+
+    expect(loadWaterTastings(storage)).toEqual({ ok: true, records: [legacyRecord] });
+    expect(storage.values[WATER_TASTING_STORAGE_KEY]).toBe(original);
+  });
+
+  it('rejects out-of-range spectrum values without overwriting saved data', () => {
+    storage.values[WATER_TASTING_STORAGE_KEY] = 'original';
+    const invalid = {
+      ...makeRecord('invalid-spectrum', '2026-09-28T09:00:00.000Z'),
+      spectrum: { ...createNeutralWaterTastingSpectrum(), finish: 6 },
+    } as WaterTastingRecord;
+
+    expect(saveWaterTastings([invalid], [], storage)).toEqual({ ok: false, error: 'invalid-records' });
+    expect(storage.values[WATER_TASTING_STORAGE_KEY]).toBe('original');
   });
 
   it('loads an empty list without writing a new storage value', () => {

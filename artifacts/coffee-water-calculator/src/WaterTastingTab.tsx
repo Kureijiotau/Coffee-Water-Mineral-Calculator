@@ -9,7 +9,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  WATER_TASTING_RATINGS, WATER_TASTING_DESCRIPTORS,
+  WATER_TASTING_RATINGS, WATER_TASTING_SPECTRUM, WATER_TASTING_DESCRIPTORS,
+  createNeutralWaterTastingSpectrum,
   calculateWaterTastingTotal, createWaterTastingRecord, updateWaterTastingRecord,
   loadWaterTastings, saveWaterTastings, sortWaterTastingsNewestFirst,
   type WaterTastingDraft, type WaterTastingProfileOption,
@@ -31,7 +32,14 @@ const ghostButton = 'inline-flex min-h-11 items-center justify-center gap-2 roun
 const eyebrow = 'text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80';
 
 function emptyDraft(profileSourceId = ''): WaterTastingDraft {
-  return { profileSourceId, profileNameSnapshot: '', coffee: {}, ratings: {}, descriptorIds: [] };
+  return {
+    profileSourceId,
+    profileNameSnapshot: '',
+    coffee: {},
+    ratings: {},
+    spectrum: createNeutralWaterTastingSpectrum(),
+    descriptorIds: [],
+  };
 }
 
 function storageMessage(error: WaterTastingStorageError): string {
@@ -51,6 +59,12 @@ function storageMessage(error: WaterTastingStorageError): string {
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric' }).format(new Date(value));
+}
+
+function formatSpectrumValue(value: number): string {
+  if (value > 0) return `+${value}`;
+  if (value < 0) return `−${Math.abs(value)}`;
+  return '0';
 }
 
 export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenWatermancer }: WaterTastingTabProps) {
@@ -100,6 +114,9 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
       profileNameSnapshot: record.profileNameSnapshot,
       coffee: { ...record.coffee },
       ratings: { ...record.ratings },
+      spectrum: record.spectrum
+        ? { ...record.spectrum }
+        : createNeutralWaterTastingSpectrum(),
       descriptorIds: [...record.descriptorIds],
     });
     setFeedback(null);
@@ -125,6 +142,7 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
       profileNameSnapshot: snapshot,
       coffee: values.coffee,
       ratings: values.ratings ?? {},
+      spectrum: { ...values.spectrum },
       descriptorIds: values.descriptorIds ?? [],
     };
     const nextRecord = editingRecord
@@ -333,9 +351,63 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
               <p className="mt-3 text-xs text-slate-500 sm:pl-10">Each dimension is equally weighted. This total reflects your impression, not an objective measurement or an official Q score.</p>
             </section>
 
-            <section aria-labelledby="tasting-descriptors-heading" className="border-b border-slate-600/35 pb-8">
+            <section aria-labelledby="tasting-spectrum-heading" className="border-b border-slate-600/35 pb-8">
               <div className="flex items-start gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">04</span>
+                <div>
+                  <h3 id="tasting-spectrum-heading" className="font-semibold text-slate-100">Cup shape <span className="ml-1 text-xs font-normal text-slate-400">· optional</span></h3>
+                  <p className="mt-1 text-xs text-slate-400">Describe the direction of the cup. Each slider starts at neutral 0; the ratings above stay separate.</p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:pl-10">
+                {WATER_TASTING_SPECTRUM.map(axis => (
+                  <FormField
+                    key={axis.id}
+                    control={form.control}
+                    name={`spectrum.${axis.id}` as const}
+                    render={({ field }) => {
+                      const value = typeof field.value === 'number' ? field.value : 0;
+                      const position = value === 0
+                        ? 'Neutral'
+                        : value < 0 ? axis.leftLabel : axis.rightLabel;
+                      return <FormItem className="rounded-xl border border-slate-600/45 bg-slate-900/35 p-4">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <FormLabel className="text-sm font-medium text-slate-100">{axis.label}</FormLabel>
+                          <span data-testid={`value-spectrum-${axis.id}`} className="font-mono text-xs tabular-nums text-cyan-200">
+                            {formatSpectrumValue(value)} <span className="font-sans text-slate-400">· {position}</span>
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-x-2 gap-y-2">
+                          <span className="text-xs leading-tight text-slate-400"><span className="font-mono">−5</span> · {axis.leftLabel}</span>
+                          <span className="text-center text-[10px] text-slate-500"><span className="font-mono">0</span> · Neutral</span>
+                          <span className="text-right text-xs leading-tight text-slate-400">{axis.rightLabel} · <span className="font-mono">+5</span></span>
+                          <FormControl>
+                            <input
+                              {...field}
+                              type="range"
+                              min={-5}
+                              max={5}
+                              step={1}
+                              value={value}
+                              onChange={event => field.onChange(Number(event.currentTarget.value))}
+                              aria-label={`${axis.label}: ${axis.leftLabel} to ${axis.rightLabel}`}
+                              aria-valuetext={`${position} (${formatSpectrumValue(value)})`}
+                              data-testid={`input-spectrum-${axis.id}`}
+                              className="col-span-3 h-5 w-full cursor-pointer accent-cyan-300"
+                            />
+                          </FormControl>
+                        </div>
+                        <FormMessage />
+                      </FormItem>;
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section aria-labelledby="tasting-descriptors-heading" className="border-b border-slate-600/35 pb-8">
+              <div className="flex items-start gap-3">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">05</span>
                 <div>
                   <h3 id="tasting-descriptors-heading" className="font-semibold text-slate-100">Words for the cup <span className="ml-1 text-xs font-normal text-slate-400">· optional</span></h3>
                   <p className="mt-1 text-xs text-slate-400">Choose any that fit. Descriptors never change the total.</p>
@@ -395,6 +467,7 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
           <div className="mt-5 grid gap-3">
             {records.map((record, index) => {
               const savedTotal = calculateWaterTastingTotal(record.ratings);
+              const spectrum = record.spectrum;
               return <article key={record.id} data-testid={`card-tasting-${record.id}`} className={`rounded-xl border bg-slate-900/65 p-4 sm:p-5 ${editingId === record.id ? 'border-cyan-300/65' : 'border-slate-600/45'}`}>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -408,6 +481,18 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
                   </div>
                   {savedTotal !== null && <div data-testid={`total-tasting-${record.id}`} className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-cyan-100">{savedTotal} / 50</div>}
                 </div>
+                {spectrum ? (
+                  <dl data-testid={`spectrum-tasting-${record.id}`} aria-label="Cup shape summary" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {WATER_TASTING_SPECTRUM.map(axis => (
+                      <div key={axis.id} className="flex items-center justify-between gap-2 rounded-lg border border-slate-600/40 bg-slate-800/45 px-3 py-2">
+                        <dt className="text-xs text-slate-400">{axis.historyLabel}</dt>
+                        <dd className="font-mono text-xs font-semibold tabular-nums text-cyan-100">{formatSpectrumValue(spectrum[axis.id])}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p data-testid={`spectrum-tasting-${record.id}`} className="mt-4 text-xs text-slate-500">Cup shape not captured</p>
+                )}
                 {record.descriptorIds.length > 0 && <div data-testid={`descriptors-tasting-${record.id}`} className="mt-4 flex flex-wrap gap-1.5">
                   {record.descriptorIds.map(id => <span key={id} className="rounded-full border border-slate-600/60 bg-slate-800/65 px-2.5 py-1 text-xs text-slate-300">{descriptorNames.get(id) ?? id}</span>)}
                 </div>}

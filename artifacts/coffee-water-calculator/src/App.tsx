@@ -30,7 +30,7 @@ import {
   TdsCard as SharedTdsCard,
 } from './components/MetricCards';
 import {
-  loadProfiles, saveProfiles, saveActiveProfileId,
+  loadProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
   loadNerdLevel, saveNerdLevel, createProfile,
   type NerdLevel,
 } from '@/profiles';
@@ -51,9 +51,10 @@ import {
   WATER_PLAN_AUTOSAVE_NAME,
 } from './waterPlans';
 import {
-  createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles,
+  createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles, WATERMANCER_PROFILES_STORAGE_KEY,
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
+import { mergeProfileCollections, sameProfileCollection } from './profileSync';
 import { IonRatioTable } from './IonRatioTable';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
@@ -2450,16 +2451,28 @@ function useDebouncedPersistence(
   persist: () => void,
   dependencies: DependencyList,
   delayMs = 250,
+  skipNextChangeRef?: { current: boolean },
 ) {
   const persistRef = useRef(persist);
   const timerRef = useRef<number | null>(null);
+  const pendingRef = useRef(false);
   persistRef.current = persist;
 
   const flush = useCallback(() => {
+    if (skipNextChangeRef?.current) {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      pendingRef.current = false;
+      return;
+    }
+    if (!pendingRef.current) return;
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
     }
+    pendingRef.current = false;
     try {
       persistRef.current();
     } catch {
@@ -2470,8 +2483,15 @@ function useDebouncedPersistence(
 
   useEffect(() => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+    if (skipNextChangeRef?.current) {
+      skipNextChangeRef.current = false;
+      pendingRef.current = false;
+      timerRef.current = null;
+      return;
+    }
+    pendingRef.current = true;
     timerRef.current = window.setTimeout(flush, delayMs);
-  }, dependencies);
+  }, [...dependencies, skipNextChangeRef]);
 
   useEffect(() => {
     window.addEventListener('pagehide', flush);
@@ -2887,7 +2907,20 @@ function App() {
   }, [communityWaters, communitySearch, communitySortIon, communitySortDescending]);
 
   // Profile + settings state
-  const [profiles, setProfiles] = useState<WaterProfile[]>(() => loadProfiles());
+  const [profiles, setProfilesState] = useState<WaterProfile[]>(() => loadProfiles());
+  const profilesRef = useRef(profiles);
+  const persistedProfilesRef = useRef(profiles);
+  const profilesDirtyRef = useRef(false);
+  const skipProfilesPersistenceRef = useRef(false);
+  const setProfiles = useCallback((
+    action: WaterProfile[] | ((previous: WaterProfile[]) => WaterProfile[]),
+  ) => {
+    const next = typeof action === 'function' ? action(profilesRef.current) : action;
+    profilesRef.current = next;
+    profilesDirtyRef.current = true;
+    skipProfilesPersistenceRef.current = false;
+    setProfilesState(next);
+  }, []);
   const [activeProfileId, setActiveProfileId] = useState<string>(AIKI_DEFAULT_PROFILE.id);
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
@@ -2946,7 +2979,70 @@ function App() {
    const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
-  const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
+   const [wmProfiles, setWmProfilesState] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
+   const wmProfilesRef = useRef(wmProfiles);
+   const persistedWmProfilesRef = useRef(wmProfiles);
+   const wmProfilesDirtyRef = useRef(false);
+   const skipWmProfilesPersistenceRef = useRef(false);
+   const setWmProfiles = useCallback((
+     action: WatermancerProfile[] | ((previous: WatermancerProfile[]) => WatermancerProfile[]),
+   ) => {
+     const next = typeof action === 'function' ? action(wmProfilesRef.current) : action;
+     wmProfilesRef.current = next;
+     wmProfilesDirtyRef.current = true;
+     skipWmProfilesPersistenceRef.current = false;
+     setWmProfilesState(next);
+   }, []);
+  useEffect(() => {
+    const handleProfileStorage = (event: StorageEvent) => {
+       if (event.key === null || event.key === PROFILES_KEY) {
+         const incoming = loadProfiles();
+         if (profilesDirtyRef.current) {
+           const merged = mergeProfileCollections(
+             persistedProfilesRef.current,
+             profilesRef.current,
+             incoming,
+           );
+           persistedProfilesRef.current = incoming;
+           if (!sameProfileCollection(profilesRef.current, merged)) {
+             profilesRef.current = merged;
+             setProfilesState(merged);
+           }
+         } else {
+           persistedProfilesRef.current = incoming;
+           if (!sameProfileCollection(profilesRef.current, incoming)) {
+             profilesRef.current = incoming;
+             skipProfilesPersistenceRef.current = true;
+             setProfilesState(incoming);
+           }
+         }
+       }
+      if (event.key === null || event.key === WATERMANCER_PROFILES_STORAGE_KEY) {
+         const incoming = loadWatermancerProfiles();
+         if (wmProfilesDirtyRef.current) {
+           const merged = mergeProfileCollections(
+             persistedWmProfilesRef.current,
+             wmProfilesRef.current,
+             incoming,
+           );
+           persistedWmProfilesRef.current = incoming;
+           if (!sameProfileCollection(wmProfilesRef.current, merged)) {
+             wmProfilesRef.current = merged;
+             setWmProfilesState(merged);
+           }
+         } else {
+           persistedWmProfilesRef.current = incoming;
+           if (!sameProfileCollection(wmProfilesRef.current, incoming)) {
+             wmProfilesRef.current = incoming;
+             skipWmProfilesPersistenceRef.current = true;
+             setWmProfilesState(incoming);
+           }
+         }
+      }
+    };
+    window.addEventListener('storage', handleProfileStorage);
+    return () => window.removeEventListener('storage', handleProfileStorage);
+  }, []);
   const waterTastingProfileOptions = useMemo(
     () => buildWaterTastingProfileOptions(profiles, wmProfiles, AIKI_DEFAULT_PROFILE.name),
     [profiles, wmProfiles],
@@ -3068,10 +3164,20 @@ function App() {
   };
 
   // Persist on changes
-  useDebouncedPersistence(() => saveProfiles(profiles), [profiles]);
+  useDebouncedPersistence(() => {
+    const latestProfiles = profilesRef.current;
+    saveProfiles(latestProfiles);
+    persistedProfilesRef.current = latestProfiles;
+    profilesDirtyRef.current = false;
+  }, [profiles], 250, skipProfilesPersistenceRef);
   useDebouncedPersistence(() => saveActiveProfileId(activeProfileId), [activeProfileId]);
   useDebouncedPersistence(() => saveNerdLevel(nerdLevel), [nerdLevel]);
-  useDebouncedPersistence(() => saveWatermancerProfiles(wmProfiles), [wmProfiles]);
+  useDebouncedPersistence(() => {
+    const latestProfiles = wmProfilesRef.current;
+    saveWatermancerProfiles(latestProfiles);
+    persistedWmProfilesRef.current = latestProfiles;
+    wmProfilesDirtyRef.current = false;
+  }, [wmProfiles], 250, skipWmProfilesPersistenceRef);
   useDebouncedPersistence(() => {
     localStorage.setItem(WATERMANCER_TARGET_SOURCE_STORAGE_KEY, watermancerTargetSource);
   }, [watermancerTargetSource]);
