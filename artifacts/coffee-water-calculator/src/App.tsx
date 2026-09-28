@@ -6,7 +6,7 @@ import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -80,6 +80,8 @@ import {
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import WaterMixer, { type WaterMixerDatabaseWater, type WaterMixerSavedSource } from './WaterMixer';
+import { WaterTastingTab } from './WaterTastingTab';
+import { buildWaterTastingProfileOptions } from './waterTasting';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
 import {
   recipeCardIonTargets,
@@ -706,7 +708,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'guide' | 'concentrate' | 'diy-concentrate' | 'ion-ratios' | 'mixer';
+type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrate' | 'diy-concentrate' | 'ion-ratios' | 'mixer';
 type ConcentrateMode = 'builder' | 'lotus';
 
 // Ratio matching remains implemented for saved/imported sessions, but the
@@ -2945,6 +2947,10 @@ function App() {
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
   const [wmProfiles, setWmProfiles] = useState<WatermancerProfile[]>(() => loadWatermancerProfiles());
+  const waterTastingProfileOptions = useMemo(
+    () => buildWaterTastingProfileOptions(wmProfiles, AIKI_DEFAULT_PROFILE.name),
+    [wmProfiles],
+  );
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
   const [sharedRecipeNotice, setSharedRecipeNotice] = useState<string | null>(null);
@@ -5914,7 +5920,7 @@ function App() {
             onDelete={handleDeleteWaterPlan}
             onImport={handleImportWaterPlan}
           />
-            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex shrink-0 rounded-lg border border-white/20 bg-black/15 p-0.5">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex max-w-full shrink-0 overflow-x-auto rounded-lg border border-white/20 bg-black/15 p-0.5">
             <button
               type="button"
               role="tab"
@@ -5924,6 +5930,19 @@ function App() {
             >
               <CalculatorIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Calculator
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="water-tasting-tab-button"
+              aria-controls="water-tasting-panel"
+              aria-selected={appTab === 'water-tasting'}
+              data-testid="tab-water-tasting"
+              onClick={() => setAppTab('water-tasting')}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'water-tasting' ? 'bg-cyan-300/25 text-cyan-50 shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
+              Water Tasting
             </button>
             <button
               type="button"
@@ -5970,6 +5989,25 @@ function App() {
          </div>
        </div>
   );
+
+  if (appTab === 'water-tasting') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-5xl flex-col">
+            {appHeader}
+            <WaterTastingTab
+              profileOptions={waterTastingProfileOptions}
+              onOpenWatermancer={() => {
+                setAppTab('calculator');
+                setNerdLevel('watermancer');
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (appTab === 'mixer') {
     return (
