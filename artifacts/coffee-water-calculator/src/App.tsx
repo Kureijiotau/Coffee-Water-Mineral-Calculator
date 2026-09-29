@@ -942,6 +942,7 @@ function HoldStepperButton({
   return (
     <button
       type="button"
+      onContextMenu={event => event.preventDefault()}
       onPointerDown={startHold}
       onPointerUp={finishHold}
       onPointerCancel={event => {
@@ -956,7 +957,7 @@ function HoldStepperButton({
         onStep();
       }}
       disabled={disabled}
-      className={`volume-input ${className}`}
+      className={`adjustment-stepper-button volume-input ${className}`}
       aria-label={label}
     >
       {children}
@@ -1306,10 +1307,11 @@ function VolumeInput({
       <button
         type="button"
         onClick={() => stepValue(-1)}
+        onContextMenu={event => event.preventDefault()}
         disabled={liters <= 0}
         aria-label={`Decrease ${ariaLabel}`}
         title="Decrease by 0.1"
-        className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/20 bg-slate-950/40 text-cyan-200/70 transition-all hover:border-cyan-200/60 hover:bg-cyan-400/15 hover:text-cyan-100 active:scale-90 active:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-25 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+        className="adjustment-stepper-button group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/20 bg-slate-950/40 text-cyan-200/70 transition-all hover:border-cyan-200/60 hover:bg-cyan-400/15 hover:text-cyan-100 active:scale-90 active:bg-cyan-300/25 disabled:cursor-not-allowed disabled:opacity-25 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
       >
         <Minus className="h-3.5 w-3.5 transition-transform group-active:scale-75" aria-hidden="true" />
       </button>
@@ -1317,9 +1319,10 @@ function VolumeInput({
       <button
         type="button"
         onClick={() => stepValue(1)}
+        onContextMenu={event => event.preventDefault()}
         aria-label={`Increase ${ariaLabel}`}
         title="Increase by 0.1"
-        className="group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/35 bg-cyan-400/10 text-cyan-100 transition-all hover:border-cyan-200/70 hover:bg-cyan-400/25 hover:shadow-[0_0_16px_rgba(34,211,238,0.18)] active:scale-90 active:bg-cyan-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+        className="adjustment-stepper-button group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/35 bg-cyan-400/10 text-cyan-100 transition-all hover:border-cyan-200/70 hover:bg-cyan-400/25 hover:shadow-[0_0_16px_rgba(34,211,238,0.18)] active:scale-90 active:bg-cyan-300/30 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
       >
         <Plus className="h-3.5 w-3.5 transition-transform group-active:scale-75" aria-hidden="true" />
       </button>
@@ -1587,13 +1590,14 @@ function WaterVolumeStepper({
     <div className="flex items-center gap-2" aria-label="Water volume adjustment">
       <button
         type="button"
+        onContextMenu={event => event.preventDefault()}
         onPointerDown={event => {
           event.currentTarget.setPointerCapture(event.pointerId);
           startRepeating(-1);
         }}
         onPointerUp={stopRepeating}
         onPointerCancel={stopRepeating}
-        className={`flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
+        className={`adjustment-stepper-button flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
         aria-label="Decrease water volume by 1 mL"
         title="Decrease by 1 mL (hold to repeat)"
       >
@@ -1602,13 +1606,14 @@ function WaterVolumeStepper({
       <span className="min-w-[4.5rem] text-center text-xs tabular-nums text-slate-300">{fmt(currentValue)} mL</span>
       <button
         type="button"
+        onContextMenu={event => event.preventDefault()}
         onPointerDown={event => {
           event.currentTarget.setPointerCapture(event.pointerId);
           startRepeating(1);
         }}
         onPointerUp={stopRepeating}
         onPointerCancel={stopRepeating}
-        className={`flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
+        className={`adjustment-stepper-button flex h-8 w-8 items-center justify-center rounded-lg border text-lg font-semibold leading-none transition ${buttonTone}`}
         aria-label="Increase water volume by 1 mL"
         title="Increase by 1 mL (hold to repeat)"
       >

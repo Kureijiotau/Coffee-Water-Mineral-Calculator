@@ -22,6 +22,12 @@ body {
   -moz-appearance: textfield;
 }
 
+.adjustment-stepper-button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .volume-input::-webkit-inner-spin-button,
 .volume-input::-webkit-outer-spin-button {
   margin: 0;

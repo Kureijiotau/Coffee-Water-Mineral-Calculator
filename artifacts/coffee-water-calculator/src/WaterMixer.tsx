@@ -669,8 +669,9 @@ function MixerSaltTable({
                     <button
                       type="button"
                       onClick={() => onDoseChange(salt.id, formatSteppedSaltDose(Math.max(0, activeMg - 1)))}
+                      onContextMenu={event => event.preventDefault()}
                       disabled={!used || activeMg <= 0}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="adjustment-stepper-button flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-cyan-300/50 hover:bg-cyan-500/10 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={`Decrease ${salt.name} Mixer dose by 1 mg`}
                       data-testid={`button-decrease-mixer-salt-${salt.id}`}
                     >
@@ -700,8 +701,9 @@ function MixerSaltTable({
                     <button
                       type="button"
                       onClick={() => onDoseChange(salt.id, formatSteppedSaltDose(activeMg + 1))}
+                      onContextMenu={event => event.preventDefault()}
                       disabled={!used}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-30"
+                      className="adjustment-stepper-button flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-400/35 bg-cyan-500/10 text-cyan-200 transition hover:border-cyan-200/60 hover:bg-cyan-500/20 disabled:cursor-not-allowed disabled:opacity-30"
                       aria-label={`Increase ${salt.name} Mixer dose by 1 mg`}
                       data-testid={`button-increase-mixer-salt-${salt.id}`}
                     >
