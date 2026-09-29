@@ -68,7 +68,6 @@ export default defineConfig({
           if (id.includes('react-icons')) return 'icons';
           if (id.includes('lucide-react')) return 'icons';
           if (id.includes('react-dom') || id.includes('/react/')) return 'react';
-          return 'vendor';
         },
       },
     },
