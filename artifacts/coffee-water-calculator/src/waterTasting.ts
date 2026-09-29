@@ -1,3 +1,5 @@
+import type { IonId } from './waterData';
+
 export const WATER_TASTING_STORAGE_KEY = 'cwm.waterTastings.v1';
 
 export const WATER_TASTING_RATINGS = [
@@ -125,11 +127,22 @@ export const WATER_TASTING_DESCRIPTORS = [
 
 export type WaterTastingDescriptorId =
   typeof WATER_TASTING_DESCRIPTORS[number]['options'][number]['id'];
-export type WaterTastingProfileGroup = 'Built-in' | 'Alchemist' | 'Watermancer' | 'Saved';
+export type WaterTastingProfileGroup = 'Alchemist' | 'Watermancer';
 
-export interface WaterTastingProfileOption {
+export interface WaterTastingProfileReadings {
+  ions: Partial<Record<IonId, number>>;
+  tds?: number;
+  gh?: number;
+  kh?: number;
+}
+
+export interface WaterTastingProfileSource {
   sourceId: string;
   name: string;
+  readings: WaterTastingProfileReadings;
+}
+
+export interface WaterTastingProfileOption extends WaterTastingProfileSource {
   group: WaterTastingProfileGroup;
 }
 
@@ -321,31 +334,27 @@ export function updateWaterTastingRecord(
 }
 
 export function buildWaterTastingProfileOptions(
-  alchemistProfiles: ReadonlyArray<{ id: string; name: string }>,
-  watermancerProfiles: ReadonlyArray<{ id: string; name: string }>,
-  aikiProfileName: string,
+  alchemistSources: ReadonlyArray<WaterTastingProfileSource>,
+  watermancerSources: ReadonlyArray<WaterTastingProfileSource>,
 ): WaterTastingProfileOption[] {
+  const seenSourceIds = new Set<string>();
+  const appendGroup = (
+    sources: ReadonlyArray<WaterTastingProfileSource>,
+    group: WaterTastingProfileGroup,
+  ): WaterTastingProfileOption[] => sources.map(source => {
+    if (!source.sourceId.trim() || !source.name.trim()) {
+      throw new Error('Water Tasting profile sources need a source ID and name.');
+    }
+    if (seenSourceIds.has(source.sourceId)) {
+      throw new Error(`Duplicate Water Tasting source ID: ${source.sourceId}`);
+    }
+    seenSourceIds.add(source.sourceId);
+    return { ...source, group };
+  });
+
   return [
-    {
-      sourceId: 'safe-profile',
-      name: `${aikiProfileName} safe profile`,
-      group: 'Built-in',
-    },
-    {
-      sourceId: 'salt-table',
-      name: 'Current salt table',
-      group: 'Built-in',
-    },
-    ...alchemistProfiles.map(profile => ({
-      sourceId: `alchemist:${profile.id}`,
-      name: profile.name,
-      group: 'Alchemist' as const,
-    })),
-    ...watermancerProfiles.map(profile => ({
-      sourceId: `saved:${profile.id}`,
-      name: profile.name,
-      group: 'Watermancer' as const,
-    })),
+    ...appendGroup(alchemistSources, 'Alchemist'),
+    ...appendGroup(watermancerSources, 'Watermancer'),
   ];
 }
 

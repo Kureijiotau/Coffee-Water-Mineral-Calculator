@@ -133,46 +133,55 @@ describe('Water Tasting cup shape and descriptors', () => {
 });
 
 describe('Water Tasting profile options', () => {
-  it('offers built-in, Alchemist, and Watermancer profiles in separate groups', () => {
-    expect(buildWaterTastingProfileOptions(
+  it('keeps both mode catalogs in exactly two groups with their own readings', () => {
+    const options = buildWaterTastingProfileOptions(
       [
-        { id: 'aiki-default', name: 'Aiki' },
-        { id: 'empirical-1', name: 'Empirical Water ionic profile' },
-        { id: 'custom-1', name: 'My custom profile' },
+        {
+          sourceId: 'alchemist:setup:current',
+          name: 'Current setup',
+          readings: { ions: { calcium: 24 } },
+        },
+        {
+          sourceId: 'alchemist:recipe:builtin:kimoi',
+          name: 'Kimoi Water',
+          readings: { ions: { sodium: 4 } },
+        },
       ],
-      [{ id: 'water-1', name: 'Bright Water' }],
-      'Aiki',
-    )).toEqual([
-      { sourceId: 'safe-profile', name: 'Aiki safe profile', group: 'Built-in' },
-      { sourceId: 'salt-table', name: 'Current salt table', group: 'Built-in' },
-      { sourceId: 'alchemist:aiki-default', name: 'Aiki', group: 'Alchemist' },
-      { sourceId: 'alchemist:empirical-1', name: 'Empirical Water ionic profile', group: 'Alchemist' },
-      { sourceId: 'alchemist:custom-1', name: 'My custom profile', group: 'Alchemist' },
-      { sourceId: 'saved:water-1', name: 'Bright Water', group: 'Watermancer' },
+      [
+        {
+          sourceId: 'safe-profile',
+          name: 'Aiki safe profile',
+          readings: { ions: { sodium: 3 } },
+        },
+        {
+          sourceId: 'watermancer:sensory-profile',
+          name: 'Watermancer Sensory',
+          readings: { ions: { calcium: 28 } },
+        },
+      ],
+    );
+
+    expect(options.map(({ sourceId, name, group }) => ({ sourceId, name, group }))).toEqual([
+      { sourceId: 'alchemist:setup:current', name: 'Current setup', group: 'Alchemist' },
+      { sourceId: 'alchemist:recipe:builtin:kimoi', name: 'Kimoi Water', group: 'Alchemist' },
+      { sourceId: 'safe-profile', name: 'Aiki safe profile', group: 'Watermancer' },
+      { sourceId: 'watermancer:sensory-profile', name: 'Watermancer Sensory', group: 'Watermancer' },
     ]);
+    expect(options.find(option => option.sourceId === 'alchemist:setup:current')?.readings.ions)
+      .toEqual({ calcium: 24 });
+    expect(options.find(option => option.sourceId === 'safe-profile')?.readings.ions)
+      .toEqual({ sodium: 3 });
+    expect(new Set(options.map(option => option.sourceId)).size).toBe(options.length);
   });
 
-  it('reflects profiles added to either current source collection', () => {
-    const alchemistProfiles = [{ id: 'custom-1', name: 'First profile' }];
-    const watermancerProfiles: Array<{ id: string; name: string }> = [];
-    const initial = buildWaterTastingProfileOptions(alchemistProfiles, watermancerProfiles, 'Aiki');
-    expect(initial.some(option => option.sourceId === 'alchemist:custom-2')).toBe(false);
-    expect(initial.some(option => option.sourceId === 'saved:water-2')).toBe(false);
-
-    alchemistProfiles.push({ id: 'custom-2', name: 'New Alchemist profile' });
-    watermancerProfiles.push({ id: 'water-2', name: 'New Watermancer profile' });
-    const updated = buildWaterTastingProfileOptions(alchemistProfiles, watermancerProfiles, 'Aiki');
-
-    expect(updated).toContainEqual({
-      sourceId: 'alchemist:custom-2',
-      name: 'New Alchemist profile',
-      group: 'Alchemist',
-    });
-    expect(updated).toContainEqual({
-      sourceId: 'saved:water-2',
-      name: 'New Watermancer profile',
-      group: 'Watermancer',
-    });
+  it('rejects duplicate source IDs rather than creating ambiguous picker entries', () => {
+    const duplicate = {
+      sourceId: 'shared-id',
+      name: 'Duplicate',
+      readings: { ions: {} },
+    };
+    expect(() => buildWaterTastingProfileOptions([duplicate], [duplicate]))
+      .toThrow('Duplicate Water Tasting source ID: shared-id');
   });
 });
 

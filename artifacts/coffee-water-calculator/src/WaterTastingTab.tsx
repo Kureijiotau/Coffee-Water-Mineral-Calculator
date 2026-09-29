@@ -93,7 +93,8 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
     ? [...profileOptions, {
       sourceId: editingRecord.profileSourceId,
       name: `${editingRecord.profileNameSnapshot} (no longer available)`,
-      group: 'Saved' as const,
+      group: editingRecord.profileSourceId.startsWith('alchemist:') ? 'Alchemist' as const : 'Watermancer' as const,
+      readings: { ions: {} },
     }]
     : profileOptions;
   const selectedProfileAnalysis = selectedProfileSourceId
@@ -240,7 +241,7 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
                       <select {...field} value={field.value ?? ''} data-testid="select-tasting-profile" className={`${inputStyle} w-full appearance-auto border px-3 sm:max-w-md`}>
                         {!profileChoices.length && <option value="">No profiles available</option>}
                         <option value="" disabled>Select a water profile</option>
-                        {(['Built-in', 'Alchemist', 'Watermancer', 'Saved'] as const).map(group => {
+                        {(['Alchemist', 'Watermancer'] as const).map(group => {
                           const options = profileChoices.filter(option => option.group === group);
                           return options.length ? <optgroup key={group} label={group}>
                             {options.map(option => <option key={option.sourceId} value={option.sourceId}>{option.name}</option>)}
@@ -259,9 +260,9 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
                 {editingRecord && profileOptions.some(option => option.sourceId === editingRecord.profileSourceId && option.name !== editingRecord.profileNameSnapshot) && (
                   <p className="mt-2 text-xs text-slate-400" data-testid="text-profile-snapshot">Originally saved as “{editingRecord.profileNameSnapshot}”. That name stays with this note.</p>
                 )}
-                {!profileOptions.some(option => option.group === 'Watermancer') && (
+                {!profileOptions.some(option => option.sourceId.startsWith('saved:')) && (
                   <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-400">
-                    <span>No saved Watermancer targets yet. The other profiles are ready to use.</span>
+                    <span>No saved Watermancer profiles yet. The other sources are ready to use.</span>
                     <button type="button" onClick={onOpenWatermancer} data-testid="button-open-watermancer" className="inline-flex min-h-11 items-center gap-1 font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-4 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">
                       Create a target in Watermancer <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                     </button>

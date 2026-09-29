@@ -3043,10 +3043,6 @@ function App() {
     window.addEventListener('storage', handleProfileStorage);
     return () => window.removeEventListener('storage', handleProfileStorage);
   }, []);
-  const waterTastingProfileOptions = useMemo(
-    () => buildWaterTastingProfileOptions(profiles, wmProfiles, AIKI_DEFAULT_PROFILE.name),
-    [profiles, wmProfiles],
-  );
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
   const [sharedRecipeNotice, setSharedRecipeNotice] = useState<string | null>(null);
@@ -4443,6 +4439,131 @@ function App() {
   const reviewFinalGh = computeGH(reviewFinalIons);
   const reviewFinalKh = computeKH(reviewFinalIons);
   const reviewFinalTds = Object.values(reviewFinalIons).reduce((total, ppm) => total + ppm, 0);
+  const waterTastingProfileOptions = useMemo(() => {
+    const tastingSource = (
+      sourceId: string,
+      name: string,
+      ions: Partial<Record<IonId, number>>,
+      summary: { tds?: number; gh?: number; kh?: number } = {},
+    ) => ({
+      sourceId,
+      name,
+      readings: {
+        ions: Object.fromEntries(
+          ACTIVE_ION_IDS.map(id => [id, Number(ions[id] ?? 0)]),
+        ) as Partial<Record<IonId, number>>,
+        ...summary,
+      },
+    });
+    const profileIons = (profile: WaterProfile) => Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, profile.ranges[id].greenMax]),
+    ) as Partial<Record<IonId, number>>;
+    const eligibleProfiles = profiles.filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id
+      && profile.id !== WATERMANCER_SENSORY_PROFILE.id);
+    const externalTastingRecipes = ROBERT_ASAMI_RECIPES.filter(recipe => (
+      recipe.method === 'Filter'
+      || recipe.method.includes('tap-water')
+      || recipe.method === 'Espresso'
+    ));
+    const recipeName = (recipe: SaltRecipe) => (
+      `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`
+    );
+    const alchemistSources = [
+      tastingSource(
+        'alchemist:setup:current',
+        'Current setup',
+        reviewFinalIons,
+        { tds: reviewFinalTds, gh: reviewFinalGh, kh: reviewFinalKh },
+      ),
+      ...eligibleProfiles.map(profile => tastingSource(
+        `alchemist:${profile.id}`,
+        profile.name,
+        profileIons(profile),
+      )),
+      ...savedRecipes.map(recipe => tastingSource(
+        `alchemist:recipe:saved:${recipe.id}`,
+        `Recipe · ${recipe.name}`,
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+      ...RECIPES.map(recipe => tastingSource(
+        `alchemist:recipe:builtin:${recipe.id}`,
+        recipeName(recipe),
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+      ...externalTastingRecipes.map(recipe => tastingSource(
+        `alchemist:external:${recipe.id}`,
+        recipe.name,
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+    ];
+    const watermancerSources = [
+      tastingSource(
+        'safe-profile',
+        `${AIKI_DEFAULT_PROFILE.name} safe profile`,
+        profileIons(AIKI_DEFAULT_PROFILE),
+      ),
+      tastingSource('salt-table', 'Current salt table', saltOnlyIons),
+      tastingSource(
+        'watermancer:sensory-profile',
+        WATERMANCER_SENSORY_PROFILE.name,
+        profileIons(WATERMANCER_SENSORY_PROFILE),
+      ),
+      ...wmProfiles.map(profile => tastingSource(
+        `saved:${profile.id}`,
+        `Profile · ${profile.name}`,
+        profile.finishedIons ?? profile.targets,
+      )),
+      ...savedRecipes.map(recipe => tastingSource(
+        `watermancer:recipe:saved:${recipe.id}`,
+        `Recipe · ${recipe.name}`,
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+      ...RECIPES.map(recipe => tastingSource(
+        `watermancer:recipe:builtin:${recipe.id}`,
+        recipeName(recipe),
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+      ...eligibleProfiles.map(profile => tastingSource(
+        `watermancer:profile:${profile.id}`,
+        profile.name
+          .replace(/^Empirical Water — /, '')
+          .replace(/ ionic profile$/, ''),
+        profileIons(profile),
+      )),
+      ...externalTastingRecipes.map(recipe => tastingSource(
+        `watermancer:external:${recipe.id}`,
+        recipe.name,
+        ionTotalsForSaltRecipe(recipe),
+        { tds: recipe.finishedWaterMetadata?.tds },
+      )),
+      ...WATERING_HOLE_WATER_RECIPES.map(recipe => tastingSource(
+        `watermancer:watering-hole:${recipe.id}`,
+        recipe.name,
+        recipe.finishedWaterIons,
+        { tds: recipe.finishedWaterMetadata.tds },
+      )),
+      ...LOTUS_RECIPES.map(recipe => tastingSource(
+        `watermancer:lotus:${recipe.id}`,
+        recipe.name,
+        lotusIonTargetsForWatermancer(recipe),
+      )),
+    ];
+    return buildWaterTastingProfileOptions(alchemistSources, watermancerSources);
+  }, [
+    profiles,
+    wmProfiles,
+    savedRecipes,
+    reviewFinalIons,
+    reviewFinalTds,
+    reviewFinalGh,
+    reviewFinalKh,
+    saltOnlyIons,
+  ]);
   const reviewSaltGh = computeGH(reviewSaltIons);
   const reviewSaltKh = computeKH(reviewSaltIons);
   const reviewSaltTds = Object.values(reviewSaltIons).reduce((total, ppm) => total + ppm, 0);
@@ -6108,53 +6229,17 @@ function App() {
                 const option = waterTastingProfileOptions.find(item => item.sourceId === sourceId);
                 if (!option) return null;
 
-                let sourceIons: Partial<Record<IonId, number>>;
-                let summary = {
-                  tds: 0,
-                  gh: 0,
-                  kh: 0,
-                };
-                let recipeName = option.name;
-
-                if (sourceId === 'safe-profile') {
-                  sourceIons = Object.fromEntries(
-                    ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
-                  ) as Record<IonId, number>;
-                } else if (sourceId === 'salt-table') {
-                  sourceIons = saltOnlyIons;
-                } else if (sourceId.startsWith('alchemist:')) {
-                  sourceIons = reviewFinalIons;
-                  summary = {
-                    tds: reviewFinalTds,
-                    gh: reviewFinalGh,
-                    kh: reviewFinalKh,
-                  };
-                  recipeName = 'Current recipe';
-                } else if (sourceId.startsWith('saved:')) {
-                  const profileId = sourceId.slice('saved:'.length);
-                  const profile = wmProfiles.find(item => item.id === profileId);
-                  if (!profile) return null;
-                  sourceIons = Object.fromEntries(
-                    ACTIVE_ION_IDS.map(id => [
-                      id,
-                      Number(profile.finishedIons?.[id] ?? profile.targets[id] ?? 0),
-                    ]),
-                  ) as Record<IonId, number>;
-                } else {
-                  return null;
-                }
-
                 const finalIons = Object.fromEntries(
-                  ACTIVE_ION_IDS.map(id => [id, Number(sourceIons[id] ?? 0)]),
+                  ACTIVE_ION_IDS.map(id => [id, Number(option.readings.ions[id] ?? 0)]),
                 ) as Record<IonId, number>;
                 const totalIonPpm = Object.values(finalIons).reduce((total, value) => total + value, 0);
                 return (
                   <MineralAnalysisLabel
-                    recipeName={recipeName}
+                    recipeName={option.name}
                     finalIons={finalIons}
-                    tds={summary.tds || totalIonPpm}
-                    gh={summary.gh || computeGH(finalIons)}
-                    kh={summary.kh || computeKH(finalIons)}
+                    tds={option.readings.tds ?? totalIonPpm}
+                    gh={option.readings.gh ?? computeGH(finalIons)}
+                    kh={option.readings.kh ?? computeKH(finalIons)}
                   />
                 );
               }}
