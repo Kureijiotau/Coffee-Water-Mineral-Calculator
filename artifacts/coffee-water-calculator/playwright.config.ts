@@ -29,6 +29,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/mobile-steppers.spec.ts',
       use: {
         ...devices['Desktop Chrome'],
         launchOptions: executablePath('PLAYWRIGHT_CHROMIUM_EXECUTABLE'),
@@ -36,6 +37,7 @@ export default defineConfig({
     },
     {
       name: 'firefox',
+      testIgnore: '**/mobile-steppers.spec.ts',
       use: {
         ...devices['Desktop Firefox'],
         launchOptions: executablePath('PLAYWRIGHT_FIREFOX_EXECUTABLE'),
@@ -43,9 +45,18 @@ export default defineConfig({
     },
     {
       name: 'webkit',
+      testIgnore: '**/mobile-steppers.spec.ts',
       use: {
         ...devices['Desktop Safari'],
         launchOptions: executablePath('PLAYWRIGHT_WEBKIT_EXECUTABLE'),
+      },
+    },
+    {
+      name: 'mobile-chromium',
+      testMatch: '**/mobile-steppers.spec.ts',
+      use: {
+        ...devices['Pixel 7'],
+        launchOptions: executablePath('PLAYWRIGHT_CHROMIUM_EXECUTABLE'),
       },
     },
   ],

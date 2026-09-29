@@ -518,6 +518,15 @@ body {
     scroll-margin-inline: 0.75rem;
   }
 
+  .watermancer-salt-table__dose {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .watermancer-salt-table__dose-label {
+    position: static;
+  }
+
   .watermancer-salt-table__row {
     min-height: 0;
     margin: 0.5rem;
