@@ -57,6 +57,8 @@ import {
 import { mergeProfileCollections, sameProfileCollection } from './profileSync';
 import { IonRatioTable } from './IonRatioTable';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
+import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
+import { computeWatermancerMetricValues, type WatermancerMetricValues } from './watermancerMetricValues';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
 import {
   embedWaterRecipeJsonInPng,
@@ -4436,9 +4438,10 @@ function App() {
     : Object.fromEntries(
       IONS.map(({ id }) => [id, Math.max((reviewFinalIons[id] ?? 0) - (reviewSaltIons[id] ?? 0), 0)]),
     ) as Record<IonId, number>;
-  const reviewFinalGh = computeGH(reviewFinalIons);
-  const reviewFinalKh = computeKH(reviewFinalIons);
-  const reviewFinalTds = Object.values(reviewFinalIons).reduce((total, ppm) => total + ppm, 0);
+  const reviewFinalMetricValues = computeWatermancerMetricValues(reviewFinalIons);
+  const reviewFinalGh = reviewFinalMetricValues.gh;
+  const reviewFinalKh = reviewFinalMetricValues.kh;
+  const reviewFinalTds = reviewFinalMetricValues.tds;
   const waterTastingProfileOptions = useMemo(() => {
     const tastingSource = (
       sourceId: string,
@@ -4585,12 +4588,10 @@ function App() {
     )).length
     : 0;
   const completeWatermancerTargets = completeIonTotals(watermancerIonTargets);
-  const originalTargetGh = computeGH(completeWatermancerTargets);
-  const originalTargetKh = computeKH(completeWatermancerTargets);
-  const originalTargetTds = IONS.reduce(
-    (total, { id }) => total + completeWatermancerTargets[id],
-    0,
-  );
+  const originalTargetMetricValues = computeWatermancerMetricValues(completeWatermancerTargets);
+  const originalTargetGh = originalTargetMetricValues.gh;
+  const originalTargetKh = originalTargetMetricValues.kh;
+  const originalTargetTds = originalTargetMetricValues.tds;
   const bicarbonateTarget = finalMixtureTargetIons.bicarbonate ?? 0;
   const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
   const bicarbonateWaterOvershoot = hasMineralWater
@@ -7629,6 +7630,8 @@ function App() {
                 actualIons={watermancerCurrentFinalIons}
                supplementalIons={computeSupplementalIonTotals(activeWatermancerSaltTargets)}
               targetIons={watermancerIonTargets}
+               targetMetricValues={originalTargetMetricValues}
+               finalMetricValues={reviewFinalMetricValues}
                matchingMode={watermancerMatchingMode}
                ratioEvaluation={watermancerCurrentRatioEvaluation}
               targetLabel={watermancerTargetSourceLabel}
@@ -13287,6 +13290,8 @@ function WatermancerIonCoverageBars({
   actualIons,
   supplementalIons,
   targetIons,
+  targetMetricValues,
+  finalMetricValues,
   matchingMode,
   ratioEvaluation,
   targetLabel,
@@ -13310,6 +13315,8 @@ function WatermancerIonCoverageBars({
   actualIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
+  targetMetricValues: WatermancerMetricValues;
+  finalMetricValues: WatermancerMetricValues;
   matchingMode: WatermancerMatchingMode;
   ratioEvaluation: WatermancerRatioEvaluation | null;
   targetLabel: string;
@@ -13344,6 +13351,16 @@ function WatermancerIonCoverageBars({
   ));
   const completeActualIons = completeIonTotals(actualIons);
   const hasModeledIons = ACTIVE_ION_IDS.some(id => (completeActualIons[id] ?? 0) > 0);
+  const [metricSource, setMetricSource] = useState<WatermancerMetricSource>(
+    hasModeledIons ? 'final-mixture' : 'targets',
+  );
+  const previousHasModeledIonsRef = useRef(hasModeledIons);
+  useEffect(() => {
+    if (previousHasModeledIonsRef.current === hasModeledIons) return;
+    previousHasModeledIonsRef.current = hasModeledIons;
+    setMetricSource(hasModeledIons ? 'final-mixture' : 'targets');
+  }, [hasModeledIons]);
+  const activeMetricSource = hasModeledIons ? metricSource : 'targets';
   const ratioIons = hasModeledIons
     ? completeActualIons
     : completeIonTotals(targetIons);
@@ -13417,6 +13434,10 @@ function WatermancerIonCoverageBars({
         <WatermancerCompactReadings
           actualIons={actualIons}
           targetIons={targetIons}
+          targetMetrics={targetMetricValues}
+          finalMetrics={finalMetricValues}
+          metricSource={activeMetricSource}
+          onMetricSourceChange={setMetricSource}
           targetLabel={targetLabel}
           previewRatios={!hasModeledIons}
           followEnabled={compactFollowEnabled}
@@ -13536,6 +13557,16 @@ function WatermancerIonCoverageBars({
         </div>
       </div>}
          <div className={`app-card-body min-h-0 flex-1 space-y-3 ${followEnabled ? 'overflow-y-auto overscroll-contain' : ''}`}>
+        {readingsView === 'classic' && (
+          <WatermancerMetricSummary
+            targetMetrics={targetMetricValues}
+            finalMetrics={finalMetricValues}
+            source={activeMetricSource}
+            preview={!hasModeledIons}
+            targetLabel={targetLabel}
+            onSourceChange={setMetricSource}
+          />
+        )}
         {visibleIonIds.map(id => (
           <WatermancerIonReadingRow
             key={id}

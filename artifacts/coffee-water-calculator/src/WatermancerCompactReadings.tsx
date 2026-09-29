@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Pin, PinOff } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_MAP, type IonId } from './waterData';
+import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
+import type { WatermancerMetricValues } from './watermancerMetricValues';
 
 type RatioSummary = {
   id: 'gh-kh' | 'mg-ca' | 'cl-so4';
@@ -17,6 +19,10 @@ function formatPpm(value: number): string {
 export function WatermancerCompactReadings({
   actualIons,
   targetIons,
+  targetMetrics,
+  finalMetrics,
+  metricSource,
+  onMetricSourceChange,
   targetLabel,
   previewRatios,
   followEnabled,
@@ -29,6 +35,10 @@ export function WatermancerCompactReadings({
 }: {
   actualIons: Partial<Record<IonId, number>>;
   targetIons: Partial<Record<IonId, number>>;
+  targetMetrics: WatermancerMetricValues;
+  finalMetrics: WatermancerMetricValues;
+  metricSource: WatermancerMetricSource;
+  onMetricSourceChange: (source: WatermancerMetricSource) => void;
   targetLabel: string;
   previewRatios: boolean;
   followEnabled: boolean;
@@ -155,6 +165,15 @@ export function WatermancerCompactReadings({
         aria-label={previewRatios ? 'Live ions and ratio preview based on selected targets' : 'Live ions and current mixture ratios'}
       >
         <div className="flex w-max min-w-full items-center gap-1.5">
+          <WatermancerMetricSummary
+            targetMetrics={targetMetrics}
+            finalMetrics={finalMetrics}
+            source={metricSource}
+            preview={previewRatios}
+            targetLabel={targetLabel}
+            onSourceChange={onMetricSourceChange}
+            compact
+          />
           {visibleIonIds.map(id => {
             const ion = ION_MAP[id];
             const actual = Math.max(actualIons[id] ?? 0, 0);

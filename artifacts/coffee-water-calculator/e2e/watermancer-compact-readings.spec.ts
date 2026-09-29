@@ -267,3 +267,40 @@ test('workflow shortcuts keep target, salt, and matching controls clear of the p
   await expect(guideMatch).toHaveAttribute('open', '');
   await expect.poll(() => readPosition(readings)).toBe('fixed');
 });
+
+test('shows target and final GH, KH, and modeled TDS in both readings layouts', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const readings = await openWatermancer(page);
+  const compactSummary = readings.locator('[data-watermancer-metric-summary]');
+  const metricIds = ['gh', 'kh', 'tds'];
+  const readMetricValues = async (summary: Locator) => Promise.all(
+    metricIds.map(id => summary.locator(`[data-watermancer-metric="${id}"] span`).nth(1).innerText()),
+  );
+
+  await expect(compactSummary).toHaveAttribute('data-source', 'targets');
+  for (const id of metricIds) {
+    await expect(compactSummary.locator(`[data-watermancer-metric="${id}"]`)).toBeVisible();
+  }
+  await expect(compactSummary.locator('[data-watermancer-metric="tds"]'))
+    .toHaveAttribute('aria-label', /Modeled TDS: .* mg\/L/);
+  const targetValues = await readMetricValues(compactSummary);
+
+  await createLiveSaltReadings(page);
+  await expect(compactSummary).toHaveAttribute('data-source', 'final-mixture');
+  const finalValues = await readMetricValues(compactSummary);
+  expect(finalValues).not.toEqual(targetValues);
+
+  await compactSummary.getByRole('button', { name: 'Show target metrics' }).click();
+  await expect(compactSummary).toHaveAttribute('data-source', 'targets');
+  await expect.poll(() => readMetricValues(compactSummary)).toEqual(targetValues);
+
+  const display = page.getByRole('group', { name: 'Ion readings display' });
+  await display.getByRole('button', { name: 'Classic', exact: true }).click();
+  const classicSummary = page.locator('[data-watermancer-metric-summary]');
+  await expect(classicSummary).toHaveAttribute('data-source', 'targets');
+  await expect.poll(() => readMetricValues(classicSummary)).toEqual(targetValues);
+
+  await classicSummary.getByRole('button', { name: 'Final mixture', exact: true }).click();
+  await expect(classicSummary).toHaveAttribute('data-source', 'final-mixture');
+  await expect.poll(() => readMetricValues(classicSummary)).toEqual(finalValues);
+});
