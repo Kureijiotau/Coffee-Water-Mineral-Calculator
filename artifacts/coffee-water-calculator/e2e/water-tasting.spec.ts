@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('saves a partial tasting, edits it to a complete score, and deletes it', async ({ page }) => {
+test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openWaterTasting(page);
 
@@ -39,10 +39,27 @@ test('saves a partial tasting, edits it to a complete score, and deletes it', as
   await page.getByTestId('input-tasting-roast').fill('Light');
   await page.getByTestId('input-tasting-origin').fill('Huila, Colombia');
   await page.getByTestId('input-tasting-brewMethod').fill('V60');
-  await page.getByTestId('button-rating-clarity-7').click();
-  await expect(page.getByTestId('announcement-tasting-total'))
-    .toHaveText('1 of 5 ratings selected. The total appears when all five are rated.');
-  await page.getByTestId('toggle-descriptors-water-character').click();
+  const fragrance = page.getByTestId('input-descriptive-fragrance');
+  await expect(fragrance).toHaveAttribute('min', '0');
+  await expect(fragrance).toHaveAttribute('max', '15');
+  await fragrance.focus();
+  await page.keyboard.press('ArrowLeft');
+  const mouthfeel = page.getByTestId('input-descriptive-mouthfeel');
+  await mouthfeel.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const overall = page.getByTestId('input-affective-overall');
+  await overall.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect(fragrance).toHaveValue('7');
+  await expect(fragrance).toHaveAttribute('aria-valuetext', '7 out of 15. Low fragrance');
+  await expect(page.getByTestId('cue-descriptive-fragrance')).toHaveText('Low fragrance');
+  await expect(mouthfeel).toHaveValue('10');
+  await expect(page.getByTestId('cue-descriptive-mouthfeel')).toContainText('fuller');
+  await expect(overall).toHaveValue('7');
+  await expect(page.getByTestId('cue-affective-overall')).toHaveText('Moderately high');
+  await page.getByTestId('toggle-descriptors-fragrance-aroma').click();
   await page.getByTestId('button-descriptor-mineral').click();
   await page.getByTestId('button-save-tasting').click();
 
@@ -56,6 +73,11 @@ test('saves a partial tasting, edits it to a complete score, and deletes it', as
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday morning cup');
   await expect(page.getByTestId(`descriptors-tasting-${tastingId}`)).toContainText('Mineral');
   await expect(page.getByTestId(`total-tasting-${tastingId}`)).toHaveCount(0);
+  await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Fragrance');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('7 / 15');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Mouthfeel');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('10 / 15');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   await page.reload();
@@ -64,24 +86,22 @@ test('saves a partial tasting, edits it to a complete score, and deletes it', as
 
   await page.getByTestId(`button-edit-tasting-${tastingId}`).click();
   await expect(page.getByTestId('input-tasting-name')).toHaveValue('Sunday morning cup');
-  await expect(page.getByTestId('value-rating-clarity')).toHaveText('7 / 10');
+  await expect(page.getByTestId('input-descriptive-fragrance')).toHaveValue('7');
+  await expect(page.getByTestId('input-descriptive-mouthfeel')).toHaveValue('10');
+  await expect(page.getByTestId('input-affective-overall')).toHaveValue('7');
   await page.getByTestId('input-tasting-name').fill('Sunday cup, revised');
-  await page.getByTestId('button-rating-flavorExpression-8').click();
-  await page.getByTestId('button-rating-balance-6').click();
-  await page.getByTestId('button-rating-mouthfeel-8').click();
-  await page.getByTestId('button-rating-finish-9').click();
-  await expect(page.getByTestId('value-tasting-total')).toHaveText('38 / 50');
-  await expect(page.getByTestId('announcement-tasting-total')).toHaveText('Your impression total is 38 out of 50.');
-  const waterCharacterGroup = page.getByTestId('group-descriptors-water-character');
-  const isWaterCharacterOpen = await waterCharacterGroup.evaluate(group => (group as HTMLDetailsElement).open);
-  if (!isWaterCharacterOpen) await page.getByTestId('toggle-descriptors-water-character').click();
+  await page.getByTestId('button-clear-descriptive-fragrance').click();
+  await expect(page.getByTestId('value-descriptive-fragrance')).toHaveText('Not scored');
+  const fragranceAromaGroup = page.getByTestId('group-descriptors-fragrance-aroma');
+  const isFragranceAromaOpen = await fragranceAromaGroup.evaluate(group => (group as HTMLDetailsElement).open);
+  if (!isFragranceAromaOpen) await page.getByTestId('toggle-descriptors-fragrance-aroma').click();
   await page.getByTestId('button-descriptor-saline').click();
-  await expect(page.getByTestId('value-tasting-total')).toHaveText('38 / 50');
   await page.getByTestId('button-save-tasting').click();
 
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday cup, revised');
-  await expect(page.getByTestId(`total-tasting-${tastingId}`)).toHaveText('38 / 50');
+  await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).not.toContainText('Fragrance');
 
   await page.getByTestId(`button-delete-tasting-${tastingId}`).click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
@@ -270,48 +290,84 @@ test('does not overwrite data corrupted after the form is opened', async ({ page
   expect(await page.evaluate(key => localStorage.getItem(key), TASTINGS_KEY)).toBe('{corrupted after load');
 });
 
-test('saves and reopens the cup-shape spectrum and descriptors', async ({ page }) => {
+test('keeps legacy ratings, cup-shape values, and descriptors in their original format', async ({ page }) => {
+  await page.addInitScript(tastingsKey => {
+    localStorage.setItem(tastingsKey, JSON.stringify([{
+      id: 'legacy-spectrum',
+      createdAt: '2026-09-27T09:00:00.000Z',
+      updatedAt: '2026-09-27T09:00:00.000Z',
+      profileSourceId: 'safe-profile',
+      profileNameSnapshot: 'Aiki safe profile',
+      coffee: { name: 'Legacy cup' },
+      ratings: {
+        clarity: 5,
+        flavorExpression: 6,
+        balance: 7,
+        mouthfeel: 8,
+        finish: 9,
+      },
+      spectrum: {
+        acidityFocus: 2,
+        bodyWeight: -1,
+        structure: 1,
+        finish: 0,
+      },
+      descriptorIds: ['sparkling', 'hollow', 'clean-finish'],
+    }]));
+  }, TASTINGS_KEY);
+
   await openWaterTasting(page);
-  await page.getByTestId('select-tasting-profile').selectOption('salt-table');
+  await expect(page.getByTestId('total-tasting-legacy-spectrum')).toHaveText('35 / 50');
+  await page.getByTestId('button-edit-tasting-legacy-spectrum').click();
+  await expect(page.getByTestId('value-rating-clarity')).toHaveText('5 / 10');
 
   const acidity = page.getByTestId('input-spectrum-acidityFocus');
   const body = page.getByTestId('input-spectrum-bodyWeight');
   const structure = page.getByTestId('input-spectrum-structure');
   const finish = page.getByTestId('input-spectrum-finish');
-  await expect(acidity).toHaveValue('0');
-  await expect(body).toHaveValue('0');
-  await expect(structure).toHaveValue('0');
+  await expect(acidity).toHaveValue('2');
+  await expect(body).toHaveValue('-1');
+  await expect(structure).toHaveValue('1');
   await expect(finish).toHaveValue('0');
 
   await acidity.focus();
   await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
   await body.focus();
   await page.keyboard.press('ArrowLeft');
-  await structure.focus();
-  await page.keyboard.press('ArrowRight');
 
-  await page.getByTestId('toggle-descriptors-acidity-sweetness').click();
-  await page.getByTestId('button-descriptor-sparkling').click();
-  await page.getByTestId('toggle-descriptors-body-tactile').click();
-  await page.getByTestId('button-descriptor-hollow').click();
-  await page.getByTestId('toggle-descriptors-finish-defects').click();
-  await page.getByTestId('button-descriptor-clean-finish').click();
+  await page.getByTestId('toggle-descriptors-main-tastes').click();
+  await page.getByTestId('button-descriptor-jammy').click();
   await page.getByTestId('button-save-tasting').click();
 
   const card = page.locator('[data-testid^="card-tasting-"]').first();
   const summary = card.locator('[data-testid^="spectrum-tasting-"]');
   await expect(summary).toContainText('Acidity');
-  await expect(summary).toContainText('+2');
+  await expect(summary).toContainText('+3');
   await expect(summary).toContainText('Body');
-  await expect(summary).toContainText('−1');
+  await expect(summary).toContainText('−2');
   await expect(card).toContainText('Sparkling');
   await expect(card).toContainText('Hollow');
   await expect(card).toContainText('Clean finish');
+  await expect(card).toContainText('Jammy');
+  expect(await page.evaluate(key => {
+    const records = JSON.parse(localStorage.getItem(key) ?? '[]');
+    return records[0];
+  }, TASTINGS_KEY)).toMatchObject({
+    ratings: {
+      clarity: 5,
+      flavorExpression: 6,
+      balance: 7,
+      mouthfeel: 8,
+      finish: 9,
+    },
+    spectrum: { acidityFocus: 3, bodyWeight: -2, structure: 1, finish: 0 },
+  });
+  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '[]')[0]?.scoringVersion, TASTINGS_KEY))
+    .toBeUndefined();
 
   await card.locator('[data-testid^="button-edit-tasting-"]').click();
-  await expect(acidity).toHaveValue('2');
-  await expect(body).toHaveValue('-1');
+  await expect(acidity).toHaveValue('3');
+  await expect(body).toHaveValue('-2');
   await expect(structure).toHaveValue('1');
   await expect(finish).toHaveValue('0');
 });

@@ -9,10 +9,18 @@ import {
   sortWaterTastingsNewestFirst,
   updateWaterTastingRecord,
   WATER_TASTING_DESCRIPTORS,
+  WATER_TASTING_AFFECTIVE_ANCHORS,
+  WATER_TASTING_AFFECTIVE_ATTRIBUTES,
+  WATER_TASTING_DESCRIPTIVE_ATTRIBUTES,
   WATER_TASTING_RATINGS,
   WATER_TASTING_SPECTRUM,
   WATER_TASTING_STORAGE_KEY,
-  type WaterTastingDraft,
+  getWaterTastingAffectiveCue,
+  getWaterTastingDescriptiveCue,
+  type WaterTastingCvaDraft,
+  type WaterTastingCvaRecord,
+  type WaterTastingLegacyDraft,
+  type WaterTastingLegacyRecord,
   type WaterTastingRecord,
   type WaterTastingStorage,
 } from './waterTasting';
@@ -28,7 +36,7 @@ function makeStorage(): WaterTastingStorage & { values: Record<string, string> }
   };
 }
 
-function makeDraft(overrides: Partial<WaterTastingDraft> = {}): WaterTastingDraft {
+function makeDraft(overrides: Partial<WaterTastingLegacyDraft> = {}): WaterTastingLegacyDraft {
   return {
     profileSourceId: 'saved:water-1',
     profileNameSnapshot: 'Bright Water',
@@ -40,8 +48,23 @@ function makeDraft(overrides: Partial<WaterTastingDraft> = {}): WaterTastingDraf
   };
 }
 
-function makeRecord(id: string, createdAt: string): WaterTastingRecord {
+function makeRecord(id: string, createdAt: string): WaterTastingLegacyRecord {
   return createWaterTastingRecord(makeDraft(), new Date(createdAt), id);
+}
+
+function makeCvaDraft(
+  overrides: Partial<Omit<WaterTastingCvaDraft, 'scoringVersion'>> = {},
+): WaterTastingCvaDraft {
+  return {
+    profileSourceId: 'saved:water-1',
+    profileNameSnapshot: 'Bright Water',
+    coffee: {},
+    scoringVersion: 2,
+    descriptive: {},
+    affective: {},
+    descriptorIds: [],
+    ...overrides,
+  };
 }
 
 describe('Water Tasting score model', () => {
@@ -103,10 +126,10 @@ describe('Water Tasting cup shape and descriptors', () => {
     ));
 
     expect(groupIds).toEqual([
-      'water-character',
-      'acidity-sweetness',
-      'body-tactile',
-      'finish-defects',
+      'fragrance-aroma',
+      'flavor',
+      'main-tastes',
+      'mouthfeel',
     ]);
     expect(descriptorIds).toEqual(expect.arrayContaining([
       'clean-neutral',
@@ -129,6 +152,42 @@ describe('Water Tasting cup shape and descriptors', () => {
       'flat',
       'clean-finish',
     ]));
+  });
+});
+
+describe('Water Tasting CVA-informed scales', () => {
+  it('provides an attribute-specific cue for every descriptive score', () => {
+    for (const attribute of WATER_TASTING_DESCRIPTIVE_ATTRIBUTES) {
+      for (let value = 0; value <= 15; value += 1) {
+        expect(getWaterTastingDescriptiveCue(attribute.id, value)).toBeTruthy();
+      }
+    }
+    expect(getWaterTastingDescriptiveCue('mouthfeel', 3)).toContain('tea-like');
+    expect(getWaterTastingDescriptiveCue('mouthfeel', 12)).toContain('coating');
+    expect(getWaterTastingDescriptiveCue('flavor', -1)).toBeUndefined();
+    expect(getWaterTastingDescriptiveCue('flavor', 15.5)).toBeUndefined();
+  });
+
+  it('defines seven descriptive attributes and five affective attributes with all SCA anchors', () => {
+    expect(WATER_TASTING_DESCRIPTIVE_ATTRIBUTES).toHaveLength(7);
+    expect(WATER_TASTING_AFFECTIVE_ATTRIBUTES).toHaveLength(5);
+    expect(WATER_TASTING_AFFECTIVE_ANCHORS.map(({ value }) => value))
+      .toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(WATER_TASTING_AFFECTIVE_ANCHORS.map(({ label }) => label)).toEqual([
+      'Extremely low',
+      'Very low',
+      'Moderately low',
+      'Slightly low',
+      'Neither high nor low',
+      'Slightly high',
+      'Moderately high',
+      'Very high',
+      'Extremely high',
+    ]);
+    expect(getWaterTastingAffectiveCue(1)).toBe('Extremely low');
+    expect(getWaterTastingAffectiveCue(5)).toBe('Neither high nor low');
+    expect(getWaterTastingAffectiveCue(9)).toBe('Extremely high');
+    expect(getWaterTastingAffectiveCue(10)).toBeUndefined();
   });
 });
 
@@ -223,6 +282,46 @@ describe('Water Tasting record lifecycle', () => {
     expect(updated.profileNameSnapshot).toBe('Aiki safe profile');
   });
 
+  it('creates and updates version 2 records without changing their water identity', () => {
+    const original = createWaterTastingRecord(makeCvaDraft({
+      descriptive: { fragrance: 0, mouthfeel: 15 },
+      affective: { overall: 9 },
+      descriptorIds: ['mineral'],
+    }), new Date('2026-09-27T09:00:00.000Z'), 'cva-tasting');
+    const updated = updateWaterTastingRecord(
+      original,
+      makeCvaDraft({
+        profileSourceId: 'saved:renamed-water',
+        profileNameSnapshot: 'Renamed water',
+        coffee: { name: 'Ethiopia' },
+        descriptive: { flavor: 7 },
+        affective: { overall: 8 },
+        descriptorIds: ['clean-neutral'],
+      }),
+      new Date('2026-09-28T09:00:00.000Z'),
+    );
+
+    expect(original).toMatchObject({
+      scoringVersion: 2,
+      profileSourceId: 'saved:water-1',
+      profileNameSnapshot: 'Bright Water',
+      descriptive: { fragrance: 0, mouthfeel: 15 },
+      affective: { overall: 9 },
+    } satisfies Partial<WaterTastingCvaRecord>);
+    expect(updated).toMatchObject({
+      scoringVersion: 2,
+      profileSourceId: 'saved:renamed-water',
+      profileNameSnapshot: 'Renamed water',
+      coffee: { name: 'Ethiopia' },
+      descriptive: { flavor: 7 },
+      affective: { overall: 8 },
+      descriptorIds: ['clean-neutral'],
+    });
+    expect(updated.id).toBe(original.id);
+    expect(updated.createdAt).toBe(original.createdAt);
+    expect(updated.updatedAt).not.toBe(original.updatedAt);
+  });
+
   it('sorts history newest first and keeps equal-date items stable', () => {
     const older = makeRecord('older', '2026-09-26T09:00:00.000Z');
     const sameDateA = makeRecord('same-a', '2026-09-27T09:00:00.000Z');
@@ -247,6 +346,21 @@ describe('Water Tasting local persistence', () => {
     expect(saveWaterTastings(records, [], storage)).toEqual({ ok: true });
     expect(storage.values[WATER_TASTING_STORAGE_KEY]).toContain('"profileNameSnapshot":"Bright Water"');
     expect(loadWaterTastings(storage)).toEqual({ ok: true, records });
+  });
+
+  it('round-trips partial CVA records alongside legacy records', () => {
+    const legacy = makeRecord('legacy', '2026-09-27T09:00:00.000Z');
+    const cva = createWaterTastingRecord(makeCvaDraft({
+      descriptive: { fragrance: 0, mouthfeel: 15 },
+      affective: { overall: 9 },
+      descriptorIds: ['syrupy'],
+    }), new Date('2026-09-28T09:00:00.000Z'), 'cva');
+    const records = [legacy, cva];
+
+    expect(saveWaterTastings(records, [], storage)).toEqual({ ok: true });
+    expect(loadWaterTastings(storage)).toEqual({ ok: true, records });
+    expect(storage.values[WATER_TASTING_STORAGE_KEY]).toContain('"scoringVersion":2');
+    expect(storage.values[WATER_TASTING_STORAGE_KEY]).not.toContain('"total"');
   });
 
   it('round-trips spectrum values and copies them when records are created or updated', () => {
@@ -326,6 +440,18 @@ describe('Water Tasting local persistence', () => {
 
     expect(saveWaterTastings([invalid as WaterTastingRecord], [], storage))
       .toEqual({ ok: false, error: 'invalid-records' });
+    expect(storage.values[WATER_TASTING_STORAGE_KEY]).toBe('original');
+  });
+
+  it('rejects out-of-range CVA scores without overwriting saved data', () => {
+    storage.values[WATER_TASTING_STORAGE_KEY] = 'original';
+    const valid = createWaterTastingRecord(makeCvaDraft(), new Date('2026-09-28T09:00:00.000Z'), 'bad-cva');
+    const invalid = {
+      ...valid,
+      descriptive: { fragrance: 16 },
+    } as WaterTastingCvaRecord;
+
+    expect(saveWaterTastings([invalid], [], storage)).toEqual({ ok: false, error: 'invalid-records' });
     expect(storage.values[WATER_TASTING_STORAGE_KEY]).toBe('original');
   });
 

@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, BookOpen, Check, ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import {
@@ -9,13 +9,16 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  WATER_TASTING_RATINGS, WATER_TASTING_SPECTRUM, WATER_TASTING_DESCRIPTORS,
+  WATER_TASTING_AFFECTIVE_ATTRIBUTES, WATER_TASTING_DESCRIPTIVE_ATTRIBUTES,
+  WATER_TASTING_SPECTRUM, WATER_TASTING_DESCRIPTORS,
   createNeutralWaterTastingSpectrum,
-  calculateWaterTastingTotal, createWaterTastingRecord, updateWaterTastingRecord,
+  calculateWaterTastingTotal, createWaterTastingRecord, isCvaWaterTastingRecord, updateWaterTastingRecord,
   loadWaterTastings, saveWaterTastings, sortWaterTastingsNewestFirst,
-  type WaterTastingDraft, type WaterTastingProfileOption,
+  type WaterTastingCvaDraft, type WaterTastingLegacyDraft,
+  type WaterTastingEditorValues, type WaterTastingProfileOption,
   type WaterTastingRecord, type WaterTastingStorageError,
 } from './waterTasting';
+import { WaterTastingScoring } from './WaterTastingScoring';
 
 interface WaterTastingTabProps {
   profileOptions: WaterTastingProfileOption[];
@@ -31,14 +34,18 @@ const inputStyle = 'h-11 rounded-lg border-slate-600/60 bg-slate-950/45 px-3 tex
 const ghostButton = 'inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-600/60 bg-slate-800/40 px-4 text-sm font-medium text-slate-200 transition-colors hover:border-cyan-300/40 hover:bg-slate-700/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300';
 const eyebrow = 'text-[11px] font-semibold uppercase tracking-[0.2em] text-cyan-300/80';
 
-function emptyDraft(profileSourceId = ''): WaterTastingDraft {
+function emptyDraft(profileSourceId = ''): WaterTastingEditorValues {
   return {
+    mode: 'cva',
     profileSourceId,
     profileNameSnapshot: '',
     coffee: {},
     ratings: {},
     spectrum: createNeutralWaterTastingSpectrum(),
+    descriptive: {},
+    affective: {},
     descriptorIds: [],
+    legacySpectrumCaptured: false,
   };
 }
 
@@ -78,16 +85,9 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
   const [editingId, setEditingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const formStart = useRef<HTMLDivElement>(null);
-  const form = useForm<WaterTastingDraft>({ defaultValues: emptyDraft() });
+  const form = useForm<WaterTastingEditorValues>({ defaultValues: emptyDraft() });
   const selectedProfileSourceId = form.watch('profileSourceId');
-  const ratings = form.watch('ratings');
-  const selectedDescriptors = form.watch('descriptorIds') ?? [];
-  const total = calculateWaterTastingTotal(ratings ?? {});
-  const ratedCount = WATER_TASTING_RATINGS.filter(({ id }) => (
-    Number.isInteger(ratings?.[id])
-    && Number(ratings?.[id]) >= 0
-    && Number(ratings?.[id]) <= 10
-  )).length;
+  const mode = form.watch('mode');
   const editingRecord = records.find(record => record.id === editingId);
   const profileChoices = editingRecord && !profileOptions.some(option => option.sourceId === editingRecord.profileSourceId)
     ? [...profileOptions, {
@@ -110,21 +110,35 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
 
   function openRecord(record: WaterTastingRecord) {
     setEditingId(record.id);
-    form.reset({
-      profileSourceId: record.profileSourceId,
-      profileNameSnapshot: record.profileNameSnapshot,
-      coffee: { ...record.coffee },
-      ratings: { ...record.ratings },
-      spectrum: record.spectrum
-        ? { ...record.spectrum }
-        : createNeutralWaterTastingSpectrum(),
-      descriptorIds: [...record.descriptorIds],
-    });
+    if (isCvaWaterTastingRecord(record)) {
+      form.reset({
+        ...emptyDraft(record.profileSourceId),
+        mode: 'cva',
+        profileNameSnapshot: record.profileNameSnapshot,
+        coffee: { ...record.coffee },
+        descriptive: { ...record.descriptive },
+        affective: { ...record.affective },
+        descriptorIds: [...record.descriptorIds],
+      });
+    } else {
+      form.reset({
+        ...emptyDraft(record.profileSourceId),
+        mode: 'legacy',
+        profileNameSnapshot: record.profileNameSnapshot,
+        coffee: { ...record.coffee },
+        ratings: { ...record.ratings },
+        spectrum: record.spectrum
+          ? { ...record.spectrum }
+          : createNeutralWaterTastingSpectrum(),
+        descriptorIds: [...record.descriptorIds],
+        legacySpectrumCaptured: record.spectrum !== undefined,
+      });
+    }
     setFeedback(null);
     formStart.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function saveDraft(values: WaterTastingDraft) {
+  function saveDraft(values: WaterTastingEditorValues) {
     if (!initialLoad.ok) {
       setFeedback({ kind: 'error', text: storageMessage(initialLoad.error) });
       return;
@@ -138,17 +152,49 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
     const snapshot = editingRecord?.profileSourceId === option.sourceId
       ? editingRecord.profileNameSnapshot
       : option.name;
-    const draft: WaterTastingDraft = {
+    const draftBase = {
       profileSourceId: option.sourceId,
       profileNameSnapshot: snapshot,
       coffee: values.coffee,
-      ratings: values.ratings ?? {},
-      spectrum: { ...values.spectrum },
       descriptorIds: values.descriptorIds ?? [],
     };
-    const nextRecord = editingRecord
-      ? updateWaterTastingRecord(editingRecord, draft)
-      : createWaterTastingRecord(draft);
+    let nextRecord: WaterTastingRecord;
+    if (values.mode === 'cva') {
+      const draft: WaterTastingCvaDraft = {
+        ...draftBase,
+        scoringVersion: 2,
+        descriptive: values.descriptive ?? {},
+        affective: values.affective ?? {},
+      };
+      if (editingRecord && isCvaWaterTastingRecord(editingRecord)) {
+        nextRecord = updateWaterTastingRecord(editingRecord, draft);
+      } else if (!editingRecord) {
+        nextRecord = createWaterTastingRecord(draft);
+      } else {
+        setFeedback({ kind: 'error', text: 'This note must be edited with its original scoring format.' });
+        return;
+      }
+    } else {
+      const priorLegacy = editingRecord && !isCvaWaterTastingRecord(editingRecord)
+        ? editingRecord
+        : undefined;
+      if (editingRecord && !priorLegacy) {
+        setFeedback({ kind: 'error', text: 'This note must be edited with its original scoring format.' });
+        return;
+      }
+      const draft: WaterTastingLegacyDraft = {
+        ...draftBase,
+        ratings: values.ratings ?? {},
+        spectrum: values.legacySpectrumCaptured
+          ? { ...values.spectrum }
+          : priorLegacy?.spectrum,
+      };
+      if (priorLegacy) nextRecord = updateWaterTastingRecord(priorLegacy, draft);
+      else {
+        setFeedback({ kind: 'error', text: 'Start a new tasting to use the current scoring format.' });
+        return;
+      }
+    }
     const nextRecords = sortWaterTastingsNewestFirst(
       editingRecord ? records.map(record => record.id === editingId ? nextRecord : record) : [...records, nextRecord],
     );
@@ -294,150 +340,7 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
               </div>
             </section>
 
-            <section aria-labelledby="tasting-ratings-heading" className="border-b border-slate-600/35 pb-8">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">03</span>
-                  <div>
-                    <h3 id="tasting-ratings-heading" className="font-semibold text-slate-100">Water contribution</h3>
-                    <p className="mt-1 max-w-lg text-xs leading-relaxed text-slate-400">Rate how well this water supported each quality in this cup. Leave anything unanswered if you’re not sure yet.</p>
-                  </div>
-                </div>
-                <div className="min-w-32 rounded-lg border border-cyan-300/25 bg-cyan-950/30 px-4 py-2 text-right">
-                  <span className="block text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan-200/75">Your impression</span>
-                  <strong data-testid="value-tasting-total" className="mt-0.5 block font-mono text-xl font-semibold tabular-nums text-cyan-100">{total === null ? '— / 50' : `${total} / 50`}</strong>
-                  <span className="block text-[10px] text-slate-400">{total === null ? 'All five to show total' : 'Five dimensions rated'}</span>
-                </div>
-              </div>
-              <span
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
-                data-testid="announcement-tasting-total"
-                className="sr-only"
-              >
-                {total === null
-                  ? `${ratedCount} of 5 ratings selected. The total appears when all five are rated.`
-                  : `Your impression total is ${total} out of 50.`}
-              </span>
-              <div className="mt-5 space-y-3 sm:pl-10">
-                {WATER_TASTING_RATINGS.map(rating => (
-                  <FormField key={rating.id} control={form.control} name={`ratings.${rating.id}`} render={({ field }) => (
-                    <FormItem className="rounded-xl border border-slate-600/40 bg-slate-900/55 p-3.5 sm:p-4">
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                        <div>
-                          <span className="text-sm font-semibold text-slate-100">{rating.label}</span>
-                          <p id={`hint-rating-${rating.id}`} className="mt-1 text-xs leading-relaxed text-slate-400">{rating.prompt}</p>
-                        </div>
-                        <span data-testid={`value-rating-${rating.id}`} className="font-mono text-sm font-semibold tabular-nums text-cyan-200">{field.value === undefined ? 'Not rated' : `${field.value} / 10`}</span>
-                      </div>
-                      <div role="group" aria-label={`${rating.label} rating, 0 to 10`} aria-describedby={`hint-rating-${rating.id}`} className="mt-3 flex flex-wrap gap-1.5">
-                        {Array.from({ length: 11 }, (_, score) => (
-                          <button
-                            key={score}
-                            type="button"
-                            aria-label={`${rating.label}: ${score} out of 10`}
-                            aria-pressed={field.value === score}
-                            onClick={() => { field.onChange(score); setFeedback(null); }}
-                            data-testid={`button-rating-${rating.id}-${score}`}
-                            className={`flex h-10 w-10 items-center justify-center rounded-md border font-mono text-xs font-semibold tabular-nums transition-colors sm:h-11 sm:w-11 ${field.value === score ? 'border-cyan-200 bg-cyan-300 text-slate-950' : 'border-slate-600/70 bg-slate-800/70 text-slate-300 hover:border-cyan-300/60 hover:text-cyan-100'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900`}
-                          >{score}</button>
-                        ))}
-                        {field.value !== undefined && <button type="button" onClick={() => { field.onChange(undefined); setFeedback(null); }} data-testid={`button-clear-rating-${rating.id}`} className="min-h-10 rounded-md px-2 text-xs text-slate-400 underline underline-offset-2 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300">Clear</button>}
-                      </div>
-                    </FormItem>
-                  )} />
-                ))}
-              </div>
-              <p className="mt-3 text-xs text-slate-500 sm:pl-10">Each dimension is equally weighted. This total reflects your impression, not an objective measurement or an official Q score.</p>
-            </section>
-
-            <section aria-labelledby="tasting-spectrum-heading" className="border-b border-slate-600/35 pb-8">
-              <div className="flex items-start gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">04</span>
-                <div>
-                  <h3 id="tasting-spectrum-heading" className="font-semibold text-slate-100">Cup shape <span className="ml-1 text-xs font-normal text-slate-400">· optional</span></h3>
-                  <p className="mt-1 text-xs text-slate-400">Describe the direction of the cup. Each slider starts at neutral 0; the ratings above stay separate.</p>
-                </div>
-              </div>
-              <div className="mt-4 grid gap-3 sm:pl-10">
-                {WATER_TASTING_SPECTRUM.map(axis => (
-                  <FormField
-                    key={axis.id}
-                    control={form.control}
-                    name={`spectrum.${axis.id}` as const}
-                    render={({ field }) => {
-                      const value = typeof field.value === 'number' ? field.value : 0;
-                      const position = value === 0
-                        ? 'Neutral'
-                        : value < 0 ? axis.leftLabel : axis.rightLabel;
-                      return <FormItem className="rounded-xl border border-slate-600/45 bg-slate-900/35 p-4">
-                        <div className="flex flex-wrap items-baseline justify-between gap-2">
-                          <FormLabel className="text-sm font-medium text-slate-100">{axis.label}</FormLabel>
-                          <span data-testid={`value-spectrum-${axis.id}`} className="font-mono text-xs tabular-nums text-cyan-200">
-                            {formatSpectrumValue(value)} <span className="font-sans text-slate-400">· {position}</span>
-                          </span>
-                        </div>
-                        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-x-2 gap-y-2">
-                          <span className="text-xs leading-tight text-slate-400"><span className="font-mono">−5</span> · {axis.leftLabel}</span>
-                          <span className="text-center text-[10px] text-slate-500"><span className="font-mono">0</span> · Neutral</span>
-                          <span className="text-right text-xs leading-tight text-slate-400">{axis.rightLabel} · <span className="font-mono">+5</span></span>
-                          <FormControl>
-                            <input
-                              {...field}
-                              type="range"
-                              min={-5}
-                              max={5}
-                              step={1}
-                              value={value}
-                              onChange={event => field.onChange(Number(event.currentTarget.value))}
-                              aria-label={`${axis.label}: ${axis.leftLabel} to ${axis.rightLabel}`}
-                              aria-valuetext={`${position} (${formatSpectrumValue(value)})`}
-                              data-testid={`input-spectrum-${axis.id}`}
-                              className="col-span-3 h-5 w-full cursor-pointer accent-cyan-300"
-                            />
-                          </FormControl>
-                        </div>
-                        <FormMessage />
-                      </FormItem>;
-                    }}
-                  />
-                ))}
-              </div>
-            </section>
-
-            <section aria-labelledby="tasting-descriptors-heading" className="border-b border-slate-600/35 pb-8">
-              <div className="flex items-start gap-3">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">05</span>
-                <div>
-                  <h3 id="tasting-descriptors-heading" className="font-semibold text-slate-100">Words for the cup <span className="ml-1 text-xs font-normal text-slate-400">· optional</span></h3>
-                  <p className="mt-1 text-xs text-slate-400">Choose any that fit. Descriptors never change the total.</p>
-                </div>
-              </div>
-              <div className="mt-4 space-y-2 sm:pl-10">
-                {WATER_TASTING_DESCRIPTORS.map(group => (
-                  <details key={group.id} className="group rounded-xl border border-slate-600/45 bg-slate-900/35" data-testid={`group-descriptors-${group.id}`}>
-                    <summary data-testid={`toggle-descriptors-${group.id}`} className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium text-slate-200 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300 [&::-webkit-details-marker]:hidden">
-                      <span>{group.label} <span className="ml-1 font-normal text-slate-500">({group.options.filter(option => selectedDescriptors.includes(option.id)).length} selected)</span></span>
-                      <ChevronDown className="h-4 w-4 shrink-0 text-cyan-300 transition-transform group-open:rotate-180" aria-hidden="true" />
-                    </summary>
-                    <div className="flex flex-wrap gap-2 border-t border-slate-600/35 px-4 py-4">
-                      {group.options.map(option => {
-                        const selected = selectedDescriptors.includes(option.id);
-                        return <button
-                          key={option.id}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => form.setValue('descriptorIds', selected ? selectedDescriptors.filter(id => id !== option.id) : [...selectedDescriptors, option.id], { shouldDirty: true })}
-                          data-testid={`button-descriptor-${option.id}`}
-                          className={`inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${selected ? 'border-cyan-300/65 bg-cyan-300/15 text-cyan-100' : 'border-slate-600/65 bg-slate-800/60 text-slate-300 hover:border-cyan-300/45'}`}
-                        >{selected && <Check className="h-3.5 w-3.5" aria-hidden="true" />}{option.label}</button>;
-                      })}
-                    </div>
-                  </details>
-                ))}
-              </div>
-            </section>
+            <WaterTastingScoring mode={mode} form={form} onChange={() => setFeedback(null)} />
 
             <div className="flex flex-wrap items-center gap-3 sm:pl-10">
               <button type="submit" data-testid="button-save-tasting" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-cyan-200/65 bg-cyan-300 px-6 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
@@ -467,8 +370,9 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
         ) : (
           <div className="mt-5 grid gap-3">
             {records.map((record, index) => {
-              const savedTotal = calculateWaterTastingTotal(record.ratings);
-              const spectrum = record.spectrum;
+              const isCvaRecord = isCvaWaterTastingRecord(record);
+              const savedTotal = isCvaRecord ? null : calculateWaterTastingTotal(record.ratings);
+              const spectrum = isCvaRecord ? undefined : record.spectrum;
               return <article key={record.id} data-testid={`card-tasting-${record.id}`} className={`rounded-xl border bg-slate-900/65 p-4 sm:p-5 ${editingId === record.id ? 'border-cyan-300/65' : 'border-slate-600/45'}`}>
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
@@ -480,8 +384,35 @@ export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenW
                     <h4 data-testid={`profile-tasting-${record.id}`} className="mt-2 break-words text-base font-semibold text-slate-100">{record.profileNameSnapshot}</h4>
                     {record.coffee.name && <p data-testid={`coffee-tasting-${record.id}`} className="mt-1 text-sm text-slate-300">{record.coffee.name}</p>}
                   </div>
-                  {savedTotal !== null && <div data-testid={`total-tasting-${record.id}`} className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-cyan-100">{savedTotal} / 50</div>}
+                  {isCvaRecord && typeof record.affective.overall === 'number' && (
+                    <div data-testid={`overall-tasting-${record.id}`} className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-cyan-100">
+                      Overall {record.affective.overall} / 9
+                    </div>
+                  )}
+                  {!isCvaRecord && savedTotal !== null && <div data-testid={`total-tasting-${record.id}`} className="rounded-lg border border-cyan-300/25 bg-cyan-300/10 px-3 py-2 font-mono text-sm font-semibold tabular-nums text-cyan-100">{savedTotal} / 50</div>}
                 </div>
+                {isCvaRecord && (
+                  <dl data-testid={`scores-tasting-${record.id}`} aria-label="Descriptive and affective scores" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                    {WATER_TASTING_DESCRIPTIVE_ATTRIBUTES.flatMap(attribute => {
+                      const score = record.descriptive[attribute.id];
+                      return typeof score === 'number'
+                        ? [<div key={`descriptive-${attribute.id}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-600/40 bg-slate-800/45 px-3 py-2">
+                          <dt className="text-xs text-slate-400">{attribute.label.replace(' intensity', '')}</dt>
+                          <dd className="font-mono text-xs font-semibold tabular-nums text-cyan-100">{score} / 15</dd>
+                        </div>]
+                        : [];
+                    })}
+                    {WATER_TASTING_AFFECTIVE_ATTRIBUTES.flatMap(attribute => {
+                      const score = record.affective[attribute.id];
+                      return typeof score === 'number'
+                        ? [<div key={`affective-${attribute.id}`} className="flex items-center justify-between gap-2 rounded-lg border border-slate-600/40 bg-slate-800/45 px-3 py-2">
+                          <dt className="text-xs text-slate-400">{attribute.label}</dt>
+                          <dd className="font-mono text-xs font-semibold tabular-nums text-cyan-100">{score} / 9</dd>
+                        </div>]
+                        : [];
+                    })}
+                  </dl>
+                )}
                 {spectrum ? (
                   <dl data-testid={`spectrum-tasting-${record.id}`} aria-label="Cup shape summary" className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {WATER_TASTING_SPECTRUM.map(axis => (
