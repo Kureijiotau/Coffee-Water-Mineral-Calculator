@@ -21,7 +21,7 @@ import {
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
-import LabelScanner from './LabelScanner';
+import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import {
@@ -55,7 +55,6 @@ import {
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
 import { mergeProfileCollections, sameProfileCollection } from './profileSync';
-import { IonRatioTable } from './IonRatioTable';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import { computeWatermancerMetricValues, type WatermancerMetricValues } from './watermancerMetricValues';
@@ -82,8 +81,7 @@ import {
   type LotusDropperStyle,
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
-import WaterMixer, { type WaterMixerDatabaseWater, type WaterMixerSavedSource } from './WaterMixer';
-import { WaterTastingTab } from './WaterTastingTab';
+import type { WaterMixerDatabaseWater, WaterMixerSavedSource } from './WaterMixer';
 import { buildWaterTastingProfileOptions } from './waterTasting';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
 import {
@@ -211,6 +209,14 @@ import {
 } from './savedProfileSorting';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
+const WaterMixer = lazy(() => import('./WaterMixer'));
+const WaterTastingTab = lazy(() => import('./WaterTastingTab').then(module => ({
+  default: module.WaterTastingTab,
+})));
+const IonRatioTable = lazy(() => import('./IonRatioTable').then(module => ({
+  default: module.IonRatioTable,
+})));
+const LabelScanner = lazy(() => import('./LabelScanner'));
 const WATER_RECIPE_IMAGE_SIZE = 256;
 
 async function createWaterRecipePreviewPng(sourceUrl: string, title: string): Promise<Uint8Array<ArrayBuffer>> {
@@ -6242,31 +6248,35 @@ function App() {
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
           <div className="app-page-stack flex w-full max-w-5xl flex-col">
             {appHeader}
-            <WaterTastingTab
-              profileOptions={waterTastingProfileOptions}
-              renderProfileAnalysis={sourceId => {
-                const option = waterTastingProfileOptions.find(item => item.sourceId === sourceId);
-                if (!option) return null;
+            <DeferredPanelBoundary label="Water Tasting">
+              <Suspense fallback={<DeferredPanelFallback label="Water Tasting" />}>
+                <WaterTastingTab
+                  profileOptions={waterTastingProfileOptions}
+                  renderProfileAnalysis={sourceId => {
+                    const option = waterTastingProfileOptions.find(item => item.sourceId === sourceId);
+                    if (!option) return null;
 
-                const finalIons = Object.fromEntries(
-                  ACTIVE_ION_IDS.map(id => [id, Number(option.readings.ions[id] ?? 0)]),
-                ) as Record<IonId, number>;
-                const totalIonPpm = Object.values(finalIons).reduce((total, value) => total + value, 0);
-                return (
-                  <MineralAnalysisLabel
-                    recipeName={option.name}
-                    finalIons={finalIons}
-                    tds={option.readings.tds ?? totalIonPpm}
-                    gh={option.readings.gh ?? computeGH(finalIons)}
-                    kh={option.readings.kh ?? computeKH(finalIons)}
-                  />
-                );
-              }}
-              onOpenWatermancer={() => {
-                setAppTab('calculator');
-                setNerdLevel('watermancer');
-              }}
-            />
+                    const finalIons = Object.fromEntries(
+                      ACTIVE_ION_IDS.map(id => [id, Number(option.readings.ions[id] ?? 0)]),
+                    ) as Record<IonId, number>;
+                    const totalIonPpm = Object.values(finalIons).reduce((total, value) => total + value, 0);
+                    return (
+                      <MineralAnalysisLabel
+                        recipeName={option.name}
+                        finalIons={finalIons}
+                        tds={option.readings.tds ?? totalIonPpm}
+                        gh={option.readings.gh ?? computeGH(finalIons)}
+                        kh={option.readings.kh ?? computeKH(finalIons)}
+                      />
+                    );
+                  }}
+                  onOpenWatermancer={() => {
+                    setAppTab('calculator');
+                    setNerdLevel('watermancer');
+                  }}
+                />
+              </Suspense>
+            </DeferredPanelBoundary>
           </div>
         </div>
       </div>
@@ -6279,15 +6289,19 @@ function App() {
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
           <div className="app-page-stack flex w-full max-w-7xl flex-col">
             {appHeader}
-            <WaterMixer
-              savedSources={mixerSavedSources}
-              localWaters={localWaters}
-              communityWaters={communityWaters.filter(water => water.shared === 'yes')}
-              databaseLoading={communityLoading}
-              databaseError={communityLoadError}
-              onLoadCommunityWaters={loadCommunityWaters}
-              onImportRecipeFile={handleImportMixerRecipeFile}
-            />
+            <DeferredPanelBoundary label="Mixer">
+              <Suspense fallback={<DeferredPanelFallback label="Mixer" />}>
+                <WaterMixer
+                  savedSources={mixerSavedSources}
+                  localWaters={localWaters}
+                  communityWaters={communityWaters.filter(water => water.shared === 'yes')}
+                  databaseLoading={communityLoading}
+                  databaseError={communityLoadError}
+                  onLoadCommunityWaters={loadCommunityWaters}
+                  onImportRecipeFile={handleImportMixerRecipeFile}
+                />
+              </Suspense>
+            </DeferredPanelBoundary>
           </div>
         </div>
       </div>
@@ -6324,11 +6338,15 @@ function App() {
                   Back to Watermancer
                 </button>
               </div>
-              <IonRatioTable
-                targetIons={watermancerIonTargets}
-                seedDraft={ionRatioSeedDraft}
-                onImport={ratioTargets => handleWatermancerTargetOverrideChange(mergeDirectIonTargets(watermancerIonTargets, ratioTargets))}
-              />
+              <DeferredPanelBoundary label="Ion Ratios">
+                <Suspense fallback={<DeferredPanelFallback label="Ion Ratios" />}>
+                  <IonRatioTable
+                    targetIons={watermancerIonTargets}
+                    seedDraft={ionRatioSeedDraft}
+                    onImport={ratioTargets => handleWatermancerTargetOverrideChange(mergeDirectIonTargets(watermancerIonTargets, ratioTargets))}
+                  />
+                </Suspense>
+              </DeferredPanelBoundary>
             </main>
           </div>
         </div>
@@ -7326,7 +7344,11 @@ function App() {
                    <ScanLine className="mt-0.5 h-4 w-4 shrink-0 text-indigo-300" aria-hidden="true" />
                  </div>
                  <div className="mt-3">
-                   <LabelScanner onExtracted={handleScannedMineralWater} />
+                    <DeferredPanelBoundary label="Label Scanner">
+                      <Suspense fallback={<DeferredPanelFallback label="Label Scanner" />}>
+                        <LabelScanner onExtracted={handleScannedMineralWater} />
+                      </Suspense>
+                    </DeferredPanelBoundary>
                  </div>
                </div>
              )}
@@ -13577,16 +13599,6 @@ function WatermancerIonCoverageBars({
         </div>
       </div>}
          <div className={`app-card-body min-h-0 flex-1 space-y-3 ${followEnabled ? 'overflow-y-auto overscroll-contain' : ''}`}>
-        {readingsView === 'classic' && (
-          <WatermancerMetricSummary
-            targetMetrics={targetMetricValues}
-            finalMetrics={finalMetricValues}
-            source={activeMetricSource}
-            preview={!hasModeledIons}
-            targetLabel={targetLabel}
-            onSourceChange={setMetricSource}
-          />
-        )}
         {visibleIonIds.map(id => (
           <WatermancerIonReadingRow
             key={id}
@@ -13682,7 +13694,7 @@ function WatermancerIonCoverageBars({
            </div>
          );
        })}
-         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
+          <div data-testid="watermancer-classic-ratios" className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-3 text-xs font-semibold tabular-nums">
            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
              Ratios{!hasModeledIons && <span className="ml-1 normal-case tracking-normal text-indigo-300/70">(preview)</span>}
            </span>
@@ -13719,6 +13731,17 @@ function WatermancerIonCoverageBars({
               <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(monovalentTotal)} ppm)</span>
             </span>
        </div>
+        {readingsView === 'classic' && (
+          <WatermancerMetricSummary
+            targetMetrics={targetMetricValues}
+            finalMetrics={finalMetricValues}
+            source={activeMetricSource}
+            preview={!hasModeledIons}
+            targetLabel={targetLabel}
+            onSourceChange={setMetricSource}
+            inline
+          />
+        )}
       </div>
       </div>
       )}

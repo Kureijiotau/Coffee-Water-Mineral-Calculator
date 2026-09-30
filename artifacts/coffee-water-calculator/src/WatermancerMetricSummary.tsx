@@ -15,6 +15,7 @@ export function WatermancerMetricSummary({
   targetLabel,
   onSourceChange,
   compact = false,
+  inline = false,
 }: {
   targetMetrics: WatermancerMetricValues;
   finalMetrics: WatermancerMetricValues;
@@ -23,20 +24,21 @@ export function WatermancerMetricSummary({
   targetLabel: string;
   onSourceChange: (source: WatermancerMetricSource) => void;
   compact?: boolean;
+  inline?: boolean;
 }) {
   const activeSource = preview ? 'targets' : source;
   const metrics = activeSource === 'final-mixture' ? finalMetrics : targetMetrics;
   const entries = [
     {
       id: 'gh',
-      label: compact ? 'GH' : 'General Hardness (GH)',
+      label: compact || inline ? 'GH' : 'General Hardness (GH)',
       value: metrics.gh,
       unit: 'ppm CaCO₃',
       accessibleLabel: 'GH',
     },
     {
       id: 'kh',
-      label: compact ? 'KH' : 'Carbonate Hardness (KH)',
+      label: compact || inline ? 'KH' : 'Carbonate Hardness (KH)',
       value: metrics.kh,
       unit: 'ppm CaCO₃',
       accessibleLabel: 'KH',
@@ -53,14 +55,17 @@ export function WatermancerMetricSummary({
   return (
     <div
       data-watermancer-metric-summary
+      data-testid={inline ? 'watermancer-classic-metric-summary' : undefined}
       data-source={activeSource}
       role="group"
       aria-label="GH, KH, and modeled TDS summary"
-      className={compact
-        ? 'flex h-8 shrink-0 items-center gap-1.5 border-r border-cyan-300/20 pr-2'
-        : 'space-y-2 rounded-xl border border-cyan-300/15 bg-slate-950/25 p-3'}
+      className={inline
+        ? 'flex w-full min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-cyan-400/15 pt-2 text-xs font-semibold tabular-nums'
+        : compact
+          ? 'flex h-8 shrink-0 items-center gap-1.5 border-r border-cyan-300/20 pr-2'
+          : 'space-y-2 rounded-xl border border-cyan-300/15 bg-slate-950/25 p-3'}
     >
-      {!compact && (
+      {!compact && !inline && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-100">
             {preview ? `${targetLabel} targets · Preview` : 'Mineral summary'}
@@ -100,7 +105,49 @@ export function WatermancerMetricSummary({
         </div>
       )}
 
-      <div className={compact ? 'flex items-center gap-1.5' : 'grid grid-cols-3 gap-2'}>
+      {inline && (
+        <span
+          data-testid="text-watermancer-metric-context"
+          className="text-[10px] font-semibold uppercase tracking-wider text-cyan-100"
+        >
+          {preview ? `${targetLabel} targets · Preview` : 'Mineral summary'}
+        </span>
+      )}
+
+      {inline && !preview && (
+        <div
+          role="group"
+          aria-label="Metric source"
+          className="inline-flex items-center gap-0.5 rounded-lg border border-cyan-300/15 bg-slate-950/50 p-0.5"
+        >
+          <button
+            type="button"
+            onClick={() => onSourceChange('targets')}
+            aria-pressed={activeSource === 'targets'}
+            className={`min-h-8 rounded-md px-2.5 text-[10px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-cyan-200 ${
+              activeSource === 'targets'
+                ? 'bg-cyan-500/20 text-cyan-100'
+                : 'text-slate-400 hover:bg-cyan-500/10 hover:text-cyan-100'
+            }`}
+          >
+            Targets
+          </button>
+          <button
+            type="button"
+            onClick={() => onSourceChange('final-mixture')}
+            aria-pressed={activeSource === 'final-mixture'}
+            className={`min-h-8 rounded-md px-2.5 text-[10px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-cyan-200 ${
+              activeSource === 'final-mixture'
+                ? 'bg-emerald-500/15 text-emerald-100'
+                : 'text-slate-400 hover:bg-emerald-500/10 hover:text-emerald-100'
+            }`}
+          >
+            Final mixture
+          </button>
+        </div>
+      )}
+
+      <div className={inline ? 'contents' : compact ? 'flex items-center gap-1.5' : 'grid grid-cols-3 gap-2'}>
         {entries.map(entry => {
           const value = formatMetricValue(entry.value);
           return (
@@ -110,17 +157,19 @@ export function WatermancerMetricSummary({
               role="group"
               aria-label={`${entry.accessibleLabel}: ${value} ${entry.unit}`}
               title={entry.id === 'tds' ? 'Modeled ion total, not a meter reading' : undefined}
-              className={compact
-                ? 'flex h-8 shrink-0 items-center gap-1 rounded-md px-1 text-[9px] tabular-nums'
-                : 'flex min-w-0 flex-col justify-center rounded-lg border border-slate-700/50 bg-slate-900/60 px-2 py-2'}
+              className={inline
+                ? 'flex shrink-0 items-center gap-1 rounded-md px-1 text-[10px] tabular-nums'
+                : compact
+                  ? 'flex h-8 shrink-0 items-center gap-1 rounded-md px-1 text-[9px] tabular-nums'
+                  : 'flex min-w-0 flex-col justify-center rounded-lg border border-slate-700/50 bg-slate-900/60 px-2 py-2'}
             >
               <span className={`font-semibold ${entry.id === 'tds' ? 'text-indigo-200' : 'text-slate-400'}`}>
                 {entry.label}
               </span>
-              <span className={`font-semibold tabular-nums ${compact ? 'text-slate-100' : 'mt-0.5 text-sm text-slate-100'}`}>
+              <span className={`font-semibold tabular-nums ${compact || inline ? 'text-slate-100' : 'mt-0.5 text-sm text-slate-100'}`}>
                 {value}
               </span>
-              <span className="text-slate-500">{entry.unit}</span>
+              <span className={`text-slate-500 ${inline ? 'text-[9px]' : ''}`}>{entry.unit}</span>
             </div>
           );
         })}

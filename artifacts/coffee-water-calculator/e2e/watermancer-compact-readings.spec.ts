@@ -285,6 +285,21 @@ test('shows target and final GH, KH, and modeled TDS in both readings layouts', 
     .toHaveAttribute('aria-label', /Modeled TDS: .* mg\/L/);
   const targetValues = await readMetricValues(compactSummary);
 
+  const display = page.getByRole('group', { name: 'Ion readings display' });
+  await display.getByRole('button', { name: 'Classic', exact: true }).click();
+  const classicSummary = page.getByTestId('watermancer-classic-metric-summary');
+  const classicRatios = page.getByTestId('watermancer-classic-ratios');
+  await expect(classicSummary).toHaveAttribute('data-source', 'targets');
+  await expect(classicSummary.getByTestId('text-watermancer-metric-context'))
+    .toContainText(/targets · Preview/);
+  await expect.poll(async () => {
+    const ratiosBottom = await classicRatios.evaluate(element => element.getBoundingClientRect().bottom);
+    const summaryTop = await classicSummary.evaluate(element => element.getBoundingClientRect().top);
+    return summaryTop >= ratiosBottom;
+  }).toBe(true);
+  await expect.poll(() => readMetricValues(classicSummary)).toEqual(targetValues);
+
+  await display.getByRole('button', { name: 'Compact', exact: true }).click();
   await createLiveSaltReadings(page);
   await expect(compactSummary).toHaveAttribute('data-source', 'final-mixture');
   const finalValues = await readMetricValues(compactSummary);
@@ -294,13 +309,27 @@ test('shows target and final GH, KH, and modeled TDS in both readings layouts', 
   await expect(compactSummary).toHaveAttribute('data-source', 'targets');
   await expect.poll(() => readMetricValues(compactSummary)).toEqual(targetValues);
 
-  const display = page.getByRole('group', { name: 'Ion readings display' });
   await display.getByRole('button', { name: 'Classic', exact: true }).click();
-  const classicSummary = page.locator('[data-watermancer-metric-summary]');
   await expect(classicSummary).toHaveAttribute('data-source', 'targets');
   await expect.poll(() => readMetricValues(classicSummary)).toEqual(targetValues);
+  await expect(classicSummary.getByTestId('text-watermancer-metric-context'))
+    .toHaveText('Mineral summary');
 
   await classicSummary.getByRole('button', { name: 'Final mixture', exact: true }).click();
   await expect(classicSummary).toHaveAttribute('data-source', 'final-mixture');
   await expect.poll(() => readMetricValues(classicSummary)).toEqual(finalValues);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect.poll(async () => classicSummary.evaluate(summary => {
+    const bounds = summary.getBoundingClientRect();
+    const metricBounds = [...summary.querySelectorAll('[data-watermancer-metric]')]
+      .map(metric => metric.getBoundingClientRect());
+    return summary.scrollWidth <= summary.clientWidth + 1
+      && metricBounds.every(metric => metric.left >= bounds.left - 1 && metric.right <= bounds.right + 1);
+  })).toBe(true);
+  await expect.poll(async () => {
+    const ratiosBottom = await classicRatios.evaluate(element => element.getBoundingClientRect().bottom);
+    const summaryTop = await classicSummary.evaluate(element => element.getBoundingClientRect().top);
+    return summaryTop >= ratiosBottom;
+  }).toBe(true);
 });
