@@ -717,7 +717,9 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrate' | 'diy-concentrate' | 'ion-ratios' | 'mixer';
+type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrates' | 'ion-ratios' | 'mixer';
+type CalculatorMode = 'alchemist' | 'watermancer' | 'concentrates';
+type ConcentrateWorkspaceTab = 'recipe' | 'diy';
 type ConcentrateMode = 'builder' | 'lotus';
 
 // Ratio matching remains implemented for saved/imported sessions, but the
@@ -2938,6 +2940,7 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [concentrateWorkspaceTab, setConcentrateWorkspaceTab] = useState<ConcentrateWorkspaceTab>('diy');
   const [ionRatioSeedDraft, setIonRatioSeedDraft] = useState<IonRatioDraft | null>(null);
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
   const [savedPlans, setSavedPlans] = useState<WaterPlan[]>(() => loadWaterPlans());
@@ -3170,6 +3173,15 @@ function App() {
       setSplitMode(false);
     }
     setNerdLevel(level);
+  };
+  const handleCalculatorModeChange = (mode: CalculatorMode) => {
+    if (mode === 'concentrates') {
+      setConcentrateWorkspaceTab('diy');
+      setAppTab('concentrates');
+      return;
+    }
+    handleNerdLevelChange(mode);
+    setAppTab('calculator');
   };
 
   // Persist on changes
@@ -5081,9 +5093,10 @@ function App() {
 
   const handleOpenConcentrateFromCurrentRecipe = () => {
     const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
+    setConcentrateWorkspaceTab('recipe');
     if (Object.keys(salts).length === 0) {
       setConcentrateRecipeHandoff(null);
-      setAppTab('concentrate');
+      setAppTab('concentrates');
       return;
     }
     setConcentrateRecipeHandoff({
@@ -5095,7 +5108,7 @@ function App() {
       ...previous,
       recipeConcentratePlan: null,
     }));
-    setAppTab('concentrate');
+    setAppTab('concentrates');
   };
 
   const handleSendRecipeToConcentrate = () => {
@@ -5736,7 +5749,9 @@ function App() {
 
   const captureWaterPlanSnapshot = (): WaterPlanSnapshot => ({
     version: 1,
-    appTab: appTab === 'concentrate' || appTab === 'diy-concentrate' ? appTab : 'calculator',
+    appTab: appTab === 'concentrates'
+      ? concentrateWorkspaceTab === 'diy' ? 'diy-concentrate' : 'concentrate'
+      : 'calculator',
     nerdLevel,
     liters,
     volumeUnit,
@@ -5943,7 +5958,12 @@ function App() {
     setConcentrateRecipeHandoff(snapshot.concentrateRecipeHandoff);
     setPendingConcentrateRestore({ ...snapshot.concentrate });
     setConcentrateSnapshot({ ...snapshot.concentrate });
-    setAppTab(snapshot.appTab);
+    if (snapshot.appTab === 'concentrate' || snapshot.appTab === 'diy-concentrate') {
+      setConcentrateWorkspaceTab(snapshot.appTab === 'diy-concentrate' ? 'diy' : 'recipe');
+      setAppTab('concentrates');
+    } else {
+      setAppTab('calculator');
+    }
     setPlansOpen(false);
     commitSessionBaseline(snapshot);
   };
@@ -6133,9 +6153,65 @@ function App() {
     watermancerUsedSaltIds,
   ]);
 
+  const renderCalculatorModeTabs = (activeMode: CalculatorMode) => (
+    <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+      <button
+        type="button"
+        onClick={() => handleCalculatorModeChange('alchemist')}
+        aria-pressed={activeMode === 'alchemist'}
+        data-testid="mode-alchemist"
+        title="Salt & concentrate lab"
+        className={`mode-switcher__button inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+          activeMode === 'alchemist'
+            ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-200 shadow-sm'
+            : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+        }`}
+      >
+        <AlchemistMark
+          className={activeMode === 'alchemist' ? 'text-emerald-200' : 'text-slate-500'}
+          aria-hidden="true"
+        />
+        Alchemist
+      </button>
+      <button
+        type="button"
+        onClick={() => handleCalculatorModeChange('watermancer')}
+        aria-pressed={activeMode === 'watermancer'}
+        data-testid="mode-watermancer"
+        title="Source water & ions"
+        className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+          activeMode === 'watermancer'
+            ? 'border border-indigo-400/40 bg-indigo-500/20 text-indigo-200 shadow-sm'
+            : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+        }`}
+      >
+        <WatermancerMark
+          className={activeMode === 'watermancer' ? 'text-indigo-200' : 'text-slate-500'}
+          aria-hidden="true"
+        />
+        Watermancer
+      </button>
+      <button
+        type="button"
+        onClick={() => handleCalculatorModeChange('concentrates')}
+        aria-pressed={activeMode === 'concentrates'}
+        data-testid="mode-concentrates"
+        title="Recipe and DIY concentrate workspaces"
+        className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+          activeMode === 'concentrates'
+            ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
+            : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+        }`}
+      >
+        <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
+        Concentrates
+      </button>
+    </div>
+  );
+
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrate' || appTab === 'diy-concentrate' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrates' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerMarkImage}
@@ -6176,9 +6252,9 @@ function App() {
             <button
               type="button"
               role="tab"
-              aria-selected={appTab === 'calculator' || appTab === 'ion-ratios'}
+              aria-selected={appTab === 'calculator' || appTab === 'ion-ratios' || appTab === 'concentrates'}
               onClick={() => setAppTab('calculator')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' || appTab === 'concentrates' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <CalculatorIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Calculator
@@ -6195,26 +6271,6 @@ function App() {
             >
               <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
               Water Tasting
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={appTab === 'concentrate'}
-              onClick={handleOpenConcentrateFromCurrentRecipe}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-            >
-              <BottleWine className="h-3.5 w-3.5" aria-hidden="true" />
-              Recipe Concentrate
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={appTab === 'diy-concentrate'}
-              onClick={() => setAppTab('diy-concentrate')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'diy-concentrate' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
-            >
-              <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
-              DIY Concentrate
             </button>
             <button
               type="button"
@@ -6354,17 +6410,67 @@ function App() {
     );
   }
 
-  if (appTab === 'concentrate' || appTab === 'diy-concentrate') {
+  if (appTab === 'concentrates') {
     return (
       <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
         <div className="app-page-stack flex w-full max-w-5xl flex-col">
           {appHeader}
+          <section className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-2">
+                <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" aria-hidden="true" />
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Calculator mode</div>
+                  <div className="mt-0.5 text-xs text-slate-500">
+                    Prepare recipe-based or DIY mineral concentrates.
+                  </div>
+                </div>
+              </div>
+              {renderCalculatorModeTabs('concentrates')}
+            </div>
+          </section>
+          <div
+            role="tablist"
+            aria-label="Concentrate workspace"
+            className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={concentrateWorkspaceTab === 'recipe'}
+              data-testid="concentrate-workspace-recipe"
+              onClick={() => setConcentrateWorkspaceTab('recipe')}
+              className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                concentrateWorkspaceTab === 'recipe'
+                  ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
+                  : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+              }`}
+            >
+              <BottleWine className="h-4 w-4" aria-hidden="true" />
+              Recipe Concentrate
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={concentrateWorkspaceTab === 'diy'}
+              data-testid="concentrate-workspace-diy"
+              onClick={() => setConcentrateWorkspaceTab('diy')}
+              className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition ${
+                concentrateWorkspaceTab === 'diy'
+                  ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
+                  : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+              }`}
+            >
+              <FlaskConical className="h-4 w-4" aria-hidden="true" />
+              DIY Concentrate
+            </button>
+          </div>
           <ConcentrateWorkspace
-            workspaceMode={appTab === 'diy-concentrate' ? 'diy' : 'recipe'}
+            workspaceMode={concentrateWorkspaceTab === 'diy' ? 'diy' : 'recipe'}
             volumeUnit={volumeUnit}
             onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-            recipeHandoff={appTab === 'concentrate' ? concentrateRecipeHandoff : null}
+            recipeHandoff={concentrateWorkspaceTab === 'recipe' ? concentrateRecipeHandoff : null}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
             dropsPerMl={brewerDropsPerMl}
             diySaltTargets={dosingSaltTargets}
@@ -6482,7 +6588,7 @@ function App() {
             <div className="flex items-start gap-2">
               <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-sky-300" />
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Detail level</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Calculator mode</div>
                 <div className="mt-0.5 text-xs text-slate-500">
                   {nerdLevel === 'alchemist'
                     ? <>Use <strong className="font-semibold text-white">mineral salts</strong> to craft your recipe. Pick, save, share, or import recipes. Make all in one, separate GH KH or separate salt concentrates.</>
@@ -6492,42 +6598,7 @@ function App() {
                 </div>
               </div>
             </div>
-             <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
-               <button
-                 type="button"
-                 onClick={() => handleNerdLevelChange('alchemist')}
-                 aria-pressed={nerdLevel === 'alchemist'}
-                 title="Salt & concentrate lab"
-                 className={`mode-switcher__button inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
-                   nerdLevel === 'alchemist'
-                     ? 'border border-emerald-400/40 bg-emerald-500/15 text-emerald-200 shadow-sm'
-                     : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                 }`}
-               >
-                 <AlchemistMark
-                   className={nerdLevel === 'alchemist' ? 'text-emerald-200' : 'text-slate-500'}
-                   aria-hidden="true"
-                 />
-                 Alchemist
-               </button>
-                <button
-                  type="button"
-                  onClick={() => handleNerdLevelChange('watermancer')}
-                  aria-pressed={nerdLevel === 'watermancer'}
-                  title="Source water & ions"
-                  className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
-                    nerdLevel === 'watermancer'
-                      ? 'border border-indigo-400/40 bg-indigo-500/20 text-indigo-200 shadow-sm'
-                      : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-                  }`}
-                >
-                  <WatermancerMark
-                    className={nerdLevel === 'watermancer' ? 'text-indigo-200' : 'text-slate-500'}
-                    aria-hidden="true"
-                  />
-                  Watermancer
-                </button>
-             </div>
+            {renderCalculatorModeTabs(nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist')}
           </div>
         </div>
 
