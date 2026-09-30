@@ -5,9 +5,58 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coffee Water Lab · Watermancer</title>
+    <style>
+      #site-update-notice {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #020617;
+        color: #e2e8f0;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        text-align: center;
+      }
+      #site-update-notice section {
+        width: min(100%, 440px);
+        padding: 36px 28px;
+        border: 1px solid #334155;
+        border-radius: 20px;
+        background: #0f172a;
+        box-shadow: 0 24px 80px rgb(0 0 0 / 35%);
+      }
+      #site-update-notice .brand {
+        margin: 0 0 20px;
+        color: #67e8f9;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+      #site-update-notice h1 {
+        margin: 0;
+        color: #f8fafc;
+        font-size: clamp(24px, 6vw, 32px);
+        line-height: 1.2;
+      }
+      #site-update-notice .message {
+        margin: 16px 0 0;
+        color: #cbd5e1;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="site-update-notice" role="status" aria-live="polite">
+      <section aria-labelledby="site-update-title">
+        <p class="brand">Watermancer</p>
+        <h1 id="site-update-title">We’re updating the site</h1>
+        <p class="message">We’re finishing an update to sign-in and account syncing. Please check back shortly.</p>
+      </section>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
