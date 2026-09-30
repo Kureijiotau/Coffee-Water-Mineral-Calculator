@@ -1,6 +1,7 @@
 - [Archived optional workspaces](archived-optional-workspaces.md) — preserve retired Brewer, assistant, scanner, and profile sources while keeping only Alchemist, Watermancer, Concentrate, and lazy Guide live
 - [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
 - [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
+- [Vercel Neon production database](vercel-neon-database.md) — keep Vercel’s Neon schema separate from Replit’s development database
 - [Base water final mixture](base-water-final-mixture.md) — keep base salt recipe metrics separate from configured-water final mixture metrics
 - [Ion profile view model](ion-profile-view-model.md) — distinguish original salt-only ions from final configured-water ions with an explicit toggle
 - [Ion ratio swap persistence](ion-ratio-swap-persistence.md) — relationship edits must preserve the user’s swapped first/second orientation
