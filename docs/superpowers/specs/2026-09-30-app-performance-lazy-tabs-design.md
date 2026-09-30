@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft for user review. No application code has been changed.
+Approved for implementation. Application code has not yet been changed.
 
 ## Goals
 
