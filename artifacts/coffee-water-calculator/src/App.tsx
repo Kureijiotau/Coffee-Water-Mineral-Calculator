@@ -3374,14 +3374,20 @@ function App() {
     () => [...localWaters, ...communityWaters],
     [communityWaters, localWaters],
   );
-  const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(() => (
-    [
-      ...savedPlans
-        .filter(plan => !isAutoSavedWaterPlan(plan))
-        .map(plan => waterPlanToMixerSource(plan, mixerCatalogWaters)),
-      ...wmProfiles.map(watermancerProfileToMixerSource),
-    ]
-  ), [mixerCatalogWaters, savedPlans, wmProfiles]);
+  const mixerSavedPlanSources = useMemo<WaterMixerSavedSource[]>(
+    () => savedPlans
+      .filter(plan => !isAutoSavedWaterPlan(plan))
+      .map(plan => waterPlanToMixerSource(plan, mixerCatalogWaters)),
+    [mixerCatalogWaters, savedPlans],
+  );
+  const mixerWatermancerProfileSources = useMemo<WaterMixerSavedSource[]>(
+    () => wmProfiles.map(watermancerProfileToMixerSource),
+    [wmProfiles],
+  );
+  const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(
+    () => [...mixerSavedPlanSources, ...mixerWatermancerProfileSources],
+    [mixerSavedPlanSources, mixerWatermancerProfileSources],
+  );
   const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
     const parsed = await readWaterMixerImportFile(file);
     if (parsed.kind === 'error') return { error: parsed.message };
@@ -3453,8 +3459,8 @@ function App() {
     );
     setAppTab('ion-ratios');
   }, [hasSelectedWatermancerProfile, watermancerIonTargets]);
-  const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
-    ...profiles
+  const watermancerBuiltInProfileComparisons = useMemo<WatermancerComparisonProfile[]>(
+    () => profiles
       .filter(profile => profile.id !== AIKI_DEFAULT_PROFILE.id
         && profile.id !== WATERMANCER_SENSORY_PROFILE.id)
       .map(profile => ({
@@ -3466,11 +3472,9 @@ function App() {
           ACTIVE_ION_IDS.map(id => [id, profile.ranges[id].greenMax]),
         ) as Partial<Record<IonId, number>>,
       })),
-    ...wmProfiles.map(profile => ({
-      id: `saved:${profile.id}`,
-      name: profile.name,
-      targets: profile.targets,
-    })),
+    [profiles],
+  );
+  const watermancerRecipeComparisons = useMemo<WatermancerComparisonProfile[]>(() => [
     ...allRecipesForWatermancer.map(recipe => ({
       id: `recipe:${recipe.id}`,
       name: recipe.name,
@@ -3491,7 +3495,16 @@ function App() {
       name: recipe.name,
       targets: lotusIonTargetsForWatermancer(recipe),
     })),
-  ], [activeProfileId, allRecipesForWatermancer, profiles, wmProfiles]);
+  ], [allRecipesForWatermancer]);
+  const watermancerComparisonProfiles = useMemo<WatermancerComparisonProfile[]>(() => [
+    ...watermancerBuiltInProfileComparisons,
+    ...wmProfiles.map(profile => ({
+      id: `saved:${profile.id}`,
+      name: profile.name,
+      targets: profile.targets,
+    })),
+    ...watermancerRecipeComparisons,
+  ], [watermancerBuiltInProfileComparisons, watermancerRecipeComparisons, wmProfiles]);
   // Combined contribution from all bottled waters (base + addition, already diluted)
   const bottledIons = useMemo(() => {
     const m = {} as Record<IonId, number>;
@@ -12574,23 +12587,25 @@ function WatermancerIonProfileCard({
 
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
-  const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => sortProfilePickerGroups([
-    ...(wmProfiles.length > 0 || savedRecipes.length > 0
-      ? [{
-          label: 'My saved profiles',
-          accent: 'violet' as const,
-          options: [
-            ...wmProfiles.map(profile => ({
-              value: `saved:${profile.id}`,
-              label: `Profile · ${profile.name}`,
-            })),
-            ...savedRecipes.map(recipe => ({
-              value: `recipe:${recipe.id}`,
-              label: `Recipe · ${recipe.name}`,
-            })),
-          ],
-        }]
-      : []),
+  const savedTargetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => {
+    if (wmProfiles.length === 0 && savedRecipes.length === 0) return [];
+    const group: RecipePickerGroup = {
+      label: 'My saved profiles',
+      accent: 'violet',
+      options: [
+        ...wmProfiles.map(profile => ({
+          value: `saved:${profile.id}`,
+          label: `Profile · ${profile.name}`,
+        })),
+        ...savedRecipes.map(recipe => ({
+          value: `recipe:${recipe.id}`,
+          label: `Recipe · ${recipe.name}`,
+        })),
+      ],
+    };
+    return sortProfilePickerGroups([group], profileSortMode, savedProfileValues);
+  }, [profileSortMode, savedProfileValues, savedRecipes, wmProfiles]);
+  const builtInTargetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => [
     {
       label: 'Kimoi.coffee Recipes',
       accent: 'emerald',
@@ -12647,16 +12662,16 @@ function WatermancerIonProfileCard({
         .filter(recipe => recipe.method === 'Espresso')
         .map(recipe => ({ value: `external:${recipe.id}`, label: recipe.name })),
     },
-  ], profileSortMode, savedProfileValues), [
+  ], [
     externalRecipes,
     lotusRecipes,
-    profileSortMode,
     profiles,
-    savedProfileValues,
-    savedRecipes,
-    wmProfiles,
     wateringHoleWaterRecipes,
   ]);
+  const targetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => [
+    ...savedTargetSourcePickerGroups,
+    ...builtInTargetSourcePickerGroups,
+  ], [builtInTargetSourcePickerGroups, savedTargetSourcePickerGroups]);
 
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
