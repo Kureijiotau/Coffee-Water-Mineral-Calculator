@@ -1,13 +1,15 @@
-# On-Demand Workspace Loading Design
+# App Performance and Watermancer Readings Design
 
 ## Status
 
 Draft for user review. No application code has been changed.
 
-## Goal
+## Goals
 
-Reduce the JavaScript needed to open the default Calculator screen by loading
-separate, non-default workspaces only when the user first opens them.
+1. Reduce the JavaScript needed to open the default Calculator screen by
+   loading separate, non-default workspaces only when the user first opens them.
+2. In the Classic Watermancer readings panel, show GH, KH, and modeled TDS as
+   one compact inline line directly below the existing Ratios line.
 
 The measured baseline at commit `32c6d99` is an `index` JavaScript chunk of
 825,211 bytes (235,490 bytes gzip). `App.tsx` is about 837 KB of source, and the
@@ -18,6 +20,27 @@ imported.
 This is a measured first pass, not a full `App.tsx` refactor. If the initial
 entry does not become measurably smaller, stop and report the result before
 expanding the scope.
+
+## Watermancer preview summary
+
+In the Classic readings view only, replace the three-card GH / KH / Modeled TDS
+presentation with an inline metrics line immediately below the existing Ratios
+line. Match the Ratios line's compact typography, spacing, and inline grouping.
+For example:
+
+`Version 43 targets · Preview   GH 27.3 ppm CaCO₃ · KH 10.2 ppm CaCO₃ · Modeled TDS 41.3 mg/L`
+
+Use the existing `WatermancerMetricValues`; never hard-code screenshot values.
+When previewing targets, prefix the values with the existing target label and
+preview status. Otherwise, keep the existing Targets / Final mixture source
+selector compactly aligned with the inline summary, and show the values for
+the selected source. Preserve the Compact readings view's current metric chips
+and scrolling rail.
+
+Call the final value **Modeled TDS** and keep its existing meaning as a modeled
+ion total, not a conductivity-meter reading. Preserve accessible labels for
+each value and allow the inline groups to wrap on narrow screens without
+horizontal overflow.
 
 ## Proposed design
 
@@ -50,6 +73,8 @@ in-memory edits.
 - Do not change Watermancer solver algorithms, worker protocol, request guards,
   or matching results. Route computation and Best Match remain on the existing
   React-free worker path.
+- Do not change GH, KH, or TDS calculations, metric source semantics, or ratio
+  calculations.
 - Do not split inline Concentrate or Calculator code out of `App.tsx` in this
   pass.
 - Do not add result caching, worker-message changes, a new bundler dependency,
@@ -65,6 +90,8 @@ in-memory edits.
   without a new loading state.
 - A deferred chunk failure should leave the rest of the app shell intact and
   give the user a deliberate recovery action.
+- In Classic readings, the current GH, KH, and Modeled TDS values appear on one
+  line below Ratios; Compact readings stay unchanged.
 
 ## Risks and mitigations
 
@@ -89,8 +116,12 @@ in-memory edits.
 4. Smoke-test tab navigation, Watermancer-to-Mixer profile handoff, Water
    Tasting history, and Ion Ratios import.
 5. Confirm Watermancer worker behavior and solver results are unchanged.
+6. Verify the Classic metrics line follows Ratios, reflects the selected
+   Targets or Final mixture source, retains preview context, and wraps cleanly
+   on narrow screens; confirm Compact metrics remain unchanged.
 
 Success requires a measurable reduction in the initial compressed entry and
-no regression in panel navigation or handoffs. If the entry is not smaller,
-stop this pass and report the measured result rather than automatically
-extracting more of `App.tsx`.
+no regression in panel navigation or handoffs. The separate readings change
+must preserve the existing values and source behavior. If the entry is not
+smaller, stop the performance pass and report the measured result rather than
+automatically extracting more of `App.tsx`.
