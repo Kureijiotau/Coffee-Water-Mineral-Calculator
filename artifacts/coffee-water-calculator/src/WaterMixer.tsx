@@ -946,6 +946,7 @@ export default function WaterMixer({
   const [pendingImport, setPendingImport] = useState<WaterMixerSavedSource | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [hiddenSourceIds, setHiddenSourceIds] = useState<Set<string>>(loadHiddenMixerSourceIds);
+  const hasRunFinishedWaterCleanupRef = useRef(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const deleteConfirmRef = useRef<HTMLButtonElement>(null);
@@ -961,24 +962,23 @@ export default function WaterMixer({
   }, [pendingDeleteRecipe]);
 
   useEffect(() => {
+    if (hasRunFinishedWaterCleanupRef.current) return;
+    hasRunFinishedWaterCleanupRef.current = true;
     if (localStorage.getItem(MIXER_FINISHED_WATER_CLEANUP_KEY) === 'done') return;
-    if (savedSources.length === 0 && importedSources.length === 0 && storedRecipes.length === 0) return;
 
-    const nextHiddenSourceIds = new Set(hiddenSourceIds);
-    savedSources.forEach(source => {
-      const id = mixerSourceStorageId(source);
-      if (id) nextHiddenSourceIds.add(id);
-    });
-    saveHiddenMixerSourceIds(nextHiddenSourceIds);
-    setHiddenSourceIds(nextHiddenSourceIds);
-    saveWaterMixRecipes([]);
-    saveImportedWaterMixSources([]);
-    setStoredRecipes([]);
-    setImportedSources([]);
+    // Run this legacy migration once when Mixer first mounts. Only remove
+    // Mixer-owned snapshots; saved Watermancer profiles and water plans are
+    // reusable source records and must remain visible.
+    if (importedSources.length > 0 || storedRecipes.length > 0) {
+      saveWaterMixRecipes([]);
+      saveImportedWaterMixSources([]);
+      setStoredRecipes([]);
+      setImportedSources([]);
+      setCardA(emptyCard());
+      setCardB(emptyCard());
+    }
     localStorage.setItem(MIXER_FINISHED_WATER_CLEANUP_KEY, 'done');
-    setCardA(emptyCard());
-    setCardB(emptyCard());
-  }, [hiddenSourceIds, importedSources.length, savedSources, storedRecipes.length]);
+  }, []);
 
   const databaseWaters = useMemo(() => {
     const byId = new Map<string, WaterMixerDatabaseWater>();

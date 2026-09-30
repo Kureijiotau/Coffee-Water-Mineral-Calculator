@@ -66,7 +66,7 @@ for (const viewport of [
   { label: 'desktop', width: 1280, height: 900 },
   { label: 'narrow', width: 390, height: 844 },
 ]) {
-  test(`saves and selects a new Watermancer profile responsively at ${viewport.label} width`, async ({ page }) => {
+  test(`saves a Watermancer profile and selects it in Mixer responsively at ${viewport.label} width`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await seedSavedItems(page);
     await page.goto('/');
@@ -98,10 +98,16 @@ for (const viewport of [
     const saveAndSelectMs = await page.evaluate(start => performance.now() - start, beginCommit);
     expect(saveAndSelectMs, 'saving and selecting the new profile should not pause the UI').toBeLessThan(2_500);
 
-    const savedProfiles = await page.evaluate(() => JSON.parse(
-      localStorage.getItem(SAVED_PROFILES_KEY) ?? '[]',
-    ) as Array<{ name: string }>);
+    await expect.poll(async () => page.evaluate(profileStorageKey => {
+      const profiles = JSON.parse(localStorage.getItem(profileStorageKey) ?? '[]') as Array<{ name: string }>;
+      return profiles.some(profile => profile.name === 'Browser save profile');
+    }, SAVED_PROFILES_KEY)).toBe(true);
+    const savedProfiles = await page.evaluate(profileStorageKey => JSON.parse(
+      localStorage.getItem(profileStorageKey) ?? '[]',
+    ) as Array<{ id: string; name: string; targets: Record<string, number> }>, SAVED_PROFILES_KEY);
     expect(savedProfiles.map(profile => profile.name)).toContain('Browser save profile');
+    const savedProfile = savedProfiles.find(profile => profile.name === 'Browser save profile');
+    expect(savedProfile).toBeDefined();
 
     const pickerAfterSave = await openSavedPicker(page);
     const savedGroup = pickerAfterSave.getByRole('group', { name: 'My saved profiles' });
@@ -112,14 +118,29 @@ for (const viewport of [
     ).toBeVisible();
     const savedSort = pickerAfterSave.getByRole('button', { name: 'Sort saved' });
     await savedSort.click();
+    const sortDialog = page.getByRole('dialog', { name: 'Sort saved profiles' });
     await expect(
-      pickerAfterSave.getByRole('radio', { name: 'Date added · Newest first' }),
+      sortDialog.getByRole('radio', { name: 'Date added · Newest first' }),
     ).toHaveAttribute('aria-checked', 'true');
-    await page.getByRole('button', { name: 'Done' }).click();
+    await sortDialog.getByRole('button', { name: 'Done' }).click();
     const labelsAfterSave = await savedGroup.getByRole('option').allTextContents();
     expect(labelsAfterSave.map(label => label.trim())).toEqual([
       'Profile · Browser save profile',
       ...existingOptionsNewestFirst,
     ]);
+    await page.getByRole('button', { name: 'Select mineral recipe' }).click();
+
+    await page.getByRole('tab', { name: 'Mixer', exact: true }).click();
+    const mixerSourcePicker = page.getByTestId('select-mixer-saved-source-a');
+    await expect(mixerSourcePicker.locator('option').filter({
+      hasText: 'Browser save profile · Watermancer saved profile',
+    })).toHaveCount(1);
+    await mixerSourcePicker.selectOption(`watermancer-profile:${savedProfile!.id}`);
+    await expect(page.getByTestId('text-mixer-source-name-a')).toHaveText('Browser save profile');
+
+    for (const [ionId, value] of Object.entries(savedProfile!.targets)) {
+      const displayedValue = value < 10 ? value.toFixed(2) : value.toFixed(1);
+      await expect(page.getByTestId(`text-mixer-source-ion-a-${ionId}`)).toContainText(displayedValue);
+    }
   });
 }
