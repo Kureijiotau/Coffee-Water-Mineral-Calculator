@@ -16,7 +16,7 @@ export default function clerkProxyHandler(req, res) {
     }
 
     requestUrl.searchParams.delete("__clerk_path");
-    req.url = `/api/clerkproxy/${proxyPath}${requestUrl.search}`;
+    req.url = `/api/__clerk/${proxyPath}${requestUrl.search}`;
   }
 
   return app(req, res);
