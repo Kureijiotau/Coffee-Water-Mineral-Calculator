@@ -6238,7 +6238,7 @@ function App() {
               role="tab"
               aria-selected={appTab === 'calculator' || appTab === 'ion-ratios'}
               onClick={() => setAppTab('calculator')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' ? 'border-white/45 bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' ? 'border-white/30 bg-white/10 text-white' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
             >
               <CalculatorIcon className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />
               Calculator
@@ -6249,7 +6249,7 @@ function App() {
               aria-selected={appTab === 'concentrates'}
               data-testid="tab-concentrates"
               onClick={handleOpenConcentrates}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrates' ? 'border-white/45 bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrates' ? 'border-white/30 bg-white/10 text-white' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
             >
               <FlaskConical className="h-3.5 w-3.5 text-fuchsia-300" aria-hidden="true" />
               Concentrates
@@ -6259,7 +6259,7 @@ function App() {
               role="tab"
               aria-selected={appTab === 'mixer'}
               onClick={() => setAppTab('mixer')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'mixer' ? 'border-white/45 bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'mixer' ? 'border-white/30 bg-white/10 text-white' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
             >
               <Beaker className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
               Mixer
@@ -6272,7 +6272,7 @@ function App() {
               aria-selected={appTab === 'water-tasting'}
               data-testid="tab-water-grading"
               onClick={() => setAppTab('water-tasting')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'water-tasting' ? 'border-cyan-200/60 bg-cyan-300/25 text-cyan-50 shadow-lg shadow-black/10' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'water-tasting' ? 'border-cyan-300/35 bg-cyan-300/10 text-cyan-100' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
             >
               <Coffee className="h-3.5 w-3.5 text-blue-300" aria-hidden="true" />
               Water grading
@@ -6282,7 +6282,7 @@ function App() {
               role="tab"
               aria-selected={appTab === 'guide'}
               onClick={() => setAppTab('guide')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'border-white/45 bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'border-white/30 bg-white/10 text-white' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
             >
               <ListChecks className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
               Guide
