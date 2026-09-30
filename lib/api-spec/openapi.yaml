@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: account
+    description: Account-owned calculator data
 paths:
   /healthz:
     get:
@@ -24,6 +26,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /account/sync:
+    get:
+      operationId: getAccountSyncData
+      tags: [account]
+      summary: Get the signed-in user's synced calculator data
+      responses:
+        "200":
+          description: Account data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSyncData"
+        "401":
+          description: Authentication required
+        "503":
+          description: Account sync storage is unavailable
+    put:
+      operationId: saveAccountSyncData
+      tags: [account]
+      summary: Save the signed-in user's calculator data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountSyncInput"
+      responses:
+        "200":
+          description: Saved account data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSyncData"
+        "401":
+          description: Authentication required
+        "409":
+          description: The account data changed since it was read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountSyncConflict"
+        "503":
+          description: Account sync storage is unavailable
 components:
   schemas:
     HealthStatus:
@@ -33,4 +78,154 @@ components:
           type: string
       required:
         - status
-
+    IonRange:
+      type: object
+      properties:
+        greenMax:
+          type: number
+          minimum: 0
+        yellowMax:
+          type: number
+          minimum: 0
+      required: [greenMax, yellowMax]
+      additionalProperties: false
+    AlchemistProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        name:
+          type: string
+          maxLength: 200
+        ranges:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/IonRange"
+        locked:
+          type: boolean
+        description:
+          type: string
+          maxLength: 2000
+      required: [id, name, ranges, locked]
+      additionalProperties: true
+    IonicTargets:
+      type: object
+      additionalProperties:
+        type: number
+        minimum: 0
+    WatermancerProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        name:
+          type: string
+          maxLength: 200
+        targets:
+          $ref: "#/components/schemas/IonicTargets"
+        finishedIons:
+          $ref: "#/components/schemas/IonicTargets"
+        source:
+          type: string
+          maxLength: 500
+        sourceUrl:
+          type: string
+          maxLength: 2000
+        details:
+          type: string
+          maxLength: 4000
+      required: [id, name, targets]
+      additionalProperties: true
+    DiyConcentrateInputs:
+      type: object
+      properties:
+        stockWeightInput:
+          type: string
+          maxLength: 100
+        stockVolumeInput:
+          type: string
+          maxLength: 100
+        finalVolumeInput:
+          type: string
+          maxLength: 100
+        calibrationDropsInput:
+          type: string
+          maxLength: 100
+        calibrationWeightInput:
+          type: string
+          maxLength: 100
+        desiredPpmInput:
+          type: string
+          maxLength: 100
+        desiredSaltMgInput:
+          type: string
+          maxLength: 100
+        desiredDoseBasis:
+          type: string
+          enum: [caco3, salt-mg]
+      additionalProperties: false
+    AccountSyncData:
+      type: object
+      properties:
+        revision:
+          type: integer
+          minimum: 0
+        updatedAt:
+          type: [string, "null"]
+          format: date-time
+        alchemistProfiles:
+          type: array
+          maxItems: 300
+          items:
+            $ref: "#/components/schemas/AlchemistProfile"
+        watermancerProfiles:
+          type: array
+          maxItems: 300
+          items:
+            $ref: "#/components/schemas/WatermancerProfile"
+        diyConcentrateInputs:
+          oneOf:
+            - $ref: "#/components/schemas/DiyConcentrateInputs"
+            - type: "null"
+      required:
+        - revision
+        - updatedAt
+        - alchemistProfiles
+        - watermancerProfiles
+        - diyConcentrateInputs
+    AccountSyncInput:
+      type: object
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 0
+        alchemistProfiles:
+          type: array
+          maxItems: 300
+          items:
+            $ref: "#/components/schemas/AlchemistProfile"
+        watermancerProfiles:
+          type: array
+          maxItems: 300
+          items:
+            $ref: "#/components/schemas/WatermancerProfile"
+        diyConcentrateInputs:
+          oneOf:
+            - $ref: "#/components/schemas/DiyConcentrateInputs"
+            - type: "null"
+      required:
+        - expectedRevision
+        - alchemistProfiles
+        - watermancerProfiles
+        - diyConcentrateInputs
+      additionalProperties: false
+    AccountSyncConflict:
+      type: object
+      properties:
+        current:
+          $ref: "#/components/schemas/AccountSyncData"
+      required: [current]

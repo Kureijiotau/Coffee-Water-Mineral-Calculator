@@ -3,6 +3,7 @@ import {
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
+import { getAccountSyncStorageKey, writeAccountSyncStorageValue } from './accountSyncStorage';
 
 export const PROFILES_KEY = 'cwm.profiles';
 const ACTIVE_KEY = 'cwm.activeProfileId';
@@ -52,7 +53,7 @@ function writeJSON(key: string, value: unknown): void {
 }
 
 export function loadProfiles(): WaterProfile[] {
-  const parsed = readJSON<unknown>(PROFILES_KEY, []);
+  const parsed = readJSON<unknown>(getAccountSyncStorageKey(PROFILES_KEY), []);
   const stored = Array.isArray(parsed)
     ? parsed.filter((profile): profile is WaterProfile => (
       Boolean(profile)
@@ -80,9 +81,17 @@ export function loadProfiles(): WaterProfile[] {
   return [AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, ...EMPIRICAL_PROFILES, ...migrated];
 }
 
-export function saveProfiles(profiles: WaterProfile[]): void {
+export function saveProfiles(profiles: WaterProfile[], notifyLocalChange = true): void {
   // Never persist built-in locked profiles — they are always re-injected from code
-  writeJSON(PROFILES_KEY, profiles.filter(p => !BUILT_IN_PROFILE_IDS.has(p.id)));
+  writeAccountSyncStorageValue(
+    PROFILES_KEY,
+    JSON.stringify(profiles.filter(p => !BUILT_IN_PROFILE_IDS.has(p.id))),
+    notifyLocalChange,
+  );
+}
+
+export function loadUserCreatedProfiles(): WaterProfile[] {
+  return loadProfiles().filter(profile => !BUILT_IN_PROFILE_IDS.has(profile.id));
 }
 
 export function loadActiveProfileId(): string {

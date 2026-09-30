@@ -1,5 +1,6 @@
 import type { IonId } from '@/waterData';
 import { ACTIVE_ION_IDS } from '@/waterData';
+import { getAccountSyncStorageKey, writeAccountSyncStorageValue } from './accountSyncStorage';
 
 export type IonicTargetValues = Partial<Record<IonId, number>>;
 
@@ -18,7 +19,9 @@ export const WATERMANCER_PROFILES_STORAGE_KEY = 'cwm.watermancerProfiles';
 
 function readProfiles(): WatermancerProfile[] {
   try {
-    const stored = JSON.parse(localStorage.getItem(WATERMANCER_PROFILES_STORAGE_KEY) ?? '[]') as unknown;
+    const stored = JSON.parse(
+      localStorage.getItem(getAccountSyncStorageKey(WATERMANCER_PROFILES_STORAGE_KEY)) ?? '[]',
+    ) as unknown;
     if (!Array.isArray(stored)) return [];
     const profiles = stored.flatMap(item => {
       if (!item || typeof item !== 'object') return [];
@@ -56,12 +59,15 @@ export function loadWatermancerProfiles(): WatermancerProfile[] {
   return readProfiles();
 }
 
-export function saveWatermancerProfiles(profiles: WatermancerProfile[]): void {
-  try {
-    localStorage.setItem(WATERMANCER_PROFILES_STORAGE_KEY, JSON.stringify(profiles));
-  } catch {
-    /* Ignore storage quota and privacy-mode failures. */
-  }
+export function saveWatermancerProfiles(
+  profiles: WatermancerProfile[],
+  notifyLocalChange = true,
+): void {
+  writeAccountSyncStorageValue(
+    WATERMANCER_PROFILES_STORAGE_KEY,
+    JSON.stringify(profiles),
+    notifyLocalChange,
+  );
 }
 
 export function createWatermancerProfile(

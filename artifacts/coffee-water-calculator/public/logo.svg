@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 88" fill="none">
+  <defs>
+    <linearGradient id="water" x1="12" y1="8" x2="72" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#67E8F9"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <path d="M44 7C35 22 16 42 16 56a28 28 0 0 0 56 0C72 42 53 22 44 7Z" fill="url(#water)"/>
+  <path d="M31 57c0 8 5 13 12 15" stroke="#ECFEFF" stroke-linecap="round" stroke-width="4" opacity=".85"/>
+  <circle cx="59" cy="47" r="4" fill="#ECFEFF" opacity=".9"/>
+  <text x="92" y="56" fill="#E2E8F0" font-family="system-ui, sans-serif" font-size="38" font-weight="700" letter-spacing="-1.5">Watermancer</text>
+</svg>

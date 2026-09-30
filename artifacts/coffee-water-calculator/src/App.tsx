@@ -9,6 +9,7 @@ import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
+import { useAuth, useClerk } from '@clerk/react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
@@ -30,7 +31,7 @@ import {
   TdsCard as SharedTdsCard,
 } from './components/MetricCards';
 import {
-  loadProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
+  loadProfiles, loadUserCreatedProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
   loadNerdLevel, saveNerdLevel, createProfile,
   type NerdLevel,
 } from '@/profiles';
@@ -55,6 +56,15 @@ import {
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
 import { mergeProfileCollections, sameProfileCollection } from './profileSync';
+import { useAccountSync } from './AccountSyncProvider';
+import {
+  ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
+  DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
+  getAccountSyncStorageKey,
+  loadDiyConcentrateInputs,
+  saveDiyConcentrateInputs,
+  type DiyConcentrateStoredInputs,
+} from './accountSyncStorage';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import { computeWatermancerMetricValues, type WatermancerMetricValues } from './watermancerMetricValues';
@@ -1383,7 +1393,6 @@ const AUTO_FILL_SETTINGS_STORAGE_KEY = 'coffee-water-auto-fill-settings';
 const WATERMANCER_OVERSHOOT_STORAGE_KEY = 'coffee-water-watermancer-overshoot-policy';
 const DROPPER_CALIBRATION_STORAGE_KEY = 'coffee-water-dropper-calibration';
 const DROPPER_CALIBRATION_ACKNOWLEDGED_KEY = 'coffee-water-dropper-calibration-acknowledged';
-const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = 'coffee-water-diy-concentrate-inputs';
 const GUIDE_CALIBRATION_INPUTS_STORAGE_KEY = 'coffee-water-guide-calibration-inputs';
 const DEFAULT_DROPS_PER_ML = 20;
 /** Smallest physical salt dose considered by Watermancer. */
@@ -1416,26 +1425,6 @@ function loadHasSavedDropperCalibration(): boolean {
     return localStorage.getItem(DROPPER_CALIBRATION_STORAGE_KEY) !== null;
   } catch {
     return false;
-  }
-}
-
-type DiyConcentrateStoredInputs = {
-  stockWeightInput?: string;
-  stockVolumeInput?: string;
-  finalVolumeInput?: string;
-  calibrationDropsInput?: string;
-  calibrationWeightInput?: string;
-  desiredPpmInput?: string;
-  desiredSaltMgInput?: string;
-  desiredDoseBasis?: 'caco3' | 'salt-mg';
-};
-
-function loadDiyConcentrateInputs(): DiyConcentrateStoredInputs {
-  try {
-    const stored = JSON.parse(localStorage.getItem(DIY_CONCENTRATE_INPUTS_STORAGE_KEY) ?? 'null') as DiyConcentrateStoredInputs | null;
-    return stored && typeof stored === 'object' ? stored : {};
-  } catch {
-    return {};
   }
 }
 
@@ -2547,6 +2536,9 @@ function DeferredMount({
 }
 
 function App() {
+  const { isLoaded: isClerkLoaded, isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+  const { status: accountSyncStatus, retrySync } = useAccountSync();
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
@@ -3010,8 +3002,9 @@ function App() {
      setWmProfilesState(next);
    }, []);
   useEffect(() => {
-    const handleProfileStorage = (event: StorageEvent) => {
-       if (event.key === null || event.key === PROFILES_KEY) {
+  const handleProfileStorage = (event: Event) => {
+    const key = event instanceof StorageEvent ? event.key : null;
+    if (key === null || key === getAccountSyncStorageKey(PROFILES_KEY)) {
          const incoming = loadProfiles();
          if (profilesDirtyRef.current) {
            const merged = mergeProfileCollections(
@@ -3033,7 +3026,7 @@ function App() {
            }
          }
        }
-      if (event.key === null || event.key === WATERMANCER_PROFILES_STORAGE_KEY) {
+    if (key === null || key === getAccountSyncStorageKey(WATERMANCER_PROFILES_STORAGE_KEY)) {
          const incoming = loadWatermancerProfiles();
          if (wmProfilesDirtyRef.current) {
            const merged = mergeProfileCollections(
@@ -3057,7 +3050,11 @@ function App() {
       }
     };
     window.addEventListener('storage', handleProfileStorage);
-    return () => window.removeEventListener('storage', handleProfileStorage);
+  window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
+  return () => {
+    window.removeEventListener('storage', handleProfileStorage);
+    window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
+  };
   }, []);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
   const [savedRecipes, setSavedRecipes] = useState<SaltRecipe[]>(() => loadSavedRecipes());
@@ -6220,6 +6217,33 @@ function App() {
           >
             <SiDiscord className="h-4 w-4" aria-hidden="true" />
           </a>
+          {isClerkLoaded && isSignedIn ? (
+            <div className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/20 bg-black/15 px-2.5 py-1.5 text-xs text-slate-100 sm:min-h-8">
+              <span role="status" aria-live="polite" className="whitespace-nowrap">
+                {accountSyncStatus === 'syncing'
+                  ? 'Syncing…'
+                  : accountSyncStatus === 'error'
+                    ? 'Sync issue'
+                    : <><Check aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-emerald-300" />Synced</>}
+              </span>
+              {accountSyncStatus === 'error' && (
+                <button type="button" onClick={retrySync} className="font-semibold text-cyan-200 underline decoration-cyan-200/50 underline-offset-2 hover:text-cyan-100">
+                  Retry
+                </button>
+              )}
+              <button type="button" onClick={() => void signOut()} className="whitespace-nowrap rounded border border-white/15 px-2 py-1 text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <a
+              href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`}
+              aria-label="Sign in to sync your custom profiles and DIY concentrate inputs"
+              className="inline-flex min-h-10 items-center rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 sm:min-h-8"
+            >
+              Sign in to sync
+            </a>
+          )}
           <WaterPlanManager
             plans={savedPlans}
             open={plansOpen}
@@ -11366,7 +11390,7 @@ function DiySingleSaltConcentratePanel({
   const targetPpm = num(handoff.salts[salt.id]?.target);
   const formIdx = handoff.salts[salt.id]?.formIdx ?? salt.defaultFormIdx ?? 0;
   const form = salt.hydrationForms[formIdx] ?? salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
-  const [storedInputs] = useState(loadDiyConcentrateInputs);
+  const [storedInputs, setStoredInputs] = useState(loadDiyConcentrateInputs);
   const [stockWeightInput, setStockWeightInput] = useState(
     storedInputs.stockWeightInput ?? storedInputs.stockVolumeInput ?? '100',
   );
@@ -11381,6 +11405,30 @@ function DiySingleSaltConcentratePanel({
   const [desiredDoseBasis, setDesiredDoseBasis] = useState<'caco3' | 'salt-mg'>(
     storedInputs.desiredDoseBasis === 'salt-mg' ? 'salt-mg' : 'caco3',
   );
+  useEffect(() => {
+    const applyRemoteDiyInputs = () => {
+      const nextInputs = loadDiyConcentrateInputs();
+      setStoredInputs(nextInputs);
+      setStockWeightInput(
+        nextInputs.stockWeightInput ?? nextInputs.stockVolumeInput ?? '100',
+      );
+      setFinalVolumeInput(
+        nextInputs.finalVolumeInput
+          ?? String(volumeUnit === 'gallons'
+            ? handoff.finalLiters / US_GALLON_IN_LITERS
+            : handoff.finalLiters),
+      );
+      setCalibrationDropsInput(nextInputs.calibrationDropsInput ?? '');
+      setCalibrationWeightInput(nextInputs.calibrationWeightInput ?? '');
+      setDesiredPpmInput(nextInputs.desiredPpmInput ?? '');
+      setDesiredSaltMgInput(nextInputs.desiredSaltMgInput ?? '');
+      setDesiredDoseBasis(nextInputs.desiredDoseBasis === 'salt-mg' ? 'salt-mg' : 'caco3');
+    };
+    window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, applyRemoteDiyInputs);
+    return () => {
+      window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, applyRemoteDiyInputs);
+    };
+  }, [handoff.finalLiters, volumeUnit]);
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
@@ -11442,19 +11490,16 @@ function DiySingleSaltConcentratePanel({
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
 
   useEffect(() => {
-    try {
-      localStorage.setItem(DIY_CONCENTRATE_INPUTS_STORAGE_KEY, JSON.stringify({
-        stockWeightInput,
-        finalVolumeInput,
-        calibrationDropsInput,
-        calibrationWeightInput,
-        desiredPpmInput,
-        desiredSaltMgInput,
-        desiredDoseBasis,
-      } satisfies DiyConcentrateStoredInputs));
-    } catch {
-      // The DIY tab remains functional when local storage is unavailable.
-    }
+  saveDiyConcentrateInputs({
+    stockWeightInput,
+    stockVolumeInput: storedInputs.stockVolumeInput,
+    finalVolumeInput,
+    calibrationDropsInput,
+    calibrationWeightInput,
+    desiredPpmInput,
+    desiredSaltMgInput,
+    desiredDoseBasis,
+  } satisfies DiyConcentrateStoredInputs);
   }, [
     calibrationDropsInput,
     calibrationWeightInput,
@@ -11463,6 +11508,7 @@ function DiySingleSaltConcentratePanel({
     desiredDoseBasis,
     finalVolumeInput,
     stockWeightInput,
+  storedInputs.stockVolumeInput,
   ]);
 
   useEffect(() => {

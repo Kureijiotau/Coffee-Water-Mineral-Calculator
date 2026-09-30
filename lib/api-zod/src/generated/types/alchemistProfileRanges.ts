@@ -5,7 +5,6 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { IonRange } from './ionRange';
 
-export interface HealthStatus {
-  status: string;
-}
+export type AlchemistProfileRanges = {[key: string]: IonRange};
