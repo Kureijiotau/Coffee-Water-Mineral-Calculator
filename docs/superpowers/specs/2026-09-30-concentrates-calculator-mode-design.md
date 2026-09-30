@@ -2,13 +2,14 @@
 
 ## Goal
 
-Group Recipe Concentrate and DIY Concentrate under a single **Concentrates** choice in the Calculator mode switcher, alongside Alchemist and Watermancer.
+Keep Recipe Concentrate and DIY Concentrate together under a **Concentrates** top-level workspace, positioned with Calculator and Mixer in the first navigation row.
 
 ## Approved interaction
 
-- Keep the existing top-level Calculator, Water Tasting, Mixer, and Guide navigation.
-- In Calculator, show three peer modes: Alchemist, Watermancer, and Concentrates.
-- The Concentrates mode contains nested **Recipe Concentrate** and **DIY Concentrate** tabs.
+- Arrange top-level navigation in two rows: **Calculator · Concentrates · Mixer**, then **Water grading · Guide**.
+- Rename the Water Tasting navigation label to **Water grading** while retaining its existing workspace behavior.
+- Keep Alchemist and Watermancer as the two modes inside Calculator.
+- The top-level Concentrates workspace contains nested **Recipe Concentrate** and **DIY Concentrate** tabs.
 - Clicking Concentrates opens DIY Concentrate by default.
 - The Calculator's “Send to Concentrate” action opens Concentrates on Recipe Concentrate and carries the current recipe handoff.
 - The two concentrate workflows retain their current builders, saved configuration, and behavior.

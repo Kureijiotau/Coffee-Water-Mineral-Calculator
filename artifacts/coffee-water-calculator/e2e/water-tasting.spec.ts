@@ -6,7 +6,7 @@ const ALCHEMIST_PROFILES_KEY = 'cwm.profiles';
 
 async function openWaterTasting(page: import('@playwright/test').Page) {
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
+  await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
   await expect(page.getByTestId('water-tasting-tab')).toBeVisible();
 }
 
@@ -38,7 +38,7 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(page.getByTestId('button-open-watermancer')).toBeVisible();
   await page.getByTestId('button-open-watermancer').click();
   await expect(page.getByRole('button', { name: 'Watermancer', exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
+  await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
 
   await page.getByTestId('select-tasting-profile').selectOption('safe-profile');
   await page.getByTestId('input-tasting-name').fill('Sunday morning cup');
@@ -90,7 +90,7 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   await page.reload();
-  await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
+  await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
   await expect(page.getByTestId(`card-tasting-${tastingId}`)).toBeVisible();
 
   await page.getByTestId(`button-edit-tasting-${tastingId}`).click();
@@ -115,7 +115,7 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(page.getByTestId('empty-tasting-history')).toBeVisible();
 
   await page.reload();
-  await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
+  await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
   await expect(page.getByTestId('empty-tasting-history')).toBeVisible();
 });
 
@@ -244,7 +244,7 @@ test('selects a saved target, preserves its prior name snapshot, and keeps histo
   await expect(page.getByTestId(`profile-tasting-${newTastingId}`)).toHaveText('Renamed E2E Water');
 
   await page.reload();
-  await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
+  await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
   const reloadedCards = page.locator('[data-testid^="card-tasting-"]');
   await expect(reloadedCards).toHaveCount(3);
   await expect(reloadedCards.first()).toHaveAttribute('data-testid', `card-tasting-${newTastingId}`);

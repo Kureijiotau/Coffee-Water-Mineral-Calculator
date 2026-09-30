@@ -17,10 +17,10 @@ test('requests standalone workspace modules only when selected', async ({ page }
   });
 
   await page.goto('/');
-  await expect(page.getByTestId('tab-water-tasting')).toBeVisible();
+  await expect(page.getByTestId('tab-water-grading')).toBeVisible();
   expect([...requestedModules]).toEqual([]);
 
-  await page.getByTestId('tab-water-tasting').click();
+  await page.getByTestId('tab-water-grading').click();
   await expect.poll(() => requestedModules.has('WaterTastingTab')).toBe(true);
   await expect(page.getByTestId('water-tasting-tab')).toBeVisible();
 

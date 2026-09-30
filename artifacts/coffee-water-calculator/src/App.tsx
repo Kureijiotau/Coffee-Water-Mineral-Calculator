@@ -718,7 +718,7 @@ type WatermancerComparisonProfile = {
   targets: Partial<Record<IonId, number>>;
 };
 type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrates' | 'ion-ratios' | 'mixer';
-type CalculatorMode = 'alchemist' | 'watermancer' | 'concentrates';
+type CalculatorMode = 'alchemist' | 'watermancer';
 type ConcentrateWorkspaceTab = 'recipe' | 'diy';
 type ConcentrateMode = 'builder' | 'lotus';
 
@@ -3175,13 +3175,12 @@ function App() {
     setNerdLevel(level);
   };
   const handleCalculatorModeChange = (mode: CalculatorMode) => {
-    if (mode === 'concentrates') {
-      setConcentrateWorkspaceTab('diy');
-      setAppTab('concentrates');
-      return;
-    }
     handleNerdLevelChange(mode);
     setAppTab('calculator');
+  };
+  const handleOpenConcentrates = () => {
+    setConcentrateWorkspaceTab('diy');
+    setAppTab('concentrates');
   };
 
   // Persist on changes
@@ -6154,7 +6153,7 @@ function App() {
   ]);
 
   const renderCalculatorModeTabs = (activeMode: CalculatorMode) => (
-    <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+    <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
       <button
         type="button"
         onClick={() => handleCalculatorModeChange('alchemist')}
@@ -6191,21 +6190,6 @@ function App() {
         />
         Watermancer
       </button>
-      <button
-        type="button"
-        onClick={() => handleCalculatorModeChange('concentrates')}
-        aria-pressed={activeMode === 'concentrates'}
-        data-testid="mode-concentrates"
-        title="Recipe and DIY concentrate workspaces"
-        className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
-          activeMode === 'concentrates'
-            ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm'
-            : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
-        }`}
-      >
-        <FlaskConical className="h-4 w-4 shrink-0" aria-hidden="true" />
-        Concentrates
-      </button>
     </div>
   );
 
@@ -6225,7 +6209,7 @@ function App() {
             <p className="text-[11px] leading-relaxed text-slate-300/75">Min-Max Your Coffee Water Chemistry</p>
           </div>
         </div>
-        <div className="app-header__controls order-3 flex w-full items-center justify-between gap-2 sm:order-none sm:w-auto">
+        <div className="app-header__controls order-3 flex w-full flex-wrap items-center justify-between gap-2 sm:order-none sm:w-auto sm:flex-nowrap">
           <a
             href="https://discord.com/users/361929925449482240"
             target="_blank"
@@ -6248,13 +6232,13 @@ function App() {
             onDelete={handleDeleteWaterPlan}
             onImport={handleImportWaterPlan}
           />
-            <div role="tablist" aria-label="App workspace" className="app-header__tabs flex max-w-full shrink-0 overflow-x-auto rounded-lg border border-white/20 bg-black/15 p-0.5">
+            <div role="tablist" aria-label="App workspace" className="app-header__tabs grid w-full max-w-full shrink-0 grid-cols-3 gap-0.5 rounded-lg border border-white/20 bg-black/15 p-0.5 sm:w-auto">
             <button
               type="button"
               role="tab"
-              aria-selected={appTab === 'calculator' || appTab === 'ion-ratios' || appTab === 'concentrates'}
+              aria-selected={appTab === 'calculator' || appTab === 'ion-ratios'}
               onClick={() => setAppTab('calculator')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' || appTab === 'concentrates' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'calculator' || appTab === 'ion-ratios' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
               <CalculatorIcon className="h-3.5 w-3.5" aria-hidden="true" />
               Calculator
@@ -6262,15 +6246,13 @@ function App() {
             <button
               type="button"
               role="tab"
-              id="water-tasting-tab-button"
-              aria-controls="water-tasting-panel"
-              aria-selected={appTab === 'water-tasting'}
-              data-testid="tab-water-tasting"
-              onClick={() => setAppTab('water-tasting')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'water-tasting' ? 'bg-cyan-300/25 text-cyan-50 shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+              aria-selected={appTab === 'concentrates'}
+              data-testid="tab-concentrates"
+              onClick={handleOpenConcentrates}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'concentrates' ? 'bg-white/25 text-white shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
             >
-              <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
-              Water Tasting
+              <FlaskConical className="h-3.5 w-3.5" aria-hidden="true" />
+              Concentrates
             </button>
             <button
               type="button"
@@ -6281,6 +6263,19 @@ function App() {
             >
               <Beaker className="h-3.5 w-3.5" aria-hidden="true" />
               Mixer
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="water-tasting-tab-button"
+              aria-controls="water-tasting-panel"
+              aria-selected={appTab === 'water-tasting'}
+              data-testid="tab-water-grading"
+              onClick={() => setAppTab('water-tasting')}
+              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'water-tasting' ? 'bg-cyan-300/25 text-cyan-50 shadow-lg shadow-black/10' : 'text-white/70 hover:bg-white/10 hover:text-white'}`}
+            >
+              <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
+              Water grading
             </button>
             <button
               type="button"
@@ -6304,8 +6299,8 @@ function App() {
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
           <div className="app-page-stack flex w-full max-w-5xl flex-col">
             {appHeader}
-            <DeferredPanelBoundary label="Water Tasting">
-              <Suspense fallback={<DeferredPanelFallback label="Water Tasting" />}>
+            <DeferredPanelBoundary label="Water grading">
+              <Suspense fallback={<DeferredPanelFallback label="Water grading" />}>
                 <WaterTastingTab
                   profileOptions={waterTastingProfileOptions}
                   renderProfileAnalysis={sourceId => {
@@ -6421,13 +6416,12 @@ function App() {
               <div className="flex items-start gap-2">
                 <Gauge className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" aria-hidden="true" />
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Calculator mode</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Concentrates</div>
                   <div className="mt-0.5 text-xs text-slate-500">
                     Prepare recipe-based or DIY mineral concentrates.
                   </div>
                 </div>
               </div>
-              {renderCalculatorModeTabs('concentrates')}
             </div>
           </section>
           <div
