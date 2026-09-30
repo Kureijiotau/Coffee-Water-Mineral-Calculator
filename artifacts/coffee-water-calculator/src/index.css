@@ -86,10 +86,6 @@ body {
     0 -16px 40px rgb(2 6 23 / 0.2) inset;
 }
 
-.app-header__tabs {
-  box-shadow: 0 0 0 1px rgb(2 6 23 / 0.2) inset, 0 8px 20px -12px rgb(2 6 23 / 0.9);
-}
-
 .app-header__controls {
   min-width: 0;
 }
