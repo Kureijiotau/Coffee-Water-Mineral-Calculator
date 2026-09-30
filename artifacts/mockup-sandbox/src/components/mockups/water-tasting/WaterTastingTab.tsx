@@ -74,7 +74,7 @@ function formatSpectrumValue(value: number): string {
   return '0';
 }
 
-export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTastingTabProps) {
+export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenWatermancer }: WaterTastingTabProps) {
   const [initialLoad] = useState(loadWaterTastings);
   const expectedRecordsRef = useRef<WaterTastingRecord[] | null>(
     initialLoad.ok ? initialLoad.records : null,
@@ -86,6 +86,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const formStart = useRef<HTMLDivElement>(null);
   const form = useForm<WaterTastingEditorValues>({ defaultValues: emptyDraft() });
+  const selectedProfileSourceId = form.watch('profileSourceId');
   const mode = form.watch('mode');
   const editingRecord = records.find(record => record.id === editingId);
   const profileChoices = editingRecord && !profileOptions.some(option => option.sourceId === editingRecord.profileSourceId)
@@ -96,6 +97,10 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       readings: { ions: {} },
     }]
     : profileOptions;
+  const selectedProfileAnalysis = selectedProfileSourceId
+    ? renderProfileAnalysis(selectedProfileSourceId)
+    : null;
+
   function beginNew() {
     setEditingId(null);
     form.reset(emptyDraft());
@@ -147,36 +152,19 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
     const snapshot = editingRecord?.profileSourceId === option.sourceId
       ? editingRecord.profileNameSnapshot
       : option.name;
-    const coffee = editingRecord
-      ? {
-        ...editingRecord.coffee,
-        ...(typeof values.coffee?.name === 'string' ? { name: values.coffee.name } : {}),
-      }
-      : values.coffee;
-    const preserveCvaDescriptors = editingRecord
-      && isCvaWaterTastingRecord(editingRecord)
-      && values.mode === 'cva';
     const draftBase = {
       profileSourceId: option.sourceId,
       profileNameSnapshot: snapshot,
-      coffee,
-      descriptorIds: preserveCvaDescriptors
-        ? [...editingRecord.descriptorIds]
-        : values.descriptorIds ?? [],
+      coffee: values.coffee,
+      descriptorIds: values.descriptorIds ?? [],
     };
     let nextRecord: WaterTastingRecord;
     if (values.mode === 'cva') {
       const draft: WaterTastingCvaDraft = {
         ...draftBase,
         scoringVersion: 2,
-        descriptive: {
-          ...(editingRecord && isCvaWaterTastingRecord(editingRecord) ? editingRecord.descriptive : {}),
-          ...(values.descriptive ?? {}),
-        },
-        affective: {
-          ...(editingRecord && isCvaWaterTastingRecord(editingRecord) ? editingRecord.affective : {}),
-          ...(values.affective ?? {}),
-        },
+        descriptive: values.descriptive ?? {},
+        affective: values.affective ?? {},
       };
       if (editingRecord && isCvaWaterTastingRecord(editingRecord)) {
         nextRecord = updateWaterTastingRecord(editingRecord, draft);
@@ -257,13 +245,15 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       <div className="relative overflow-hidden border-b border-cyan-300/15 bg-gradient-to-br from-cyan-950/55 via-slate-900/75 to-indigo-950/35 px-5 py-7 sm:px-8 sm:py-9">
         <div className="pointer-events-none absolute right-[-4rem] top-[-7rem] h-64 w-64 rounded-full border border-cyan-300/10" aria-hidden="true" />
         <div className="pointer-events-none absolute right-[-1rem] top-[-4rem] h-44 w-44 rounded-full border border-cyan-300/10" aria-hidden="true" />
-        <div className="relative flex flex-wrap items-end justify-between gap-5">
+        <div className={eyebrow}>Watermancer / Field notes</div>
+        <div className="relative mt-3 flex flex-wrap items-end justify-between gap-5">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">Water Tasting</h2>
             <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300">
-              Choose the water used to brew this coffee, then note what changes in the cup.
+              One water target. One brewed cup. Note what the water helped bring forward, in your own terms.
             </p>
           </div>
+          <span className="rounded-full border border-cyan-300/25 bg-cyan-300/10 px-3 py-1.5 text-xs font-medium tracking-wide text-cyan-100">A personal observation, not a coffee score</span>
         </div>
       </div>
 
@@ -285,8 +275,8 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
               <div className="flex items-start gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-cyan-300/30 bg-cyan-300/10 font-mono text-xs text-cyan-200">01</span>
                 <div className="min-w-0 flex-1">
-                  <h3 id="tasting-source-heading" className="font-semibold text-slate-100">Water used</h3>
-                  <p className="mt-1 text-xs leading-relaxed text-slate-400">Choose the water that was used to brew this coffee.</p>
+                  <h3 id="tasting-source-heading" className="font-semibold text-slate-100">Water target</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-400">Saved as context for this cup. It won’t change the prompts or your ratings.</p>
                 </div>
               </div>
               <div className="mt-5 sm:pl-10">
@@ -308,6 +298,11 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                     <FormMessage />
                   </FormItem>
                 )} />
+                {selectedProfileAnalysis && (
+                  <div className="mt-5" data-testid="panel-tasting-profile-analysis">
+                    {selectedProfileAnalysis}
+                  </div>
+                )}
                 {editingRecord && profileOptions.some(option => option.sourceId === editingRecord.profileSourceId && option.name !== editingRecord.profileNameSnapshot) && (
                   <p className="mt-2 text-xs text-slate-400" data-testid="text-profile-snapshot">Originally saved as “{editingRecord.profileNameSnapshot}”. That name stays with this note.</p>
                 )}
@@ -326,15 +321,22 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
               <div className="flex items-start gap-3">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-slate-500/40 bg-slate-700/35 font-mono text-xs text-slate-300">02</span>
                 <div>
-                  <h3 id="tasting-coffee-heading" className="font-semibold text-slate-100">Coffee <span className="ml-1 text-xs font-normal text-slate-400">· optional</span></h3>
-                  <p className="mt-1 text-xs text-slate-400">Add a name to recognize this cup later.</p>
+                  <h3 id="tasting-coffee-heading" className="font-semibold text-slate-100">The cup <span className="ml-1 text-xs font-normal text-slate-400">· all optional</span></h3>
+                  <p className="mt-1 text-xs text-slate-400">A few details to recognize this brew later.</p>
                 </div>
               </div>
-              <div className="mt-5 sm:pl-10">
-                <label className="block max-w-md space-y-2 text-xs font-semibold text-slate-300">
-                  <span>Coffee name</span>
-                  <Input {...form.register('coffee.name')} data-testid="input-tasting-name" placeholder="e.g. Sunday morning blend" className={inputStyle} />
-                </label>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 sm:pl-10">
+                {([
+                  ['name', 'Coffee name', 'e.g. Sunday morning blend'],
+                  ['roast', 'Roast', 'e.g. Light'],
+                  ['origin', 'Origin', 'e.g. Huila, Colombia'],
+                  ['brewMethod', 'Brew method', 'e.g. V60'],
+                ] as const).map(([key, label, placeholder]) => (
+                  <label key={key} className="block space-y-2 text-xs font-semibold text-slate-300">
+                    <span>{label}</span>
+                    <Input {...form.register(`coffee.${key}`)} data-testid={`input-tasting-${key}`} placeholder={placeholder} className={inputStyle} />
+                  </label>
+                ))}
               </div>
             </section>
 

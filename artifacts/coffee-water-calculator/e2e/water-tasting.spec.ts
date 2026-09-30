@@ -25,9 +25,15 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }) => {
+test('records water’s effect with five sliders and edits a partial tasting', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openWaterTasting(page);
+
+  await expect(page.getByTestId('input-descriptive-fragrance')).toHaveCount(0);
+  await expect(page.getByTestId('toggle-descriptors-fragrance-aroma')).toHaveCount(0);
+  await expect(page.getByTestId('input-tasting-roast')).toHaveCount(0);
+  await expect(page.getByTestId('input-tasting-origin')).toHaveCount(0);
+  await expect(page.getByTestId('input-tasting-brewMethod')).toHaveCount(0);
 
   await expect(page.getByTestId('button-open-watermancer')).toBeVisible();
   await page.getByTestId('button-open-watermancer').click();
@@ -36,31 +42,34 @@ test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }
 
   await page.getByTestId('select-tasting-profile').selectOption('safe-profile');
   await page.getByTestId('input-tasting-name').fill('Sunday morning cup');
-  await page.getByTestId('input-tasting-roast').fill('Light');
-  await page.getByTestId('input-tasting-origin').fill('Huila, Colombia');
-  await page.getByTestId('input-tasting-brewMethod').fill('V60');
-  const fragrance = page.getByTestId('input-descriptive-fragrance');
-  await expect(fragrance).toHaveAttribute('min', '0');
-  await expect(fragrance).toHaveAttribute('max', '15');
-  await fragrance.focus();
+
+  const fragranceAroma = page.getByTestId('input-affective-fragranceAroma');
+  await fragranceAroma.focus();
   await page.keyboard.press('ArrowLeft');
-  const mouthfeel = page.getByTestId('input-descriptive-mouthfeel');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const flavorAftertaste = page.getByTestId('input-affective-flavorAftertaste');
+  await flavorAftertaste.focus();
+  await page.keyboard.press('ArrowRight');
+  const acidity = page.getByTestId('input-affective-acidity');
+  await acidity.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  const mouthfeel = page.getByTestId('input-affective-mouthfeel');
   await mouthfeel.focus();
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowLeft');
   const overall = page.getByTestId('input-affective-overall');
   await overall.focus();
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowRight');
-  await expect(fragrance).toHaveValue('7');
-  await expect(fragrance).toHaveAttribute('aria-valuetext', '7 out of 15. Low fragrance');
-  await expect(page.getByTestId('cue-descriptive-fragrance')).toHaveText('Low fragrance');
-  await expect(mouthfeel).toHaveValue('10');
-  await expect(page.getByTestId('cue-descriptive-mouthfeel')).toContainText('fuller');
+  await expect(fragranceAroma).toHaveValue('6');
+  await expect(flavorAftertaste).toHaveValue('6');
+  await expect(acidity).toHaveValue('8');
+  await expect(mouthfeel).toHaveValue('4');
   await expect(overall).toHaveValue('7');
   await expect(page.getByTestId('cue-affective-overall')).toHaveText('Moderately high');
-  await page.getByTestId('toggle-descriptors-fragrance-aroma').click();
-  await page.getByTestId('button-descriptor-mineral').click();
+  await expect(page.getByTestId('panel-tasting-profile-analysis')).toHaveCount(0);
   await page.getByTestId('button-save-tasting').click();
 
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting saved');
@@ -71,13 +80,13 @@ test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }
   const tastingId = cardTestId!.replace('card-tasting-', '');
   await expect(page.getByTestId(`profile-tasting-${tastingId}`)).toHaveText('Aiki safe profile');
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday morning cup');
-  await expect(page.getByTestId(`descriptors-tasting-${tastingId}`)).toContainText('Mineral');
+  await expect(page.getByTestId(`descriptors-tasting-${tastingId}`)).toHaveCount(0);
   await expect(page.getByTestId(`total-tasting-${tastingId}`)).toHaveCount(0);
   await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
   await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Fragrance');
-  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('7 / 15');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('6 / 9');
   await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Mouthfeel');
-  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('10 / 15');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).not.toContainText('/ 15');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   await page.reload();
@@ -86,22 +95,18 @@ test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }
 
   await page.getByTestId(`button-edit-tasting-${tastingId}`).click();
   await expect(page.getByTestId('input-tasting-name')).toHaveValue('Sunday morning cup');
-  await expect(page.getByTestId('input-descriptive-fragrance')).toHaveValue('7');
-  await expect(page.getByTestId('input-descriptive-mouthfeel')).toHaveValue('10');
+  await expect(page.getByTestId('input-affective-fragranceAroma')).toHaveValue('6');
+  await expect(page.getByTestId('input-affective-flavorAftertaste')).toHaveValue('6');
+  await expect(page.getByTestId('input-affective-acidity')).toHaveValue('8');
+  await expect(page.getByTestId('input-affective-mouthfeel')).toHaveValue('4');
   await expect(page.getByTestId('input-affective-overall')).toHaveValue('7');
   await page.getByTestId('input-tasting-name').fill('Sunday cup, revised');
-  await page.getByTestId('button-clear-descriptive-fragrance').click();
-  await expect(page.getByTestId('value-descriptive-fragrance')).toHaveText('Not scored');
-  const fragranceAromaGroup = page.getByTestId('group-descriptors-fragrance-aroma');
-  const isFragranceAromaOpen = await fragranceAromaGroup.evaluate(group => (group as HTMLDetailsElement).open);
-  if (!isFragranceAromaOpen) await page.getByTestId('toggle-descriptors-fragrance-aroma').click();
-  await page.getByTestId('button-descriptor-saline').click();
   await page.getByTestId('button-save-tasting').click();
 
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday cup, revised');
   await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
-  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).not.toContainText('Fragrance');
+  await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Fragrance');
 
   await page.getByTestId(`button-delete-tasting-${tastingId}`).click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
@@ -112,6 +117,56 @@ test('saves, reopens, and edits a partial CVA-informed tasting', async ({ page }
   await page.reload();
   await page.getByRole('tab', { name: 'Water Tasting', exact: true }).click();
   await expect(page.getByTestId('empty-tasting-history')).toBeVisible();
+});
+
+test('keeps hidden details when editing a saved CVA tasting', async ({ page }) => {
+  const legacyDetails = {
+    fragrance: 3,
+    aroma: 4,
+    flavor: 5,
+    aftertaste: 6,
+    acidity: 7,
+    sweetness: 8,
+    mouthfeel: 9,
+  };
+  await page.addInitScript(({ tastingsKey, record }) => {
+    localStorage.setItem(tastingsKey, JSON.stringify([record]));
+  }, {
+    tastingsKey: TASTINGS_KEY,
+    record: {
+      id: 'hidden-details-cva',
+      createdAt: '2026-09-28T09:00:00.000Z',
+      updatedAt: '2026-09-28T09:00:00.000Z',
+      profileSourceId: 'safe-profile',
+      profileNameSnapshot: 'Aiki safe profile',
+      coffee: { name: 'Older cup', roast: 'Light', origin: 'Huila', brewMethod: 'V60' },
+      scoringVersion: 2,
+      descriptive: legacyDetails,
+      affective: { fragranceAroma: 5, flavorAftertaste: 6, acidity: 7, mouthfeel: 8, overall: 9 },
+      descriptorIds: ['mineral', 'clean-finish'],
+    },
+  });
+  await openWaterTasting(page);
+  await expect(page.getByTestId('card-tasting-hidden-details-cva')).toBeVisible();
+  await page.getByTestId('button-edit-tasting-hidden-details-cva').click();
+  await expect(page.getByTestId('input-tasting-name')).toHaveValue('Older cup');
+  await expect(page.getByTestId('input-tasting-roast')).toHaveCount(0);
+  await page.getByTestId('input-tasting-name').fill('Older cup, renamed');
+  await page.getByTestId('input-affective-overall').focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.getByTestId('button-save-tasting').click();
+  await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
+
+  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '[]'), TASTINGS_KEY);
+  expect(saved[0].descriptive).toEqual(legacyDetails);
+  expect(saved[0].descriptorIds).toEqual(['mineral', 'clean-finish']);
+  expect(saved[0].coffee).toEqual({
+    name: 'Older cup, renamed',
+    roast: 'Light',
+    origin: 'Huila',
+    brewMethod: 'V60',
+  });
+  expect(saved[0].affective.overall).toBe(8);
 });
 
 test('keeps a deleted profile name available when editing its tasting', async ({ page }) => {

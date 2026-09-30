@@ -1,0 +1,9 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root { color-scheme: dark; }
+html, body { min-height: 100%; background: #020617; }
+.app-shell { background: radial-gradient(circle at 8% -8%, rgb(14 165 233 / .2), transparent 32rem), radial-gradient(circle at 92% 0%, rgb(99 102 241 / .18), transparent 30rem), linear-gradient(145deg, #020617 0%, #0f172a 48%, #020617 100%); }
+.app-card { border-radius: 1rem; }
+.app-section-header { min-height: 3.25rem; padding-block: .875rem; background: linear-gradient(100deg, rgb(56 189 248 / .065), transparent 38%, rgb(99 102 241 / .05)), rgb(15 23 42 / .12); }
+.app-card-body { padding: 1rem; }

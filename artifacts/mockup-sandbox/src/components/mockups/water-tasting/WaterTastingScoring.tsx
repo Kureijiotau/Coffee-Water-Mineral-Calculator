@@ -4,11 +4,13 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import {
   WATER_TASTING_AFFECTIVE_ANCHORS,
   WATER_TASTING_AFFECTIVE_ATTRIBUTES,
+  WATER_TASTING_DESCRIPTIVE_ATTRIBUTES,
   WATER_TASTING_DESCRIPTORS,
   WATER_TASTING_RATINGS,
   WATER_TASTING_SPECTRUM,
   calculateWaterTastingTotal,
   getWaterTastingAffectiveCue,
+  getWaterTastingDescriptiveCue,
   type WaterTastingEditorValues,
 } from './waterTasting';
 
@@ -38,22 +40,109 @@ function getScoreColor(mode: 'descriptive' | 'affective', value: number): string
   return `hsl(${hue} 76% 65%)`;
 }
 
+function DescriptiveAssessment({
+  form,
+  onChange,
+}: Pick<WaterTastingScoringProps, 'form' | 'onChange'>) {
+  return (
+    <section aria-labelledby="tasting-descriptive-heading" className="border-b border-slate-600/35 pb-8">
+      <div className="flex items-start gap-3">
+        <span className={sectionNumberClass}>03</span>
+        <div>
+          <h3 id="tasting-descriptive-heading" className="font-semibold text-slate-100">Descriptive assessment</h3>
+          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
+            Record how strongly each quality comes through. Intensity is not a quality score; leave anything unanswered if you prefer.
+          </p>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-3 sm:pl-10">
+        {WATER_TASTING_DESCRIPTIVE_ATTRIBUTES.map(attribute => (
+          <FormField
+            key={attribute.id}
+            control={form.control}
+            name={`descriptive.${attribute.id}` as const}
+            render={({ field }) => {
+              const value = typeof field.value === 'number' ? field.value : undefined;
+              const position = value ?? 8;
+              const cue = value === undefined
+                ? 'Choose a value to record an intensity.'
+                : getWaterTastingDescriptiveCue(attribute.id, value) ?? '';
+              const color = value === undefined ? '#94a3b8' : getScoreColor('descriptive', value);
+              const scaleId = `scale-descriptive-${attribute.id}`;
+              return (
+                <FormItem className="rounded-xl border border-slate-600/40 bg-slate-900/55 p-3.5 sm:p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                    <FormLabel className="text-sm font-semibold text-slate-100">{attribute.label}</FormLabel>
+                    <span
+                      data-testid={`value-descriptive-${attribute.id}`}
+                      className="font-mono text-sm font-semibold tabular-nums"
+                      style={{ color }}
+                    >
+                      {value === undefined ? 'Not scored' : `${value} / 15`}
+                    </span>
+                  </div>
+                  <p data-testid={`cue-descriptive-${attribute.id}`} className="mt-1 text-xs leading-relaxed text-slate-400">
+                    {cue}
+                  </p>
+                  <div className="mt-3">
+                    <div id={scaleId} className="flex justify-between text-[10px] text-slate-500">
+                      <span>0</span><span>8</span><span>15</span>
+                    </div>
+                    <FormControl>
+                      <input
+                        type="range"
+                        min={0}
+                        max={15}
+                        step={1}
+                        value={position}
+                        onChange={event => {
+                          field.onChange(Number(event.currentTarget.value));
+                          onChange();
+                        }}
+                        aria-label={attribute.label}
+                        aria-describedby={scaleId}
+                        aria-valuetext={value === undefined
+                          ? 'Not scored. Adjust to record intensity.'
+                          : `${value} out of 15. ${cue}`}
+                        data-testid={`input-descriptive-${attribute.id}`}
+                        className="mt-1 h-6 w-full cursor-pointer accent-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                        style={{ accentColor: color }}
+                      />
+                    </FormControl>
+                  </div>
+                  {value !== undefined && (
+                    <button
+                      type="button"
+                      onClick={() => { field.onChange(undefined); onChange(); }}
+                      data-testid={`button-clear-descriptive-${attribute.id}`}
+                      className="mt-1 min-h-9 text-xs text-slate-400 underline underline-offset-2 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                    >Clear score</button>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+        ))}
+      </div>
+      <AffectiveAssessment form={form} onChange={onChange} />
+    </section>
+  );
+}
+
 function AffectiveAssessment({
   form,
   onChange,
 }: Pick<WaterTastingScoringProps, 'form' | 'onChange'>) {
   return (
-    <section aria-labelledby="tasting-affective-heading" className="rounded-xl border border-cyan-300/20 bg-slate-950/30 p-4 sm:p-5">
-      <div className="flex items-start gap-3">
-        <span className={sectionNumberClass}>03</span>
-        <div>
-          <h3 id="tasting-affective-heading" className="font-semibold text-slate-100">Water's effect on the cup</h3>
-          <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
-            Rate what the water brings forward in this coffee. Leave any slider untouched to skip it.
-          </p>
-        </div>
+    <section aria-labelledby="tasting-affective-heading" className="mt-7 sm:pl-10">
+      <div>
+        <h4 id="tasting-affective-heading" className="font-semibold text-slate-100">Affective assessment</h4>
+        <p className="mt-1 max-w-xl text-xs leading-relaxed text-slate-400">
+          Rate your impression of quality from extremely low to extremely high.
+        </p>
       </div>
-      <div className="mt-5 space-y-3 sm:pl-10">
+      <div className="mt-4 space-y-3">
         {WATER_TASTING_AFFECTIVE_ATTRIBUTES.map(attribute => (
           <FormField
             key={attribute.id}
@@ -322,5 +411,10 @@ function LegacyAssessment({
 
 export function WaterTastingScoring({ mode, form, onChange }: WaterTastingScoringProps) {
   if (mode === 'legacy') return <LegacyAssessment form={form} onChange={onChange} />;
-  return <AffectiveAssessment form={form} onChange={onChange} />;
+  return (
+    <>
+      <DescriptiveAssessment form={form} onChange={onChange} />
+      <DescriptorChoices form={form} legacy={false} />
+    </>
+  );
 }
