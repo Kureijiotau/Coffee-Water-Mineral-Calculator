@@ -358,9 +358,10 @@ test('toggles pairwise ion percentages and keeps the choice across readings layo
   );
 
   await expect(relationship).toHaveAttribute('data-view', 'combined');
-  const pairwiseButton = relationship.getByRole('button', { name: 'Pairwise' });
-  await pairwiseButton.click();
+  await expect(relationship).toHaveAttribute('aria-label', 'Switch to pairwise ion ratios');
+  await relationship.click();
   await expect(relationship).toHaveAttribute('data-view', 'pairwise');
+  await expect(relationship).toHaveAttribute('aria-label', 'Switch to combined ion ratios');
   await expect(relationship.getByTestId('watermancer-ratio-k-mg'))
     .toContainText(expectedPercent(potassium, magnesium));
   await expect(relationship.getByTestId('watermancer-ratio-na-ca'))
@@ -368,13 +369,13 @@ test('toggles pairwise ion percentages and keeps the choice across readings layo
 
   await readingsView.getByRole('button', { name: 'Compact', exact: true }).click();
   await expect(relationship).toHaveAttribute('data-view', 'pairwise');
-  await relationship.getByRole('button', { name: 'Combined' }).click();
+  await relationship.click();
   await expect(relationship).toHaveAttribute('data-view', 'combined');
   await expect(relationship).toContainText('ppm');
 
   await readingsView.getByRole('button', { name: 'Classic', exact: true }).click();
   await expect(relationship).toHaveAttribute('data-view', 'combined');
-  await relationship.getByRole('button', { name: 'Pairwise' }).click();
+  await relationship.click();
   await expect(relationship.getByTestId('watermancer-ratio-k-mg')).toContainText('K ÷ Mg');
   await expect(relationship.getByTestId('watermancer-ratio-na-ca')).toContainText('Na ÷ Ca');
 });
