@@ -211,6 +211,41 @@ describe("account sync merge", () => {
     expect(merged.watermancerProfiles[0]?.details).toBe("Account profile");
   });
 
+  it("deduplicates a pending local profile against the account copy on conflict retry", () => {
+    const baseline = serverData();
+    const localCopy = {
+      ...targetProfile("local-copy", "Version 38"),
+      targets: { calcium: 100 },
+      details: "Local profile",
+    };
+    const pending = mergeAccountSyncWithRemote(
+      baseline,
+      localData({
+        watermancerProfiles: [
+          localCopy,
+          { ...localCopy, id: "different-target", targets: { calcium: 101 } },
+        ],
+      }),
+      baseline,
+    );
+    const remoteCopy = {
+      ...localCopy,
+      id: "remote-copy",
+      details: "Account profile",
+    };
+    const retried = mergeAccountSyncWithRemote(
+      baseline,
+      localData({ watermancerProfiles: pending.watermancerProfiles }),
+      serverData({ watermancerProfiles: [remoteCopy] }),
+    );
+
+    expect(retried.watermancerProfiles.map(profile => profile.id)).toEqual([
+      "remote-copy",
+      "different-target",
+    ]);
+    expect(retried.watermancerProfiles[0]?.details).toBe("Account profile");
+  });
+
   it("compares target maps independent of key order but distinguishes missing targets from zero", () => {
     const profiles = deduplicateWatermancerProfiles([
       {
