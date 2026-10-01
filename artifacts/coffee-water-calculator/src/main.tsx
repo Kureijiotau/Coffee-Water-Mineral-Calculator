@@ -15,8 +15,9 @@ import { AccountSyncProvider } from "./AccountSyncProvider";
 import "./index.css";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const clerkKeyHost = window.location.hostname.replace(/^www\./i, "");
 const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
+  clerkKeyHost,
   import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
 );
 const queryClient = new QueryClient();
