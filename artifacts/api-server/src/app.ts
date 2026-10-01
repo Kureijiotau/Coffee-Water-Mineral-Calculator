@@ -60,7 +60,7 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 app.use(clerkMiddleware(req => ({
   publishableKey: publishableKeyFromHost(
-    getClerkProxyHost(req) ?? "",
+    getClerkProxyHost(req)?.replace(/^www\./i, "") ?? "",
     process.env.CLERK_PUBLISHABLE_KEY,
   ),
 })));
