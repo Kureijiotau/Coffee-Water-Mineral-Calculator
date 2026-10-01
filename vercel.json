@@ -4,6 +4,10 @@
     {
       "source": "/api/__clerk/:proxyPath*",
       "destination": "/api/clerkproxy?__clerk_path=:proxyPath*"
+    },
+    {
+      "source": "/((?!api/).*)",
+      "destination": "/index.html"
     }
   ]
 }
