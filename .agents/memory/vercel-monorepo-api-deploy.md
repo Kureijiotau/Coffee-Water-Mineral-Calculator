@@ -3,8 +3,10 @@ name: Vercel monorepo API deployment
 description: Vercel API deployments in this workspace must avoid the root recursive build.
 ---
 
-Vercel’s default monorepo build runs the root `pnpm run build`, which attempts to build unrelated artifacts and can fail on local-only environment requirements such as `PORT`. API deployments should use an API-package-only build command.
+Vercel’s API project should stay rooted at the repository root, build only the API package, and keep its `public` output folder. The repository also uses filesystem-based Vercel functions to expose the Express app.
 
-**Why:** The workspace contains several independently runnable artifacts, but the API deployment only needs the server package and its serverless entrypoint.
+Vercel’s catch-all API function did not route a multi-segment account path in production, even though the same Express handler worked locally. When a request returns a Vercel edge `NOT_FOUND` while sibling API paths reach Express, add an explicit filesystem function entrypoint for the nested path or use a verified global rewrite; do not change the Express auth handler to work around an upstream routing miss.
 
-**How to apply:** Keep the API Vercel project at the repository root with output-directory override disabled, and configure its build command to run only `@workspace/api-server`.
+**Why:** The monorepo contains independently runnable artifacts, and Vercel’s filesystem router can reject a deep path before Express sees it. Local route tests alone will not catch that production mapping gap.
+
+**How to apply:** Keep the Vercel API build scoped to `@workspace/api-server`; compare edge headers and local behavior when debugging, then verify the explicit nested route on the production alias.

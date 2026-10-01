@@ -1,5 +1,6 @@
 - [Archived optional workspaces](archived-optional-workspaces.md) — preserve retired Brewer, assistant, scanner, and profile sources while keeping only Alchemist, Watermancer, Concentrate, and lazy Guide live
 - [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
+- [Clerk CNAME host on www](clerk-www-cname-key-host.md) — remove `www.` before host-derived key construction when the verified Frontend API CNAME is on the apex
 - [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
 - [Vercel Neon production database](vercel-neon-database.md) — keep Vercel’s Neon schema separate from Replit’s development database
 - [Base water final mixture](base-water-final-mixture.md) — keep base salt recipe metrics separate from configured-water final mixture metrics

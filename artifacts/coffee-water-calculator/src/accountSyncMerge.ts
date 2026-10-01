@@ -1,5 +1,9 @@
 import type { AccountSyncData } from "@workspace/api-client-react";
-import { mergeProfileCollections, sameProfileCollection } from "./profileSync";
+import {
+  mergeProfileCollections,
+  mergeWatermancerProfileCollections,
+  sameProfileCollection,
+} from "./profileSync";
 import type { AccountSyncLocalData } from "./accountSyncStorage";
 
 const EMPTY_ACCOUNT_DATA: AccountSyncData = {
@@ -36,7 +40,7 @@ export function mergeAccountSyncWithRemote(
       local.alchemistProfiles,
       remoteLocal.alchemistProfiles,
     ) as unknown as AccountSyncData["alchemistProfiles"],
-    watermancerProfiles: mergeProfileCollections(
+    watermancerProfiles: mergeWatermancerProfileCollections(
       baseline.watermancerProfiles as unknown as AccountSyncLocalData["watermancerProfiles"],
       local.watermancerProfiles,
       remoteLocal.watermancerProfiles,
@@ -87,10 +91,11 @@ export function mergeFirstDeviceAccountData(
       account.alchemistProfiles,
       guest.alchemistProfiles,
     ),
-    watermancerProfiles: mergeProfileCollections(
+    watermancerProfiles: mergeWatermancerProfileCollections(
       [],
       account.watermancerProfiles,
       guest.watermancerProfiles,
+      account.watermancerProfiles.map(profile => profile.id),
     ),
     diyConcentrateInputs: account.diyConcentrateInputs ?? guest.diyConcentrateInputs,
   };

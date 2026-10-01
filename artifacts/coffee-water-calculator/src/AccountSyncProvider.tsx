@@ -20,6 +20,10 @@ import {
   saveWatermancerProfiles,
 } from "./watermancerProfiles";
 import {
+  deduplicateWatermancerProfiles,
+  remapSavedWatermancerTargetSource,
+} from "./profileSync";
+import {
   accountSyncDataMatchesRemote,
   accountSyncLocalDataMatchesRemote,
   accountSyncRemoteToLocal,
@@ -63,8 +67,24 @@ function readLocalData(): AccountSyncLocalData {
 
 function writeLocalData(data: AccountSyncLocalData, userId: string): void {
   if (getAccountSyncScope() !== userId) return;
+  const previousWatermancerProfiles = loadWatermancerProfiles();
+  const watermancerProfiles = deduplicateWatermancerProfiles(data.watermancerProfiles);
+  try {
+    const targetSourceKey = "coffee-water-watermancer-target-source";
+    const storedSource = localStorage.getItem(targetSourceKey);
+    const remappedSource = remapSavedWatermancerTargetSource(
+      storedSource,
+      previousWatermancerProfiles,
+      watermancerProfiles,
+    );
+    if (remappedSource !== storedSource && remappedSource !== null) {
+      localStorage.setItem(targetSourceKey, remappedSource);
+    }
+  } catch {
+    // Profile data still syncs if browser storage is unavailable.
+  }
   saveProfiles(data.alchemistProfiles, false);
-  saveWatermancerProfiles(data.watermancerProfiles, false);
+  saveWatermancerProfiles(watermancerProfiles, false);
   if (data.diyConcentrateInputs) {
     saveDiyConcentrateInputs(data.diyConcentrateInputs, false);
   }

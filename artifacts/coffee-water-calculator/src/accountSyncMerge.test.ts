@@ -8,6 +8,10 @@ import {
 } from "./accountSyncMerge";
 import type { AccountSyncLocalData } from "./accountSyncStorage";
 import type { WatermancerProfile } from "./watermancerProfiles";
+import {
+  deduplicateWatermancerProfiles,
+  remapSavedWatermancerTargetSource,
+} from "./profileSync";
 
 function alchemistProfile(id: string, name: string): WaterProfile {
   return {
@@ -147,5 +151,110 @@ describe("account sync merge", () => {
       ["account-only", "Account profile"],
     ]);
     expect(merged.diyConcentrateInputs).toEqual({ desiredPpmInput: "700" });
+  });
+  it("deduplicates same-name, same-target profiles on first-device sync and keeps the account copy", () => {
+    const accountCopy = {
+      ...targetProfile("account-copy", "Version 38"),
+      targets: { calcium: 100, magnesium: 20 },
+      details: "Account profile",
+    };
+    const guestCopy = { ...accountCopy, id: "guest-copy", details: "Guest profile" };
+    const merged = mergeFirstDeviceAccountData(
+      localData({
+        watermancerProfiles: [
+          accountCopy,
+          { ...accountCopy, id: "different-target", targets: { calcium: 101, magnesium: 20 } },
+          { ...accountCopy, id: "different-name", name: "version 38" },
+        ],
+      }),
+      localData({ watermancerProfiles: [guestCopy] }),
+    );
+
+    expect(merged.watermancerProfiles.map(profile => profile.id)).toEqual([
+      "account-copy",
+      "different-target",
+      "different-name",
+    ]);
+    expect(merged.watermancerProfiles.find(profile => profile.id === "account-copy")?.details)
+      .toBe("Account profile");
+  });
+
+  it("deduplicates same-name, same-target profiles on later sync and keeps the remote copy", () => {
+    const localCopy = {
+      ...targetProfile("local-copy", "Version 38"),
+      targets: { calcium: 100 },
+      details: "Local profile",
+    };
+    const remoteCopy = {
+      ...localCopy,
+      id: "remote-copy",
+      targets: { calcium: 100 },
+      details: "Account profile",
+    };
+    const merged = mergeAccountSyncWithRemote(
+      serverData(),
+      localData({
+        watermancerProfiles: [
+          localCopy,
+          { ...localCopy, id: "different-target", targets: { calcium: 101 } },
+          { ...localCopy, id: "different-name", name: "version 38" },
+        ],
+      }),
+      serverData({ watermancerProfiles: [remoteCopy] }),
+    );
+
+    expect(merged.watermancerProfiles.map(profile => profile.id)).toEqual([
+      "remote-copy",
+      "different-target",
+      "different-name",
+    ]);
+    expect(merged.watermancerProfiles[0]?.details).toBe("Account profile");
+  });
+
+  it("compares target maps independent of key order but distinguishes missing targets from zero", () => {
+    const profiles = deduplicateWatermancerProfiles([
+      {
+        ...targetProfile("first", "Version 38"),
+        targets: { calcium: 100, magnesium: 0 },
+      },
+      {
+        ...targetProfile("same-targets", "Version 38"),
+        targets: { magnesium: 0, calcium: 100 },
+      },
+      {
+        ...targetProfile("missing-magnesium", "Version 38"),
+        targets: { calcium: 100 },
+      },
+    ]);
+
+    expect(profiles.map(profile => profile.id)).toEqual(["first", "missing-magnesium"]);
+  });
+
+  it("keeps saved target selections attached to the surviving duplicate profile", () => {
+    const previous = {
+      ...targetProfile("local-copy", "Version 38"),
+      details: "Local profile",
+    };
+    const survivor = {
+      ...previous,
+      id: "remote-copy",
+      details: "Account profile",
+    };
+
+    expect(remapSavedWatermancerTargetSource(
+      "saved:local-copy",
+      [previous],
+      [survivor],
+    )).toBe("saved:remote-copy");
+    expect(remapSavedWatermancerTargetSource(
+      "recipe:local-copy",
+      [previous],
+      [survivor],
+    )).toBe("recipe:remote-copy");
+    expect(remapSavedWatermancerTargetSource(
+      "saved:unrelated",
+      [previous],
+      [survivor],
+    )).toBe("saved:unrelated");
   });
 });

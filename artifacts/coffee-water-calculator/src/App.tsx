@@ -55,7 +55,13 @@ import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles, WATERMANCER_PROFILES_STORAGE_KEY,
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
-import { mergeProfileCollections, sameProfileCollection } from './profileSync';
+import {
+  deduplicateWatermancerProfiles,
+  mergeProfileCollections,
+  mergeWatermancerProfileCollections,
+  remapSavedWatermancerTargetSource,
+  sameProfileCollection,
+} from './profileSync';
 import { useAccountSync } from './AccountSyncProvider';
 import {
   ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
@@ -2947,6 +2953,8 @@ function App() {
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>(
     () => loadWatermancerTargetSource(),
   );
+  const watermancerTargetSourceRef = useRef(watermancerTargetSource);
+  watermancerTargetSourceRef.current = watermancerTargetSource;
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
@@ -3028,23 +3036,36 @@ function App() {
        }
     if (key === null || key === getAccountSyncStorageKey(WATERMANCER_PROFILES_STORAGE_KEY)) {
          const incoming = loadWatermancerProfiles();
+          const normalizedIncoming = deduplicateWatermancerProfiles(incoming);
+          const previousProfiles = [...wmProfilesRef.current, ...persistedWmProfilesRef.current];
+          const applyIncomingProfiles = (nextProfiles: WatermancerProfile[]) => {
+            const remappedSource = remapSavedWatermancerTargetSource(
+              watermancerTargetSourceRef.current,
+              previousProfiles,
+              nextProfiles,
+            ) as WatermancerTargetSourceId;
+            if (remappedSource !== watermancerTargetSourceRef.current) {
+              watermancerTargetSourceRef.current = remappedSource;
+              setWatermancerTargetSource(remappedSource);
+            }
+            wmProfilesRef.current = nextProfiles;
+            setWmProfilesState(nextProfiles);
+          };
          if (wmProfilesDirtyRef.current) {
-           const merged = mergeProfileCollections(
+            const merged = mergeWatermancerProfileCollections(
              persistedWmProfilesRef.current,
              wmProfilesRef.current,
              incoming,
            );
            persistedWmProfilesRef.current = incoming;
            if (!sameProfileCollection(wmProfilesRef.current, merged)) {
-             wmProfilesRef.current = merged;
-             setWmProfilesState(merged);
+              applyIncomingProfiles(merged);
            }
          } else {
            persistedWmProfilesRef.current = incoming;
-           if (!sameProfileCollection(wmProfilesRef.current, incoming)) {
-             wmProfilesRef.current = incoming;
+            if (!sameProfileCollection(wmProfilesRef.current, normalizedIncoming)) {
              skipWmProfilesPersistenceRef.current = true;
-             setWmProfilesState(incoming);
+               applyIncomingProfiles(normalizedIncoming);
            }
          }
       }

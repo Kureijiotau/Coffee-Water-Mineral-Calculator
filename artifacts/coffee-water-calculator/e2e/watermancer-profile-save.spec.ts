@@ -144,3 +144,41 @@ for (const viewport of [
     }
   });
 }
+
+test('keeps the selected Watermancer target when sync replaces its duplicate ID', async ({ page }) => {
+  const previousProfile = makeProfile('local-water-target', 'Saved target');
+  const survivingProfile = { ...previousProfile, id: 'cloud-water-target' };
+  await page.addInitScript(({ profilesKey, targetKey, profile }) => {
+    localStorage.setItem(profilesKey, JSON.stringify([profile]));
+    localStorage.setItem(targetKey, `saved:${profile.id}`);
+  }, {
+    profilesKey: SAVED_PROFILES_KEY,
+    targetKey: 'coffee-water-watermancer-target-source',
+    profile: previousProfile,
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  await expect(targetPicker).toContainText('Profile · Saved target');
+
+  await page.evaluate(({ profilesKey, profile }) => {
+    localStorage.setItem(profilesKey, JSON.stringify([profile]));
+    window.dispatchEvent(new Event('cwm:account-sync-remote-change'));
+  }, { profilesKey: SAVED_PROFILES_KEY, profile: survivingProfile });
+
+  await expect(targetPicker).toContainText('Profile · Saved target');
+  await expect.poll(() => page.evaluate(targetKey => localStorage.getItem(targetKey), 'coffee-water-watermancer-target-source'))
+    .toBe('saved:cloud-water-target');
+
+  const pickerDialog = async () => {
+    await targetPicker.click();
+    return page.getByRole('dialog', { name: 'Mineral recipes' });
+  };
+  let dialog = await pickerDialog();
+  await expect(dialog.getByRole('option', { name: 'Profile · Saved target' })).toHaveAttribute('aria-selected', 'true');
+  await targetPicker.click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+  dialog = await pickerDialog();
+  await expect(dialog.getByRole('option', { name: 'Profile · Saved target' })).toHaveAttribute('aria-selected', 'true');
+});
