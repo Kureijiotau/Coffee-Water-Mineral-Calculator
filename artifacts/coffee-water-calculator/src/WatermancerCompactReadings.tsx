@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Pin, PinOff } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_MAP, type IonId } from './waterData';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
+import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
 import type { WatermancerMetricValues } from './watermancerMetricValues';
 
 type RatioSummary = {
@@ -29,6 +30,9 @@ export function WatermancerCompactReadings({
   onToggleFollow,
   ratios,
   monovalentRatio,
+  ionRelationshipView,
+  onIonRelationshipViewChange,
+  pairwiseIonRatios,
   onSwapRatio,
   expanded,
   onToggleExpanded,
@@ -45,6 +49,9 @@ export function WatermancerCompactReadings({
   onToggleFollow: () => void;
   ratios: RatioSummary[];
   monovalentRatio: { value: string; total: number; severity: 'normal' | 'warning' | 'high' };
+  ionRelationshipView: 'combined' | 'pairwise';
+  onIonRelationshipViewChange: (view: 'combined' | 'pairwise') => void;
+  pairwiseIonRatios: { potassium: number; magnesium: number; sodium: number; calcium: number };
   onSwapRatio: (key: RatioSummary['id']) => void;
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -212,13 +219,13 @@ export function WatermancerCompactReadings({
               <span className="font-semibold text-slate-100">{ratio.value}</span>
             </button>
           ))}
-          <div className="flex h-8 shrink-0 items-center gap-1 rounded-md px-1.5 text-[10px]">
-            <span className="font-semibold uppercase tracking-wide text-slate-500">Na+K/Mg+Ca</span>
-            <span className={`font-semibold tabular-nums ${monovalentRatio.severity === 'high' ? 'text-rose-300' : monovalentRatio.severity === 'warning' ? 'text-amber-200' : 'text-slate-200'}`}>
-              {monovalentRatio.value}
-            </span>
-            <span className="text-slate-500">({formatPpm(monovalentRatio.total)} ppm)</span>
-          </div>
+          <WatermancerIonRelationshipDisplay
+            compact
+            view={ionRelationshipView}
+            onViewChange={onIonRelationshipViewChange}
+            {...pairwiseIonRatios}
+            combined={monovalentRatio}
+          />
         </div>
       </div>
     </section>

@@ -333,3 +333,48 @@ test('shows target and final GH, KH, and modeled TDS in both readings layouts', 
     return summaryTop >= ratiosBottom;
   }).toBe(true);
 });
+
+test('toggles pairwise ion percentages and keeps the choice across readings layouts', async ({ page }) => {
+  const readings = await openWatermancer(page);
+  const readingsView = page.getByRole('group', { name: 'Ion readings display' });
+
+  await readingsView.getByRole('button', { name: 'Classic', exact: true }).click();
+  const relationship = page.getByTestId('watermancer-ion-relationship');
+  const readTargetPpm = async (ion: string) => {
+    const value = await readings.locator(`[data-watermancer-ion-row="${ion}"] > span`).last().innerText();
+    const match = value.match(/\/\s*([\d.]+)/);
+    if (!match) throw new Error(`Could not read ${ion} target ppm from "${value}"`);
+    return Number(match[1]);
+  };
+
+  const [potassium, magnesium, sodium, calcium] = await Promise.all([
+    readTargetPpm('potassium'),
+    readTargetPpm('magnesium'),
+    readTargetPpm('sodium'),
+    readTargetPpm('calcium'),
+  ]);
+  const expectedPercent = (numerator: number, denominator: number) => (
+    denominator > 0 ? `${((numerator / denominator) * 100).toFixed(1)}%` : '—'
+  );
+
+  await expect(relationship).toHaveAttribute('data-view', 'combined');
+  const pairwiseButton = relationship.getByRole('button', { name: 'Pairwise' });
+  await pairwiseButton.click();
+  await expect(relationship).toHaveAttribute('data-view', 'pairwise');
+  await expect(relationship.getByTestId('watermancer-ratio-k-mg'))
+    .toContainText(expectedPercent(potassium, magnesium));
+  await expect(relationship.getByTestId('watermancer-ratio-na-ca'))
+    .toContainText(expectedPercent(sodium, calcium));
+
+  await readingsView.getByRole('button', { name: 'Compact', exact: true }).click();
+  await expect(relationship).toHaveAttribute('data-view', 'pairwise');
+  await relationship.getByRole('button', { name: 'Combined' }).click();
+  await expect(relationship).toHaveAttribute('data-view', 'combined');
+  await expect(relationship).toContainText('ppm');
+
+  await readingsView.getByRole('button', { name: 'Classic', exact: true }).click();
+  await expect(relationship).toHaveAttribute('data-view', 'combined');
+  await relationship.getByRole('button', { name: 'Pairwise' }).click();
+  await expect(relationship.getByTestId('watermancer-ratio-k-mg')).toContainText('K ÷ Mg');
+  await expect(relationship.getByTestId('watermancer-ratio-na-ca')).toContainText('Na ÷ Ca');
+});

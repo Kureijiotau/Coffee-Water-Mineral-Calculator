@@ -72,6 +72,7 @@ import {
   type DiyConcentrateStoredInputs,
 } from './accountSyncStorage';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
+import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import { computeWatermancerMetricValues, type WatermancerMetricValues } from './watermancerMetricValues';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
@@ -13528,6 +13529,7 @@ function WatermancerIonCoverageBars({
   const [metricSource, setMetricSource] = useState<WatermancerMetricSource>(
     hasModeledIons ? 'final-mixture' : 'targets',
   );
+  const [ionRelationshipView, setIonRelationshipView] = useState<'combined' | 'pairwise'>('combined');
   const previousHasModeledIonsRef = useRef(hasModeledIons);
   useEffect(() => {
     if (previousHasModeledIonsRef.current === hasModeledIons) return;
@@ -13553,11 +13555,6 @@ function WatermancerIonCoverageBars({
   const monovalentPercent = monovalentPercentValue == null
     ? '—'
     : `${monovalentPercentValue.toFixed(1)}%`;
-  const monovalentPercentClass = monovalentPercentValue != null && monovalentPercentValue > 50
-    ? 'text-rose-300'
-    : monovalentPercentValue != null && monovalentPercentValue > 30
-      ? 'text-amber-300'
-      : 'text-slate-300';
   const ratioSummaries = [
     { first: 'magnesium' as const, second: 'calcium' as const, label: 'Mg:Ca' },
     { first: 'chloride' as const, second: 'sulfate' as const, label: 'Cl:SO₄' },
@@ -13643,6 +13640,14 @@ function WatermancerIonCoverageBars({
               : monovalentPercentValue != null && monovalentPercentValue > 30
                 ? 'warning'
                 : 'normal',
+          }}
+          ionRelationshipView={ionRelationshipView}
+          onIonRelationshipViewChange={setIonRelationshipView}
+          pairwiseIonRatios={{
+            potassium: ratioIons.potassium ?? 0,
+            magnesium: ratioIons.magnesium ?? 0,
+            sodium: ratioIons.sodium ?? 0,
+            calcium: ratioIons.calcium ?? 0,
           }}
           onSwapRatio={onSwapRatio}
           expanded={compactBreakdownExpanded}
@@ -13851,17 +13856,23 @@ function WatermancerIonCoverageBars({
               <span className="ml-1 text-slate-300">{ratioSummaries[1]?.ratio}</span>
               <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(ratioSummaries[1]?.total ?? 0)} ppm)</span>
            </button>
-            <span className="whitespace-nowrap rounded px-1">
-              <span style={{ color: ION_MAP.sodium.color.foreground }}>Na</span>
-              <span className="text-slate-500"> + </span>
-              <span style={{ color: ION_MAP.potassium.color.foreground }}>K</span>
-              <span className="mx-1 text-slate-500">relative to</span>
-              <span style={{ color: ION_MAP.magnesium.color.foreground }}>Mg</span>
-              <span className="text-slate-500"> + </span>
-              <span style={{ color: ION_MAP.calcium.color.foreground }}>Ca</span>
-              <span className={`ml-1 ${monovalentPercentClass}`}>{monovalentPercent}</span>
-              <span className="ml-1 text-[10px] font-normal text-slate-500">({formatLiveIonPpm(monovalentTotal)} ppm)</span>
-            </span>
+             <WatermancerIonRelationshipDisplay
+               view={ionRelationshipView}
+               onViewChange={setIonRelationshipView}
+               potassium={ratioIons.potassium ?? 0}
+               magnesium={ratioIons.magnesium ?? 0}
+               sodium={ratioIons.sodium ?? 0}
+               calcium={ratioIons.calcium ?? 0}
+               combined={{
+                 value: monovalentPercent,
+                 total: monovalentTotal,
+                 severity: monovalentPercentValue != null && monovalentPercentValue > 50
+                   ? 'high'
+                   : monovalentPercentValue != null && monovalentPercentValue > 30
+                     ? 'warning'
+                     : 'normal',
+               }}
+             />
        </div>
         {readingsView === 'classic' && (
           <WatermancerMetricSummary
