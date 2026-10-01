@@ -5,6 +5,7 @@ import {
   emptyAccountSyncData,
   mergeAccountSyncWithRemote,
   mergeFirstDeviceAccountData,
+  rebaseAccountSyncLocalChanges,
 } from "./accountSyncMerge";
 import type { AccountSyncLocalData } from "./accountSyncStorage";
 import type { WatermancerProfile } from "./watermancerProfiles";
@@ -244,6 +245,36 @@ describe("account sync merge", () => {
       "different-target",
     ]);
     expect(retried.watermancerProfiles[0]?.details).toBe("Account profile");
+  });
+
+  it("rebases deletions and edits made after the request snapshot over its response", () => {
+    const removedProfile = targetProfile("removed-during-save", "Saved target");
+    const keptProfile = targetProfile("kept", "Kept target");
+    const remoteAddition = targetProfile("remote-addition", "Remote target");
+    const lateLocalAddition = targetProfile("late-addition", "Late target");
+    const inFlightLocal = localData({
+      watermancerProfiles: [removedProfile, keptProfile],
+      diyConcentrateInputs: { stockWeightInput: "before request" },
+    });
+    const latestLocal = localData({
+      watermancerProfiles: [keptProfile, lateLocalAddition],
+      diyConcentrateInputs: { stockWeightInput: "edited during request" },
+    });
+    const response = serverData({
+      watermancerProfiles: [removedProfile, keptProfile, remoteAddition],
+      diyConcentrateInputs: { stockWeightInput: "older submitted value" },
+    });
+
+    const rebased = rebaseAccountSyncLocalChanges(inFlightLocal, latestLocal, response);
+
+    expect(rebased.watermancerProfiles.map(profile => profile.id)).toEqual([
+      "kept",
+      "remote-addition",
+      "late-addition",
+    ]);
+    expect(rebased.diyConcentrateInputs).toEqual({
+      stockWeightInput: "edited during request",
+    });
   });
 
   it("compares target maps independent of key order but distinguishes missing targets from zero", () => {

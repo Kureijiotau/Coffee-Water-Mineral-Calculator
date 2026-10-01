@@ -54,6 +54,31 @@ export function mergeAccountSyncWithRemote(
   };
 }
 
+export function rebaseAccountSyncLocalChanges(
+  inFlightLocal: AccountSyncLocalData,
+  latestLocal: AccountSyncLocalData,
+  remote: AccountSyncData,
+): AccountSyncData {
+  const remoteLocal = accountSyncRemoteToLocal(remote);
+  return {
+    ...remote,
+    alchemistProfiles: mergeProfileCollections(
+      inFlightLocal.alchemistProfiles,
+      latestLocal.alchemistProfiles,
+      remoteLocal.alchemistProfiles,
+    ) as unknown as AccountSyncData["alchemistProfiles"],
+    watermancerProfiles: mergeWatermancerProfileCollections(
+      inFlightLocal.watermancerProfiles,
+      latestLocal.watermancerProfiles,
+      remoteLocal.watermancerProfiles,
+    ) as unknown as AccountSyncData["watermancerProfiles"],
+    diyConcentrateInputs: JSON.stringify(latestLocal.diyConcentrateInputs)
+      !== JSON.stringify(inFlightLocal.diyConcentrateInputs)
+      ? latestLocal.diyConcentrateInputs
+      : remote.diyConcentrateInputs,
+  };
+}
+
 export function accountSyncDataMatchesRemote(
   local: AccountSyncData,
   remote: AccountSyncData,
