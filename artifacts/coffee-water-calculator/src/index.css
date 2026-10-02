@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+.water-tasting-affective-range {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+
+.water-tasting-affective-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    90deg,
+    var(--water-tasting-muted) 0%,
+    var(--water-tasting-active) var(--water-tasting-progress),
+    rgb(51 65 85 / 0.9) var(--water-tasting-progress),
+    rgb(51 65 85 / 0.9) 100%
+  );
+}
+
+.water-tasting-affective-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: rgb(51 65 85 / 0.9);
+}
+
+.water-tasting-affective-range::-moz-range-progress {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--water-tasting-muted), var(--water-tasting-active));
+}
+
+.water-tasting-affective-range::-webkit-slider-thumb {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin-top: -0.3125rem;
+  border: 2px solid rgb(226 232 240 / 0.95);
+  border-radius: 50%;
+  background: var(--water-tasting-active);
+  box-shadow: 0 0 0 3px rgb(15 23 42 / 0.9);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.water-tasting-affective-range::-moz-range-thumb {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid rgb(226 232 240 / 0.95);
+  border-radius: 50%;
+  background: var(--water-tasting-active);
+  box-shadow: 0 0 0 3px rgb(15 23 42 / 0.9);
+}
+
 /* Dramatic instrument-console treatment: the existing cyan, emerald, indigo,
    and violet accents stay in charge; these layers give them a composed surface
    to glow against without changing the calculator's information architecture. */
