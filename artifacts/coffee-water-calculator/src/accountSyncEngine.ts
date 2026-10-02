@@ -146,6 +146,8 @@ function accountSyncInput(data: AccountSyncData): AccountSyncInput {
     alchemistProfiles: data.alchemistProfiles,
     watermancerProfiles: data.watermancerProfiles,
     diyConcentrateInputs: data.diyConcentrateInputs,
+    waterTastings: data.waterTastings,
+    waterTastingDeletions: data.waterTastingDeletions,
   };
 }
 
@@ -162,6 +164,8 @@ function conflictData(error: unknown): AccountSyncData | null {
     !Number.isInteger(data.revision)
     || !Array.isArray(data.alchemistProfiles)
     || !Array.isArray(data.watermancerProfiles)
+    || !Array.isArray(data.waterTastings)
+    || !Array.isArray(data.waterTastingDeletions)
   ) {
     return null;
   }
