@@ -23,6 +23,7 @@ import {
   deduplicateWatermancerProfiles,
   remapSavedWatermancerTargetSource,
 } from "./profileSync";
+import { loadWaterTastingCollection, replaceWaterTastingCollection } from "./waterTasting";
 import {
   accountSyncDataMatchesRemote,
   accountSyncLocalDataMatchesRemote,
@@ -30,6 +31,7 @@ import {
   emptyAccountSyncData,
   mergeAccountSyncWithRemote,
   mergeFirstDeviceAccountData,
+  mergeWaterTastingCollections,
 } from "./accountSyncMerge";
 import {
   ACCOUNT_SYNC_BASELINE_KEY,
@@ -58,10 +60,12 @@ const AccountSyncContext = createContext<AccountSyncContextValue>({
 });
 
 function readLocalData(): AccountSyncLocalData {
+  const waterTastings = loadWaterTastingCollection();
   return {
     alchemistProfiles: loadUserCreatedProfiles(),
     watermancerProfiles: loadWatermancerProfiles(),
     diyConcentrateInputs: loadDiyConcentrateInputsRecord(),
+    waterTastingCollection: waterTastings.ok ? waterTastings.collection : null,
   };
 }
 
@@ -88,6 +92,16 @@ function writeLocalData(data: AccountSyncLocalData, userId: string): void {
   if (data.diyConcentrateInputs) {
     saveDiyConcentrateInputs(data.diyConcentrateInputs, false);
   }
+  if (data.waterTastingCollection) {
+    const current = loadWaterTastingCollection();
+    if (current.ok) {
+      replaceWaterTastingCollection(
+        mergeWaterTastingCollections(data.waterTastingCollection, current.collection),
+        undefined,
+        false,
+      );
+    }
+  }
 }
 
 function readBaseline(): AccountSyncData | null {
@@ -99,6 +113,8 @@ function readBaseline(): AccountSyncData | null {
       !Number.isInteger(value.revision)
       || !Array.isArray(value.alchemistProfiles)
       || !Array.isArray(value.watermancerProfiles)
+      || (value.waterTastings !== undefined && !Array.isArray(value.waterTastings))
+      || (value.waterTastingDeletions !== undefined && !Array.isArray(value.waterTastingDeletions))
     ) {
       return null;
     }
@@ -129,6 +145,8 @@ function conflictData(error: unknown): AccountSyncData | null {
     !Number.isInteger(data.revision)
     || !Array.isArray(data.alchemistProfiles)
     || !Array.isArray(data.watermancerProfiles)
+    || !Array.isArray(data.waterTastings)
+    || !Array.isArray(data.waterTastingDeletions)
   ) {
     return null;
   }
@@ -141,6 +159,8 @@ function accountSyncInput(data: AccountSyncData): AccountSyncInput {
     alchemistProfiles: data.alchemistProfiles,
     watermancerProfiles: data.watermancerProfiles,
     diyConcentrateInputs: data.diyConcentrateInputs,
+    waterTastings: data.waterTastings,
+    waterTastingDeletions: data.waterTastingDeletions,
   };
 }
 
