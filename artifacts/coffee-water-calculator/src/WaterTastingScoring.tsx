@@ -1,13 +1,15 @@
+import type { CSSProperties } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { Check, ChevronDown } from 'lucide-react';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import {
-  WATER_TASTING_AFFECTIVE_ANCHORS,
   WATER_TASTING_AFFECTIVE_ATTRIBUTES,
   WATER_TASTING_DESCRIPTORS,
   WATER_TASTING_RATINGS,
   WATER_TASTING_SPECTRUM,
   calculateWaterTastingTotal,
+  getWaterTastingAffectiveAnchors,
+  getWaterTastingAffectiveColor,
   getWaterTastingAffectiveCue,
   type WaterTastingEditorValues,
 } from './waterTasting';
@@ -33,9 +35,7 @@ function getScoreColor(mode: 'descriptive' | 'affective', value: number): string
     const lightness = 72 - (value / 15) * 18;
     return `hsl(190 ${saturation}% ${lightness}%)`;
   }
-  const position = (value - 1) / 8;
-  const hue = position <= 0.5 ? 8 + position * 68 : 42 + (position - 0.5) * 210;
-  return `hsl(${hue} 76% 65%)`;
+  return getWaterTastingAffectiveColor('overall', value);
 }
 
 function AffectiveAssessment({
@@ -64,30 +64,44 @@ function AffectiveAssessment({
               const position = value ?? 5;
               const cue = value === undefined
                 ? 'Choose a value to record your impression.'
-                : getWaterTastingAffectiveCue(value) ?? '';
-              const color = value === undefined ? '#94a3b8' : getScoreColor('affective', value);
+                : getWaterTastingAffectiveCue(attribute.id, value) ?? '';
+              const color = value === undefined
+                ? '#94a3b8'
+                : getWaterTastingAffectiveColor(attribute.id, value);
+              const anchors = getWaterTastingAffectiveAnchors(attribute.id);
+              const sliderStyle = {
+                '--water-tasting-progress': `${((position - 1) / 8) * 100}%`,
+                '--water-tasting-muted': getWaterTastingAffectiveColor(attribute.id, 1),
+                '--water-tasting-active': color,
+              } as CSSProperties;
               const scaleId = `scale-affective-${attribute.id}`;
               const anchorsId = `anchors-affective-${attribute.id}`;
               return (
                 <FormItem className="rounded-xl border border-slate-600/40 bg-slate-900/55 p-3.5 sm:p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <FormLabel className="text-sm font-semibold text-slate-100">{attribute.label}</FormLabel>
+                    <FormLabel className="text-sm font-bold text-slate-100">{attribute.label}</FormLabel>
                     <span
                       data-testid={`value-affective-${attribute.id}`}
-                      className="font-mono text-sm font-semibold tabular-nums"
+                      className="font-mono text-sm font-bold tabular-nums"
                       style={{ color }}
                     >
                       {value === undefined ? 'Not scored' : `${value} / 9`}
                     </span>
                   </div>
-                  <p data-testid={`cue-affective-${attribute.id}`} className="mt-1 text-xs leading-relaxed text-slate-400">
+                   <p data-testid={`cue-affective-${attribute.id}`} className="mt-1 text-sm font-bold leading-relaxed" style={{ color }}>
                     {cue}
                   </p>
                   <div className="mt-3">
-                    <div id={scaleId} className="flex justify-between gap-2 text-[10px] text-slate-500">
-                      <span>1 · Extremely low</span>
-                      <span className="text-center">5 · Neither high nor low</span>
-                      <span className="text-right">9 · Extremely high</span>
+                    <div id={scaleId} className="flex justify-between gap-2 text-xs font-bold">
+                      {anchors.map((anchor, index) => (
+                        <span
+                          key={anchor.value}
+                          className={index === 1 ? 'text-center' : index === 2 ? 'text-right' : ''}
+                          style={{ color: getWaterTastingAffectiveColor(attribute.id, anchor.value) }}
+                        >
+                          {anchor.value} · {anchor.label}
+                        </span>
+                      ))}
                     </div>
                     <FormControl>
                       <input
@@ -106,8 +120,8 @@ function AffectiveAssessment({
                           ? 'Not scored. Adjust to record your impression.'
                           : `${value} out of 9. ${cue}`}
                         data-testid={`input-affective-${attribute.id}`}
-                        className="mt-1 h-6 w-full cursor-pointer accent-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
-                        style={{ accentColor: color }}
+                        className="water-tasting-affective-range mt-1 h-6 w-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                        style={sliderStyle}
                       />
                     </FormControl>
                   </div>
@@ -121,7 +135,7 @@ function AffectiveAssessment({
                   )}
                   <FormMessage />
                   <span id={anchorsId} className="sr-only">
-                    {WATER_TASTING_AFFECTIVE_ANCHORS.map(anchor => `${anchor.value}: ${anchor.label}`).join('. ')}
+                    {anchors.map(anchor => `${anchor.value}: ${anchor.label}`).join('. ')}
                   </span>
                 </FormItem>
               );
