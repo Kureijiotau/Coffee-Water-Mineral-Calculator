@@ -1,5 +1,6 @@
 import type { WaterProfile } from "@/waterData";
 import type { WatermancerProfile } from "./watermancerProfiles";
+import type { WaterTastingCollection } from "./waterTasting";
 
 export const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = "coffee-water-diy-concentrate-inputs";
 export const ACCOUNT_SYNC_LOCAL_CHANGE_EVENT = "cwm:account-sync-local-change";
@@ -21,6 +22,7 @@ export type AccountSyncLocalData = {
   alchemistProfiles: WaterProfile[];
   watermancerProfiles: WatermancerProfile[];
   diyConcentrateInputs: DiyConcentrateStoredInputs | null;
+  waterTastingCollection: WaterTastingCollection | null;
 };
 
 let activeAccountId: string | null = null;
@@ -54,11 +56,15 @@ export function writeAccountSyncStorageValue(
 ): void {
   try {
     localStorage.setItem(getAccountSyncStorageKey(key), value);
-    if (notifyLocalChange && typeof window !== "undefined") {
-      window.dispatchEvent(new Event(ACCOUNT_SYNC_LOCAL_CHANGE_EVENT));
-    }
+    if (notifyLocalChange) notifyAccountSyncLocalChange();
   } catch {
     // The calculator remains usable when browser storage is unavailable.
+  }
+}
+
+export function notifyAccountSyncLocalChange(): void {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(ACCOUNT_SYNC_LOCAL_CHANGE_EVENT));
   }
 }
 
