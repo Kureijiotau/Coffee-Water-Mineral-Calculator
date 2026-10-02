@@ -5,10 +5,12 @@ import {
   emptyAccountSyncData,
   mergeAccountSyncWithRemote,
   mergeFirstDeviceAccountData,
+  mergeWaterTastingCollections,
   rebaseAccountSyncLocalChanges,
 } from "./accountSyncMerge";
 import type { AccountSyncLocalData } from "./accountSyncStorage";
 import type { WatermancerProfile } from "./watermancerProfiles";
+import type { WaterTastingRecord } from "./waterTasting";
 import {
   deduplicateWatermancerProfiles,
   remapSavedWatermancerTargetSource,
@@ -40,7 +42,24 @@ function localData(overrides: Partial<AccountSyncLocalData> = {}): AccountSyncLo
     alchemistProfiles: [],
     watermancerProfiles: [],
     diyConcentrateInputs: null,
+    waterTastingCollection: { records: [], deletions: [] },
     ...overrides,
+  };
+}
+
+function tastingRecord(id: string, updatedAt: string, notes?: string): WaterTastingRecord {
+  return {
+    id,
+    profileSourceId: "saved:water",
+    profileNameSnapshot: "Bright Water",
+    coffee: {},
+    descriptorIds: [],
+    ...(notes ? { notes } : {}),
+    scoringVersion: 2,
+    descriptive: {},
+    affective: {},
+    createdAt: "2026-09-28T09:00:00.000Z",
+    updatedAt,
   };
 }
 
@@ -322,5 +341,65 @@ describe("account sync merge", () => {
       [previous],
       [survivor],
     )).toBe("saved:unrelated");
+  });
+
+  it("merges independent tasting additions and keeps the latest edit by record ID", () => {
+    const older = tastingRecord("shared-tasting", "2026-09-28T10:00:00.000Z", "local old");
+    const newer = tastingRecord("shared-tasting", "2026-09-28T11:00:00.000Z", "remote new");
+    const localOnly = tastingRecord("local-tasting", "2026-09-28T10:30:00.000Z");
+    const remoteOnly = tastingRecord("remote-tasting", "2026-09-28T10:45:00.000Z");
+
+    const merged = mergeAccountSyncWithRemote(
+      emptyAccountSyncData(),
+      localData({
+        waterTastingCollection: { records: [older, localOnly], deletions: [] },
+      }),
+      serverData({ waterTastings: [newer, remoteOnly] }),
+    );
+
+    expect(merged.waterTastings.map(record => record.id).sort())
+      .toEqual(["local-tasting", "remote-tasting", "shared-tasting"]);
+    expect(merged.waterTastings.find(record => record.id === "shared-tasting")?.notes)
+      .toBe("remote new");
+  });
+
+  it("keeps tombstones over stale offline records and lets a later edit supersede them", () => {
+    const oldRecord = tastingRecord("deleted-tasting", "2026-09-28T10:00:00.000Z");
+    const deletion = { id: oldRecord.id, deletedAt: "2026-09-28T11:00:00.000Z" };
+    const deleted = mergeWaterTastingCollections(
+      { records: [oldRecord], deletions: [] },
+      { records: [], deletions: [deletion] },
+    );
+    expect(deleted).toEqual({ records: [], deletions: [deletion] });
+
+    const laterEdit = tastingRecord("deleted-tasting", "2026-09-28T12:00:00.000Z", "edited later");
+    const restored = mergeWaterTastingCollections(
+      { records: [], deletions: [deletion] },
+      { records: [laterEdit], deletions: [] },
+    );
+    expect(restored).toEqual({ records: [laterEdit], deletions: [] });
+  });
+
+  it("merges guest tastings on first-device sign-in and rebases a deletion made in flight", () => {
+    const accountRecord = tastingRecord("same-tasting", "2026-09-28T11:00:00.000Z", "account");
+    const guestRecord = tastingRecord("same-tasting", "2026-09-28T10:00:00.000Z", "guest");
+    const guestOnly = tastingRecord("guest-only", "2026-09-28T09:00:00.000Z");
+    const firstDevice = mergeFirstDeviceAccountData(
+      localData({ waterTastingCollection: { records: [accountRecord], deletions: [] } }),
+      localData({ waterTastingCollection: { records: [guestRecord, guestOnly], deletions: [] } }),
+    );
+    expect(firstDevice.waterTastingCollection?.records.map(record => record.id).sort())
+      .toEqual(["guest-only", "same-tasting"]);
+    expect(firstDevice.waterTastingCollection?.records.find(record => record.id === "same-tasting")?.notes)
+      .toBe("account");
+
+    const deletion = { id: accountRecord.id, deletedAt: "2026-09-28T12:00:00.000Z" };
+    const rebased = rebaseAccountSyncLocalChanges(
+      localData({ waterTastingCollection: { records: [accountRecord], deletions: [] } }),
+      localData({ waterTastingCollection: { records: [], deletions: [deletion] } }),
+      serverData({ waterTastings: [accountRecord] }),
+    );
+    expect(rebased.waterTastings).toEqual([]);
+    expect(rebased.waterTastingDeletions).toEqual([deletion]);
   });
 });
