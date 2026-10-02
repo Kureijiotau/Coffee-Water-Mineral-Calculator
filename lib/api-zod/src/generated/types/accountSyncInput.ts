@@ -8,6 +8,8 @@
 import type { AlchemistProfile } from './alchemistProfile';
 import type { DiyConcentrateInputs } from './diyConcentrateInputs';
 import type { WatermancerProfile } from './watermancerProfile';
+import type { WaterTastingDeletion } from './waterTastingDeletion';
+import type { WaterTastingRecord } from './waterTastingRecord';
 
 export interface AccountSyncInput {
   /** @minimum 0 */
@@ -17,4 +19,6 @@ export interface AccountSyncInput {
   /** @maxItems 300 */
   watermancerProfiles: WatermancerProfile[];
   diyConcentrateInputs: DiyConcentrateInputs | null;
+  waterTastings: WaterTastingRecord[];
+  waterTastingDeletions: WaterTastingDeletion[];
 }
