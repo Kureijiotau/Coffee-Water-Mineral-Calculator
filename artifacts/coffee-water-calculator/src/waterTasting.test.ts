@@ -3,18 +3,22 @@ import {
   buildWaterTastingProfileOptions,
   calculateWaterTastingTotal,
   createWaterTastingRecord,
+  createWaterTastingDeletionMarker,
   createNeutralWaterTastingSpectrum,
+  loadWaterTastingCollection,
   loadWaterTastings,
+  replaceWaterTastingCollection,
   saveWaterTastings,
   sortWaterTastingsNewestFirst,
   updateWaterTastingRecord,
   WATER_TASTING_DESCRIPTORS,
-  WATER_TASTING_AFFECTIVE_ANCHORS,
   WATER_TASTING_AFFECTIVE_ATTRIBUTES,
   WATER_TASTING_DESCRIPTIVE_ATTRIBUTES,
   WATER_TASTING_RATINGS,
   WATER_TASTING_SPECTRUM,
   WATER_TASTING_STORAGE_KEY,
+  getWaterTastingAffectiveAnchors,
+  getWaterTastingAffectiveColor,
   getWaterTastingAffectiveCue,
   getWaterTastingDescriptiveCue,
   type WaterTastingCvaDraft,
@@ -168,26 +172,32 @@ describe('Water Tasting CVA-informed scales', () => {
     expect(getWaterTastingDescriptiveCue('flavor', 15.5)).toBeUndefined();
   });
 
-  it('defines seven descriptive attributes and five affective attributes with all SCA anchors', () => {
+  it('defines seven descriptive attributes and five attribute-specific affective scales', () => {
     expect(WATER_TASTING_DESCRIPTIVE_ATTRIBUTES).toHaveLength(7);
     expect(WATER_TASTING_AFFECTIVE_ATTRIBUTES).toHaveLength(5);
-    expect(WATER_TASTING_AFFECTIVE_ANCHORS.map(({ value }) => value))
-      .toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    expect(WATER_TASTING_AFFECTIVE_ANCHORS.map(({ label }) => label)).toEqual([
-      'Extremely low',
-      'Very low',
-      'Moderately low',
-      'Slightly low',
-      'Neither high nor low',
-      'Slightly high',
-      'Moderately high',
-      'Very high',
-      'Extremely high',
+    const acidityAnchors = getWaterTastingAffectiveAnchors('acidity');
+    expect(acidityAnchors.map(({ value }) => value)).toEqual([1, 5, 9]);
+    expect(acidityAnchors.map(({ label }) => label)).toEqual([
+      'Nearly absent',
+      'Bright and clear',
+      'Forcefully sharp',
     ]);
-    expect(getWaterTastingAffectiveCue(1)).toBe('Extremely low');
-    expect(getWaterTastingAffectiveCue(5)).toBe('Neither high nor low');
-    expect(getWaterTastingAffectiveCue(9)).toBe('Extremely high');
-    expect(getWaterTastingAffectiveCue(10)).toBeUndefined();
+    expect(getWaterTastingAffectiveCue('fragranceAroma', 1)).toBe('Barely perceptible');
+    expect(getWaterTastingAffectiveCue('mouthfeel', 5)).toBe('Medium, rounded weight');
+    expect(getWaterTastingAffectiveAnchors('mouthfeel').map(({ label }) => label))
+      .toEqual(['Almost no tactile weight', 'Medium, rounded weight', 'Very dense, syrupy coating']);
+    expect(getWaterTastingAffectiveCue('overall', 9)).toBe('Strong across the cup');
+    expect(getWaterTastingAffectiveCue('acidity', 10)).toBeUndefined();
+    for (const attribute of WATER_TASTING_AFFECTIVE_ATTRIBUTES) {
+      for (let value = 1; value <= 9; value += 1) {
+        expect(getWaterTastingAffectiveCue(attribute.id, value)).toBeTruthy();
+      }
+      expect(getWaterTastingAffectiveColor(attribute.id, 1))
+        .not.toBe(getWaterTastingAffectiveColor(attribute.id, 9));
+    }
+    expect(new Set(WATER_TASTING_AFFECTIVE_ATTRIBUTES.map(({ id }) =>
+      getWaterTastingAffectiveColor(id, 5),
+    )).size).toBe(5);
   });
 });
 
@@ -501,5 +511,87 @@ describe('Water Tasting local persistence', () => {
     expect(loadWaterTastings(readFailure)).toEqual({ ok: false, error: 'unavailable' });
     expect(saveWaterTastings([makeRecord('tasting-1', '2026-09-28T09:00:00.000Z')], [], writeFailure))
       .toEqual({ ok: false, error: 'write-failed' });
+  });
+});
+
+describe('Water Tasting notes and synced collection storage', () => {
+  it('creates, preserves, edits, and clears optional notes in both scoring formats', () => {
+    const cva = createWaterTastingRecord(
+      makeCvaDraft({ notes: '  Bright, floral finish.  ' }),
+      new Date('2026-09-28T10:00:00.000Z'),
+      'cva-with-notes',
+    );
+    expect(cva.notes).toBe('Bright, floral finish.');
+
+    const cvaUnchanged = updateWaterTastingRecord(
+      cva,
+      makeCvaDraft(),
+      new Date('2026-09-28T11:00:00.000Z'),
+    );
+    expect(cvaUnchanged.notes).toBe(cva.notes);
+    const cvaCleared = updateWaterTastingRecord(
+      cvaUnchanged,
+      makeCvaDraft({ notes: '  ' }),
+      new Date('2026-09-28T12:00:00.000Z'),
+    );
+    expect(cvaCleared).not.toHaveProperty('notes');
+
+    const legacy = createWaterTastingRecord(
+      makeDraft({ notes: 'Old-format note', ratings: { clarity: 0 } }),
+      new Date('2026-09-28T10:00:00.000Z'),
+      'legacy-with-notes',
+    );
+    const legacyUpdated = updateWaterTastingRecord(
+      legacy,
+      makeDraft({ notes: 'Edited legacy note', ratings: legacy.ratings }),
+      new Date('2026-09-28T11:00:00.000Z'),
+    );
+    expect(legacyUpdated.notes).toBe('Edited legacy note');
+    expect(legacyUpdated.ratings.clarity).toBe(0);
+    expect(legacyUpdated.scoringVersion).toBeUndefined();
+  });
+
+  it('accepts legacy arrays and persists an atomic collection with tombstones', () => {
+    const storage = makeStorage();
+    const record = makeRecord('old-local-record', '2026-09-28T09:00:00.000Z');
+    storage.values[WATER_TASTING_STORAGE_KEY] = JSON.stringify([record]);
+
+    const legacyLoad = loadWaterTastingCollection(storage);
+    expect(legacyLoad).toEqual({
+      ok: true,
+      collection: { records: [record], deletions: [] },
+    });
+    if (!legacyLoad.ok) throw new Error('Expected legacy record collection to load.');
+
+    const deletion = createWaterTastingDeletionMarker(
+      record,
+      new Date('2026-09-28T08:00:00.000Z'),
+    );
+    expect(Date.parse(deletion.deletedAt)).toBeGreaterThan(Date.parse(record.updatedAt));
+    expect(replaceWaterTastingCollection({
+      records: [],
+      deletions: [deletion],
+    }, storage)).toEqual({ ok: true });
+
+    expect(JSON.parse(storage.values[WATER_TASTING_STORAGE_KEY] ?? 'null')).toMatchObject({
+      version: 2,
+      records: [],
+      deletions: [deletion],
+    });
+    expect(loadWaterTastingCollection(storage)).toEqual({
+      ok: true,
+      collection: { records: [], deletions: [deletion] },
+    });
+  });
+
+  it('rejects notes longer than the supported limit', () => {
+    const storage = makeStorage();
+    const record = createWaterTastingRecord(
+      makeCvaDraft({ notes: 'x'.repeat(2001) }),
+      new Date('2026-09-28T10:00:00.000Z'),
+      'too-long-notes',
+    );
+    expect(saveWaterTastings([record], [], storage))
+      .toEqual({ ok: false, error: 'invalid-records' });
   });
 });
