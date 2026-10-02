@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, BookOpen, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -12,13 +12,15 @@ import {
   WATER_TASTING_AFFECTIVE_ATTRIBUTES, WATER_TASTING_DESCRIPTIVE_ATTRIBUTES,
   WATER_TASTING_SPECTRUM, WATER_TASTING_DESCRIPTORS,
   createNeutralWaterTastingSpectrum,
-  calculateWaterTastingTotal, createWaterTastingRecord, isCvaWaterTastingRecord, updateWaterTastingRecord,
-  loadWaterTastings, saveWaterTastings, sortWaterTastingsNewestFirst,
+  calculateWaterTastingTotal, createWaterTastingRecord, createWaterTastingDeletionMarker,
+  isCvaWaterTastingRecord, updateWaterTastingRecord,
+  loadWaterTastingCollection, saveWaterTastingCollection, sortWaterTastingsNewestFirst,
   type WaterTastingCvaDraft, type WaterTastingLegacyDraft,
-  type WaterTastingEditorValues, type WaterTastingProfileOption,
+  type WaterTastingCollection, type WaterTastingEditorValues, type WaterTastingProfileOption,
   type WaterTastingRecord, type WaterTastingStorageError,
 } from './waterTasting';
 import { WaterTastingScoring } from './WaterTastingScoring';
+import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT } from './accountSyncStorage';
 
 interface WaterTastingTabProps {
   profileOptions: WaterTastingProfileOption[];
@@ -45,6 +47,7 @@ function emptyDraft(profileSourceId = ''): WaterTastingEditorValues {
     descriptive: {},
     affective: {},
     descriptorIds: [],
+    notes: '',
     legacySpectrumCaptured: false,
   };
 }
@@ -75,12 +78,12 @@ function formatSpectrumValue(value: number): string {
 }
 
 export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTastingTabProps) {
-  const [initialLoad] = useState(loadWaterTastings);
-  const expectedRecordsRef = useRef<WaterTastingRecord[] | null>(
-    initialLoad.ok ? initialLoad.records : null,
+  const [initialLoad] = useState(loadWaterTastingCollection);
+  const expectedCollectionRef = useRef<WaterTastingCollection | null>(
+    initialLoad.ok ? initialLoad.collection : null,
   );
   const [records, setRecords] = useState<WaterTastingRecord[]>(() =>
-    initialLoad.ok ? sortWaterTastingsNewestFirst(initialLoad.records) : [],
+    initialLoad.ok ? sortWaterTastingsNewestFirst(initialLoad.collection.records) : [],
   );
   const [editingId, setEditingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
@@ -88,6 +91,22 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
   const form = useForm<WaterTastingEditorValues>({ defaultValues: emptyDraft() });
   const mode = form.watch('mode');
   const editingRecord = records.find(record => record.id === editingId);
+  useEffect(() => {
+    const refreshRecords = () => {
+      const latest = loadWaterTastingCollection();
+      if (!latest.ok) return;
+      setRecords(sortWaterTastingsNewestFirst(latest.collection.records));
+      if (editingId === null && !form.formState.isDirty) {
+        expectedCollectionRef.current = latest.collection;
+      }
+    };
+    window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshRecords);
+    window.addEventListener('storage', refreshRecords);
+    return () => {
+      window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshRecords);
+      window.removeEventListener('storage', refreshRecords);
+    };
+  }, [editingId, form]);
   const profileChoices = editingRecord && !profileOptions.some(option => option.sourceId === editingRecord.profileSourceId)
     ? [...profileOptions, {
       sourceId: editingRecord.profileSourceId,
@@ -111,6 +130,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
         mode: 'cva',
         profileNameSnapshot: record.profileNameSnapshot,
         coffee: { ...record.coffee },
+        notes: record.notes ?? '',
         descriptive: { ...record.descriptive },
         affective: { ...record.affective },
         descriptorIds: [...record.descriptorIds],
@@ -121,6 +141,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
         mode: 'legacy',
         profileNameSnapshot: record.profileNameSnapshot,
         coffee: { ...record.coffee },
+        notes: record.notes ?? '',
         ratings: { ...record.ratings },
         spectrum: record.spectrum
           ? { ...record.spectrum }
@@ -160,6 +181,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       profileSourceId: option.sourceId,
       profileNameSnapshot: snapshot,
       coffee,
+      notes: values.notes,
       descriptorIds: preserveCvaDescriptors
         ? [...editingRecord.descriptorIds]
         : values.descriptorIds ?? [],
@@ -210,21 +232,22 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
     const nextRecords = sortWaterTastingsNewestFirst(
       editingRecord ? records.map(record => record.id === editingId ? nextRecord : record) : [...records, nextRecord],
     );
-    const expectedRecords = expectedRecordsRef.current;
-    if (!expectedRecords) {
+    const expectedCollection = expectedCollectionRef.current;
+    if (!expectedCollection) {
       setFeedback({ kind: 'error', text: storageMessage('unavailable') });
       return;
     }
-    const result = saveWaterTastings(nextRecords, expectedRecords);
+    const nextCollection = { ...expectedCollection, records: nextRecords };
+    const result = saveWaterTastingCollection(nextCollection, expectedCollection);
     if (!result.ok) {
       setFeedback({ kind: 'error', text: storageMessage(result.error) });
       return;
     }
-    expectedRecordsRef.current = nextRecords;
+    expectedCollectionRef.current = nextCollection;
     setRecords(nextRecords);
     setEditingId(null);
     form.reset(emptyDraft());
-    setFeedback({ kind: 'success', text: editingRecord ? 'Tasting updated in this browser.' : 'Tasting saved in this browser.' });
+    setFeedback({ kind: 'success', text: editingRecord ? 'Tasting updated.' : 'Tasting saved.' });
   }
 
   function deleteRecord(record: WaterTastingRecord) {
@@ -233,23 +256,32 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       return;
     }
     const nextRecords = records.filter(item => item.id !== record.id);
-    const expectedRecords = expectedRecordsRef.current;
-    if (!expectedRecords) {
+    const expectedCollection = expectedCollectionRef.current;
+    if (!expectedCollection) {
       setFeedback({ kind: 'error', text: storageMessage('unavailable') });
       return;
     }
-    const result = saveWaterTastings(nextRecords, expectedRecords);
+    const priorDeletion = expectedCollection.deletions.find(item => item.id === record.id);
+    const deletion = createWaterTastingDeletionMarker(record, new Date(), priorDeletion);
+    const nextCollection: WaterTastingCollection = {
+      records: nextRecords,
+      deletions: [
+        ...expectedCollection.deletions.filter(item => item.id !== record.id),
+        deletion,
+      ],
+    };
+    const result = saveWaterTastingCollection(nextCollection, expectedCollection);
     if (!result.ok) {
       setFeedback({ kind: 'error', text: storageMessage(result.error) });
       return;
     }
-    expectedRecordsRef.current = nextRecords;
+    expectedCollectionRef.current = nextCollection;
     setRecords(nextRecords);
     if (editingId === record.id) {
       setEditingId(null);
     form.reset(emptyDraft());
     }
-    setFeedback({ kind: 'success', text: 'Tasting deleted from this browser.' });
+    setFeedback({ kind: 'success', text: 'Tasting deleted.' });
   }
 
   return (
@@ -339,6 +371,38 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
             </section>
 
             <WaterTastingScoring mode={mode} form={form} onChange={() => setFeedback(null)} />
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem className="sm:ml-10">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <FormLabel className="text-sm font-semibold text-slate-100">
+                      Additional notes <span className="font-normal text-slate-400">optional</span>
+                    </FormLabel>
+                    <span className="text-xs tabular-nums text-slate-500">
+                      {(field.value ?? '').length} / 2,000
+                    </span>
+                  </div>
+                  <FormControl>
+                    <textarea
+                      {...field}
+                      value={field.value ?? ''}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="Anything else you noticed in the cup?"
+                      data-testid="input-water-tasting-notes"
+                      className="min-h-24 w-full resize-y rounded-lg border border-slate-600/60 bg-slate-950/45 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 focus-visible:border-cyan-300/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+                      onChange={event => {
+                        field.onChange(event);
+                        setFeedback(null);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex flex-wrap items-center gap-3 sm:pl-10">
               <button type="submit" data-testid="button-save-tasting" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg border border-cyan-200/65 bg-cyan-300 px-6 text-sm font-bold text-slate-950 transition-colors hover:bg-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900">
@@ -426,6 +490,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                 {record.descriptorIds.length > 0 && <div data-testid={`descriptors-tasting-${record.id}`} className="mt-4 flex flex-wrap gap-1.5">
                   {record.descriptorIds.map(id => <span key={id} className="rounded-full border border-slate-600/60 bg-slate-800/65 px-2.5 py-1 text-xs text-slate-300">{descriptorNames.get(id) ?? id}</span>)}
                 </div>}
+                {record.notes && <p data-testid={`notes-tasting-${record.id}`} className="mt-4 whitespace-pre-wrap rounded-lg border border-slate-600/40 bg-slate-800/45 px-3 py-2.5 text-sm leading-relaxed text-slate-300">{record.notes}</p>}
                 <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-600/30 pt-4">
                   <button type="button" onClick={() => openRecord(record)} data-testid={`button-edit-tasting-${record.id}`} className={ghostButton}><Pencil className="h-3.5 w-3.5" aria-hidden="true" />Open &amp; edit</button>
                   <AlertDialog>
@@ -435,7 +500,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                     <AlertDialogContent className="w-[calc(100%-2rem)] rounded-xl border-slate-600 bg-slate-900 text-slate-100">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete this tasting?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-300">The note for {record.profileNameSnapshot} will be removed from this browser. This cannot be undone.</AlertDialogDescription>
+                        <AlertDialogDescription className="text-slate-300">The tasting for {record.profileNameSnapshot} will be removed from your saved records. When signed in, the deletion syncs across your devices. This cannot be undone.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel data-testid={`button-cancel-delete-tasting-${record.id}`} className="min-h-11 border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700">Keep note</AlertDialogCancel>
