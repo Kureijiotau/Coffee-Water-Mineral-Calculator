@@ -99,3 +99,4 @@
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
 - [Mixer picker cleanup](mixer-picker-cleanup.md) — hide finished-water entries locally in Mixer without deleting reusable source profiles or sessions
 - [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength
+- [Silica target scope](silica-target-scope.md) — silica-only target controls; do not generalize Use/Not used to other ions or salts
