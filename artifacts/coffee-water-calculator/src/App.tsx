@@ -7999,7 +7999,7 @@ function App() {
                 <div className="watermancer-salt-table mt-2 overflow-hidden rounded-xl border border-slate-700/60">
                    <div className="watermancer-salt-table__header hidden bg-slate-950/50 text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
                      <span className="text-left">Salt</span>
-                     <span>Hydration form</span>
+                      <span>Form / strength</span>
                       <div className="flex items-center justify-center gap-1.5">
                         <span>Dose</span>
                         <button
@@ -8194,57 +8194,63 @@ function App() {
                         </div>
                       );
                     })}
-                  </div>
                   <div
-                    className="flex flex-col gap-3 bg-slate-900/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    className={`watermancer-salt-table__row watermancer-salt-table__row--silica bg-slate-900/25 ${
+                      watermancerSilicaDrops > 0 ? 'watermancer-salt-table__row--silica-active' : ''
+                    }`}
                     role="group"
                     aria-label="Silica supplement dose"
                     data-testid="watermancer-silica-row"
                   >
-                    <div className="flex min-w-0 items-start gap-2 text-left">
+                    <div className="watermancer-salt-table__salt flex items-center gap-2 text-left sm:justify-start">
                       <span
-                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                        className={`h-2 w-2 shrink-0 rounded-full transition ${
                           watermancerSilicaDrops > 0
-                            ? 'bg-violet-300 shadow-[0_0_10px_rgba(196,181,253,0.65)]'
+                            ? 'bg-violet-300 shadow-[0_0_10px_rgba(196,181,253,0.55)]'
                             : 'bg-slate-700'
                         }`}
                         aria-hidden="true"
                       />
                       <div className="min-w-0">
-                        <div className="text-xs font-semibold text-slate-100">Eidon Silica supplement (SiO₂)</div>
-                        <div className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-                          Eidon label basis · 12.5 mg SiO₂ per drop · does not affect ion matching
+                        <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-100">
+                          Eidon Ionic Minerals Silica
                         </div>
+                        <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px]">SiO₂ · supplement</div>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between gap-3 sm:justify-end">
-                      <div
-                        className="min-w-0 text-right text-[10px] leading-relaxed text-violet-200"
-                        aria-live="polite"
-                        data-testid="watermancer-silica-dose"
-                      >
-                        <div className="font-semibold tabular-nums">
-                          {watermancerSilicaDrops} {watermancerSilicaDrops === 1 ? 'drop' : 'drops'} · {watermancerSilicaDoseMg(watermancerSilicaDrops).toFixed(1)} mg
-                        </div>
-                        <div className="text-violet-200/70 tabular-nums">
-                          {watermancerSilicaConcentrationPpm.toFixed(2)} mg/L
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
+                    <div className="watermancer-salt-table__hydration watermancer-salt-table__silica-strength">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">
+                        Form / strength
+                      </span>
+                      <span className="text-[11px] font-medium text-slate-300">Liquid · 12.5 mg SiO₂/drop</span>
+                    </div>
+                    <div className="watermancer-salt-table__dose">
+                      <span className="watermancer-salt-table__dose-label text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">
+                        Dose
+                      </span>
+                      <div className="watermancer-salt-table__dose-controls">
                         <button
                           type="button"
                           onClick={() => setWatermancerSilicaDrops(current => Math.max(0, current - 1))}
                           disabled={watermancerSilicaDrops <= 0}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-violet-300/50 hover:bg-violet-500/10 active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-violet-300/50 hover:bg-violet-500/10 active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label="Decrease silica dose by one drop"
                           data-testid="watermancer-silica-decrease"
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
+                        <div className="watermancer-salt-table__dose-value" aria-live="polite" data-testid="watermancer-silica-dose">
+                          <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-violet-100">
+                            {watermancerSilicaDrops} {watermancerSilicaDrops === 1 ? 'drop' : 'drops'} · {watermancerSilicaDoseMg(watermancerSilicaDrops).toFixed(1)} mg
+                          </span>
+                          <span className="text-[9px] font-semibold tabular-nums text-violet-200/70">
+                            {watermancerSilicaConcentrationPpm.toFixed(2)} mg/L
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={() => setWatermancerSilicaDrops(current => current + 1)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-500/10 text-violet-200 transition hover:border-violet-200/60 hover:bg-violet-500/20 active:scale-90"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-500/10 text-violet-200 transition hover:border-violet-200/60 hover:bg-violet-500/20 active:scale-90"
                           aria-label="Increase silica dose by one drop"
                           data-testid="watermancer-silica-increase"
                         >
@@ -8252,6 +8258,12 @@ function App() {
                         </button>
                       </div>
                     </div>
+                    <div className="watermancer-salt-table__use">
+                      <span className="rounded-md border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-violet-200">
+                        Supplement
+                      </span>
+                    </div>
+                  </div>
                   </div>
                    <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
                     The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.

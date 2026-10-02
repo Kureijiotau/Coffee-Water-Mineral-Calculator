@@ -386,6 +386,7 @@ test('shows silica readings and recipe steps only after adding drops', async ({ 
   const silicaDecrease = page.getByTestId('watermancer-silica-decrease');
   const silicaIncrease = page.getByTestId('watermancer-silica-increase');
 
+  await expect(silicaRow).toHaveClass(/watermancer-salt-table__row/);
   await expect(silicaRow).toContainText('0 drops · 0.0 mg');
   await expect(silicaRow).toContainText('0.00 mg/L');
   await expect(silicaDecrease).toBeDisabled();

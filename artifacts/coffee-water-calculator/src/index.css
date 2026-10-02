@@ -409,6 +409,10 @@ body {
   box-shadow: inset 3px 0 0 rgb(52 211 153 / 0.7);
 }
 
+.watermancer-salt-table__row--silica-active {
+  box-shadow: inset 3px 0 0 rgb(196 181 253 / 0.7);
+}
+
 .watermancer-salt-table__salt {
   min-width: 0;
   align-self: center;
@@ -427,6 +431,11 @@ body {
 .watermancer-salt-table__dose,
 .watermancer-salt-table__use {
   min-width: 0;
+}
+
+.watermancer-salt-table__silica-strength {
+  justify-content: center;
+  color: rgb(203 213 225 / 0.9);
 }
 
 .watermancer-salt-table__use {
@@ -546,6 +555,10 @@ body {
   .watermancer-salt-table__salt {
     grid-area: auto;
     text-align: left;
+  }
+
+  .watermancer-salt-table__silica-strength {
+    justify-content: flex-start;
   }
 
   .watermancer-salt-table__header > :first-child {
