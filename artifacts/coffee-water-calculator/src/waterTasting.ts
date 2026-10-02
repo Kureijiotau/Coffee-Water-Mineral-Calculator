@@ -1,4 +1,5 @@
 import type { IonId } from './waterData';
+import { getAccountSyncStorageKey, notifyAccountSyncLocalChange } from './accountSyncStorage';
 
 export const WATER_TASTING_STORAGE_KEY = 'cwm.waterTastings.v1';
 
@@ -156,17 +157,43 @@ export type WaterTastingAffectiveId =
 export type WaterTastingAffectiveScores =
   Partial<Record<WaterTastingAffectiveId, number>>;
 
-export const WATER_TASTING_AFFECTIVE_ANCHORS = [
-  { value: 1, label: 'Extremely low' },
-  { value: 2, label: 'Very low' },
-  { value: 3, label: 'Moderately low' },
-  { value: 4, label: 'Slightly low' },
-  { value: 5, label: 'Neither high nor low' },
-  { value: 6, label: 'Slightly high' },
-  { value: 7, label: 'Moderately high' },
-  { value: 8, label: 'Very high' },
-  { value: 9, label: 'Extremely high' },
-] as const;
+const AFFECTIVE_CUES: Record<WaterTastingAffectiveId, readonly string[]> = {
+  fragranceAroma: [
+    'Barely perceptible', 'Very faint', 'Faint', 'Softly expressed',
+    'Clearly present', 'Pronounced', 'Vividly aromatic',
+    'Highly expressive', 'Intensely aromatic',
+  ],
+  flavorAftertaste: [
+    'Barely expressed', 'Very faint', 'Faint', 'Softly expressed',
+    'Clearly defined', 'Pronounced', 'Richly expressed',
+    'Intense', 'Intensely expressed',
+  ],
+  acidity: [
+    'Nearly absent', 'Very soft', 'Soft', 'Gentle',
+    'Bright and clear', 'Lively', 'Markedly bright',
+    'Sharp', 'Forcefully sharp',
+  ],
+  mouthfeel: [
+    'Almost no tactile weight', 'Very light, near-weightless',
+    'Light, tea-like texture', 'Soft, delicate texture',
+    'Medium, rounded weight', 'Clearly full, smooth texture',
+    'Full-bodied, plush texture', 'Dense, coating texture',
+    'Very dense, syrupy coating',
+  ],
+  overall: [
+    'Subtle water effect', 'Very mild effect', 'Mild effect',
+    'Lightly expressed', 'Clearly present', 'Pronounced',
+    'Strongly expressed', 'Very strong', 'Strong across the cup',
+  ],
+};
+
+const AFFECTIVE_HUES: Record<WaterTastingAffectiveId, number> = {
+  fragranceAroma: 278,
+  flavorAftertaste: 16,
+  acidity: 48,
+  mouthfeel: 212,
+  overall: 172,
+};
 
 const DESCRIPTIVE_INTENSITY_CUES = [
   'Not perceived',
@@ -188,22 +215,22 @@ const DESCRIPTIVE_INTENSITY_CUES = [
 ] as const;
 
 const MOUTHFEEL_INTENSITY_CUES = [
-  'No mouthfeel intensity perceived',
-  'Almost water-light',
-  'Barely more than water-light',
-  'Very faint, tea-like weight',
-  'Light, tea-like weight',
-  'Slightly light weight',
+  'No tactile weight perceived',
+  'Almost no tactile weight',
+  'Barely perceptible texture',
+  'Very light, tea-like texture',
+  'Light, delicate texture',
   'Light-to-medium weight',
-  'Moderate, balanced weight',
-  'Clearly present, medium weight',
-  'Medium-full weight',
-  'Fuller, substantial weight',
-  'Very full weight',
-  'Strong, coating weight',
-  'Very coating, syrupy weight',
-  'Extremely coating, syrupy weight',
-  'Maximally intense, syrupy coating',
+  'Soft, rounded weight',
+  'Moderate, smooth weight',
+  'Clearly present, rounded body',
+  'Medium-full, plush texture',
+  'Full, supple texture',
+  'Substantial, smooth coating',
+  'Dense, coating texture',
+  'Very dense, syrupy coating',
+  'Extremely dense, lingering coating',
+  'Maximum density, persistent coating',
 ] as const;
 
 export function getWaterTastingDescriptiveCue(
@@ -217,8 +244,31 @@ export function getWaterTastingDescriptiveCue(
   return `${DESCRIPTIVE_INTENSITY_CUES[value]} ${attribute.cueLabel}`;
 }
 
-export function getWaterTastingAffectiveCue(value: number): string | undefined {
-  return WATER_TASTING_AFFECTIVE_ANCHORS.find(anchor => anchor.value === value)?.label;
+export function getWaterTastingAffectiveCue(
+  id: WaterTastingAffectiveId,
+  value: number,
+): string | undefined {
+  if (!Number.isInteger(value) || value < 1 || value > 9) return undefined;
+  return AFFECTIVE_CUES[id]?.[value - 1];
+}
+
+export function getWaterTastingAffectiveAnchors(
+  id: WaterTastingAffectiveId,
+): { value: 1 | 5 | 9; label: string }[] {
+  return ([1, 5, 9] as const).map(value => ({
+    value,
+    label: getWaterTastingAffectiveCue(id, value) ?? '',
+  }));
+}
+
+export function getWaterTastingAffectiveColor(
+  id: WaterTastingAffectiveId,
+  value: number,
+): string {
+  const position = Math.max(0, Math.min(1, (value - 1) / 8));
+  const saturation = Math.round(22 + position * 68);
+  const lightness = Math.round(72 - position * 13);
+  return `hsl(${AFFECTIVE_HUES[id]} ${saturation}% ${lightness}%)`;
 }
 
 export type WaterTastingProfileGroup = 'Alchemist' | 'Watermancer';
@@ -252,6 +302,7 @@ interface WaterTastingDraftBase {
   profileNameSnapshot: string;
   coffee: WaterTastingCoffeeDetails;
   descriptorIds: string[];
+  notes?: string;
 }
 
 export interface WaterTastingLegacyDraft extends WaterTastingDraftBase {
@@ -270,6 +321,7 @@ export type WaterTastingDraft = WaterTastingLegacyDraft | WaterTastingCvaDraft;
 
 export interface WaterTastingEditorValues extends WaterTastingDraftBase {
   mode: 'legacy' | 'cva';
+  notes: string;
   ratings: WaterTastingRatings;
   spectrum: WaterTastingSpectrum;
   descriptive: WaterTastingDescriptiveScores;
@@ -297,6 +349,16 @@ export interface WaterTastingCvaRecord extends WaterTastingRecordBase {
 
 export type WaterTastingRecord = WaterTastingLegacyRecord | WaterTastingCvaRecord;
 
+export interface WaterTastingDeletionMarker {
+  id: string;
+  deletedAt: string;
+}
+
+export interface WaterTastingCollection {
+  records: WaterTastingRecord[];
+  deletions: WaterTastingDeletionMarker[];
+}
+
 export function isCvaWaterTastingRecord(
   record: WaterTastingRecord,
 ): record is WaterTastingCvaRecord {
@@ -323,6 +385,8 @@ export interface WaterTastingStorage {
   setItem(key: string, value: string): void;
 }
 
+const COLLECTION_VERSION = 2;
+
 const RATING_IDS = new Set<string>(WATER_TASTING_RATINGS.map(rating => rating.id));
 const DESCRIPTIVE_IDS = new Set<string>(
   WATER_TASTING_DESCRIPTIVE_ATTRIBUTES.map(attribute => attribute.id),
@@ -342,7 +406,11 @@ const COFFEE_FIELD_IDS = ['name', 'roast', 'origin', 'brewMethod'] as const;
 function resolveStorage(storage?: WaterTastingStorage): WaterTastingStorage | null {
   if (storage) return storage;
   try {
-    return typeof localStorage === 'undefined' ? null : localStorage;
+    if (typeof localStorage === 'undefined') return null;
+    return {
+      getItem: key => localStorage.getItem(getAccountSyncStorageKey(key)),
+      setItem: (key, value) => localStorage.setItem(getAccountSyncStorageKey(key), value),
+    };
   } catch {
     return null;
   }
@@ -419,6 +487,8 @@ function isValidRecord(value: unknown): value is WaterTastingRecord {
     || !isValidCoffee(value.coffee)
     || !Array.isArray(value.descriptorIds)
     || !value.descriptorIds.every(id => typeof id === 'string' && DESCRIPTOR_IDS.has(id))
+    || (value.notes !== undefined
+      && (typeof value.notes !== 'string' || value.notes.length > 2000))
   ) {
     return false;
   }
@@ -438,6 +508,29 @@ function isValidRecord(value: unknown): value is WaterTastingRecord {
 function isValidRecordList(value: unknown): value is WaterTastingRecord[] {
   if (!Array.isArray(value) || !value.every(isValidRecord)) return false;
   return new Set(value.map(record => record.id)).size === value.length;
+}
+
+function isValidDeletionMarkerList(value: unknown): value is WaterTastingDeletionMarker[] {
+  if (!Array.isArray(value)) return false;
+  if (!value.every(marker => (
+    isObject(marker)
+    && typeof marker.id === 'string'
+    && marker.id.trim() !== ''
+    && typeof marker.deletedAt === 'string'
+    && Number.isFinite(Date.parse(marker.deletedAt))
+  ))) return false;
+  return new Set(value.map(marker => marker.id)).size === value.length;
+}
+
+function isValidCollection(value: unknown): value is WaterTastingCollection {
+  return isObject(value)
+    && isValidRecordList(value.records)
+    && isValidDeletionMarkerList(value.deletions);
+}
+
+function normalizeNotes(value: string | undefined): string | undefined {
+  const notes = value?.trim();
+  return notes ? notes : undefined;
 }
 
 function normalizeCoffee(coffee: WaterTastingCoffeeDetails): WaterTastingCoffeeDetails {
@@ -486,6 +579,7 @@ export function createWaterTastingRecord(
     profileNameSnapshot: draft.profileNameSnapshot,
     coffee: normalizeCoffee(draft.coffee),
     descriptorIds: [...new Set(draft.descriptorIds)],
+    ...(normalizeNotes(draft.notes) ? { notes: normalizeNotes(draft.notes) } : {}),
     id,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -530,6 +624,9 @@ export function updateWaterTastingRecord(
     profileNameSnapshot: draft.profileNameSnapshot,
     coffee: normalizeCoffee(draft.coffee),
     descriptorIds: [...new Set(draft.descriptorIds)],
+    ...(normalizeNotes(draft.notes === undefined ? record.notes : draft.notes)
+      ? { notes: normalizeNotes(draft.notes === undefined ? record.notes : draft.notes) }
+      : {}),
     updatedAt: now.toISOString(),
   };
   if (draft.scoringVersion === 2 && record.scoringVersion === 2) {
@@ -548,6 +645,21 @@ export function updateWaterTastingRecord(
     };
   }
   throw new Error('A tasting cannot be edited in a different scoring format.');
+}
+
+export function createWaterTastingDeletionMarker(
+  record: WaterTastingRecord,
+  now = new Date(),
+  previous?: WaterTastingDeletionMarker,
+): WaterTastingDeletionMarker {
+  const recordTime = Date.parse(record.updatedAt);
+  const previousDeletionTime = previous ? Date.parse(previous.deletedAt) : 0;
+  const deletedAt = new Date(Math.max(
+    now.getTime(),
+    recordTime + 1,
+    previousDeletionTime + 1,
+  )).toISOString();
+  return { id: record.id, deletedAt };
 }
 
 export function buildWaterTastingProfileOptions(
@@ -584,7 +696,13 @@ export function sortWaterTastingsNewestFirst(
     .map(({ record }) => record);
 }
 
-export function loadWaterTastings(storage?: WaterTastingStorage): WaterTastingLoadResult {
+export type WaterTastingCollectionLoadResult =
+  | { ok: true; collection: WaterTastingCollection }
+  | { ok: false; error: WaterTastingStorageError };
+
+export function loadWaterTastingCollection(
+  storage?: WaterTastingStorage,
+): WaterTastingCollectionLoadResult {
   const target = resolveStorage(storage);
   if (!target) return { ok: false, error: 'unavailable' };
 
@@ -595,7 +713,7 @@ export function loadWaterTastings(storage?: WaterTastingStorage): WaterTastingLo
     return { ok: false, error: 'unavailable' };
   }
 
-  if (raw === null) return { ok: true, records: [] };
+  if (raw === null) return { ok: true, collection: { records: [], deletions: [] } };
 
   let parsed: unknown;
   try {
@@ -604,8 +722,76 @@ export function loadWaterTastings(storage?: WaterTastingStorage): WaterTastingLo
     return { ok: false, error: 'invalid-data' };
   }
 
-  if (!isValidRecordList(parsed)) return { ok: false, error: 'invalid-data' };
-  return { ok: true, records: parsed };
+  if (Array.isArray(parsed)) {
+    return isValidRecordList(parsed)
+      ? { ok: true, collection: { records: parsed, deletions: [] } }
+      : { ok: false, error: 'invalid-data' };
+  }
+
+  if (
+    !isObject(parsed)
+    || parsed.version !== COLLECTION_VERSION
+    || !isValidCollection(parsed)
+  ) {
+    return { ok: false, error: 'invalid-data' };
+  }
+  return {
+    ok: true,
+    collection: { records: parsed.records, deletions: parsed.deletions },
+  };
+}
+
+export function loadWaterTastings(storage?: WaterTastingStorage): WaterTastingLoadResult {
+  const loaded = loadWaterTastingCollection(storage);
+  return loaded.ok
+    ? { ok: true, records: loaded.collection.records }
+    : loaded;
+}
+
+export function saveWaterTastingCollection(
+  collection: WaterTastingCollection,
+  expectedCollection: WaterTastingCollection,
+  storage?: WaterTastingStorage,
+  notifyLocalChange = storage === undefined,
+): WaterTastingSaveResult {
+  if (!isValidCollection(collection) || !isValidCollection(expectedCollection)) {
+    return { ok: false, error: 'invalid-records' };
+  }
+  const target = resolveStorage(storage);
+  if (!target) return { ok: false, error: 'unavailable' };
+
+  const current = loadWaterTastingCollection(target);
+  if (!current.ok) return current;
+  if (JSON.stringify(current.collection) !== JSON.stringify(expectedCollection)) {
+    return { ok: false, error: 'changed-data' };
+  }
+
+  try {
+    target.setItem(WATER_TASTING_STORAGE_KEY, JSON.stringify({
+      version: COLLECTION_VERSION,
+      records: collection.records,
+      deletions: collection.deletions,
+    }));
+    if (notifyLocalChange) notifyAccountSyncLocalChange();
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'write-failed' };
+  }
+}
+
+export function replaceWaterTastingCollection(
+  collection: WaterTastingCollection,
+  storage?: WaterTastingStorage,
+  notifyLocalChange = storage === undefined,
+): WaterTastingSaveResult {
+  const current = loadWaterTastingCollection(storage);
+  if (!current.ok) return current;
+  return saveWaterTastingCollection(
+    collection,
+    current.collection,
+    storage,
+    notifyLocalChange,
+  );
 }
 
 export function saveWaterTastings(
@@ -616,19 +802,14 @@ export function saveWaterTastings(
   if (!isValidRecordList(records) || !isValidRecordList(expectedRecords)) {
     return { ok: false, error: 'invalid-records' };
   }
-  const target = resolveStorage(storage);
-  if (!target) return { ok: false, error: 'unavailable' };
-
-  const current = loadWaterTastings(target);
+  const current = loadWaterTastingCollection(storage);
   if (!current.ok) return current;
-  if (JSON.stringify(current.records) !== JSON.stringify(expectedRecords)) {
+  if (JSON.stringify(current.collection.records) !== JSON.stringify(expectedRecords)) {
     return { ok: false, error: 'changed-data' };
   }
-
-  try {
-    target.setItem(WATER_TASTING_STORAGE_KEY, JSON.stringify(records));
-    return { ok: true };
-  } catch {
-    return { ok: false, error: 'write-failed' };
-  }
+  return saveWaterTastingCollection(
+    { ...current.collection, records },
+    current.collection,
+    storage,
+  );
 }
