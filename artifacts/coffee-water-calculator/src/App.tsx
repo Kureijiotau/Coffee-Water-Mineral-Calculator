@@ -229,6 +229,11 @@ import {
   sortSavedProfileGroups,
   type ProfilePickerSortMode,
 } from './savedProfileSorting';
+import {
+  EIDON_SILICA_LABEL_BASIS,
+  watermancerSilicaDoseMg,
+  watermancerSilicaPpm as calculateWatermancerSilicaPpm,
+} from './watermancerSilica';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const WaterMixer = lazy(() => import('./WaterMixer'));
@@ -2998,6 +3003,7 @@ function App() {
   const watermancerActionGenerationRef = useRef(0);
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
    const [watermancerDoseInputDrafts, setWatermancerDoseInputDrafts] = useState<Record<string, string>>({});
+   const [watermancerSilicaDrops, setWatermancerSilicaDrops] = useState(0);
    const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -4293,6 +4299,7 @@ function App() {
     setWatermancerUsedSaltIds([]);
     setWatermancerDoseOverridesMg({});
     setWatermancerDoseInputDrafts({});
+    setWatermancerSilicaDrops(0);
     setRows(currentRows => currentRows.map(row => ({ ...row, target: '' })));
   };
     // Build the salt recommendation shown below the calculator. The sulfate /
@@ -4440,6 +4447,14 @@ function App() {
   const supplementalIonTotals = useMemo(
     () => computeSupplementalIonTotals(effectiveSuggestedSaltTargets),
     [effectiveSuggestedSaltTargets],
+  );
+  const watermancerSilicaConcentrationPpm = calculateWatermancerSilicaPpm(watermancerSilicaDrops, L);
+  const watermancerSupplementalIonTotals = useMemo(
+    () => ({
+      ...computeSupplementalIonTotals(activeWatermancerSaltTargets),
+      silica: watermancerSilicaConcentrationPpm,
+    }),
+    [activeWatermancerSaltTargets, watermancerSilicaConcentrationPpm],
   );
   const finalMixtureOvershoots = useMemo(
     () => findIonOvershoots(suggestedIonTotals, finalMixtureTargetIons),
@@ -4742,6 +4757,7 @@ function App() {
     setWatermancerBestMatchRunning(false);
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
+    setWatermancerSilicaDrops(0);
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
@@ -5819,6 +5835,7 @@ function App() {
     watermancerBestMatchDeviationMode,
     watermancerIonSourcePreferences: Object.fromEntries(Object.entries(watermancerIonSourcePreferences)),
     watermancerDoseOverridesMg: { ...watermancerDoseOverridesMg },
+    watermancerSilicaDrops,
     sodiumCorrectionOn,
     finishedIons: Object.fromEntries(
       ACTIVE_ION_IDS.map(id => [id, Math.max(Number(watermancerCurrentFinalIons[id] ?? 0), 0)]),
@@ -5976,6 +5993,7 @@ function App() {
     setWatermancerBestMatchDeviationMode(snapshot.watermancerBestMatchDeviationMode);
     setWatermancerIonSourcePreferences(snapshot.watermancerIonSourcePreferences as Record<IonId, WatermancerIonSourcePreference>);
     setWatermancerDoseOverridesMg({ ...snapshot.watermancerDoseOverridesMg });
+    setWatermancerSilicaDrops(snapshot.watermancerSilicaDrops ?? 0);
     setSodiumCorrectionOn(snapshot.sodiumCorrectionOn);
     setWatermancerMatchMode('automatic');
     setConcentrateRecipeHandoff(snapshot.concentrateRecipeHandoff);
@@ -6168,6 +6186,7 @@ function App() {
     watermancerBestMatchDeviationMode,
     watermancerCurrentFinalIons,
     watermancerDoseOverridesMg,
+    watermancerSilicaDrops,
     watermancerIonSourcePreferences,
     watermancerMatchingMode,
     watermancerSaltObjective,
@@ -6685,7 +6704,7 @@ function App() {
               </div>}
             <WatermancerIonProfileCard
               ions={ionProfileIons}
-              supplementalIons={supplementalIonTotals}
+              supplementalIons={watermancerSupplementalIonTotals}
               targetIons={watermancerIonTargets}
               profiles={profiles}
               activeProfileId={activeProfileId}
@@ -7784,7 +7803,7 @@ function App() {
              <div className="order-5 scroll-mt-4 outline-none" data-watermancer-stage="closest-match" tabIndex={-1}>
              <WatermancerIonCoverageBars
                 actualIons={watermancerCurrentFinalIons}
-               supplementalIons={computeSupplementalIonTotals(activeWatermancerSaltTargets)}
+                supplementalIons={watermancerSupplementalIonTotals}
               targetIons={watermancerIonTargets}
                targetMetricValues={originalTargetMetricValues}
                finalMetricValues={reviewFinalMetricValues}
@@ -8175,6 +8194,64 @@ function App() {
                         </div>
                       );
                     })}
+                  </div>
+                  <div
+                    className="flex flex-col gap-3 bg-slate-900/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    role="group"
+                    aria-label="Silica supplement dose"
+                    data-testid="watermancer-silica-row"
+                  >
+                    <div className="flex min-w-0 items-start gap-2 text-left">
+                      <span
+                        className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                          watermancerSilicaDrops > 0
+                            ? 'bg-violet-300 shadow-[0_0_10px_rgba(196,181,253,0.65)]'
+                            : 'bg-slate-700'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-slate-100">Eidon Silica supplement (SiO₂)</div>
+                        <div className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
+                          Eidon label basis · 12.5 mg SiO₂ per drop · does not affect ion matching
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
+                      <div
+                        className="min-w-0 text-right text-[10px] leading-relaxed text-violet-200"
+                        aria-live="polite"
+                        data-testid="watermancer-silica-dose"
+                      >
+                        <div className="font-semibold tabular-nums">
+                          {watermancerSilicaDrops} {watermancerSilicaDrops === 1 ? 'drop' : 'drops'} · {watermancerSilicaDoseMg(watermancerSilicaDrops).toFixed(1)} mg
+                        </div>
+                        <div className="text-violet-200/70 tabular-nums">
+                          {watermancerSilicaConcentrationPpm.toFixed(2)} mg/L
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setWatermancerSilicaDrops(current => Math.max(0, current - 1))}
+                          disabled={watermancerSilicaDrops <= 0}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-violet-300/50 hover:bg-violet-500/10 active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
+                          aria-label="Decrease silica dose by one drop"
+                          data-testid="watermancer-silica-decrease"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setWatermancerSilicaDrops(current => current + 1)}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-500/10 text-violet-200 transition hover:border-violet-200/60 hover:bg-violet-500/20 active:scale-90"
+                          aria-label="Increase silica dose by one drop"
+                          data-testid="watermancer-silica-increase"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                    <p className="border-t border-slate-700/50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
                     The calculator uses its suggested dose until you edit it. After that, your Dose value is held fixed while Watermancer adjusts the other selected salts around it.
@@ -8754,6 +8831,7 @@ function App() {
           baseWaterScale={sourceScale}
           batchMl={batchMl}
           suggestedSaltTargets={recipeStepsSuggestedSaltTargets}
+          watermancerSilicaDrops={showWatermancer ? watermancerSilicaDrops : 0}
           nerdLevel={nerdLevel}
           tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
@@ -15631,6 +15709,7 @@ function BrewerRecipeStepsModal({
   baseWaterScale,
   batchMl,
   suggestedSaltTargets,
+  watermancerSilicaDrops,
   nerdLevel,
   tdsTarget,
   dropsPerMl,
@@ -15652,6 +15731,7 @@ function BrewerRecipeStepsModal({
   baseWaterScale: number;
   batchMl: number;
   suggestedSaltTargets: Record<string, number>;
+  watermancerSilicaDrops: number;
   nerdLevel: NerdLevel;
   tdsTarget: number;
   dropsPerMl: number;
@@ -15732,6 +15812,9 @@ function BrewerRecipeStepsModal({
   const stepSaltTargets = mergeRecipeStepTargets(saltTargets, suggestedSaltTargets);
   const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
+  const silicaDrops = nerdLevel === 'watermancer' ? Math.max(0, Math.floor(watermancerSilicaDrops)) : 0;
+  const silicaDoseMg = watermancerSilicaDoseMg(silicaDrops);
+  const silicaConcentrationPpm = calculateWatermancerSilicaPpm(silicaDrops, liters);
   // Keep recipe cards in the same canonical order as the main salt table.
   const orderedRecipeSalts = stepSalts;
   const finalProfileWaterIons = computeWatermancerBottledIons(
@@ -15795,11 +15878,18 @@ function BrewerRecipeStepsModal({
         amount: formatWaterVolume(water.volume),
       })),
     ],
-    saltTitle: allInOneConcentrate ? '02 · Mix the all-in-one concentrate' : '02 · Add the minerals in order',
+    saltTitle: allInOneConcentrate
+      ? '02 · Mix the all-in-one concentrate'
+      : silicaDrops > 0
+        ? '02 · Add minerals and silica'
+        : '02 · Add the minerals in order',
     saltIntro: allInOneConcentrate
       ? `Start with ${concentrateWaterVolume} for the concentrate. Add one salt at a time and stir until fully dissolved before adding the next.`
-      : 'Add one salt at a time. Stir until fully dissolved before adding the next.',
-    saltSteps: orderedRecipeSalts.map((salt, index) => {
+      : silicaDrops > 0
+        ? 'Add one salt at a time and stir until fully dissolved before adding the next. Add the silica drops after the salts.'
+        : 'Add one salt at a time. Stir until fully dissolved before adding the next.',
+    saltSteps: [
+      ...orderedRecipeSalts.map((salt, index) => {
       const saltIndex = SALTS.findIndex(item => item.id === salt.id);
       const formIndex = saltIndex >= 0
         ? recipeRows[saltIndex]?.formIdx ?? salt.defaultFormIdx ?? 0
@@ -15816,7 +15906,18 @@ function BrewerRecipeStepsModal({
           ? 'Last · add only after the other salts are clear'
           : undefined,
       };
-    }),
+      }),
+      ...(silicaDrops > 0
+        ? [{
+          name: `${orderedRecipeSalts.length + 1}. Eidon Silica supplement`,
+          formula: 'SiO₂',
+          form: `Liquid · ${EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop.toFixed(1)} mg/drop`,
+          amount: `${silicaDrops} ${silicaDrops === 1 ? 'drop' : 'drops'} · ${silicaDoseMg.toFixed(1)} mg`,
+          contributionPpm: silicaConcentrationPpm,
+          contributionLabel: 'mg/L',
+        }]
+        : []),
+    ],
     mixingNote: useMixingVessel
       ? `Reserve ${formatWaterVolume(mixingVesselMl)} of the prepared water for the salt concentrate. Dissolve the salts completely, then add the concentrate to the remaining water, rinse the vessel into the batch, and stir thoroughly.`
       : undefined,
@@ -16000,7 +16101,9 @@ function BrewerRecipeStepsModal({
           <div className="space-y-4 p-4 sm:p-5">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Step-by-step</div>
-            <div className="text-[10px] text-slate-500">{orderedRecipeSalts.length + (useMixingVessel ? 3 : 2)} actions</div>
+            <div className="text-[10px] text-slate-500">
+              {orderedRecipeSalts.length + (silicaDrops > 0 ? 1 : 0) + (useMixingVessel ? 3 : 2)} actions
+            </div>
           </div>
            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)]">
            <div className="min-w-0">
@@ -16145,6 +16248,31 @@ function BrewerRecipeStepsModal({
                         </div>
                       );
                     })}
+                    {silicaDrops > 0 && (
+                      <div
+                        className="rounded-lg border border-violet-300/35 bg-violet-500/[0.08] px-2 py-1.5"
+                        data-testid="watermancer-silica-recipe-step"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-violet-100 sm:text-sm">
+                              {orderedRecipeSalts.length + 1}. Eidon Silica supplement
+                            </div>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-violet-200/70">
+                              SiO₂ · {EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop.toFixed(1)} mg/drop · add after the salts
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className="inline-block rounded-md border border-violet-300/35 bg-violet-400/10 px-2 py-1 font-mono text-base font-bold leading-none tabular-nums text-violet-100 sm:text-lg">
+                              {silicaDrops} {silicaDrops === 1 ? 'drop' : 'drops'} · {silicaDoseMg.toFixed(1)} mg
+                            </span>
+                            <div className="mt-1 text-[10px] font-medium tabular-nums text-violet-200/80">
+                              {silicaConcentrationPpm.toFixed(2)} mg/L
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>
@@ -16161,7 +16289,7 @@ function BrewerRecipeStepsModal({
               </li>
             )}
             <li className="flex gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/20">{useMixingVessel ? 4 : orderedRecipeSalts.length > 0 ? 3 : 2}</span>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/20 text-xs font-bold text-emerald-100 ring-1 ring-emerald-300/20">{useMixingVessel ? 4 : orderedRecipeSalts.length > 0 || silicaDrops > 0 ? 3 : 2}</span>
               <div className="min-w-0">
                 <div className="text-sm font-medium text-slate-200">Verify and brew</div>
                 <div className="mt-0.5 text-xs leading-relaxed text-slate-400">

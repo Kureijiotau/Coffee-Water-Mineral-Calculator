@@ -355,6 +355,7 @@ export type RecipeShareCardSaltStep = {
   form: string;
   amount: string;
   contributionPpm: number;
+  contributionLabel?: string;
   note?: string;
 };
 
@@ -679,7 +680,7 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
       anchor: 'end',
     });
     if (step.contributionPpm > 0) {
-      svg += svgText(innerX + innerWidth - 16, cursor + rowHeight - 15, `${step.contributionPpm.toFixed(1)} ppm total`, {
+      svg += svgText(innerX + innerWidth - 16, cursor + rowHeight - 15, `${step.contributionPpm.toFixed(1)} ${step.contributionLabel ?? 'ppm total'}`, {
         fill: '#8ed9e6',
         size: 11,
         weight: 600,

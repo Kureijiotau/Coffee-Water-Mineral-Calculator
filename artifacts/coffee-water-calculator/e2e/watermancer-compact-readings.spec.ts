@@ -379,3 +379,25 @@ test('toggles pairwise ion percentages and keeps the choice across readings layo
   await expect(relationship.getByTestId('watermancer-ratio-k-mg')).toContainText('K ÷ Mg');
   await expect(relationship.getByTestId('watermancer-ratio-na-ca')).toContainText('Na ÷ Ca');
 });
+
+test('shows silica readings and recipe steps only after adding drops', async ({ page }) => {
+  const readings = await openWatermancer(page);
+  const silicaRow = page.getByTestId('watermancer-silica-row');
+  const silicaDecrease = page.getByTestId('watermancer-silica-decrease');
+  const silicaIncrease = page.getByTestId('watermancer-silica-increase');
+
+  await expect(silicaRow).toContainText('0 drops · 0.0 mg');
+  await expect(silicaRow).toContainText('0.00 mg/L');
+  await expect(silicaDecrease).toBeDisabled();
+  await expect(readings.getByText('Silica (SiO₂)', { exact: true })).toHaveCount(0);
+
+  await silicaIncrease.click();
+  await expect(silicaRow).toContainText('1 drop · 12.5 mg');
+  await expect(silicaRow).toContainText('12.50 mg/L');
+  await expect(page.getByText('Silica (SiO₂)', { exact: true }).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Open recipe steps' }).click();
+  const silicaStep = page.getByTestId('watermancer-silica-recipe-step');
+  await expect(silicaStep).toContainText('1 drop · 12.5 mg');
+  await expect(silicaStep).toContainText('12.50 mg/L');
+});

@@ -47,6 +47,7 @@ const snapshot: WaterPlanSnapshot = {
   watermancerBestMatchDeviationMode: 'strict',
   watermancerIonSourcePreferences: { calcium: 'water-then-salt' },
   watermancerDoseOverridesMg: { mgso4: 25 },
+  watermancerSilicaDrops: 3,
   sodiumCorrectionOn: false,
   concentrateRecipeHandoff: null,
   concentrate: {
@@ -83,6 +84,7 @@ describe('water plan persistence', () => {
     expect(parsed?.id).not.toBe(plan.id);
     expect(parsed?.name).toBe(plan.name);
     expect(parsed?.snapshot).toEqual(snapshot);
+    expect(parsed?.snapshot.watermancerSilicaDrops).toBe(3);
   });
 
   it('accepts legacy snapshots without a matching mode and leaves them on target values', () => {
@@ -92,6 +94,20 @@ describe('water plan persistence', () => {
 
     expect(isValidWaterPlan(plan)).toBe(true);
     expect((plan.snapshot.watermancerMatchingMode ?? 'target-values')).toBe('target-values');
+  });
+
+  it('accepts legacy snapshots without a silica dose and rejects invalid counts', () => {
+    const legacySnapshot = { ...snapshot };
+    delete legacySnapshot.watermancerSilicaDrops;
+    expect(isValidWaterPlan(createWaterPlan('Legacy silica', legacySnapshot))).toBe(true);
+    expect(isValidWaterPlan(createWaterPlan('Invalid silica', {
+      ...snapshot,
+      watermancerSilicaDrops: -1,
+    }))).toBe(false);
+    expect(isValidWaterPlan(createWaterPlan('Fractional silica', {
+      ...snapshot,
+      watermancerSilicaDrops: 1.5,
+    }))).toBe(false);
   });
 
   it('rejects files with the wrong kind or version', () => {

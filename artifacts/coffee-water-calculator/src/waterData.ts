@@ -64,7 +64,7 @@ export interface IonContribution {
   fraction: number;
 }
 
-export type SupplementalIonId = 'lactate' | 'glycinate' | 'malate';
+export type SupplementalIonId = 'lactate' | 'glycinate' | 'malate' | 'silica';
 
 export interface SupplementalIonInfo {
   id: SupplementalIonId;
@@ -389,6 +389,12 @@ export const SUPPLEMENTAL_IONS: SupplementalIonInfo[] = [
     name: 'Malate',
     formula: 'C₄H₄O₅²⁻',
     note: 'The malate portion of Magnesium Malate. Displayed separately from elemental magnesium and kept outside the core water-ion target and overshoot model.',
+  },
+  {
+    id: 'silica',
+    name: 'Silica (SiO₂)',
+    formula: 'SiO₂',
+    note: 'Label-based silicon dioxide dose from Eidon Ionic Minerals Silica. Displayed separately from modeled ions and kept outside the target, ratio, GH/KH, and overshoot model.',
   },
 ];
 

@@ -228,6 +228,25 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('…');
   });
 
+  it('exports a separate silica dose with its drop count, mass, and mg/L value', () => {
+    const card = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      saltSteps: [{
+        name: '1. Silica supplement',
+        formula: 'SiO₂',
+        form: 'Liquid · 12.5 mg/drop',
+        amount: '3 drops · 37.5 mg',
+        contributionPpm: 18.75,
+        contributionLabel: 'mg/L',
+      }],
+    });
+
+    expect(card.svg).toContain('Silica supplement');
+    expect(card.svg).toContain('3 drops · 37.5 mg');
+    expect(card.svg).toContain('18.8 mg/L');
+    expect(card.svg).toContain('SiO₂');
+  });
+
   it('labels target-profile analysis as a preview rather than a finished mix', () => {
     const targetPreview = buildRecipeShareCardSvg({
       ...shareCardFixture,
