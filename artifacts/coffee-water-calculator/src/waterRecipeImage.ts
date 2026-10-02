@@ -392,6 +392,7 @@ export type RecipeShareCardModel = {
   finalStep: string;
   tdsTarget: number;
   analysis: {
+    source?: 'target-preview' | 'final-mixture';
     ions: RecipeShareCardIon[];
     tds: number;
     gh: number;
@@ -483,6 +484,7 @@ export function createRecipeShareCardModel(input: RecipeShareCardInput): RecipeS
     tdsTarget: finiteNumber(input.tdsTarget),
     analysis: {
       ...input.analysis,
+      source: input.analysis.source ?? 'final-mixture',
       ions: input.analysis.ions.map(ion => ({
         ...ion,
         name: ion.name.trim() || ion.id,
@@ -719,6 +721,7 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
 function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number, width: number): { svg: string; height: number } {
   const innerX = x + 26;
   const innerWidth = width - 52;
+  const isTargetPreview = model.analysis.source === 'target-preview';
   // A hairline blue-gray keyline keeps the ion palette readable on the pale card
   // without the weight of a black outline or drop shadow.
   const ionTextOutline = { stroke: '#4b6970', strokeWidth: 0.7, strokeOpacity: 0.85 };
@@ -742,7 +745,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
     weight: 700,
     letterSpacing: 2.1,
   });
-  svg += svgText(x + width - 26, y + 31, 'FINAL MIX', {
+  svg += svgText(x + width - 26, y + 31, isTargetPreview ? 'TARGET PREVIEW' : 'FINAL MIX', {
     fill: '#0d6170',
     size: 11,
     weight: 700,
@@ -808,7 +811,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   const metricTop = cursor;
   svg += `<line x1="${innerX}" y1="${metricTop}" x2="${innerX + innerWidth}" y2="${metricTop}" stroke="#0d6170" stroke-opacity="0.3"/>`;
   const metrics = [
-    ['APPROX. TDS', model.analysis.tds],
+    [isTargetPreview ? 'TARGET TDS' : 'APPROX. TDS', model.analysis.tds],
     ['GH', model.analysis.gh],
     ['KH', model.analysis.kh],
   ] as const;
@@ -841,11 +844,16 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   const ratio = model.analysis.kh > 0
     ? `${(model.analysis.gh / model.analysis.kh).toFixed(2)}:1`
     : model.analysis.gh > 0 ? '∞:1' : '—';
-  svg += svgText(innerX, cursor + 4, `Estimated final TDS: ${model.analysis.tds.toFixed(0)} ppm`, {
-    fill: '#47737a',
-    size: 11,
-    weight: 700,
-  });
+  svg += svgText(
+    innerX,
+    cursor + 4,
+    `Estimated ${isTargetPreview ? 'target' : 'final'} TDS: ${model.analysis.tds.toFixed(0)} ppm`,
+    {
+      fill: '#47737a',
+      size: 11,
+      weight: 700,
+    },
+  );
   svg += svgText(innerX + innerWidth, cursor + 4, `GH:KH ${ratio}`, {
     fill: '#47737a',
     size: 11,

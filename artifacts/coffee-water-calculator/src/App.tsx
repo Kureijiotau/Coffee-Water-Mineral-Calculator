@@ -74,7 +74,12 @@ import {
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
-import { computeWatermancerMetricValues, type WatermancerMetricValues } from './watermancerMetricValues';
+import {
+  computeWatermancerMetricValues,
+  hasModeledWatermancerIons,
+  resolveWatermancerRecipeAnalysis,
+  type WatermancerMetricValues,
+} from './watermancerMetricValues';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
 import {
   embedWaterRecipeJsonInPng,
@@ -6360,7 +6365,7 @@ function App() {
                     return (
                       <MineralAnalysisLabel
                         recipeName={option.name}
-                        finalIons={finalIons}
+                        ionReadings={finalIons}
                         tds={option.readings.tds ?? totalIonPpm}
                         gh={option.readings.gh ?? computeGH(finalIons)}
                         kh={option.readings.kh ?? computeKH(finalIons)}
@@ -13525,7 +13530,7 @@ function WatermancerIonCoverageBars({
     id !== 'citrates' || (actualIons[id] ?? 0) > 0
   ));
   const completeActualIons = completeIonTotals(actualIons);
-  const hasModeledIons = ACTIVE_ION_IDS.some(id => (completeActualIons[id] ?? 0) > 0);
+  const hasModeledIons = hasModeledWatermancerIons(completeActualIons);
   const [metricSource, setMetricSource] = useState<WatermancerMetricSource>(
     hasModeledIons ? 'final-mixture' : 'targets',
   );
@@ -14956,9 +14961,11 @@ const MINERAL_LABEL_ANION_IDS: IonId[] = ['bicarbonate', 'chloride', 'sulfate'];
 function MineralAnalysisIonRow({
   id,
   value,
+  isTargetPreview = false,
 }: {
   id: IonId;
   value: number;
+  isTargetPreview?: boolean;
 }) {
   const ion = ION_MAP[id];
   return (
@@ -14971,7 +14978,9 @@ function MineralAnalysisIonRow({
           <span className="shrink-0 font-mono text-[13px] font-bold tracking-tight text-[color:var(--ion-light-fg)]" title={ion.name}>{ion.formula}</span>
           <span className="truncate text-[11px] font-semibold tracking-tight text-[#173f49]">{ion.name}</span>
         </div>
-        <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#47737a]/80">final concentration</div>
+        <div className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-[#47737a]/80">
+          {isTargetPreview ? 'target concentration' : 'final concentration'}
+        </div>
       </div>
       <div className="text-right">
         <div className="font-mono text-lg font-bold leading-none tabular-nums text-[color:var(--ion-light-fg)]">
@@ -14985,16 +14994,18 @@ function MineralAnalysisIonRow({
 
 function MineralAnalysisLabel({
   recipeName,
-  finalIons,
+  ionReadings,
   tds,
   gh,
   kh,
+  isTargetPreview = false,
 }: {
   recipeName: string;
-  finalIons: Record<IonId, number>;
+  ionReadings: Record<IonId, number>;
   tds: number;
   gh: number;
   kh: number;
+  isTargetPreview?: boolean;
 }) {
   const displayRecipeName = recipeName.trim() && recipeName !== 'Custom'
     ? recipeName
@@ -15002,7 +15013,7 @@ function MineralAnalysisLabel({
   const additionalIonIds = ACTIVE_ION_IDS.filter(id => (
     !MINERAL_LABEL_CATION_IDS.includes(id)
     && !MINERAL_LABEL_ANION_IDS.includes(id)
-    && (finalIons[id] ?? 0) > 0.05
+    && (ionReadings[id] ?? 0) > 0.05
   ));
   const summary = [
     ['TDS', tds, 'ppm'],
@@ -15014,7 +15025,7 @@ function MineralAnalysisLabel({
   return (
     <aside
       className="relative overflow-hidden rounded-[1.35rem] border border-[#7cc3c5] bg-[#e9f3ee] text-[#173f49] shadow-[0_24px_70px_-35px_rgba(0,0,0,0.9)]"
-      aria-label="Final mineral contribution"
+      aria-label={isTargetPreview ? 'Target profile mineral preview' : 'Final mineral contribution'}
     >
       <div
         className="absolute inset-0 opacity-30"
@@ -15025,12 +15036,18 @@ function MineralAnalysisLabel({
       <div className="relative p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 border-b-2 border-[#0d6170] pb-3">
           <div>
-            <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">Water profile</div>
+            <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#47737a]">
+              {isTargetPreview ? 'Target profile' : 'Water profile'}
+            </div>
             <h2 className="font-['Georgia'] text-lg font-bold tracking-tight text-[#173f49]">Mineral analysis</h2>
           </div>
           <div className="text-right">
-            <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">Current mix</div>
-            <div className="mt-0.5 text-[9px] text-[#47737a]">final contribution</div>
+            <div className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-[#0d6170]">
+              {isTargetPreview ? 'Target preview' : 'Current mix'}
+            </div>
+            <div className="mt-0.5 text-[9px] text-[#47737a]">
+              {isTargetPreview ? 'selected profile targets' : 'final contribution'}
+            </div>
           </div>
         </div>
 
@@ -15040,7 +15057,7 @@ function MineralAnalysisLabel({
           </div>
           <div className="mt-2 flex items-center justify-center gap-2 text-[9px] text-[#47737a]">
             <span className="h-px w-6 bg-[#0d6170]/35" />
-            <span>per litre of finished water</span>
+            <span>{isTargetPreview ? 'target profile · preview' : 'per litre of finished water'}</span>
             <span className="h-px w-6 bg-[#0d6170]/35" />
           </div>
         </div>
@@ -15052,7 +15069,7 @@ function MineralAnalysisLabel({
               <span className="h-px flex-1 bg-[#0d6170]/20" />
             </div>
             {MINERAL_LABEL_CATION_IDS.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
+              <MineralAnalysisIonRow key={id} id={id} value={ionReadings[id] ?? 0} isTargetPreview={isTargetPreview} />
             ))}
           </div>
           <div>
@@ -15061,7 +15078,7 @@ function MineralAnalysisLabel({
               <span className="h-px flex-1 bg-[#0d6170]/20" />
             </div>
             {MINERAL_LABEL_ANION_IDS.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
+              <MineralAnalysisIonRow key={id} id={id} value={ionReadings[id] ?? 0} isTargetPreview={isTargetPreview} />
             ))}
           </div>
         </div>
@@ -15070,7 +15087,7 @@ function MineralAnalysisLabel({
           <div className="border-b border-[#0d6170]/35 py-3">
             <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Other modeled ions</div>
             {additionalIonIds.map(id => (
-              <MineralAnalysisIonRow key={id} id={id} value={finalIons[id] ?? 0} />
+              <MineralAnalysisIonRow key={id} id={id} value={ionReadings[id] ?? 0} isTargetPreview={isTargetPreview} />
             ))}
           </div>
         )}
@@ -15082,7 +15099,7 @@ function MineralAnalysisLabel({
               className="rounded-lg border border-[#0d6170]/20 bg-white/40 px-2 py-2"
             >
               <div className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#47737a]">
-                {label === 'TDS' ? 'Approx. TDS' : label}
+                {label === 'TDS' ? (isTargetPreview ? 'Target TDS' : 'Approx. TDS') : label}
               </div>
               <div className="mt-0.5 font-mono text-base font-bold tabular-nums text-[#0d6170]">{value.toFixed(0)}</div>
               <div className="text-[8px] uppercase tracking-wider text-[#47737a]">{unit}</div>
@@ -15092,7 +15109,9 @@ function MineralAnalysisLabel({
 
         <div className="flex items-center justify-between gap-3 pt-3 text-[9px] text-[#47737a]">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="font-semibold uppercase tracking-[0.12em]">Estimated final TDS: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{tds.toFixed(0)}</span> ppm</span>
+            <span className="font-semibold uppercase tracking-[0.12em]">
+              Estimated {isTargetPreview ? 'target' : 'final'} TDS: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{tds.toFixed(0)}</span> ppm
+            </span>
             <span className="font-semibold uppercase tracking-[0.12em]">
               GH:KH ratio: <span className="font-mono text-sm tabular-nums text-[#0d6170]">{ghKhRatio}</span>
             </span>
@@ -15664,6 +15683,21 @@ function BrewerRecipeStepsModal({
   const finalProfileTds = computeModeledTds(stepSaltTargets, finalProfileWaterIons, 1);
   const finalProfileGh = computeGH(finalProfileIons);
   const finalProfileKh = computeKH(finalProfileIons);
+  const targetProfileIons = completeIonTotals(
+    Object.fromEntries(profile.targets.map(target => [target.id, target.value])) as Partial<Record<IonId, number>>,
+  );
+  const finalProfileMetrics = {
+    tds: finalProfileTds,
+    gh: finalProfileGh,
+    kh: finalProfileKh,
+  };
+  const recipeCardAnalysis = nerdLevel === 'watermancer'
+    ? resolveWatermancerRecipeAnalysis(finalProfileIons, targetProfileIons, finalProfileMetrics)
+    : {
+      source: 'final-mixture' as const,
+      ions: finalProfileIons,
+      metrics: finalProfileMetrics,
+    };
   const saltGroup = (salt: typeof SALTS[number]) =>
     salt.formula.includes('SO₄') ? 'Sulfate'
       : salt.formula.includes('Cl') ? 'Chloride'
@@ -15727,35 +15761,36 @@ function BrewerRecipeStepsModal({
     finalStep: 'Check that the water is clear and all minerals are fully dissolved. Proceed with your brew method and adjust extraction to taste.',
     tdsTarget,
     analysis: {
+      source: recipeCardAnalysis.source,
       ions: [
         ...(['calcium', 'magnesium', 'sodium', 'potassium'] as IonId[]).map(id => ({
           id,
           name: ION_MAP[id].name,
           formula: ION_MAP[id].formula,
-          value: finalProfileIons[id] ?? 0,
+          value: recipeCardAnalysis.ions[id] ?? 0,
           category: 'Cations' as const,
         })),
         ...(['bicarbonate', 'chloride', 'sulfate'] as IonId[]).map(id => ({
           id,
           name: ION_MAP[id].name,
           formula: ION_MAP[id].formula,
-          value: finalProfileIons[id] ?? 0,
+          value: recipeCardAnalysis.ions[id] ?? 0,
           category: 'Anions' as const,
         })),
         ...ACTIVE_ION_IDS
           .filter(id => !['calcium', 'magnesium', 'sodium', 'potassium', 'bicarbonate', 'chloride', 'sulfate'].includes(id))
-          .filter(id => (finalProfileIons[id] ?? 0) > 0.05)
+          .filter(id => (recipeCardAnalysis.ions[id] ?? 0) > 0.05)
           .map(id => ({
             id,
             name: ION_MAP[id].name,
             formula: ION_MAP[id].formula,
-            value: finalProfileIons[id] ?? 0,
+            value: recipeCardAnalysis.ions[id] ?? 0,
             category: 'Other modeled ions' as const,
           })),
       ],
-      tds: finalProfileTds,
-      gh: finalProfileGh,
-      kh: finalProfileKh,
+      tds: recipeCardAnalysis.metrics.tds,
+      gh: recipeCardAnalysis.metrics.gh,
+      kh: recipeCardAnalysis.metrics.kh,
     },
     profile,
     concentrateGuide: concentrateOn && concentrateDoseMlPerLiter > 0 && concentrateLiters > 0
@@ -15786,6 +15821,8 @@ function BrewerRecipeStepsModal({
         })
         .filter((entry): entry is readonly [string, { target: string; formIdx: number }] => entry !== null),
     ),
+    // Keep the embedded finished-water snapshot actual; target previews are
+    // only a visual analysis state and must not become Mixer import readings.
     finishedWaterIons: finalProfileIons,
     finishedWaterMetadata: { tds: finalProfileTds },
     sourceWaters: {
@@ -16083,10 +16120,11 @@ function BrewerRecipeStepsModal({
            <div className="min-w-0">
              <MineralAnalysisLabel
                recipeName={recipeName}
-               finalIons={finalProfileIons}
-               tds={finalProfileTds}
-               gh={finalProfileGh}
-               kh={finalProfileKh}
+               ionReadings={recipeCardAnalysis.ions}
+               tds={recipeCardAnalysis.metrics.tds}
+               gh={recipeCardAnalysis.metrics.gh}
+               kh={recipeCardAnalysis.metrics.kh}
+               isTargetPreview={recipeCardAnalysis.source === 'target-preview'}
              />
              <div className="mt-3">
                <button

@@ -228,6 +228,30 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('…');
   });
 
+  it('labels target-profile analysis as a preview rather than a finished mix', () => {
+    const targetPreview = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      analysis: {
+        ...shareCardFixture.analysis,
+        source: 'target-preview',
+        ions: [
+          { id: 'calcium', name: 'Calcium', formula: 'Ca²⁺', value: 40, category: 'Cations' },
+          { id: 'magnesium', name: 'Magnesium', formula: 'Mg²⁺', value: 12, category: 'Cations' },
+        ],
+        tds: 52,
+        gh: 149.3,
+        kh: 0,
+      },
+    }).svg;
+
+    expect(targetPreview).toContain('TARGET PREVIEW');
+    expect(targetPreview).toContain('40.0');
+    expect(targetPreview).toContain('TARGET TDS');
+    expect(targetPreview).toContain('Estimated target TDS: 52 ppm');
+    expect(targetPreview).not.toContain('FINAL MIX');
+    expect(targetPreview).not.toContain('Estimated final TDS');
+  });
+
   it('uses the browser-only rasterization contract explicitly', async () => {
     await expect(rasterizeRecipeShareCard('<svg />', 1200, 800)).rejects.toThrow(
       'can only be created in a browser',
