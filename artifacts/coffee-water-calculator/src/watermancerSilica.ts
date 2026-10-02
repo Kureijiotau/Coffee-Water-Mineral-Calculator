@@ -19,3 +19,15 @@ export function watermancerSilicaPpm(drops: number, batchLiters: number): number
     ? doseMg / batchLiters
     : 0;
 }
+
+export function watermancerSilicaDropsForTarget(targetPpm: number, batchLiters: number): number {
+  if (
+    !Number.isFinite(targetPpm) || targetPpm <= 0
+    || !Number.isFinite(batchLiters) || batchLiters <= 0
+  ) {
+    return 0;
+  }
+  return normalizeWatermancerSilicaDrops(
+    Math.round(targetPpm * batchLiters / EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop),
+  );
+}

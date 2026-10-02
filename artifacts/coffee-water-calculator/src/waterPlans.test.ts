@@ -48,6 +48,8 @@ const snapshot: WaterPlanSnapshot = {
   watermancerIonSourcePreferences: { calcium: 'water-then-salt' },
   watermancerDoseOverridesMg: { mgso4: 25 },
   watermancerSilicaDrops: 3,
+  watermancerSilicaTargetEnabled: true,
+  watermancerSilicaTargetPpm: '25',
   sodiumCorrectionOn: false,
   concentrateRecipeHandoff: null,
   concentrate: {
@@ -85,6 +87,8 @@ describe('water plan persistence', () => {
     expect(parsed?.name).toBe(plan.name);
     expect(parsed?.snapshot).toEqual(snapshot);
     expect(parsed?.snapshot.watermancerSilicaDrops).toBe(3);
+    expect(parsed?.snapshot.watermancerSilicaTargetEnabled).toBe(true);
+    expect(parsed?.snapshot.watermancerSilicaTargetPpm).toBe('25');
   });
 
   it('accepts legacy snapshots without a matching mode and leaves them on target values', () => {
@@ -99,6 +103,8 @@ describe('water plan persistence', () => {
   it('accepts legacy snapshots without a silica dose and rejects invalid counts', () => {
     const legacySnapshot = { ...snapshot };
     delete legacySnapshot.watermancerSilicaDrops;
+    delete legacySnapshot.watermancerSilicaTargetEnabled;
+    delete legacySnapshot.watermancerSilicaTargetPpm;
     expect(isValidWaterPlan(createWaterPlan('Legacy silica', legacySnapshot))).toBe(true);
     expect(isValidWaterPlan(createWaterPlan('Invalid silica', {
       ...snapshot,
@@ -107,6 +113,10 @@ describe('water plan persistence', () => {
     expect(isValidWaterPlan(createWaterPlan('Fractional silica', {
       ...snapshot,
       watermancerSilicaDrops: 1.5,
+    }))).toBe(false);
+    expect(isValidWaterPlan(createWaterPlan('Invalid silica target toggle', {
+      ...snapshot,
+      watermancerSilicaTargetEnabled: 'yes' as unknown as boolean,
     }))).toBe(false);
   });
 

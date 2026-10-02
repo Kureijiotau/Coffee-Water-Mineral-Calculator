@@ -232,6 +232,7 @@ import {
 import {
   EIDON_SILICA_LABEL_BASIS,
   watermancerSilicaDoseMg,
+  watermancerSilicaDropsForTarget,
   watermancerSilicaPpm as calculateWatermancerSilicaPpm,
 } from './watermancerSilica';
 
@@ -3004,6 +3005,8 @@ function App() {
    const [watermancerDoseOverridesMg, setWatermancerDoseOverridesMg] = useState<Record<string, number>>({});
    const [watermancerDoseInputDrafts, setWatermancerDoseInputDrafts] = useState<Record<string, string>>({});
    const [watermancerSilicaDrops, setWatermancerSilicaDrops] = useState(0);
+    const [watermancerSilicaTargetEnabled, setWatermancerSilicaTargetEnabled] = useState(false);
+    const [watermancerSilicaTargetPpmInput, setWatermancerSilicaTargetPpmInput] = useState('');
    const watermancerDoseInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [watermancerShareStatus, setWatermancerShareStatus] = useState<'idle' | 'downloaded' | 'shared' | 'error'>('idle');
   const [sodiumCorrectionOn, setSodiumCorrectionOn] = useState(false);
@@ -4300,6 +4303,8 @@ function App() {
     setWatermancerDoseOverridesMg({});
     setWatermancerDoseInputDrafts({});
     setWatermancerSilicaDrops(0);
+    setWatermancerSilicaTargetEnabled(false);
+    setWatermancerSilicaTargetPpmInput('');
     setRows(currentRows => currentRows.map(row => ({ ...row, target: '' })));
   };
     // Build the salt recommendation shown below the calculator. The sulfate /
@@ -4449,6 +4454,35 @@ function App() {
     [effectiveSuggestedSaltTargets],
   );
   const watermancerSilicaConcentrationPpm = calculateWatermancerSilicaPpm(watermancerSilicaDrops, L);
+  useEffect(() => {
+    if (!watermancerSilicaTargetEnabled) return;
+    const targetPpm = Number.parseFloat(watermancerSilicaTargetPpmInput);
+    const nextDrops = watermancerSilicaDropsForTarget(targetPpm, L);
+    setWatermancerSilicaDrops(current => current === nextDrops ? current : nextDrops);
+  }, [L, watermancerSilicaTargetEnabled, watermancerSilicaTargetPpmInput]);
+  const handleWatermancerSilicaTargetToggle = (enabled: boolean) => {
+    if (enabled) {
+      const targetPpmInput = watermancerSilicaTargetPpmInput.trim()
+        ? watermancerSilicaTargetPpmInput
+        : String(watermancerSilicaConcentrationPpm);
+      setWatermancerSilicaTargetPpmInput(targetPpmInput);
+      setWatermancerSilicaDrops(watermancerSilicaDropsForTarget(Number.parseFloat(targetPpmInput), L));
+    }
+    setWatermancerSilicaTargetEnabled(enabled);
+  };
+  const handleWatermancerSilicaTargetChange = (value: string) => {
+    setWatermancerSilicaTargetPpmInput(value);
+    if (watermancerSilicaTargetEnabled) {
+      setWatermancerSilicaDrops(watermancerSilicaDropsForTarget(Number.parseFloat(value), L));
+    }
+  };
+  const changeWatermancerSilicaDrops = (delta: number) => {
+    const nextDrops = Math.max(0, watermancerSilicaDrops + delta);
+    setWatermancerSilicaDrops(nextDrops);
+    if (watermancerSilicaTargetEnabled) {
+      setWatermancerSilicaTargetPpmInput(String(calculateWatermancerSilicaPpm(nextDrops, L)));
+    }
+  };
   const watermancerSupplementalIonTotals = useMemo(
     () => ({
       ...computeSupplementalIonTotals(activeWatermancerSaltTargets),
@@ -4758,6 +4792,8 @@ function App() {
     setWatermancerRecalculationNonce(0);
     setWatermancerDoseOverridesMg({});
     setWatermancerSilicaDrops(0);
+    setWatermancerSilicaTargetEnabled(false);
+    setWatermancerSilicaTargetPpmInput('');
     setSodiumCorrectionOn(false);
     setShowResetConfirm(false);
   };
@@ -5836,6 +5872,8 @@ function App() {
     watermancerIonSourcePreferences: Object.fromEntries(Object.entries(watermancerIonSourcePreferences)),
     watermancerDoseOverridesMg: { ...watermancerDoseOverridesMg },
     watermancerSilicaDrops,
+    watermancerSilicaTargetEnabled,
+    watermancerSilicaTargetPpm: watermancerSilicaTargetPpmInput,
     sodiumCorrectionOn,
     finishedIons: Object.fromEntries(
       ACTIVE_ION_IDS.map(id => [id, Math.max(Number(watermancerCurrentFinalIons[id] ?? 0), 0)]),
@@ -5994,6 +6032,8 @@ function App() {
     setWatermancerIonSourcePreferences(snapshot.watermancerIonSourcePreferences as Record<IonId, WatermancerIonSourcePreference>);
     setWatermancerDoseOverridesMg({ ...snapshot.watermancerDoseOverridesMg });
     setWatermancerSilicaDrops(snapshot.watermancerSilicaDrops ?? 0);
+    setWatermancerSilicaTargetEnabled(snapshot.watermancerSilicaTargetEnabled ?? false);
+    setWatermancerSilicaTargetPpmInput(snapshot.watermancerSilicaTargetPpm ?? '');
     setSodiumCorrectionOn(snapshot.sodiumCorrectionOn);
     setWatermancerMatchMode('automatic');
     setConcentrateRecipeHandoff(snapshot.concentrateRecipeHandoff);
@@ -6187,6 +6227,8 @@ function App() {
     watermancerCurrentFinalIons,
     watermancerDoseOverridesMg,
     watermancerSilicaDrops,
+    watermancerSilicaTargetEnabled,
+    watermancerSilicaTargetPpmInput,
     watermancerIonSourcePreferences,
     watermancerMatchingMode,
     watermancerSaltObjective,
@@ -6705,6 +6747,10 @@ function App() {
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               supplementalIons={watermancerSupplementalIonTotals}
+              silicaTargetEnabled={watermancerSilicaTargetEnabled}
+              silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
+              onSilicaTargetEnabledChange={handleWatermancerSilicaTargetToggle}
+              onSilicaTargetPpmInputChange={handleWatermancerSilicaTargetChange}
               targetIons={watermancerIonTargets}
               profiles={profiles}
               activeProfileId={activeProfileId}
@@ -7804,6 +7850,8 @@ function App() {
              <WatermancerIonCoverageBars
                 actualIons={watermancerCurrentFinalIons}
                 supplementalIons={watermancerSupplementalIonTotals}
+                silicaTargetEnabled={watermancerSilicaTargetEnabled}
+                silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
               targetIons={watermancerIonTargets}
                targetMetricValues={originalTargetMetricValues}
                finalMetricValues={reviewFinalMetricValues}
@@ -8231,7 +8279,7 @@ function App() {
                       <div className="watermancer-salt-table__dose-controls">
                         <button
                           type="button"
-                          onClick={() => setWatermancerSilicaDrops(current => Math.max(0, current - 1))}
+                          onClick={() => changeWatermancerSilicaDrops(-1)}
                           disabled={watermancerSilicaDrops <= 0}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/60 text-slate-300 transition hover:border-violet-300/50 hover:bg-violet-500/10 active:scale-90 disabled:cursor-not-allowed disabled:opacity-30"
                           aria-label="Decrease silica dose by one drop"
@@ -8249,7 +8297,7 @@ function App() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => setWatermancerSilicaDrops(current => current + 1)}
+                          onClick={() => changeWatermancerSilicaDrops(1)}
                           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-violet-400/35 bg-violet-500/10 text-violet-200 transition hover:border-violet-200/60 hover:bg-violet-500/20 active:scale-90"
                           aria-label="Increase silica dose by one drop"
                           data-testid="watermancer-silica-increase"
@@ -12595,6 +12643,10 @@ function WatermancerIonProfileCard({
   ions,
   currentFinalIons,
   supplementalIons,
+  silicaTargetEnabled,
+  silicaTargetPpmInput,
+  onSilicaTargetEnabledChange,
+  onSilicaTargetPpmInputChange,
   targetIons,
   profiles,
   activeProfileId,
@@ -12626,6 +12678,10 @@ function WatermancerIonProfileCard({
   ions: Partial<Record<IonId, number>>;
   currentFinalIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
+  silicaTargetEnabled: boolean;
+  silicaTargetPpmInput: string;
+  onSilicaTargetEnabledChange: (enabled: boolean) => void;
+  onSilicaTargetPpmInputChange: (value: string) => void;
   targetIons: Partial<Record<IonId, number>>;
   profiles: WaterProfile[];
   activeProfileId: string;
@@ -13419,10 +13475,12 @@ function WatermancerIonProfileCard({
         {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
           const supplemental = SUPPLEMENTAL_ION_MAP[id];
           const ppm = supplementalIons[id] ?? 0;
-          if (ppm <= 0) return null;
+          const isSilica = id === 'silica';
+          if (ppm <= 0 && !isSilica) return null;
           return (
             <div
               key={`supplemental-${id}`}
+              data-testid={isSilica ? 'watermancer-silica-ion-card' : undefined}
               className="group/ion relative rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3"
             >
               <div className="mb-1 flex items-center justify-between">
@@ -13441,8 +13499,43 @@ function WatermancerIonProfileCard({
                 {supplemental.formula}
               </div>
               <div className="mt-1 text-[10px] text-slate-500">
-                Supplemental component · display only
+                {isSilica
+                  ? silicaTargetEnabled ? 'Supplemental · target dosing' : 'Supplemental · manual dose'
+                  : 'Supplemental component · display only'}
               </div>
+              {isSilica && (
+                <div className="mt-2 space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => onSilicaTargetEnabledChange(!silicaTargetEnabled)}
+                    aria-pressed={silicaTargetEnabled}
+                    data-testid="watermancer-silica-target-toggle"
+                    className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition ${
+                      silicaTargetEnabled
+                        ? 'border-violet-300/40 bg-violet-500/15 text-violet-100'
+                        : 'border-slate-700 bg-slate-950/30 text-slate-400 hover:border-violet-300/40 hover:text-violet-100'
+                    }`}
+                  >
+                    {silicaTargetEnabled ? 'Use' : 'Not used'}
+                  </button>
+                  {silicaTargetEnabled ? (
+                    <label className="block text-[10px] text-slate-400">
+                      Silica target (ppm)
+                      <StableNumberInput
+                        min="0"
+                        step="0.1"
+                        value={silicaTargetPpmInput}
+                        onChange={event => onSilicaTargetPpmInputChange(event.target.value)}
+                        aria-label="Silica target in ppm"
+                        data-testid="watermancer-silica-target-input"
+                        className="mt-1 w-full rounded-lg border border-violet-400/30 bg-slate-900/70 px-2 py-1.5 text-sm font-semibold tabular-nums text-violet-100 outline-none focus:ring-2 focus:ring-violet-400/40"
+                      />
+                    </label>
+                  ) : (
+                    <div className="text-[10px] text-slate-500">Drop count is manual; no silica target is active.</div>
+                  )}
+                </div>
+              )}
               <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
                 {supplemental.note}
               </span>
@@ -13621,6 +13714,8 @@ type RatioSwapKey = 'gh-kh' | 'mg-ca' | 'cl-so4';
 function WatermancerIonCoverageBars({
   actualIons,
   supplementalIons,
+  silicaTargetEnabled,
+  silicaTargetPpmInput,
   targetIons,
   targetMetricValues,
   finalMetricValues,
@@ -13646,6 +13741,8 @@ function WatermancerIonCoverageBars({
 }: {
   actualIons: Partial<Record<IonId, number>>;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
+  silicaTargetEnabled: boolean;
+  silicaTargetPpmInput: string;
   targetIons: Partial<Record<IonId, number>>;
   targetMetricValues: WatermancerMetricValues;
   finalMetricValues: WatermancerMetricValues;
@@ -13960,6 +14057,9 @@ function WatermancerIonCoverageBars({
        {(Object.keys(SUPPLEMENTAL_ION_MAP) as SupplementalIonId[]).map(id => {
          const supplemental = SUPPLEMENTAL_ION_MAP[id];
          const ppm = supplementalIons[id] ?? 0;
+          const silicaHasTarget = id === 'silica' && silicaTargetEnabled;
+          const silicaTarget = Math.max(Number.parseFloat(silicaTargetPpmInput) || 0, 0);
+          const targetPercent = silicaTarget > 0 ? (ppm / silicaTarget) * 100 : 0;
          if (ppm <= 0) return null;
          return (
            <div key={`supplemental-${id}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-3 gap-y-1 sm:grid-cols-[6rem_minmax(0,1fr)_6.5rem]">
@@ -13967,23 +14067,31 @@ function WatermancerIonCoverageBars({
              <div className="min-w-0">
                <div
                  className="relative h-4 overflow-hidden rounded-full bg-slate-700/70"
-                 aria-label={`${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm, display only`}
+                  aria-label={silicaHasTarget
+                    ? `${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm of ${formatLiveIonPpm(silicaTarget)} ppm target`
+                    : `${supplemental.name}: ${formatLiveIonPpm(ppm)} ppm, display only`}
                >
                  <div
                    className="h-full rounded-full bg-violet-400/80 transition-all duration-300"
-                   style={{ width: '100%' }}
+                    style={{ width: silicaHasTarget && silicaTarget > 0 ? `${Math.min(targetPercent, 100)}%` : '100%' }}
                  />
                  <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none text-slate-950/80">
-                   display only
+                    {silicaHasTarget
+                      ? silicaTarget > 0 ? `${Math.round(targetPercent)}%` : '0 ppm target'
+                      : 'display only'}
                  </span>
                </div>
                <div className="mt-1 text-[10px] text-violet-200">
-                 {formatLiveIonPpm(ppm)} ppm · no target set
+                  {silicaHasTarget
+                    ? `${formatLiveIonPpm(ppm)} ppm · target ${formatLiveIonPpm(silicaTarget)} ppm`
+                    : `${formatLiveIonPpm(ppm)} ppm · no target set`}
                </div>
              </div>
-             <span className="text-right text-xs font-semibold tabular-nums text-violet-200">
+              <span className="whitespace-nowrap text-right text-xs font-semibold tabular-nums text-violet-200">
                {formatLiveIonPpm(ppm)}
-               <span className="font-normal text-slate-500"> ppm</span>
+                <span className="font-normal text-slate-500">
+                  {silicaHasTarget ? ` / ${formatLiveIonPpm(silicaTarget)}` : ' ppm'}
+                </span>
              </span>
            </div>
          );

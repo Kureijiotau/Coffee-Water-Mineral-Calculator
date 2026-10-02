@@ -75,6 +75,9 @@ export type WaterPlanSnapshot = {
   watermancerDoseOverridesMg: Record<string, number>;
   /** Optional for compatibility with version-1 sessions created before silica dosing. */
   watermancerSilicaDrops?: number;
+  /** Optional for compatibility with sessions created before silica target dosing. */
+  watermancerSilicaTargetEnabled?: boolean;
+  watermancerSilicaTargetPpm?: string;
   sodiumCorrectionOn: boolean;
   /** Exact final readings captured when the plan was saved, if available. */
   finishedIons?: Record<string, number>;
@@ -178,6 +181,10 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
     && (typeof value.watermancerSilicaDrops !== 'number'
       || !Number.isInteger(value.watermancerSilicaDrops)
       || value.watermancerSilicaDrops < 0)) return false;
+  if (value.watermancerSilicaTargetEnabled !== undefined
+    && typeof value.watermancerSilicaTargetEnabled !== 'boolean') return false;
+  if (value.watermancerSilicaTargetPpm !== undefined
+    && typeof value.watermancerSilicaTargetPpm !== 'string') return false;
   if (value.watermancerTargetOverride !== null && !isNumberRecord(value.watermancerTargetOverride)) return false;
   if (typeof value.sodiumCorrectionOn !== 'boolean') return false;
   const concentrate = isRecord(value.concentrate) ? value.concentrate : null;
