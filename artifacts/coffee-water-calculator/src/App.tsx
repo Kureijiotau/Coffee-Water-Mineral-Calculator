@@ -7863,45 +7863,107 @@ function App() {
                   </div>
                 </div>
               </div>
-                 <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+                  <details className={`group mt-4 overflow-hidden rounded-xl border ${
                   watermancerMatchingMode === 'ratios'
-                    ? ratioRouteIsMatched
-                    : reviewTotalDeviation <= 0.05
-                   ? 'border-emerald-400/20 bg-emerald-500/5'
-                   : 'border-amber-400/20 bg-amber-500/5'
+                     ? ratioRouteIsMatched
+                       ? 'border-emerald-400/20 bg-emerald-500/5'
+                       : 'border-amber-400/20 bg-amber-500/5'
+                     : reviewTotalDeviation <= 0.05
+                       ? 'border-emerald-400/20 bg-emerald-500/5'
+                       : 'border-amber-400/20 bg-amber-500/5'
                }`}>
-                 <div>
-                   <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                      {watermancerMatchingMode === 'ratios' ? 'Positive floor deficit' : 'Final total deviation'}
-                   </div>
-                   <div className="mt-1 text-[10px] text-slate-500">
-                      {watermancerMatchingMode === 'ratios'
-                        ? 'Positive target ions are minimum floors; zero-target ions remain ceilings'
-                        : 'Sum of absolute ion gaps after configured tolerances'}
-                   </div>
-                 </div>
-                 <div className="flex items-baseline gap-2 text-right">
-                   <span className={`text-xl font-semibold tabular-nums ${
-                      watermancerMatchingMode === 'ratios'
-                        ? ratioRouteIsMatched ? 'text-emerald-300' : 'text-amber-300'
-                        : reviewTotalDeviation <= 0.05 ? 'text-emerald-300' : 'text-amber-300'
-                   }`}>
-                      {(watermancerMatchingMode === 'ratios'
-                        ? watermancerCurrentRatioEvaluation?.floorDeficitTotal ?? 0
-                        : reviewTotalDeviation).toFixed(2)}
-                   </span>
-                   <span className="text-xs text-slate-400">ppm</span>
-                   <span className="text-[10px] text-slate-500">
-                      {watermancerMatchingMode === 'ratios'
-                        ? watermancerCurrentRatioEvaluation?.zeroTargetProtectionSatisfied
-                          ? 'floors / ceilings safe'
-                          : `${watermancerCurrentRatioEvaluation?.zeroTargetViolations.length ?? 0} zero-target violation${(watermancerCurrentRatioEvaluation?.zeroTargetViolations.length ?? 0) === 1 ? '' : 's'}`
-                        : reviewDeviationCount === 0
-                          ? 'within tolerance'
-                          : `${reviewDeviationCount} ion${reviewDeviationCount === 1 ? '' : 's'} beyond tolerance`}
-                   </span>
-                 </div>
-               </div>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 px-4 py-3 outline-none transition-colors hover:bg-white/[0.025] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300 [&::-webkit-details-marker]:hidden">
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                          {watermancerMatchingMode === 'ratios' ? 'Positive floor deficit' : 'Final total deviation'}
+                        </div>
+                        <div className="mt-1 text-[10px] text-slate-500">
+                          {watermancerMatchingMode === 'ratios'
+                            ? 'Positive target ions are minimum floors; zero-target ions remain ceilings'
+                            : 'Sum of absolute ion gaps after configured tolerances'}
+                        </div>
+                      </div>
+                      <div className="flex items-baseline gap-2 text-right">
+                        <span className={`text-xl font-semibold tabular-nums ${
+                          watermancerMatchingMode === 'ratios'
+                            ? ratioRouteIsMatched ? 'text-emerald-300' : 'text-amber-300'
+                            : reviewTotalDeviation <= 0.05 ? 'text-emerald-300' : 'text-amber-300'
+                        }`}>
+                          {(watermancerMatchingMode === 'ratios'
+                            ? watermancerCurrentRatioEvaluation?.floorDeficitTotal ?? 0
+                            : reviewTotalDeviation).toFixed(2)}
+                        </span>
+                        <span className="text-xs text-slate-400">ppm</span>
+                        <span className="text-[10px] text-slate-500">
+                          {watermancerMatchingMode === 'ratios'
+                            ? watermancerCurrentRatioEvaluation?.zeroTargetProtectionSatisfied
+                              ? 'floors / ceilings safe'
+                              : `${watermancerCurrentRatioEvaluation?.zeroTargetViolations.length ?? 0} zero-target violation${(watermancerCurrentRatioEvaluation?.zeroTargetViolations.length ?? 0) === 1 ? '' : 's'}`
+                            : reviewDeviationCount === 0
+                              ? 'within tolerance'
+                              : `${reviewDeviationCount} ion${reviewDeviationCount === 1 ? '' : 's'} beyond tolerance`}
+                        </span>
+                        <ChevronDown className="ml-1 h-4 w-4 shrink-0 text-slate-500 transition-transform group-open:rotate-180" aria-hidden="true" />
+                      </div>
+                    </summary>
+                    <div className="space-y-2 border-t border-slate-700/70 p-3">
+                      <div className="hidden grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))] gap-3 px-3 text-[9px] font-semibold uppercase tracking-wider text-slate-500 sm:grid">
+                        <span>Ion</span>
+                        <span className="text-right">Target</span>
+                        <span className="text-right">Final</span>
+                        <span className="text-right">Difference</span>
+                      </div>
+                      {watermancerCurrentDeviations.map(({ id, actual, target, delta }) => {
+                        const policyGap = watermancerDeviationBeyondPolicy(
+                          { id, actual, target, delta },
+                          watermancerPlan,
+                        );
+                        const zeroTargetViolation = watermancerCurrentRatioEvaluation?.zeroTargetViolations
+                          .find(violation => violation.id === id);
+                        const ratioFloorDeficit = watermancerCurrentRatioEvaluation?.floorDeficits[id] ?? 0;
+                        const isBeyondTolerance = watermancerMatchingMode === 'ratios'
+                          ? target <= 0
+                            ? (zeroTargetViolation?.excess ?? 0) > 0.05
+                            : ratioFloorDeficit > 0.05
+                          : Math.abs(policyGap) > 0.05;
+                        const statusLabel = watermancerMatchingMode === 'ratios'
+                          ? target <= 0
+                            ? isBeyondTolerance ? 'Ceiling exceeded' : 'Ceiling met'
+                            : isBeyondTolerance ? 'Below floor' : 'Floor met'
+                          : isBeyondTolerance ? 'Beyond tolerance' : 'Within tolerance';
+                        return (
+                          <div
+                            key={id}
+                            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-lg border border-slate-700/70 bg-slate-950/30 px-3 py-2.5 sm:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,1fr))]"
+                          >
+                            <span className="min-w-0 text-xs font-semibold text-slate-200">
+                              <span className="font-mono text-[color:var(--ion-light-fg)]">{ION_MAP[id].formula}</span>
+                              <span className="ml-1.5 text-[10px] font-normal text-slate-400">{ION_MAP[id].name}</span>
+                              <span className={`ml-2 hidden text-[9px] font-medium sm:inline ${
+                                isBeyondTolerance ? 'text-amber-300' : 'text-emerald-300'
+                              }`}>{statusLabel}</span>
+                            </span>
+                            <span className="text-right sm:block">
+                              <span className="block text-[9px] text-slate-500 sm:hidden">Target</span>
+                              <span className="font-mono text-[11px] tabular-nums text-slate-300">{target.toFixed(2)} <span className="text-[9px] text-slate-500">ppm</span></span>
+                            </span>
+                            <span className="text-right sm:block">
+                              <span className="block text-[9px] text-slate-500 sm:hidden">Final</span>
+                              <span className="font-mono text-[11px] tabular-nums text-slate-300">{actual.toFixed(2)} <span className="text-[9px] text-slate-500">ppm</span></span>
+                            </span>
+                            <span className="text-right sm:block">
+                              <span className="block text-[9px] text-slate-500 sm:hidden">Difference · {statusLabel}</span>
+                              <span className={`font-mono text-[11px] font-semibold tabular-nums ${
+                                isBeyondTolerance ? 'text-amber-300' : 'text-emerald-300'
+                              }`}>
+                                {delta >= 0 ? '+' : '−'}{Math.abs(delta).toFixed(2)} <span className="text-[9px] font-normal">ppm</span>
+                              </span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </details>
             </div>
           </div>
         )}
