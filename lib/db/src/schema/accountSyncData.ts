@@ -12,6 +12,14 @@ export const accountSyncDataTable = pgTable("account_sync_data", {
     .$type<Array<Record<string, unknown>>>(),
   diyConcentrateInputs: jsonb("diy_concentrate_inputs")
     .$type<Record<string, string> | null>(),
+  waterTastings: jsonb("water_tastings")
+    .notNull()
+    .$type<Array<Record<string, unknown>>>()
+    .default([]),
+  waterTastingDeletions: jsonb("water_tasting_deletions")
+    .notNull()
+    .$type<Array<Record<string, unknown>>>()
+    .default([]),
   revision: integer("revision").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
