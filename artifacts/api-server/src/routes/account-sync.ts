@@ -20,6 +20,8 @@ function emptyAccountData(): AccountSyncData {
     alchemistProfiles: [],
     watermancerProfiles: [],
     diyConcentrateInputs: null,
+    waterTastings: [],
+    waterTastingDeletions: [],
   };
 }
 
@@ -32,6 +34,8 @@ function serializeAccountData(
     alchemistProfiles: row.alchemistProfiles as AccountSyncData["alchemistProfiles"],
     watermancerProfiles: row.watermancerProfiles as AccountSyncData["watermancerProfiles"],
     diyConcentrateInputs: row.diyConcentrateInputs as AccountSyncData["diyConcentrateInputs"],
+    waterTastings: row.waterTastings as unknown as AccountSyncData["waterTastings"],
+    waterTastingDeletions: row.waterTastingDeletions as unknown as AccountSyncData["waterTastingDeletions"],
   };
 }
 
@@ -86,6 +90,8 @@ router.put("/account/sync", async (req, res) => {
     alchemistProfiles,
     watermancerProfiles,
     diyConcentrateInputs,
+    waterTastings,
+    waterTastingDeletions,
   } = parsed.data;
 
   try {
@@ -108,6 +114,8 @@ router.put("/account/sync", async (req, res) => {
           alchemistProfiles,
           watermancerProfiles,
           diyConcentrateInputs,
+          waterTastings,
+          waterTastingDeletions,
         })
         .onConflictDoNothing({ target: accountSyncDataTable.userId })
         .returning();
@@ -124,6 +132,8 @@ router.put("/account/sync", async (req, res) => {
           alchemistProfiles,
           watermancerProfiles,
           diyConcentrateInputs,
+          waterTastings,
+          waterTastingDeletions,
           updatedAt: new Date(),
         })
         .where(and(
