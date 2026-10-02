@@ -68,8 +68,14 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(acidity).toHaveValue('8');
   await expect(mouthfeel).toHaveValue('4');
   await expect(overall).toHaveValue('7');
-  await expect(page.getByTestId('cue-affective-overall')).toHaveText('Moderately high');
+  await expect(page.getByTestId('cue-affective-fragranceAroma')).toHaveText('Pronounced');
+  await expect(page.getByTestId('cue-affective-flavorAftertaste')).toHaveText('Richly expressed');
+  await expect(page.getByTestId('cue-affective-acidity')).toHaveText('Sharp');
+  await expect(page.getByTestId('cue-affective-mouthfeel')).toHaveText('Soft, delicate texture');
+  await expect(page.getByTestId('cue-affective-overall')).toHaveText('Strongly expressed');
+  await expect(page.getByTestId('cue-affective-overall')).toHaveCSS('font-weight', '700');
   await expect(page.getByTestId('panel-tasting-profile-analysis')).toHaveCount(0);
+  await page.getByTestId('input-water-tasting-notes').fill('Bright citrus aroma and a clean finish.');
   await page.getByTestId('button-save-tasting').click();
 
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting saved');
@@ -80,6 +86,8 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   const tastingId = cardTestId!.replace('card-tasting-', '');
   await expect(page.getByTestId(`profile-tasting-${tastingId}`)).toHaveText('Aiki safe profile');
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday morning cup');
+  await expect(page.getByTestId(`notes-tasting-${tastingId}`))
+    .toHaveText('Bright citrus aroma and a clean finish.');
   await expect(page.getByTestId(`descriptors-tasting-${tastingId}`)).toHaveCount(0);
   await expect(page.getByTestId(`total-tasting-${tastingId}`)).toHaveCount(0);
   await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
@@ -95,16 +103,21 @@ test('records water’s effect with five sliders and edits a partial tasting', a
 
   await page.getByTestId(`button-edit-tasting-${tastingId}`).click();
   await expect(page.getByTestId('input-tasting-name')).toHaveValue('Sunday morning cup');
+  await expect(page.getByTestId('input-water-tasting-notes'))
+    .toHaveValue('Bright citrus aroma and a clean finish.');
   await expect(page.getByTestId('input-affective-fragranceAroma')).toHaveValue('6');
   await expect(page.getByTestId('input-affective-flavorAftertaste')).toHaveValue('6');
   await expect(page.getByTestId('input-affective-acidity')).toHaveValue('8');
   await expect(page.getByTestId('input-affective-mouthfeel')).toHaveValue('4');
   await expect(page.getByTestId('input-affective-overall')).toHaveValue('7');
   await page.getByTestId('input-tasting-name').fill('Sunday cup, revised');
+  await page.getByTestId('input-water-tasting-notes').fill('A little more sweetness as it cooled.');
   await page.getByTestId('button-save-tasting').click();
 
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday cup, revised');
+  await expect(page.getByTestId(`notes-tasting-${tastingId}`))
+    .toHaveText('A little more sweetness as it cooled.');
   await expect(page.getByTestId(`overall-tasting-${tastingId}`)).toHaveText('Overall 7 / 9');
   await expect(page.getByTestId(`scores-tasting-${tastingId}`)).toContainText('Fragrance');
 
