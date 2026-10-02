@@ -67,6 +67,7 @@
 - [Watermancer profile seeding](watermancer-profile-seeding.md) — Add new should start from the live final-mixture ion readings so liked results can be saved immediately
 - [WATER recipe files](water-recipe-files.md) — use image-backed `.WATER.png` recipe exports while keeping embedded payloads standard JSON and legacy JSON imports valid
 - [Water tasting hidden fields](water-tasting-hidden-fields.md) — keep new notes to cup-impact ratings while retaining older hidden scores and coffee details on edit
+- [Water Tasting sync and scales](water-tasting-sync-and-scales.md) — sync only saved tastings, retain deletion markers, and keep sensory cues neutral and attribute-specific
 - [WATER QR capacity](water-recovery-qr-capacity.md) — complete recovery and share-link payloads need adaptive QR correction levels; duplicating the legacy envelope overflows large recipes
 - [Finished-water export readings](finished-water-export-readings.md) — salt targets alone cannot reconstruct a mineral-water card; exports must carry final readings for exact Mixer imports
 - [Watermancer direct downloads](watermancer-direct-downloads.md) — profile export actions should download directly instead of opening the native Web Share sheet
