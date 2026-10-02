@@ -64,6 +64,106 @@ export const getAccountSyncDataResponseDiyConcentrateInputsOneDesiredPpmInputMax
 
 export const getAccountSyncDataResponseDiyConcentrateInputsOneDesiredSaltMgInputMax = 100;
 
+export const getAccountSyncDataResponseWaterTastingsItemOneIdMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneProfileSourceIdMax = 500;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneProfileNameSnapshotMax = 500;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneCoffeeNameMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneCoffeeRoastMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneCoffeeOriginMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneCoffeeBrewMethodMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsItemMax = 100;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsMax = 100;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMax = 10;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMax = 10;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMax = 10;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMax = 10;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMax = 10;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMin = -5;
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMax = 5;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMin = -5;
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMax = 5;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMin = -5;
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMax = 5;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMin = -5;
+export const getAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMax = 5;
+
+export const getAccountSyncDataResponseWaterTastingsItemOneNotesMax = 2000;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoIdMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoProfileSourceIdMax = 500;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoProfileNameSnapshotMax = 500;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoCoffeeNameMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoCoffeeRoastMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoCoffeeOriginMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoCoffeeBrewMethodMax = 200;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsItemMax = 100;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsMax = 100;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMin = 0;
+export const getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMax = 15;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoAffectiveFragranceAromaMax = 9;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoAffectiveFlavorAftertasteMax = 9;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoAffectiveAcidityMax = 9;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoAffectiveMouthfeelMax = 9;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoAffectiveOverallMax = 9;
+
+export const getAccountSyncDataResponseWaterTastingsItemTwoNotesMax = 2000;
+
+export const getAccountSyncDataResponseWaterTastingDeletionsItemIdMax = 200;
+
 
 
 export const GetAccountSyncDataResponse = zod.object({
@@ -97,7 +197,70 @@ export const GetAccountSyncDataResponse = zod.object({
   "desiredPpmInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneDesiredPpmInputMax).optional(),
   "desiredSaltMgInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneDesiredSaltMgInputMax).optional(),
   "desiredDoseBasis": zod.enum(['caco3', 'salt-mg']).optional()
-}),zod.null()])
+}),zod.null()]),
+  "waterTastings": zod.array(zod.union([zod.object({
+  "id": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemOneIdMax),
+  "profileSourceId": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemOneProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemOneProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(getAccountSyncDataResponseWaterTastingsItemOneCoffeeNameMax).optional(),
+  "roast": zod.string().max(getAccountSyncDataResponseWaterTastingsItemOneCoffeeRoastMax).optional(),
+  "origin": zod.string().max(getAccountSyncDataResponseWaterTastingsItemOneCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(getAccountSyncDataResponseWaterTastingsItemOneCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsItemMax)).max(getAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsMax),
+  "ratings": zod.object({
+  "clarity": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMin).max(getAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMax).optional(),
+  "flavorExpression": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMin).max(getAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMax).optional(),
+  "balance": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMin).max(getAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMax).optional(),
+  "mouthfeel": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMin).max(getAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMax).optional(),
+  "finish": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMin).max(getAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMax).optional()
+}),
+  "spectrum": zod.object({
+  "acidityFocus": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMin).max(getAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMax),
+  "bodyWeight": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMin).max(getAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMax),
+  "structure": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMin).max(getAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMax),
+  "finish": zod.number().min(getAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMin).max(getAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMax)
+}).optional(),
+  "notes": zod.string().max(getAccountSyncDataResponseWaterTastingsItemOneNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.object({
+  "id": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoIdMax),
+  "profileSourceId": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(getAccountSyncDataResponseWaterTastingsItemTwoCoffeeNameMax).optional(),
+  "roast": zod.string().max(getAccountSyncDataResponseWaterTastingsItemTwoCoffeeRoastMax).optional(),
+  "origin": zod.string().max(getAccountSyncDataResponseWaterTastingsItemTwoCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(getAccountSyncDataResponseWaterTastingsItemTwoCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsItemMax)).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsMax),
+  "scoringVersion": zod.literal(2),
+  "descriptive": zod.object({
+  "fragrance": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMax).optional(),
+  "aroma": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMax).optional(),
+  "flavor": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMax).optional(),
+  "aftertaste": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMax).optional(),
+  "acidity": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMax).optional(),
+  "sweetness": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMax).optional(),
+  "mouthfeel": zod.number().min(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMin).max(getAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMax).optional()
+}),
+  "affective": zod.object({
+  "fragranceAroma": zod.number().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoAffectiveFragranceAromaMax).optional(),
+  "flavorAftertaste": zod.number().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoAffectiveFlavorAftertasteMax).optional(),
+  "acidity": zod.number().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoAffectiveAcidityMax).optional(),
+  "mouthfeel": zod.number().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoAffectiveMouthfeelMax).optional(),
+  "overall": zod.number().min(1).max(getAccountSyncDataResponseWaterTastingsItemTwoAffectiveOverallMax).optional()
+}),
+  "notes": zod.string().max(getAccountSyncDataResponseWaterTastingsItemTwoNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})])),
+  "waterTastingDeletions": zod.array(zod.object({
+  "id": zod.string().min(1).max(getAccountSyncDataResponseWaterTastingDeletionsItemIdMax),
+  "deletedAt": zod.coerce.date()
+}))
 })
 
 
@@ -148,6 +311,106 @@ export const saveAccountSyncDataBodyDiyConcentrateInputsOneDesiredPpmInputMax = 
 
 export const saveAccountSyncDataBodyDiyConcentrateInputsOneDesiredSaltMgInputMax = 100;
 
+export const saveAccountSyncDataBodyWaterTastingsItemOneIdMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneProfileSourceIdMax = 500;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneProfileNameSnapshotMax = 500;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneCoffeeNameMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneCoffeeRoastMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneCoffeeOriginMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneCoffeeBrewMethodMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneDescriptorIdsItemMax = 100;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneDescriptorIdsMax = 100;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsClarityMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsClarityMax = 10;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsFlavorExpressionMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsFlavorExpressionMax = 10;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsBalanceMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsBalanceMax = 10;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsMouthfeelMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsMouthfeelMax = 10;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsFinishMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemOneRatingsFinishMax = 10;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumAcidityFocusMin = -5;
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumAcidityFocusMax = 5;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumBodyWeightMin = -5;
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumBodyWeightMax = 5;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumStructureMin = -5;
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumStructureMax = 5;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumFinishMin = -5;
+export const saveAccountSyncDataBodyWaterTastingsItemOneSpectrumFinishMax = 5;
+
+export const saveAccountSyncDataBodyWaterTastingsItemOneNotesMax = 2000;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoIdMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoProfileSourceIdMax = 500;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoProfileNameSnapshotMax = 500;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeNameMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeRoastMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeOriginMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeBrewMethodMax = 200;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptorIdsItemMax = 100;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptorIdsMax = 100;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFragranceMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFragranceMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAromaMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAromaMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFlavorMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFlavorMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAftertasteMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAftertasteMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAcidityMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAcidityMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveSweetnessMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveSweetnessMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveMouthfeelMin = 0;
+export const saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveMouthfeelMax = 15;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveFragranceAromaMax = 9;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveFlavorAftertasteMax = 9;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveAcidityMax = 9;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveMouthfeelMax = 9;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveOverallMax = 9;
+
+export const saveAccountSyncDataBodyWaterTastingsItemTwoNotesMax = 2000;
+
+export const saveAccountSyncDataBodyWaterTastingDeletionsItemIdMax = 200;
+
 
 
 export const SaveAccountSyncDataBody = zod.object({
@@ -180,7 +443,70 @@ export const SaveAccountSyncDataBody = zod.object({
   "desiredPpmInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneDesiredPpmInputMax).optional(),
   "desiredSaltMgInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneDesiredSaltMgInputMax).optional(),
   "desiredDoseBasis": zod.enum(['caco3', 'salt-mg']).optional()
-}),zod.null()])
+}),zod.null()]),
+  "waterTastings": zod.array(zod.union([zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemOneIdMax),
+  "profileSourceId": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemOneProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemOneProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemOneCoffeeNameMax).optional(),
+  "roast": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemOneCoffeeRoastMax).optional(),
+  "origin": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemOneCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemOneCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemOneDescriptorIdsItemMax)).max(saveAccountSyncDataBodyWaterTastingsItemOneDescriptorIdsMax),
+  "ratings": zod.object({
+  "clarity": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneRatingsClarityMin).max(saveAccountSyncDataBodyWaterTastingsItemOneRatingsClarityMax).optional(),
+  "flavorExpression": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneRatingsFlavorExpressionMin).max(saveAccountSyncDataBodyWaterTastingsItemOneRatingsFlavorExpressionMax).optional(),
+  "balance": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneRatingsBalanceMin).max(saveAccountSyncDataBodyWaterTastingsItemOneRatingsBalanceMax).optional(),
+  "mouthfeel": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneRatingsMouthfeelMin).max(saveAccountSyncDataBodyWaterTastingsItemOneRatingsMouthfeelMax).optional(),
+  "finish": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneRatingsFinishMin).max(saveAccountSyncDataBodyWaterTastingsItemOneRatingsFinishMax).optional()
+}),
+  "spectrum": zod.object({
+  "acidityFocus": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumAcidityFocusMin).max(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumAcidityFocusMax),
+  "bodyWeight": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumBodyWeightMin).max(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumBodyWeightMax),
+  "structure": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumStructureMin).max(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumStructureMax),
+  "finish": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumFinishMin).max(saveAccountSyncDataBodyWaterTastingsItemOneSpectrumFinishMax)
+}).optional(),
+  "notes": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemOneNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoIdMax),
+  "profileSourceId": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeNameMax).optional(),
+  "roast": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeRoastMax).optional(),
+  "origin": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemTwoCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptorIdsItemMax)).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptorIdsMax),
+  "scoringVersion": zod.literal(2),
+  "descriptive": zod.object({
+  "fragrance": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFragranceMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFragranceMax).optional(),
+  "aroma": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAromaMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAromaMax).optional(),
+  "flavor": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFlavorMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveFlavorMax).optional(),
+  "aftertaste": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAftertasteMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAftertasteMax).optional(),
+  "acidity": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAcidityMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveAcidityMax).optional(),
+  "sweetness": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveSweetnessMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveSweetnessMax).optional(),
+  "mouthfeel": zod.number().min(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveMouthfeelMin).max(saveAccountSyncDataBodyWaterTastingsItemTwoDescriptiveMouthfeelMax).optional()
+}),
+  "affective": zod.object({
+  "fragranceAroma": zod.number().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveFragranceAromaMax).optional(),
+  "flavorAftertaste": zod.number().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveFlavorAftertasteMax).optional(),
+  "acidity": zod.number().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveAcidityMax).optional(),
+  "mouthfeel": zod.number().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveMouthfeelMax).optional(),
+  "overall": zod.number().min(1).max(saveAccountSyncDataBodyWaterTastingsItemTwoAffectiveOverallMax).optional()
+}),
+  "notes": zod.string().max(saveAccountSyncDataBodyWaterTastingsItemTwoNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})])),
+  "waterTastingDeletions": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataBodyWaterTastingDeletionsItemIdMax),
+  "deletedAt": zod.coerce.date()
+}))
 })
 
 export const saveAccountSyncDataResponseRevisionMin = 0;
@@ -227,6 +553,106 @@ export const saveAccountSyncDataResponseDiyConcentrateInputsOneDesiredPpmInputMa
 
 export const saveAccountSyncDataResponseDiyConcentrateInputsOneDesiredSaltMgInputMax = 100;
 
+export const saveAccountSyncDataResponseWaterTastingsItemOneIdMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneProfileSourceIdMax = 500;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneProfileNameSnapshotMax = 500;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneCoffeeNameMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneCoffeeRoastMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneCoffeeOriginMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneCoffeeBrewMethodMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsItemMax = 100;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsMax = 100;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMax = 10;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMax = 10;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMax = 10;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMax = 10;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMax = 10;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMin = -5;
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMax = 5;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMin = -5;
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMax = 5;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMin = -5;
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMax = 5;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMin = -5;
+export const saveAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMax = 5;
+
+export const saveAccountSyncDataResponseWaterTastingsItemOneNotesMax = 2000;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoIdMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoProfileSourceIdMax = 500;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoProfileNameSnapshotMax = 500;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeNameMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeRoastMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeOriginMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeBrewMethodMax = 200;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsItemMax = 100;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsMax = 100;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMin = 0;
+export const saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMax = 15;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveFragranceAromaMax = 9;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveFlavorAftertasteMax = 9;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveAcidityMax = 9;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveMouthfeelMax = 9;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveOverallMax = 9;
+
+export const saveAccountSyncDataResponseWaterTastingsItemTwoNotesMax = 2000;
+
+export const saveAccountSyncDataResponseWaterTastingDeletionsItemIdMax = 200;
+
 
 
 export const SaveAccountSyncDataResponse = zod.object({
@@ -260,7 +686,70 @@ export const SaveAccountSyncDataResponse = zod.object({
   "desiredPpmInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneDesiredPpmInputMax).optional(),
   "desiredSaltMgInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneDesiredSaltMgInputMax).optional(),
   "desiredDoseBasis": zod.enum(['caco3', 'salt-mg']).optional()
-}),zod.null()])
+}),zod.null()]),
+  "waterTastings": zod.array(zod.union([zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemOneIdMax),
+  "profileSourceId": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemOneProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemOneProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemOneCoffeeNameMax).optional(),
+  "roast": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemOneCoffeeRoastMax).optional(),
+  "origin": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemOneCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemOneCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsItemMax)).max(saveAccountSyncDataResponseWaterTastingsItemOneDescriptorIdsMax),
+  "ratings": zod.object({
+  "clarity": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMin).max(saveAccountSyncDataResponseWaterTastingsItemOneRatingsClarityMax).optional(),
+  "flavorExpression": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMin).max(saveAccountSyncDataResponseWaterTastingsItemOneRatingsFlavorExpressionMax).optional(),
+  "balance": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMin).max(saveAccountSyncDataResponseWaterTastingsItemOneRatingsBalanceMax).optional(),
+  "mouthfeel": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMin).max(saveAccountSyncDataResponseWaterTastingsItemOneRatingsMouthfeelMax).optional(),
+  "finish": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMin).max(saveAccountSyncDataResponseWaterTastingsItemOneRatingsFinishMax).optional()
+}),
+  "spectrum": zod.object({
+  "acidityFocus": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMin).max(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumAcidityFocusMax),
+  "bodyWeight": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMin).max(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumBodyWeightMax),
+  "structure": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMin).max(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumStructureMax),
+  "finish": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMin).max(saveAccountSyncDataResponseWaterTastingsItemOneSpectrumFinishMax)
+}).optional(),
+  "notes": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemOneNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoIdMax),
+  "profileSourceId": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoProfileSourceIdMax),
+  "profileNameSnapshot": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoProfileNameSnapshotMax),
+  "coffee": zod.object({
+  "name": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeNameMax).optional(),
+  "roast": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeRoastMax).optional(),
+  "origin": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeOriginMax).optional(),
+  "brewMethod": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemTwoCoffeeBrewMethodMax).optional()
+}),
+  "descriptorIds": zod.array(zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsItemMax)).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptorIdsMax),
+  "scoringVersion": zod.literal(2),
+  "descriptive": zod.object({
+  "fragrance": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFragranceMax).optional(),
+  "aroma": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAromaMax).optional(),
+  "flavor": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveFlavorMax).optional(),
+  "aftertaste": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAftertasteMax).optional(),
+  "acidity": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveAcidityMax).optional(),
+  "sweetness": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveSweetnessMax).optional(),
+  "mouthfeel": zod.number().min(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMin).max(saveAccountSyncDataResponseWaterTastingsItemTwoDescriptiveMouthfeelMax).optional()
+}),
+  "affective": zod.object({
+  "fragranceAroma": zod.number().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveFragranceAromaMax).optional(),
+  "flavorAftertaste": zod.number().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveFlavorAftertasteMax).optional(),
+  "acidity": zod.number().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveAcidityMax).optional(),
+  "mouthfeel": zod.number().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveMouthfeelMax).optional(),
+  "overall": zod.number().min(1).max(saveAccountSyncDataResponseWaterTastingsItemTwoAffectiveOverallMax).optional()
+}),
+  "notes": zod.string().max(saveAccountSyncDataResponseWaterTastingsItemTwoNotesMax).optional(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})])),
+  "waterTastingDeletions": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataResponseWaterTastingDeletionsItemIdMax),
+  "deletedAt": zod.coerce.date()
+}))
 })
 
 
