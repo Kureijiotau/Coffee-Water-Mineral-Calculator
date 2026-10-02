@@ -80,6 +80,215 @@ export interface DiyConcentrateInputs {
   desiredDoseBasis?: DiyConcentrateInputsDesiredDoseBasis;
 }
 
+export interface WaterTastingCoffeeDetails {
+  /** @maxLength 200 */
+  name?: string;
+  /** @maxLength 200 */
+  roast?: string;
+  /** @maxLength 200 */
+  origin?: string;
+  /** @maxLength 200 */
+  brewMethod?: string;
+}
+
+export interface WaterTastingRatings {
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  clarity?: number;
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  flavorExpression?: number;
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  balance?: number;
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  mouthfeel?: number;
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  finish?: number;
+}
+
+export interface WaterTastingSpectrum {
+  /**
+     * @minimum -5
+     * @maximum 5
+     */
+  acidityFocus: number;
+  /**
+     * @minimum -5
+     * @maximum 5
+     */
+  bodyWeight: number;
+  /**
+     * @minimum -5
+     * @maximum 5
+     */
+  structure: number;
+  /**
+     * @minimum -5
+     * @maximum 5
+     */
+  finish: number;
+}
+
+export interface WaterTastingDescriptiveScores {
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  fragrance?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  aroma?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  flavor?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  aftertaste?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  acidity?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  sweetness?: number;
+  /**
+     * @minimum 0
+     * @maximum 15
+     */
+  mouthfeel?: number;
+}
+
+export interface WaterTastingAffectiveScores {
+  /**
+     * @minimum 1
+     * @maximum 9
+     */
+  fragranceAroma?: number;
+  /**
+     * @minimum 1
+     * @maximum 9
+     */
+  flavorAftertaste?: number;
+  /**
+     * @minimum 1
+     * @maximum 9
+     */
+  acidity?: number;
+  /**
+     * @minimum 1
+     * @maximum 9
+     */
+  mouthfeel?: number;
+  /**
+     * @minimum 1
+     * @maximum 9
+     */
+  overall?: number;
+}
+
+export interface WaterTastingLegacyRecord {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  profileSourceId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  profileNameSnapshot: string;
+  coffee: WaterTastingCoffeeDetails;
+  /**
+     * @maxItems 100
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  descriptorIds: string[];
+  ratings: WaterTastingRatings;
+  spectrum?: WaterTastingSpectrum;
+  /** @maxLength 2000 */
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WaterTastingCvaRecordScoringVersion = typeof WaterTastingCvaRecordScoringVersion[keyof typeof WaterTastingCvaRecordScoringVersion];
+
+
+export const WaterTastingCvaRecordScoringVersion = {
+  NUMBER_2: 2,
+} as const;
+
+export interface WaterTastingCvaRecord {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  profileSourceId: string;
+  /**
+     * @minLength 1
+     * @maxLength 500
+     */
+  profileNameSnapshot: string;
+  coffee: WaterTastingCoffeeDetails;
+  /**
+     * @maxItems 100
+     * @items.minLength 1
+     * @items.maxLength 100
+     */
+  descriptorIds: string[];
+  scoringVersion: WaterTastingCvaRecordScoringVersion;
+  descriptive: WaterTastingDescriptiveScores;
+  affective: WaterTastingAffectiveScores;
+  /** @maxLength 2000 */
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type WaterTastingRecord = WaterTastingLegacyRecord | WaterTastingCvaRecord;
+
+export interface WaterTastingDeletion {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  id: string;
+  deletedAt: string;
+}
+
 export interface AccountSyncData {
   /** @minimum 0 */
   revision: number;
@@ -90,6 +299,8 @@ export interface AccountSyncData {
   /** @maxItems 300 */
   watermancerProfiles: WatermancerProfile[];
   diyConcentrateInputs: DiyConcentrateInputs | null;
+  waterTastings: WaterTastingRecord[];
+  waterTastingDeletions: WaterTastingDeletion[];
 }
 
 export interface AccountSyncInput {
@@ -100,6 +311,8 @@ export interface AccountSyncInput {
   /** @maxItems 300 */
   watermancerProfiles: WatermancerProfile[];
   diyConcentrateInputs: DiyConcentrateInputs | null;
+  waterTastings: WaterTastingRecord[];
+  waterTastingDeletions: WaterTastingDeletion[];
 }
 
 export interface AccountSyncConflict {
