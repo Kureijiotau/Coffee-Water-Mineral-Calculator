@@ -168,6 +168,220 @@ components:
           type: string
           enum: [caco3, salt-mg]
       additionalProperties: false
+    WaterTastingCoffeeDetails:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        roast:
+          type: string
+          maxLength: 200
+        origin:
+          type: string
+          maxLength: 200
+        brewMethod:
+          type: string
+          maxLength: 200
+      additionalProperties: false
+    WaterTastingRatings:
+      type: object
+      properties:
+        clarity:
+          type: integer
+          minimum: 0
+          maximum: 10
+        flavorExpression:
+          type: integer
+          minimum: 0
+          maximum: 10
+        balance:
+          type: integer
+          minimum: 0
+          maximum: 10
+        mouthfeel:
+          type: integer
+          minimum: 0
+          maximum: 10
+        finish:
+          type: integer
+          minimum: 0
+          maximum: 10
+      additionalProperties: false
+    WaterTastingSpectrum:
+      type: object
+      properties:
+        acidityFocus:
+          type: integer
+          minimum: -5
+          maximum: 5
+        bodyWeight:
+          type: integer
+          minimum: -5
+          maximum: 5
+        structure:
+          type: integer
+          minimum: -5
+          maximum: 5
+        finish:
+          type: integer
+          minimum: -5
+          maximum: 5
+      required: [acidityFocus, bodyWeight, structure, finish]
+      additionalProperties: false
+    WaterTastingDescriptiveScores:
+      type: object
+      properties:
+        fragrance:
+          type: integer
+          minimum: 0
+          maximum: 15
+        aroma:
+          type: integer
+          minimum: 0
+          maximum: 15
+        flavor:
+          type: integer
+          minimum: 0
+          maximum: 15
+        aftertaste:
+          type: integer
+          minimum: 0
+          maximum: 15
+        acidity:
+          type: integer
+          minimum: 0
+          maximum: 15
+        sweetness:
+          type: integer
+          minimum: 0
+          maximum: 15
+        mouthfeel:
+          type: integer
+          minimum: 0
+          maximum: 15
+      additionalProperties: false
+    WaterTastingAffectiveScores:
+      type: object
+      properties:
+        fragranceAroma:
+          type: integer
+          minimum: 1
+          maximum: 9
+        flavorAftertaste:
+          type: integer
+          minimum: 1
+          maximum: 9
+        acidity:
+          type: integer
+          minimum: 1
+          maximum: 9
+        mouthfeel:
+          type: integer
+          minimum: 1
+          maximum: 9
+        overall:
+          type: integer
+          minimum: 1
+          maximum: 9
+      additionalProperties: false
+    WaterTastingLegacyRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        profileSourceId:
+          type: string
+          minLength: 1
+          maxLength: 500
+        profileNameSnapshot:
+          type: string
+          minLength: 1
+          maxLength: 500
+        coffee:
+          $ref: "#/components/schemas/WaterTastingCoffeeDetails"
+        descriptorIds:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        ratings:
+          $ref: "#/components/schemas/WaterTastingRatings"
+        spectrum:
+          $ref: "#/components/schemas/WaterTastingSpectrum"
+        notes:
+          type: string
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, profileSourceId, profileNameSnapshot, coffee, descriptorIds, ratings, createdAt, updatedAt]
+      additionalProperties: false
+    WaterTastingCvaRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        profileSourceId:
+          type: string
+          minLength: 1
+          maxLength: 500
+        profileNameSnapshot:
+          type: string
+          minLength: 1
+          maxLength: 500
+        coffee:
+          $ref: "#/components/schemas/WaterTastingCoffeeDetails"
+        descriptorIds:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        scoringVersion:
+          type: integer
+          enum: [2]
+        descriptive:
+          $ref: "#/components/schemas/WaterTastingDescriptiveScores"
+        affective:
+          $ref: "#/components/schemas/WaterTastingAffectiveScores"
+        notes:
+          type: string
+          maxLength: 2000
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, profileSourceId, profileNameSnapshot, coffee, descriptorIds, scoringVersion, descriptive, affective, createdAt, updatedAt]
+      additionalProperties: false
+    WaterTastingRecord:
+      oneOf:
+        - $ref: "#/components/schemas/WaterTastingLegacyRecord"
+        - $ref: "#/components/schemas/WaterTastingCvaRecord"
+    WaterTastingDeletion:
+      type: object
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 200
+        deletedAt:
+          type: string
+          format: date-time
+      required: [id, deletedAt]
+      additionalProperties: false
     AccountSyncData:
       type: object
       properties:
@@ -191,12 +405,22 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DiyConcentrateInputs"
             - type: "null"
+        waterTastings:
+          type: array
+          items:
+            $ref: "#/components/schemas/WaterTastingRecord"
+        waterTastingDeletions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WaterTastingDeletion"
       required:
         - revision
         - updatedAt
         - alchemistProfiles
         - watermancerProfiles
         - diyConcentrateInputs
+        - waterTastings
+        - waterTastingDeletions
     AccountSyncInput:
       type: object
       properties:
@@ -217,11 +441,21 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DiyConcentrateInputs"
             - type: "null"
+        waterTastings:
+          type: array
+          items:
+            $ref: "#/components/schemas/WaterTastingRecord"
+        waterTastingDeletions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WaterTastingDeletion"
       required:
         - expectedRevision
         - alchemistProfiles
         - watermancerProfiles
         - diyConcentrateInputs
+        - waterTastings
+        - waterTastingDeletions
       additionalProperties: false
     AccountSyncConflict:
       type: object
