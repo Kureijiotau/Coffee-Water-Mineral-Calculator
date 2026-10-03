@@ -696,6 +696,16 @@ export function sortWaterTastingsNewestFirst(
     .map(({ record }) => record);
 }
 
+export function sortWaterTastingsByName(
+  records: readonly WaterTastingRecord[],
+): WaterTastingRecord[] {
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+  return records
+    .map((record, index) => ({ record, index }))
+    .sort((a, b) => collator.compare(a.record.profileNameSnapshot, b.record.profileNameSnapshot) || a.index - b.index)
+    .map(({ record }) => record);
+}
+
 export type WaterTastingCollectionLoadResult =
   | { ok: true; collection: WaterTastingCollection }
   | { ok: false; error: WaterTastingStorageError };

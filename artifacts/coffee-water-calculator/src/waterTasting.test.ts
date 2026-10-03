@@ -21,6 +21,7 @@ import {
   getWaterTastingAffectiveColor,
   getWaterTastingAffectiveCue,
   getWaterTastingDescriptiveCue,
+  sortWaterTastingsByName,
   type WaterTastingCvaDraft,
   type WaterTastingCvaRecord,
   type WaterTastingLegacyDraft,
@@ -340,6 +341,18 @@ describe('Water Tasting record lifecycle', () => {
 
     expect(sortWaterTastingsNewestFirst([older, sameDateA, sameDateB, newer]).map(record => record.id))
       .toEqual(['newer', 'same-a', 'same-b', 'older']);
+  });
+
+  it('sorts history by profile name A–Z, ignores letter case, keeps ties stable, and leaves input unchanged', () => {
+    const zulu = { ...makeRecord('zulu', '2026-09-28T09:00:00.000Z'), profileNameSnapshot: 'Zulu' };
+    const alpha = { ...makeRecord('alpha', '2026-09-27T09:00:00.000Z'), profileNameSnapshot: 'alpha' };
+    const bravo = { ...makeRecord('bravo', '2026-09-26T09:00:00.000Z'), profileNameSnapshot: 'Bravo' };
+    const alphaUpper = { ...makeRecord('alpha-upper', '2026-09-25T09:00:00.000Z'), profileNameSnapshot: 'ALPHA' };
+    const records = [zulu, alpha, bravo, alphaUpper];
+
+    expect(sortWaterTastingsByName(records).map(record => record.id))
+      .toEqual(['alpha', 'alpha-upper', 'bravo', 'zulu']);
+    expect(records.map(record => record.id)).toEqual(['zulu', 'alpha', 'bravo', 'alpha-upper']);
   });
 });
 

@@ -14,7 +14,7 @@ import {
   createNeutralWaterTastingSpectrum,
   calculateWaterTastingTotal, createWaterTastingRecord, createWaterTastingDeletionMarker,
   isCvaWaterTastingRecord, updateWaterTastingRecord,
-  loadWaterTastingCollection, saveWaterTastingCollection, sortWaterTastingsNewestFirst,
+  loadWaterTastingCollection, saveWaterTastingCollection, sortWaterTastingsByName, sortWaterTastingsNewestFirst,
   type WaterTastingCvaDraft, type WaterTastingLegacyDraft,
   type WaterTastingCollection, type WaterTastingEditorValues, type WaterTastingProfileOption,
   type WaterTastingRecord, type WaterTastingStorageError,
@@ -85,12 +85,14 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
   const [records, setRecords] = useState<WaterTastingRecord[]>(() =>
     initialLoad.ok ? sortWaterTastingsNewestFirst(initialLoad.collection.records) : [],
   );
+  const [historySort, setHistorySort] = useState<'newest' | 'name'>('newest');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
   const formStart = useRef<HTMLDivElement>(null);
   const form = useForm<WaterTastingEditorValues>({ defaultValues: emptyDraft() });
   const mode = form.watch('mode');
   const editingRecord = records.find(record => record.id === editingId);
+  const displayedRecords = historySort === 'name' ? sortWaterTastingsByName(records) : records;
   useEffect(() => {
     const refreshRecords = () => {
       const latest = loadWaterTastingCollection();
@@ -422,7 +424,20 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
             <div className={eyebrow}>The notebook</div>
             <h3 id="tasting-history-heading" className="mt-1 flex items-center gap-2 text-xl font-semibold text-slate-100"><BookOpen className="h-5 w-5 text-cyan-300/80" aria-hidden="true" /> Saved tastings</h3>
           </div>
-          <span data-testid="count-tasting-history" className="rounded-full border border-slate-600/50 px-3 py-1 font-mono text-xs text-slate-400">{records.length} {records.length === 1 ? 'entry' : 'entries'}</span>
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="tasting-history-sort" className="text-xs font-medium text-slate-300">Sort by</label>
+            <select
+              id="tasting-history-sort"
+              value={historySort}
+              onChange={event => setHistorySort(event.target.value as 'newest' | 'name')}
+              data-testid="select-tasting-history-sort"
+              className={`${inputStyle} w-auto appearance-auto border px-3`}
+            >
+              <option value="newest">Newest first</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <span data-testid="count-tasting-history" className="rounded-full border border-slate-600/50 px-3 py-1 font-mono text-xs text-slate-400">{records.length} {records.length === 1 ? 'entry' : 'entries'}</span>
+          </div>
         </div>
         {records.length === 0 ? (
           <div data-testid="empty-tasting-history" className="mt-5 rounded-xl border border-dashed border-slate-600/70 bg-slate-900/35 px-5 py-8 text-center">
@@ -431,7 +446,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
           </div>
         ) : (
           <div className="mt-5 grid gap-3">
-            {records.map((record, index) => {
+            {displayedRecords.map((record, index) => {
               const isCvaRecord = isCvaWaterTastingRecord(record);
               const savedTotal = isCvaRecord ? null : calculateWaterTastingTotal(record.ratings);
               const spectrum = isCvaRecord ? undefined : record.spectrum;
