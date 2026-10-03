@@ -393,6 +393,8 @@ test('shows silica readings and recipe steps only after adding drops', async ({ 
   await expect(silicaRow).toContainText('0.00 mg/L');
   await expect(silicaTargetCard).toBeVisible();
   await expect(silicaTargetToggle).toHaveText('Not used');
+  await expect(silicaRow.getByTestId('watermancer-silica-target-toggle')).toBeVisible();
+  await expect(silicaTargetCard.getByTestId('watermancer-silica-target-toggle')).toHaveCount(0);
   await expect(silicaDecrease).toBeDisabled();
   await expect(readings.getByText('Silica (SiO₂)', { exact: true })).toHaveCount(0);
 

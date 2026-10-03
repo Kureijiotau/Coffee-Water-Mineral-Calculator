@@ -8307,9 +8307,20 @@ function App() {
                       </div>
                     </div>
                     <div className="watermancer-salt-table__use">
-                      <span className="rounded-md border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-violet-200">
-                        Supplement
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleWatermancerSilicaTargetToggle(!watermancerSilicaTargetEnabled)}
+                        aria-pressed={watermancerSilicaTargetEnabled}
+                        aria-label={watermancerSilicaTargetEnabled ? 'Mark silica target not used' : 'Use silica target'}
+                        data-testid="watermancer-silica-target-toggle"
+                        className={`rounded-lg border px-3 py-1.5 text-[11px] font-semibold shadow-sm transition active:scale-95 ${
+                          watermancerSilicaTargetEnabled
+                            ? 'border-violet-300/50 bg-violet-500/15 text-violet-100 hover:bg-violet-500/25'
+                            : 'border-slate-700 bg-slate-950/40 text-slate-500 hover:border-violet-300/50 hover:bg-violet-500/10 hover:text-violet-200'
+                        }`}
+                      >
+                        {watermancerSilicaTargetEnabled ? 'Use' : 'Not used'}
+                      </button>
                     </div>
                   </div>
                   </div>
@@ -13504,20 +13515,7 @@ function WatermancerIonProfileCard({
                   : 'Supplemental component · display only'}
               </div>
               {isSilica && (
-                <div className="mt-2 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => onSilicaTargetEnabledChange(!silicaTargetEnabled)}
-                    aria-pressed={silicaTargetEnabled}
-                    data-testid="watermancer-silica-target-toggle"
-                    className={`rounded-md border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider transition ${
-                      silicaTargetEnabled
-                        ? 'border-violet-300/40 bg-violet-500/15 text-violet-100'
-                        : 'border-slate-700 bg-slate-950/30 text-slate-400 hover:border-violet-300/40 hover:text-violet-100'
-                    }`}
-                  >
-                    {silicaTargetEnabled ? 'Use' : 'Not used'}
-                  </button>
+                <div className="mt-2">
                   {silicaTargetEnabled ? (
                     <label className="block text-[10px] text-slate-400">
                       Silica target (ppm)
@@ -13531,9 +13529,7 @@ function WatermancerIonProfileCard({
                         className="mt-1 w-full rounded-lg border border-violet-400/30 bg-slate-900/70 px-2 py-1.5 text-sm font-semibold tabular-nums text-violet-100 outline-none focus:ring-2 focus:ring-violet-400/40"
                       />
                     </label>
-                  ) : (
-                    <div className="text-[10px] text-slate-500">Drop count is manual; no silica target is active.</div>
-                  )}
+                  ) : null}
                 </div>
               )}
               <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">
