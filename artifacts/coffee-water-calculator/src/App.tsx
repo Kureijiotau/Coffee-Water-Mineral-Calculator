@@ -9,7 +9,6 @@ import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
-import { useAuth, useClerk } from '@clerk/react';
 import {
   SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
@@ -62,9 +61,7 @@ import {
   remapSavedWatermancerTargetSource,
   sameProfileCollection,
 } from './profileSync';
-import { useAccountSync } from './AccountSyncProvider';
 import {
-  ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
   DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
   getAccountSyncStorageKey,
   loadDiyConcentrateInputs,
@@ -2560,9 +2557,6 @@ function DeferredMount({
 }
 
 function App() {
-  const { isLoaded: isClerkLoaded, isSignedIn } = useAuth();
-  const { signOut } = useClerk();
-  const { status: accountSyncStatus, retrySync } = useAccountSync();
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
     SALTS.map(s => ({ target: '', formIdx: s.defaultFormIdx ?? 0 })),
@@ -3094,11 +3088,9 @@ function App() {
          }
       }
     };
-    window.addEventListener('storage', handleProfileStorage);
-  window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
+  window.addEventListener('storage', handleProfileStorage);
   return () => {
     window.removeEventListener('storage', handleProfileStorage);
-    window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
   };
   }, []);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -6327,33 +6319,6 @@ function App() {
           >
             <SiDiscord className="h-4 w-4" aria-hidden="true" />
           </a>
-          {isClerkLoaded && isSignedIn ? (
-            <div className="inline-flex min-h-10 items-center gap-2 rounded-md border border-white/20 bg-black/15 px-2.5 py-1.5 text-xs text-slate-100 sm:min-h-8">
-              <span role="status" aria-live="polite" className="whitespace-nowrap">
-                {accountSyncStatus === 'syncing'
-                  ? 'Syncing…'
-                  : accountSyncStatus === 'error'
-                    ? 'Sync issue'
-                    : <><Check aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 text-emerald-300" />Synced</>}
-              </span>
-              {accountSyncStatus === 'error' && (
-                <button type="button" onClick={retrySync} className="font-semibold text-cyan-200 underline decoration-cyan-200/50 underline-offset-2 hover:text-cyan-100">
-                  Retry
-                </button>
-              )}
-              <button type="button" onClick={() => void signOut()} className="whitespace-nowrap rounded border border-white/15 px-2 py-1 text-slate-200 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70">
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <a
-              href={`${import.meta.env.BASE_URL.replace(/\/$/, '')}/sign-in`}
-              aria-label="Sign in to sync your custom profiles and DIY concentrate inputs"
-              className="inline-flex min-h-10 items-center rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold text-white transition hover:bg-black/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70 sm:min-h-8"
-            >
-              Sign in to sync
-            </a>
-          )}
           <WaterPlanManager
             plans={savedPlans}
             open={plansOpen}
@@ -11669,30 +11634,6 @@ function DiySingleSaltConcentratePanel({
   const [desiredDoseBasis, setDesiredDoseBasis] = useState<'caco3' | 'salt-mg'>(
     storedInputs.desiredDoseBasis === 'salt-mg' ? 'salt-mg' : 'caco3',
   );
-  useEffect(() => {
-    const applyRemoteDiyInputs = () => {
-      const nextInputs = loadDiyConcentrateInputs();
-      setStoredInputs(nextInputs);
-      setStockWeightInput(
-        nextInputs.stockWeightInput ?? nextInputs.stockVolumeInput ?? '100',
-      );
-      setFinalVolumeInput(
-        nextInputs.finalVolumeInput
-          ?? String(volumeUnit === 'gallons'
-            ? handoff.finalLiters / US_GALLON_IN_LITERS
-            : handoff.finalLiters),
-      );
-      setCalibrationDropsInput(nextInputs.calibrationDropsInput ?? '');
-      setCalibrationWeightInput(nextInputs.calibrationWeightInput ?? '');
-      setDesiredPpmInput(nextInputs.desiredPpmInput ?? '');
-      setDesiredSaltMgInput(nextInputs.desiredSaltMgInput ?? '');
-      setDesiredDoseBasis(nextInputs.desiredDoseBasis === 'salt-mg' ? 'salt-mg' : 'caco3');
-    };
-    window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, applyRemoteDiyInputs);
-    return () => {
-      window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, applyRemoteDiyInputs);
-    };
-  }, [handoff.finalLiters, volumeUnit]);
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 

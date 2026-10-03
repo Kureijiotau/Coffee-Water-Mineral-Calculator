@@ -20,7 +20,6 @@ import {
   type WaterTastingRecord, type WaterTastingStorageError,
 } from './waterTasting';
 import { WaterTastingScoring } from './WaterTastingScoring';
-import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT } from './accountSyncStorage';
 
 interface WaterTastingTabProps {
   profileOptions: WaterTastingProfileOption[];
@@ -102,10 +101,8 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
         expectedCollectionRef.current = latest.collection;
       }
     };
-    window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshRecords);
     window.addEventListener('storage', refreshRecords);
     return () => {
-      window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshRecords);
       window.removeEventListener('storage', refreshRecords);
     };
   }, [editingId, form]);
@@ -515,7 +512,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                     <AlertDialogContent className="w-[calc(100%-2rem)] rounded-xl border-slate-600 bg-slate-900 text-slate-100">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete this tasting?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-300">The tasting for {record.profileNameSnapshot} will be removed from your saved records. When signed in, the deletion syncs across your devices. This cannot be undone.</AlertDialogDescription>
+                        <AlertDialogDescription className="text-slate-300">The tasting for {record.profileNameSnapshot} will be removed from saved records in this browser. This cannot be undone.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel data-testid={`button-cancel-delete-tasting-${record.id}`} className="min-h-11 border-slate-600 bg-slate-800 text-slate-100 hover:bg-slate-700">Keep note</AlertDialogCancel>
