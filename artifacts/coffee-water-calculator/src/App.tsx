@@ -2977,6 +2977,7 @@ function App() {
   const [watermancerStrengthPercent, setWatermancerStrengthPercent] = useState(
     DEFAULT_WATERMANCER_STRENGTH_PERCENT,
   );
+  const [showWatermancerStrengthSlider, setShowWatermancerStrengthSlider] = useState(false);
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
@@ -6766,7 +6767,26 @@ function App() {
                  ))}
                 </div>
               </div>}
-             <section className="mb-3 rounded-xl border border-cyan-300/20 bg-cyan-950/15 px-3 py-3" aria-labelledby="watermancer-strength-label">
+              <div className="mb-3">
+                <button
+                  type="button"
+                  data-testid="watermancer-strength-toggle"
+                  aria-expanded={showWatermancerStrengthSlider}
+                  aria-controls="watermancer-strength-panel"
+                  onClick={() => setShowWatermancerStrengthSlider(value => !value)}
+                  className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-3 py-2 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                >
+                  {showWatermancerStrengthSlider ? 'Hide target strength' : 'Adjust target strength'}
+                  {showWatermancerStrengthSlider
+                    ? <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                    : <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />}
+                </button>
+                <section
+                  id="watermancer-strength-panel"
+                  hidden={!showWatermancerStrengthSlider}
+                  className="mb-3 rounded-xl border border-cyan-300/20 bg-cyan-950/15 px-3 py-3"
+                  aria-labelledby="watermancer-strength-label"
+                >
                <div className="flex items-center justify-between gap-3">
                  <div>
                    <label id="watermancer-strength-label" htmlFor="watermancer-strength-slider" className="text-xs font-semibold text-cyan-100">
@@ -6804,7 +6824,8 @@ function App() {
                  <span>100% baseline</span>
                  <span>200%</span>
                </div>
-             </section>
+                </section>
+              </div>
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               supplementalIons={watermancerSupplementalIonTotals}
@@ -15770,7 +15791,7 @@ function ConcentrateRecipeStepsModal({
                     ))}
                   </div>
                 </div>
-              </section>
+                </section>
 
               <section className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3.5">
                 <div className="flex items-center justify-between gap-3">
