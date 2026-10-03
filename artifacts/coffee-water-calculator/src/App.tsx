@@ -6749,7 +6749,6 @@ function App() {
               supplementalIons={watermancerSupplementalIonTotals}
               silicaTargetEnabled={watermancerSilicaTargetEnabled}
               silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
-              onSilicaTargetEnabledChange={handleWatermancerSilicaTargetToggle}
               onSilicaTargetPpmInputChange={handleWatermancerSilicaTargetChange}
               targetIons={watermancerIonTargets}
               profiles={profiles}
@@ -12656,7 +12655,6 @@ function WatermancerIonProfileCard({
   supplementalIons,
   silicaTargetEnabled,
   silicaTargetPpmInput,
-  onSilicaTargetEnabledChange,
   onSilicaTargetPpmInputChange,
   targetIons,
   profiles,
@@ -12691,7 +12689,6 @@ function WatermancerIonProfileCard({
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   silicaTargetEnabled: boolean;
   silicaTargetPpmInput: string;
-  onSilicaTargetEnabledChange: (enabled: boolean) => void;
   onSilicaTargetPpmInputChange: (value: string) => void;
   targetIons: Partial<Record<IonId, number>>;
   profiles: WaterProfile[];
@@ -12722,6 +12719,7 @@ function WatermancerIonProfileCard({
    onOpenIonRatios: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [editingSilicaTarget, setEditingSilicaTarget] = useState(false);
   const [editingIonId, setEditingIonId] = useState<IonId | null>(null);
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
@@ -12739,6 +12737,10 @@ function WatermancerIonProfileCard({
       setComparisonRightId(comparisonProfiles[1]?.id ?? comparisonProfiles[0]?.id ?? '');
     }
   }, [comparisonLeftId, comparisonProfiles, comparisonRightId]);
+
+  useEffect(() => {
+    if (!silicaTargetEnabled) setEditingSilicaTarget(false);
+  }, [silicaTargetEnabled]);
 
   const comparisonLeft = comparisonProfiles.find(profile => profile.id === comparisonLeftId);
   const comparisonRight = comparisonProfiles.find(profile => profile.id === comparisonRightId);
@@ -13516,21 +13518,59 @@ function WatermancerIonProfileCard({
                   : 'Supplemental component · display only'}
               </div>
               {isSilica && (
-                <div className="mt-2">
-                  {silicaTargetEnabled ? (
-                    <label className="block text-[10px] text-slate-400">
-                      Silica target (ppm)
-                      <StableNumberInput
-                        min="0"
-                        step="0.1"
-                        value={silicaTargetPpmInput}
-                        onChange={event => onSilicaTargetPpmInputChange(event.target.value)}
-                        aria-label="Silica target in ppm"
-                        data-testid="watermancer-silica-target-input"
-                        className="mt-1 w-full rounded-lg border border-violet-400/30 bg-slate-900/70 px-2 py-1.5 text-sm font-semibold tabular-nums text-violet-100 outline-none focus:ring-2 focus:ring-violet-400/40"
-                      />
-                    </label>
-                  ) : null}
+                <div className="mt-2 rounded-lg border border-violet-300/20 bg-slate-950/25 p-2" role="group" aria-label="Silica target">
+                  {silicaTargetEnabled && (
+                    editingSilicaTarget ? (
+                      <div className="flex items-end gap-2">
+                        <label className="min-w-0 flex-1 text-[10px] font-medium uppercase tracking-wider text-slate-500">
+                          Target (ppm)
+                          <StableNumberInput
+                            min="0"
+                            step="0.1"
+                            value={silicaTargetPpmInput}
+                            onChange={event => onSilicaTargetPpmInputChange(event.target.value)}
+                            aria-label="Silica target in ppm"
+                            data-testid="watermancer-silica-target-input"
+                            autoFocus
+                            className="mt-1 w-full rounded-lg border border-violet-400/30 bg-slate-900/70 px-2 py-1.5 text-base font-semibold tabular-nums text-violet-100 outline-none focus:ring-2 focus:ring-violet-400/40"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSilicaTarget(false)}
+                          data-testid="watermancer-silica-target-done"
+                          className="flex h-9 shrink-0 items-center gap-1 rounded-lg border border-violet-300/30 bg-violet-500/10 px-2.5 text-[10px] font-semibold text-violet-100 transition hover:bg-violet-500/20"
+                        >
+                          <Check className="h-3 w-3" aria-hidden="true" />
+                          Done
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <div className="text-[10px] font-medium uppercase tracking-wider text-slate-500">Silica target</div>
+                          <div className="mt-0.5 flex items-baseline gap-1.5" data-testid="watermancer-silica-target-value">
+                            <span className="text-lg font-bold tabular-nums text-violet-100">
+                              {Number.isFinite(Number.parseFloat(silicaTargetPpmInput))
+                                ? Number.parseFloat(silicaTargetPpmInput).toFixed(1)
+                                : '0.0'}
+                            </span>
+                            <span className="text-xs text-slate-400">ppm</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditingSilicaTarget(true)}
+                          aria-label="Edit silica target"
+                          data-testid="watermancer-silica-target-edit"
+                          className="flex h-8 shrink-0 items-center gap-1 rounded-lg border border-violet-300/25 bg-violet-500/10 px-2 text-[10px] font-semibold text-violet-100 transition hover:border-violet-200/50 hover:bg-violet-500/20"
+                        >
+                          <Pencil className="h-3 w-3" aria-hidden="true" />
+                          Edit
+                        </button>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
               <span className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 w-56 rounded-lg border border-slate-600/60 bg-slate-900 px-3 py-2 text-xs text-slate-300 opacity-0 shadow-xl transition-opacity group-hover/ion:opacity-100">

@@ -406,14 +406,20 @@ test('shows silica readings and recipe steps only after adding drops', async ({ 
   await expect(silicaTargetCard).toBeVisible();
   await expect(silicaTargetCard.getByTestId('watermancer-silica-target-toggle')).toHaveCount(0);
   const silicaTargetInput = page.getByTestId('watermancer-silica-target-input');
+  await expect(silicaTargetInput).toHaveCount(0);
+  const silicaTargetValue = page.getByTestId('watermancer-silica-target-value');
+  await expect(silicaTargetValue).toHaveText('12.5ppm');
+  await page.getByTestId('watermancer-silica-target-edit').click();
   await expect(silicaTargetInput).toHaveValue('12.5');
   await silicaTargetInput.fill('25');
+  await page.getByTestId('watermancer-silica-target-done').click();
+  await expect(silicaTargetInput).toHaveCount(0);
   await expect(silicaRow).toContainText('2 drops · 25.0 mg');
-  await expect(silicaTargetCard).toContainText('25.0');
+  await expect(silicaTargetValue).toHaveText('25.0ppm');
 
   await silicaIncrease.click();
   await expect(silicaRow).toContainText('3 drops · 37.5 mg');
-  await expect(silicaTargetInput).toHaveValue('37.5');
+  await expect(silicaTargetValue).toHaveText('37.5ppm');
 
   await page.getByRole('button', { name: 'Open recipe steps' }).click();
   const silicaStep = page.getByTestId('watermancer-silica-recipe-step');
