@@ -8,7 +8,7 @@ Add a Watermancer-only slider for scaling a selected ion target profile up or do
 
 Add a **Strength** range control near Watermancer's target/profile controls. It ranges from **0% to 200%** in **5% steps** and defaults to **100%**. Show the current percentage alongside the control. Use an accessible native range input with a visible label and keyboard support.
 
-Keep the strength panel collapsed by default behind a compact **Adjust target strength** button. The button reveals the current percentage and slider, then changes to **Hide target strength** while expanded. Hiding the panel must not change the selected percentage; persist the percentage as before, but keep the expanded/collapsed state transient.
+Keep the strength control out of the standalone row above the Watermancer profile card. Place a compact **Target strength** button in the profile-card heading; it opens a small anchored popover containing the current percentage and slider. Keep the popover closed by default. Closing it must not change the selected percentage; persist the percentage as before, but keep the open/closed state transient.
 
 Keep the selected target source and its base values unchanged. Derive effective targets by multiplying each active ion target by `strengthPercent / 100`. A zero target remains zero. At 100%, effective targets exactly equal the source targets. Display effective targets in the matching context so the user can see the values being matched; profile selection, comparison, and saved profile data continue to represent the unscaled source.
 
