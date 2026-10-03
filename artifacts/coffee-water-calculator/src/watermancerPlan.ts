@@ -25,6 +25,8 @@ export type WatermancerOvershootPolicy = {
 
 export type WatermancerPlan = {
   targetIons: Partial<Record<IonId, number>>;
+  /** User-selected scale applied to the source targets before matching. */
+  targetStrengthPercent?: number;
   selectedWaters: MineralWaterEntry[];
   /** Salt inventory the matcher may use; individual salts may receive zero dose. */
   selectedSalts: string[];

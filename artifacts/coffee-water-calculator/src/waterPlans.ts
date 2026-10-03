@@ -65,6 +65,8 @@ export type WaterPlanSnapshot = {
   activeProfileId: string;
   watermancerTargetSource: string;
   watermancerTargetOverride: Record<string, number> | null;
+  /** Optional for compatibility with version-1 sessions created before target-strength scaling. */
+  watermancerStrengthPercent?: number;
   watermancerUsedSaltIds: string[];
   autoCraftPreset: string;
   watermancerSaltObjective: string;
@@ -160,6 +162,12 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
     || !Array.isArray(value.additionWaters)
     || value.additionWaters.some(entry => !isWaterEntry(entry))) return false;
   if (typeof value.activeProfileId !== 'string' || typeof value.watermancerTargetSource !== 'string') return false;
+  if (value.watermancerStrengthPercent !== undefined
+    && (typeof value.watermancerStrengthPercent !== 'number'
+      || !Number.isFinite(value.watermancerStrengthPercent)
+      || value.watermancerStrengthPercent < 0
+      || value.watermancerStrengthPercent > 200
+      || value.watermancerStrengthPercent % 5 !== 0)) return false;
   if (!['original', 'chlorides', 'sulfates'].includes(String(value.magnesiumPreference))) return false;
   if (!['mineral-first', 'bicarbonate-first', 'balanced-gh-kh', 'custom'].includes(String(value.autoFillPriorityPreset))) return false;
   if (!Number.isFinite(value.autoFillDeviationPpm)) return false;

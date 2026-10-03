@@ -82,6 +82,12 @@ import {
 } from './watermancerMetricValues';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
 import {
+  DEFAULT_WATERMANCER_STRENGTH_PERCENT,
+  normalizeWatermancerStrengthPercent,
+  scaleWatermancerTargets,
+  unscaleWatermancerTargets,
+} from './watermancerTargetScaling';
+import {
   embedWaterRecipeJsonInPng,
   extractWaterRecipeJsonFromPng,
   buildRecipeShareCardSvg,
@@ -2968,6 +2974,9 @@ function App() {
   const watermancerTargetSourceRef = useRef(watermancerTargetSource);
   watermancerTargetSourceRef.current = watermancerTargetSource;
   const [watermancerTargetOverride, setWatermancerTargetOverride] = useState<IonicTargetValues | null>(null);
+  const [watermancerStrengthPercent, setWatermancerStrengthPercent] = useState(
+    DEFAULT_WATERMANCER_STRENGTH_PERCENT,
+  );
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
@@ -3493,6 +3502,10 @@ function App() {
       ACTIVE_ION_IDS.map(id => [id, AIKI_DEFAULT_PROFILE.ranges[id].greenMax]),
     ) as Partial<Record<IonId, number>>;
   }, [allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
+  const watermancerEffectiveIonTargets = useMemo(
+    () => scaleWatermancerTargets(watermancerIonTargets, watermancerStrengthPercent),
+    [watermancerIonTargets, watermancerStrengthPercent],
+  );
   const hasSelectedWatermancerProfile = watermancerTargetSource === 'safe-profile'
     || watermancerTargetSource.startsWith('profile:')
     || watermancerTargetSource.startsWith('saved:')
@@ -3573,7 +3586,7 @@ function App() {
   const watermancerIonGaps = Object.fromEntries(
     ACTIVE_ION_IDS.map(id => [
       id,
-      Math.max((watermancerIonTargets[id] ?? 0) - (bottledIons[id] ?? 0), 0),
+      Math.max((watermancerEffectiveIonTargets[id] ?? 0) - (bottledIons[id] ?? 0), 0),
     ]),
   ) as Partial<Record<IonId, number>>;
   const watermancerSaltOptions = useMemo(() => SALTS.map((salt, index) => {
@@ -3615,7 +3628,8 @@ function App() {
     return fixedDoses;
   }, [L, rows, watermancerDoseOverridesMg, watermancerUsedSaltIds]);
   const watermancerPlan = useMemo<WatermancerPlan>(() => ({
-    targetIons: watermancerIonTargets,
+    targetIons: watermancerEffectiveIonTargets,
+    targetStrengthPercent: watermancerStrengthPercent,
     selectedWaters: [...mineralWaters, ...additionWaters],
     selectedSalts: [...watermancerUsedSaltIds],
     fixedWaterVolumes: Object.fromEntries(
@@ -3633,7 +3647,7 @@ function App() {
     // per-ion policy box is the only source of a soft deficit allowance.
     softDeficitIons: watermancerBestMatchDeviationMode
       ? watermancerBestMatchDeviationMode === 'permissive'
-        ? ACTIVE_ION_IDS.filter(id => (watermancerIonTargets[id] ?? 0) > 0)
+         ? ACTIVE_ION_IDS.filter(id => (watermancerEffectiveIonTargets[id] ?? 0) > 0)
         : []
       : overshootSettings.enabled
         ? overshootSettings.allowedIons.filter(id => (overshootSettings.limits[id] ?? 0) > 0)
@@ -3642,8 +3656,8 @@ function App() {
       ? watermancerBestMatchDeviationMode === 'permissive'
         ? Object.fromEntries(
           ACTIVE_ION_IDS
-            .filter(id => (watermancerIonTargets[id] ?? 0) > 0)
-            .map(id => [id, Math.max(watermancerIonTargets[id] ?? 0, 0) * 0.1]),
+             .filter(id => (watermancerEffectiveIonTargets[id] ?? 0) > 0)
+             .map(id => [id, Math.max(watermancerEffectiveIonTargets[id] ?? 0, 0) * 0.1]),
         )
         : {}
       : overshootSettings.enabled
@@ -3674,7 +3688,8 @@ function App() {
     L,
     watermancerSaltObjective,
     watermancerMatchingMode,
-    watermancerIonTargets,
+    watermancerEffectiveIonTargets,
+    watermancerStrengthPercent,
     watermancerUsedSaltIds,
     watermancerBestMatchDeviationMode,
     watermancerFixedSaltDoses,
@@ -4409,7 +4424,7 @@ function App() {
     }
       return activeWatermancerSaltTargets;
     }, [activeWatermancerSaltTargets, showWatermancer, suggestedSaltTargets]);
-  const finalMixtureTargetIons = showWatermancer ? watermancerIonTargets : saltOnlyIons;
+  const finalMixtureTargetIons = showWatermancer ? watermancerEffectiveIonTargets : saltOnlyIons;
 
   const suggestedIonTotalsBeforeSodiumCorrection = useMemo(
     () => computeIonTotals(selectedSuggestedSaltTargets, combinedBottledIons, dil),
@@ -4684,7 +4699,7 @@ function App() {
   const reviewTotalDeviation = showWatermancer
     ? totalWatermancerAbsoluteDeviation(
       reviewFinalIons,
-      watermancerIonTargets,
+       watermancerEffectiveIonTargets,
     )
     : 0;
   const reviewDeviationCount = showWatermancer
@@ -4695,7 +4710,7 @@ function App() {
       )) > 0.05
     )).length
     : 0;
-  const completeWatermancerTargets = completeIonTotals(watermancerIonTargets);
+  const completeWatermancerTargets = completeIonTotals(watermancerEffectiveIonTargets);
   const originalTargetMetricValues = computeWatermancerMetricValues(completeWatermancerTargets);
   const originalTargetGh = originalTargetMetricValues.gh;
   const originalTargetKh = originalTargetMetricValues.kh;
@@ -4779,6 +4794,7 @@ function App() {
     setSplitStrengths({ hardness: 100, alkalinity: 100, citrate: 50 });
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
     setMagnesiumPreference('original');
+    setWatermancerStrengthPercent(DEFAULT_WATERMANCER_STRENGTH_PERCENT);
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerBestMatchDeviationMode(null);
@@ -4814,6 +4830,7 @@ function App() {
     setMagnesiumPreference('original');
      setWatermancerTargetOverride(null);
      setWatermancerTargetSource('safe-profile');
+    setWatermancerStrengthPercent(DEFAULT_WATERMANCER_STRENGTH_PERCENT);
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerSaltObjective('balanced');
@@ -5864,6 +5881,7 @@ function App() {
     activeProfileId,
     watermancerTargetSource,
     watermancerTargetOverride: watermancerTargetOverride ? { ...watermancerTargetOverride } : null,
+    watermancerStrengthPercent,
     watermancerUsedSaltIds: [...watermancerUsedSaltIds],
     autoCraftPreset,
     watermancerSaltObjective,
@@ -6024,6 +6042,9 @@ function App() {
       : AIKI_DEFAULT_PROFILE.id);
     setWatermancerTargetSource(snapshot.watermancerTargetSource as WatermancerTargetSourceId);
     setWatermancerTargetOverride(snapshot.watermancerTargetOverride ? { ...snapshot.watermancerTargetOverride } : null);
+    setWatermancerStrengthPercent(normalizeWatermancerStrengthPercent(
+      snapshot.watermancerStrengthPercent ?? DEFAULT_WATERMANCER_STRENGTH_PERCENT,
+    ));
     setWatermancerUsedSaltIds([...snapshot.watermancerUsedSaltIds]);
     setAutoCraftPreset(snapshot.autoCraftPreset as AutoCraftPreset);
     setWatermancerSaltObjective(snapshot.watermancerSaltObjective as AutoCraftObjective);
@@ -6232,6 +6253,7 @@ function App() {
     watermancerIonSourcePreferences,
     watermancerMatchingMode,
     watermancerSaltObjective,
+    watermancerStrengthPercent,
     watermancerTargetOverride,
     watermancerTargetSource,
     watermancerUsedSaltIds,
@@ -6744,6 +6766,45 @@ function App() {
                  ))}
                 </div>
               </div>}
+             <section className="mb-3 rounded-xl border border-cyan-300/20 bg-cyan-950/15 px-3 py-3" aria-labelledby="watermancer-strength-label">
+               <div className="flex items-center justify-between gap-3">
+                 <div>
+                   <label id="watermancer-strength-label" htmlFor="watermancer-strength-slider" className="text-xs font-semibold text-cyan-100">
+                     Target strength
+                   </label>
+                   <p className="mt-0.5 text-[10px] text-slate-400">
+                     Scale every ion target proportionally; selected waters and salts stay available to the matcher.
+                   </p>
+                 </div>
+                 <output
+                   className="shrink-0 rounded-md border border-cyan-300/20 bg-slate-950/40 px-2 py-1 text-sm font-bold tabular-nums text-cyan-100"
+                   htmlFor="watermancer-strength-slider"
+                   data-testid="watermancer-strength-value"
+                 >
+                   {watermancerStrengthPercent}%
+                 </output>
+               </div>
+               <input
+                 id="watermancer-strength-slider"
+                 data-testid="watermancer-strength-slider"
+                 type="range"
+                 min="0"
+                 max="200"
+                 step="5"
+                 value={watermancerStrengthPercent}
+                 onChange={event => setWatermancerStrengthPercent(
+                   normalizeWatermancerStrengthPercent(Number(event.currentTarget.value)),
+                 )}
+                 aria-label="Watermancer target strength"
+                 aria-valuetext={`${watermancerStrengthPercent}% of selected ion targets`}
+                 className="mt-2 block min-h-8 w-full cursor-pointer accent-cyan-300"
+               />
+               <div className="flex justify-between text-[9px] tabular-nums text-slate-500" aria-hidden="true">
+                 <span>0%</span>
+                 <span>100% baseline</span>
+                 <span>200%</span>
+               </div>
+             </section>
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               supplementalIons={watermancerSupplementalIonTotals}
@@ -6751,6 +6812,8 @@ function App() {
               silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
               onSilicaTargetPpmInputChange={handleWatermancerSilicaTargetChange}
               targetIons={watermancerIonTargets}
+               effectiveTargetIons={watermancerEffectiveIonTargets}
+               strengthPercent={watermancerStrengthPercent}
               profiles={profiles}
               activeProfileId={activeProfileId}
               wmProfiles={wmProfiles}
@@ -7851,7 +7914,7 @@ function App() {
                 supplementalIons={watermancerSupplementalIonTotals}
                 silicaTargetEnabled={watermancerSilicaTargetEnabled}
                 silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
-              targetIons={watermancerIonTargets}
+               targetIons={watermancerEffectiveIonTargets}
                targetMetricValues={originalTargetMetricValues}
                finalMetricValues={reviewFinalMetricValues}
                matchingMode={watermancerMatchingMode}
@@ -12657,6 +12720,8 @@ function WatermancerIonProfileCard({
   silicaTargetPpmInput,
   onSilicaTargetPpmInputChange,
   targetIons,
+  effectiveTargetIons,
+  strengthPercent,
   profiles,
   activeProfileId,
   wmProfiles,
@@ -12691,6 +12756,8 @@ function WatermancerIonProfileCard({
   silicaTargetPpmInput: string;
   onSilicaTargetPpmInputChange: (value: string) => void;
   targetIons: Partial<Record<IonId, number>>;
+  effectiveTargetIons: Partial<Record<IonId, number>>;
+  strengthPercent: number;
   profiles: WaterProfile[];
   activeProfileId: string;
   wmProfiles: WatermancerProfile[];
@@ -12862,9 +12929,10 @@ function WatermancerIonProfileCard({
   };
 
   const startEditing = () => {
+    const baseTargets = unscaleWatermancerTargets(currentFinalIons, strengthPercent);
     setDraftTargets(
       Object.fromEntries(
-        ACTIVE_ION_IDS.map(id => [id, String(currentFinalIons[id] ?? 0)]),
+        ACTIVE_ION_IDS.map(id => [id, String(baseTargets[id] ?? 0)]),
       ) as Partial<Record<IonId, string>>,
     );
     setEditing(true);
@@ -13424,9 +13492,10 @@ function WatermancerIonProfileCard({
           const ion = ION_MAP[id];
           const ppm = ions[id] ?? 0;
            const cardEditing = editing || editingIonId === id;
+           const draftBaseTarget = cardEditing ? parseFloat(draftTargets[id] ?? '0') : 0;
            const target = cardEditing
-            ? parseFloat(draftTargets[id] ?? '0')
-            : (targetIons[id] ?? 0);
+             ? (Number.isFinite(draftBaseTarget) ? Math.max(draftBaseTarget, 0) : 0) * strengthPercent / 100
+             : (effectiveTargetIons[id] ?? 0);
           const gap = Math.max(target - ppm, 0);
           const aboveTarget = ppm > target + 0.05;
           const tooltipAbove = idx >= Math.ceil(ACTIVE_ION_IDS.length / 2);
@@ -13460,7 +13529,9 @@ function WatermancerIonProfileCard({
               </div>
                {cardEditing ? (
                 <div className="mt-1.5">
-                  <label className="text-[10px] text-slate-500 block mb-0.5">Ceiling</label>
+                   <label className="text-[10px] text-slate-500 block mb-0.5">
+                     {strengthPercent === 100 ? 'Ceiling' : 'Base ceiling (at 100%)'}
+                   </label>
                   <StableNumberInput
                     value={draftTargets[id] ?? '0'}
                     onChange={e => updateDraft(id, e.target.value)}

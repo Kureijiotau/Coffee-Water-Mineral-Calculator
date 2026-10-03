@@ -40,6 +40,7 @@ const snapshot: WaterPlanSnapshot = {
   activeProfileId: 'aiki-default',
   watermancerTargetSource: 'safe-profile',
   watermancerTargetOverride: { calcium: 40 },
+  watermancerStrengthPercent: 135,
   watermancerUsedSaltIds: ['mgso4'],
   autoCraftPreset: 'closest-match',
   watermancerSaltObjective: 'balanced',
@@ -89,15 +90,27 @@ describe('water plan persistence', () => {
     expect(parsed?.snapshot.watermancerSilicaDrops).toBe(3);
     expect(parsed?.snapshot.watermancerSilicaTargetEnabled).toBe(true);
     expect(parsed?.snapshot.watermancerSilicaTargetPpm).toBe('25');
+    expect(parsed?.snapshot.watermancerStrengthPercent).toBe(135);
   });
 
   it('accepts legacy snapshots without a matching mode and leaves them on target values', () => {
     const legacySnapshot = { ...snapshot };
     delete legacySnapshot.watermancerMatchingMode;
+    delete legacySnapshot.watermancerStrengthPercent;
     const plan = createWaterPlan('Legacy', legacySnapshot, '2026-08-15T00:00:00.000Z');
 
     expect(isValidWaterPlan(plan)).toBe(true);
     expect((plan.snapshot.watermancerMatchingMode ?? 'target-values')).toBe('target-values');
+    expect(plan.snapshot.watermancerStrengthPercent).toBeUndefined();
+  });
+
+  it('rejects target-strength percentages outside the supported scale', () => {
+    const plan = createWaterPlan('Invalid strength', {
+      ...snapshot,
+      watermancerStrengthPercent: 205,
+    }, '2026-08-15T00:00:00.000Z');
+
+    expect(isValidWaterPlan(plan)).toBe(false);
   });
 
   it('accepts legacy snapshots without a silica dose and rejects invalid counts', () => {
