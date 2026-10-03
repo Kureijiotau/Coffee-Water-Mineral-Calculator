@@ -8263,7 +8263,7 @@ function App() {
                         <div className="watermancer-salt-table__salt-name text-xs font-semibold text-slate-100">
                           Eidon Ionic Minerals Silica
                         </div>
-                        <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px]">SiO₂ · supplement</div>
+                        <div className="watermancer-salt-table__salt-formula mt-0.5 text-[10px]">SiO₂ </div>
                       </div>
                     </div>
                     <div className="watermancer-salt-table__hydration watermancer-salt-table__silica-strength">
