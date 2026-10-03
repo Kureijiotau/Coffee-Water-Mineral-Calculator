@@ -13487,6 +13487,7 @@ function WatermancerIonProfileCard({
           const supplemental = SUPPLEMENTAL_ION_MAP[id];
           const ppm = supplementalIons[id] ?? 0;
           const isSilica = id === 'silica';
+          if (isSilica && !silicaTargetEnabled) return null;
           if (ppm <= 0 && !isSilica) return null;
           return (
             <div

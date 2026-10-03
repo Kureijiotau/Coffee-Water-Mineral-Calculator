@@ -391,10 +391,9 @@ test('shows silica readings and recipe steps only after adding drops', async ({ 
   await expect(silicaRow).toHaveClass(/watermancer-salt-table__row/);
   await expect(silicaRow).toContainText('0 drops · 0.0 mg');
   await expect(silicaRow).toContainText('0.00 mg/L');
-  await expect(silicaTargetCard).toBeVisible();
+  await expect(silicaTargetCard).toBeHidden();
   await expect(silicaTargetToggle).toHaveText('Not used');
   await expect(silicaRow.getByTestId('watermancer-silica-target-toggle')).toBeVisible();
-  await expect(silicaTargetCard.getByTestId('watermancer-silica-target-toggle')).toHaveCount(0);
   await expect(silicaDecrease).toBeDisabled();
   await expect(readings.getByText('Silica (SiO₂)', { exact: true })).toHaveCount(0);
 
@@ -404,6 +403,8 @@ test('shows silica readings and recipe steps only after adding drops', async ({ 
   await expect(page.getByText('Silica (SiO₂)', { exact: true }).first()).toBeVisible();
 
   await silicaTargetToggle.click();
+  await expect(silicaTargetCard).toBeVisible();
+  await expect(silicaTargetCard.getByTestId('watermancer-silica-target-toggle')).toHaveCount(0);
   const silicaTargetInput = page.getByTestId('watermancer-silica-target-input');
   await expect(silicaTargetInput).toHaveValue('12.5');
   await silicaTargetInput.fill('25');
