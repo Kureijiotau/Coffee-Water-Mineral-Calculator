@@ -93,7 +93,7 @@
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
 - [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
-- [Profile picker sorting](profile-picker-order.md) — sort saved profiles and recipes by name or date-added across pickers without changing catalog order
+- [Saved-list sorting](profile-picker-order.md) — keep profile/recipe pickers consistent and provide name sorting for Water Tasting history
 - [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before PNG metadata
 - [Salt-mass bottle-volume anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve strength and scale that bottle after a physical-mass edit
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
