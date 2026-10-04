@@ -51,6 +51,19 @@ export function lotusDropsPerMl(
   return safeStraightDropsPerMl * lotusStyleFactor(style);
 }
 
+export function lotusStraightBaselineFromMeasuredRate(
+  measuredDropsPerMl: number,
+  measuredStyle: LotusDropperStyle,
+  fallback = LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+): number {
+  const safeFallback = Number.isFinite(fallback) && fallback > 0
+    ? fallback
+    : LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML;
+  return Number.isFinite(measuredDropsPerMl) && measuredDropsPerMl > 0
+    ? measuredDropsPerMl / lotusStyleFactor(measuredStyle)
+    : safeFallback;
+}
+
 export function lotusPublishedDrops(
   recipe: LotusRecipe,
   style: LotusDropperStyle,

@@ -5,6 +5,7 @@ import {
   lotusDropsPerMl,
   lotusPublishedDrops,
   lotusRecipeById,
+  lotusStraightBaselineFromMeasuredRate,
   lotusStockPlan,
 } from './lotusConcentrate';
 
@@ -68,5 +69,11 @@ describe('DIY Lotus Drops calculations', () => {
     expect(plan.dropsPerMl).toBeCloseTo(10.08, 8);
     expect(plan.stockVolumeMl).toBe(100);
     expect(plan.saltMassG).toBeGreaterThan(0);
+  });
+
+  it('converts a measured rate to a straight-drop baseline using the measured tip style', () => {
+    expect(lotusStraightBaselineFromMeasuredRate(11.2, 'round')).toBeCloseTo(20, 8);
+    expect(lotusStraightBaselineFromMeasuredRate(20, 'straight')).toBeCloseTo(20, 8);
+    expect(lotusStraightBaselineFromMeasuredRate(0, 'round', 18)).toBe(18);
   });
 });

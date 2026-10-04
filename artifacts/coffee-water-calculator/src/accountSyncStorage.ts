@@ -16,6 +16,11 @@ export type DiyConcentrateStoredInputs = {
   desiredPpmInput?: string;
   desiredSaltMgInput?: string;
   desiredDoseBasis?: "caco3" | "salt-mg";
+  lotusCalibrationInputs?: Record<string, {
+    dropsInput: string;
+    weightInput: string;
+    style?: "round" | "straight";
+  }>;
 };
 
 export type AccountSyncLocalData = {
@@ -96,6 +101,29 @@ export function loadDiyConcentrateInputsRecord(): DiyConcentrateStoredInputs | n
     }
     if (source.desiredDoseBasis === "caco3" || source.desiredDoseBasis === "salt-mg") {
       stored.desiredDoseBasis = source.desiredDoseBasis;
+    }
+    if (
+      source.lotusCalibrationInputs
+      && typeof source.lotusCalibrationInputs === "object"
+      && !Array.isArray(source.lotusCalibrationInputs)
+    ) {
+      const calibrations: NonNullable<DiyConcentrateStoredInputs["lotusCalibrationInputs"]> = {};
+      for (const [id, value] of Object.entries(source.lotusCalibrationInputs as Record<string, unknown>)) {
+        if (!id || !value || typeof value !== "object" || Array.isArray(value)) continue;
+        const calibration = value as Record<string, unknown>;
+        if (
+          typeof calibration.dropsInput !== "string"
+          || typeof calibration.weightInput !== "string"
+        ) continue;
+        calibrations[id] = {
+          dropsInput: calibration.dropsInput,
+          weightInput: calibration.weightInput,
+          ...(calibration.style === "round" || calibration.style === "straight"
+            ? { style: calibration.style }
+            : {}),
+        };
+      }
+      stored.lotusCalibrationInputs = calibrations;
     }
     return stored;
   } catch {

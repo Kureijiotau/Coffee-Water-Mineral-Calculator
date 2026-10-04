@@ -102,6 +102,7 @@ import {
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   lotusDropsPerMl,
+  lotusStraightBaselineFromMeasuredRate,
   lotusStockPlan,
   type LotusDropperStyle,
 } from './lotusConcentrate';
@@ -9793,6 +9794,10 @@ function LotusDropsSection({
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
   const [showBonusEpsom, setShowBonusEpsom] = useState(false);
   const [expandedDropReferences, setExpandedDropReferences] = useState<Record<string, boolean>>({});
+  const [storedDiyInputs] = useState(loadDiyConcentrateInputs);
+  const [lotusCalibrationInputs, setLotusCalibrationInputs] = useState(
+    () => storedDiyInputs.lotusCalibrationInputs ?? {},
+  );
   const exportRef = useRef<HTMLElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
 
@@ -9803,9 +9808,45 @@ function LotusDropsSection({
   const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
   const stockPlans = LOTUS_DROPPER_DEFINITIONS
     .filter(dropper => !dropper.isBonus || showBonusEpsom)
-    .map(dropper => (
-    lotusStockPlan(dropper, style, stockVolumeMl, straightBaselineDropsPerMl)
-  ));
+    .map(dropper => {
+      const calibration = lotusCalibrationInputs[dropper.id];
+      const measuredDropsPerMl = calibration
+        ? computeDiyDropsPerMlFromCalibration(
+          Number(calibration.dropsInput),
+          Number(calibration.weightInput),
+        )
+        : 0;
+      const calibratedBaseline = measuredDropsPerMl > 0
+        ? lotusStraightBaselineFromMeasuredRate(
+          measuredDropsPerMl,
+          calibration?.style ?? 'straight',
+          straightBaselineDropsPerMl,
+        )
+        : straightBaselineDropsPerMl;
+      return lotusStockPlan(dropper, style, stockVolumeMl, calibratedBaseline);
+    });
+
+  useEffect(() => {
+    saveDiyConcentrateInputs({
+      ...loadDiyConcentrateInputs(),
+      lotusCalibrationInputs,
+    });
+  }, [lotusCalibrationInputs]);
+
+  const updateLotusCalibration = (
+    dropperId: string,
+    field: 'dropsInput' | 'weightInput',
+    value: string,
+  ) => {
+    setLotusCalibrationInputs(previous => ({
+      ...previous,
+      [dropperId]: {
+        ...(previous[dropperId] ?? { dropsInput: '', weightInput: '' }),
+        [field]: value,
+        style,
+      },
+    }));
+  };
 
   const handleSaveLotusImage = async () => {
     if (isSavingImage || !exportRef.current) return;
@@ -10055,10 +10096,7 @@ function LotusDropsSection({
                  <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(3)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
               <div className="mt-3 rounded-lg border border-rose-300/20 bg-rose-400/[0.06] p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/80">Calibrate this dropper</div>
-                <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
-                  Measure 1 mL with this tip, count the drops, and enter that count. This controls the dose calculations.
-                </p>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/80">Dropper calibration</div>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   <label>
                     <span className="text-[9px] uppercase tracking-wider text-slate-500">Tip</span>
@@ -10072,26 +10110,45 @@ function LotusDropsSection({
                     </span>
                   </label>
                   <label>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-500">
-                      {style === 'round' ? 'Round' : 'Straight'} drops/mL
-                    </span>
-                    <StableNumberInput min="0.1" step="0.1"
-                      value={style === 'round' ? recipeConcentrateNumber(roundDropsPerMl, 1) : straightDropsPerMlInput}
-                      onChange={event => {
-                        const value = Number(event.target.value);
-                        onStraightDropsPerMlChange(style === 'round' && Number.isFinite(value) && value > 0
-                          ? String(value / lotusDropsPerMl('round', 1)) : event.target.value);
-                      }}
-                       className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-center text-sm font-semibold tabular-nums text-slate-100 outline-none pr-[6px] pl-[6px]"
-                      aria-label={`${style} dropper calibration in drops per milliliter`} />
+                    <span className="text-[9px] uppercase tracking-wider text-slate-500">Concentrate volume (mL)</span>
+                    <StableNumberInput min="1" step="1" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)}
+                      className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
+                      aria-label="Four-mineral concentrate volume in milliliters" />
                   </label>
                 </div>
-                <label className="mt-2 block text-[9px] uppercase tracking-wider text-slate-500 text-left">
-                  Concentrate volume (mL)
-                  <StableNumberInput min="1" step="1" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)}
-                    className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
-                    aria-label="Four-mineral concentrate volume in milliliters" />
-                </label>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Measured number of drops</span>
+                    <StableNumberInput
+                      min="1"
+                      step="1"
+                      value={lotusCalibrationInputs[plan.id]?.dropsInput ?? ''}
+                      onChange={event => updateLotusCalibration(plan.id, 'dropsInput', event.target.value)}
+                      placeholder="e.g. 100"
+                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                      aria-label={`${plan.label} measured number of drops`}
+                      data-testid={`input-lotus-calibration-drops-${plan.id}`}
+                    />
+                  </label>
+                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Water weight (g)</span>
+                    <StableNumberInput
+                      min="0.01"
+                      step="0.01"
+                      value={lotusCalibrationInputs[plan.id]?.weightInput ?? ''}
+                      onChange={event => updateLotusCalibration(plan.id, 'weightInput', event.target.value)}
+                      placeholder="e.g. 5"
+                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                      aria-label={`${plan.label} calibration water weight in grams`}
+                      data-testid={`input-lotus-calibration-weight-${plan.id}`}
+                    />
+                  </label>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
+                  <span className="text-slate-500">Drops per mL</span>
+                  <strong className="font-semibold tabular-nums text-rose-100">{plan.dropsPerMl.toFixed(1)}</strong>
+                </div>
+                <p className="mt-1 text-[9px] text-slate-500">Use water; 1 g is treated as 1 mL.</p>
               </div>
                {salt && (() => {
                  const isExpanded = Boolean(expandedDropReferences[plan.id]);
@@ -11695,16 +11752,17 @@ function DiySingleSaltConcentratePanel({
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
 
   useEffect(() => {
-  saveDiyConcentrateInputs({
-    stockWeightInput,
-    stockVolumeInput: storedInputs.stockVolumeInput,
-    finalVolumeInput,
-    calibrationDropsInput,
-    calibrationWeightInput,
-    desiredPpmInput,
-    desiredSaltMgInput,
-    desiredDoseBasis,
-  } satisfies DiyConcentrateStoredInputs);
+    saveDiyConcentrateInputs({
+      ...loadDiyConcentrateInputs(),
+      stockWeightInput,
+      stockVolumeInput: storedInputs.stockVolumeInput,
+      finalVolumeInput,
+      calibrationDropsInput,
+      calibrationWeightInput,
+      desiredPpmInput,
+      desiredSaltMgInput,
+      desiredDoseBasis,
+    } satisfies DiyConcentrateStoredInputs);
   }, [
     calibrationDropsInput,
     calibrationWeightInput,
