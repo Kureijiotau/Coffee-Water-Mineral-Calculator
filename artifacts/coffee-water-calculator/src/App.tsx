@@ -10107,9 +10107,7 @@ function LotusDropsSection({
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 id="lotus-shared-calibration-title" className="text-sm font-semibold text-rose-100">
-              Shared dropper calibration
-            </h3>
+            <h3 id="lotus-shared-calibration-title" className="text-sm font-semibold text-rose-100">Dropper calibration</h3>
             <p className="mt-1 max-w-3xl text-[10px] leading-relaxed text-slate-400">
               Calibrate each tip style once. The selected style and its measured rate apply to every Lotus solution card.
               Weigh dispensed water; 1 g is treated as 1 mL.
@@ -10253,7 +10251,6 @@ function LotusDropsSection({
           })}
         </div>
       </section>
-
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
          <div className="flex flex-wrap items-center gap-2">
