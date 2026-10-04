@@ -9783,6 +9783,27 @@ function ConcentrateWorkspace({
   );
 }
 
+function LotusTipGlyph({ style }: { style: LotusDropperStyle }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      className="h-4 w-4 shrink-0 text-rose-200"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {style === 'round' ? (
+        <path d="M8 4.5h8v7.5a4 4 0 0 1-8 0z" />
+      ) : (
+        <path d="M8 4.5h8v11H8z" />
+      )}
+    </svg>
+  );
+}
+
 function LotusDropsSection({
   style,
   onStyleChange,
@@ -10205,7 +10226,10 @@ function LotusDropsSection({
                 data-testid={`lotus-shared-calibration-${calibrationStyle}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-[11px] font-semibold capitalize text-rose-100">{calibrationStyle} tip</h4>
+                  <h4 className="flex items-center gap-1.5 text-[11px] font-semibold capitalize text-rose-100">
+                    <LotusTipGlyph style={calibrationStyle} />
+                    <span>{calibrationStyle} tip</span>
+                  </h4>
                   <span className="text-[9px] uppercase tracking-wider text-slate-500">
                     {style === calibrationStyle ? 'Active for all cards' : 'Saved for this style'}
                   </span>
