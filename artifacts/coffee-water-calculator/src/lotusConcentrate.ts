@@ -13,6 +13,23 @@ export interface LotusDropperCalibration {
   style?: LotusDropperStyle;
 }
 
+export type LotusStyleCalibrationInputs = Partial<
+  Record<LotusDropperStyle, LotusDropperCalibration>
+>;
+
+export interface LotusCalibrationLegacyCandidate {
+  id: string;
+  label: string;
+  calibration: LotusDropperCalibration;
+}
+
+export interface LotusCalibrationMigration {
+  calibrations: LotusStyleCalibrationInputs;
+  conflicts: Partial<Record<LotusDropperStyle, LotusCalibrationLegacyCandidate[]>>;
+  unassigned: LotusCalibrationLegacyCandidate[];
+  legacyInputs: Record<string, LotusDropperCalibration>;
+}
+
 export const LOTUS_BREW_VOLUME_ML = 450;
 export const LOTUS_BOTTLE_VOLUME_ML = 59;
 export const LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML = 20;
@@ -37,6 +54,97 @@ export const LOTUS_DROPPER_DEFINITIONS: LotusDropperDefinition[] = [
   { id: 'sodium', label: 'Sodium', saltId: 'nahco3', ionId: 'sodium', inputKey: 'sodium' },
   { id: 'bonus-epsom', label: 'Bonus Epsom', saltId: 'mgso4', ionId: 'magnesium', inputKey: 'magnesium', isBonus: true },
 ];
+
+export function lotusMeasuredDropsPerMl(
+  calibration?: LotusDropperCalibration,
+): number | null {
+  const drops = Number(calibration?.dropsInput);
+  const waterWeight = Number(calibration?.weightInput);
+  if (
+    !Number.isFinite(drops)
+    || drops <= 0
+    || !Number.isFinite(waterWeight)
+    || waterWeight <= 0
+  ) {
+    return null;
+  }
+  return drops / waterWeight;
+}
+
+function calibrationSignature(calibration: LotusDropperCalibration): string {
+  const measuredRate = lotusMeasuredDropsPerMl(calibration);
+  if (measuredRate !== null) {
+    return `valid:${measuredRate}`;
+  }
+  return `partial:${calibration.dropsInput.trim()}:${calibration.weightInput.trim()}`;
+}
+
+function lotusCalibrationCandidate(
+  id: string,
+  calibration: LotusDropperCalibration,
+): LotusCalibrationLegacyCandidate {
+  return {
+    id,
+    label: LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === id)?.label ?? id,
+    calibration,
+  };
+}
+
+export function migrateLotusCalibrationInputs(
+  inputs: Record<string, LotusDropperCalibration>,
+): LotusCalibrationMigration {
+  const calibrations: LotusStyleCalibrationInputs = {};
+  const conflicts: LotusCalibrationMigration['conflicts'] = {};
+  const unassigned: LotusCalibrationLegacyCandidate[] = [];
+  const legacyInputs: Record<string, LotusDropperCalibration> = {};
+  const candidatesByStyle: Record<LotusDropperStyle, LotusCalibrationLegacyCandidate[]> = {
+    round: [],
+    straight: [],
+  };
+
+  for (const [id, calibration] of Object.entries(inputs)) {
+    if (id === 'round' || id === 'straight') {
+      calibrations[id] = { ...calibration, style: id };
+      continue;
+    }
+
+    const candidate = lotusCalibrationCandidate(id, calibration);
+    legacyInputs[id] = calibration;
+    if (calibration.style === 'round' || calibration.style === 'straight') {
+      candidatesByStyle[calibration.style].push(candidate);
+    } else {
+      unassigned.push(candidate);
+    }
+  }
+
+  for (const style of ['round', 'straight'] as const) {
+    if (calibrations[style]) continue;
+    const candidates = candidatesByStyle[style];
+    if (candidates.length === 0) continue;
+
+    const validCandidates = candidates.filter(
+      candidate => lotusMeasuredDropsPerMl(candidate.calibration) !== null,
+    );
+    const comparableCandidates = validCandidates.length > 0
+      ? validCandidates
+      : candidates;
+    const signatures = new Set(
+      comparableCandidates.map(candidate => calibrationSignature(candidate.calibration)),
+    );
+
+    if (signatures.size === 1) {
+      const selected = comparableCandidates[0];
+      calibrations[style] = { ...selected.calibration, style };
+      for (const candidate of comparableCandidates) {
+        delete legacyInputs[candidate.id];
+      }
+    } else {
+      conflicts[style] = comparableCandidates;
+    }
+  }
+
+  return { calibrations, conflicts, unassigned, legacyInputs };
+}
 
 function sourceInputMultiplier(dropperId: LotusDropperId): number {
   return dropperId === 'potassium' || dropperId === 'sodium' ? 2 : 1;
@@ -171,14 +279,7 @@ export function lotusCalibratedStockPlan(
   fallbackStraightDropsPerMl: number,
   calibration?: LotusDropperCalibration,
 ): LotusStockPlan {
-  const measuredDrops = Number(calibration?.dropsInput);
-  const measuredWeightG = Number(calibration?.weightInput);
-  const measuredDropsPerMl = Number.isFinite(measuredDrops)
-    && measuredDrops > 0
-    && Number.isFinite(measuredWeightG)
-    && measuredWeightG > 0
-    ? measuredDrops / measuredWeightG
-    : 0;
+  const measuredDropsPerMl = lotusMeasuredDropsPerMl(calibration) ?? 0;
   const straightBaseline = lotusStraightBaselineFromMeasuredRate(
     measuredDropsPerMl,
     calibration?.style ?? 'straight',

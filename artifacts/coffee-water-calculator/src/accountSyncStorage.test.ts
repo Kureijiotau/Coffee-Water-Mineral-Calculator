@@ -44,4 +44,21 @@ describe('DIY concentrate input storage', () => {
       },
     });
   });
+
+  it('round-trips shared Round and Straight Lotus calibration inputs', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    const inputs = {
+      lotusCalibrationInputs: {
+        round: { dropsInput: '60', weightInput: '5', style: 'round' as const },
+        straight: { dropsInput: '100', weightInput: '4', style: 'straight' as const },
+      },
+    };
+
+    saveDiyConcentrateInputs(inputs, false);
+
+    expect(loadDiyConcentrateInputs()).toEqual(inputs);
+  });
 });

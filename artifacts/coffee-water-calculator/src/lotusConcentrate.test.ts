@@ -4,6 +4,8 @@ import {
   LOTUS_DROPPER_DEFINITIONS,
   lotusCalibratedStockPlan,
   lotusDropsPerMl,
+  lotusMeasuredDropsPerMl,
+  migrateLotusCalibrationInputs,
   lotusPublishedDrops,
   lotusRecipeById,
   lotusStraightBaselineFromMeasuredRate,
@@ -98,6 +100,62 @@ describe('DIY Lotus Drops calculations', () => {
     expect(calciumPlan.saltMgPerDrop).toBeCloseTo(lotusStockPlan(calcium, 'straight').saltMgPerDrop, 8);
     expect(magnesiumPlan.saltMassG / lotusStockPlan(magnesium, 'round').saltMassG).toBeCloseTo(12 / 11.2, 8);
     expect(calciumPlan.saltMassG / lotusStockPlan(calcium, 'straight').saltMassG).toBeCloseTo(25 / 20, 8);
+  });
+
+  it('applies one shared style calibration to every Lotus stock plan', () => {
+    const calibration = { dropsInput: '60', weightInput: '5', style: 'round' as const };
+    const plans = LOTUS_DROPPER_DEFINITIONS.map(dropper =>
+      lotusCalibratedStockPlan(dropper, 'round', 59, 20, calibration),
+    );
+
+    expect(plans.map(plan => plan.dropsPerMl)).toEqual([12, 12, 12, 12, 12]);
+    expect(lotusMeasuredDropsPerMl(calibration)).toBe(12);
+  });
+
+  it('promotes one or identical legacy measurements into a shared style calibration', () => {
+    const migration = migrateLotusCalibrationInputs({
+      magnesium: { dropsInput: '60', weightInput: '5', style: 'round' },
+      calcium: { dropsInput: '120', weightInput: '10', style: 'round' },
+      sodium: { dropsInput: '100', weightInput: '4', style: 'straight' },
+    });
+
+    expect(migration.calibrations).toEqual({
+      round: { dropsInput: '60', weightInput: '5', style: 'round' },
+      straight: { dropsInput: '100', weightInput: '4', style: 'straight' },
+    });
+    expect(migration.conflicts).toEqual({});
+    expect(migration.legacyInputs).toEqual({});
+  });
+
+  it('keeps conflicting and unassigned legacy measurements available for resolution', () => {
+    const legacyInputs = {
+      magnesium: { dropsInput: '60', weightInput: '5', style: 'round' as const },
+      calcium: { dropsInput: '70', weightInput: '5', style: 'round' as const },
+      potassium: { dropsInput: '80', weightInput: '4' },
+    };
+    const migration = migrateLotusCalibrationInputs(legacyInputs);
+
+    expect(migration.calibrations.round).toBeUndefined();
+    expect(migration.conflicts.round?.map(candidate => candidate.id)).toEqual([
+      'magnesium',
+      'calcium',
+    ]);
+    expect(migration.unassigned.map(candidate => candidate.id)).toEqual(['potassium']);
+    expect(migration.legacyInputs).toEqual(legacyInputs);
+  });
+
+  it('preserves a single incomplete legacy measurement so the user can finish it', () => {
+    const migration = migrateLotusCalibrationInputs({
+      magnesium: { dropsInput: '60', weightInput: '', style: 'round' },
+    });
+
+    expect(migration.calibrations.round).toEqual({
+      dropsInput: '60',
+      weightInput: '',
+      style: 'round',
+    });
+    expect(lotusMeasuredDropsPerMl(migration.calibrations.round)).toBeNull();
+    expect(migration.legacyInputs).toEqual({});
   });
 
   it('uses the default calibration when either measurement is missing or invalid', () => {

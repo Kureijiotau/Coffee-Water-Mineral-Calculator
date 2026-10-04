@@ -38,8 +38,8 @@ record contains:
 Keep one active tip-style selection for the Lotus page. The selected style's
 shared rate is used by all solution cards. The other style's calibration
 remains saved and can be selected without re-entering its values. Remove the
-duplicated per-card calibration fields and repeated style controls; retain
-card-specific stock volume and recipe information.
+duplicated per-card calibration fields and repeated style controls; leave the
+existing concentrate-volume controls and recipe information unchanged.
 
 When the selected style has a valid measurement, use its measured rate for all
 cards. If it has no complete valid measurement, use the existing nominal
@@ -99,8 +99,8 @@ Add or update tests to verify:
   discarding user values.
 - Existing DIY storage and account-sync tests continue to preserve calibration
   values.
-- Card-specific concentrate volumes and salt masses remain independent of
-  which card's former calibration fields were entered.
+- Existing concentrate-volume and salt-mass calculations remain unchanged
+  except that each uses the shared measurement for the active style.
 
 Run focused Lotus and account-sync tests, the calculator typecheck and
 production build, restart the web workflow, and verify the Lotus page in the

@@ -103,7 +103,12 @@ import {
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   lotusCalibratedStockPlan,
   lotusDropsPerMl,
+  lotusMeasuredDropsPerMl,
+  migrateLotusCalibrationInputs,
   lotusStockPlan,
+  type LotusCalibrationLegacyCandidate,
+  type LotusCalibrationMigration,
+  type LotusDropperCalibration,
   type LotusDropperStyle,
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
@@ -9795,9 +9800,10 @@ function LotusDropsSection({
   const [showBonusEpsom, setShowBonusEpsom] = useState(false);
   const [expandedDropReferences, setExpandedDropReferences] = useState<Record<string, boolean>>({});
   const [storedDiyInputs] = useState(loadDiyConcentrateInputs);
-  const [lotusCalibrationInputs, setLotusCalibrationInputs] = useState(
-    () => storedDiyInputs.lotusCalibrationInputs ?? {},
+  const [lotusCalibrationState, setLotusCalibrationState] = useState<LotusCalibrationMigration>(
+    () => migrateLotusCalibrationInputs(storedDiyInputs.lotusCalibrationInputs ?? {}),
   );
+  const lotusCalibrationInputs = lotusCalibrationState.calibrations;
   const exportRef = useRef<HTMLElement>(null);
   const [isSavingImage, setIsSavingImage] = useState(false);
 
@@ -9814,30 +9820,104 @@ function LotusDropsSection({
         style,
         stockVolumeMl,
         straightBaselineDropsPerMl,
-        lotusCalibrationInputs[dropper.id],
+        lotusCalibrationInputs[style],
       );
     });
 
   useEffect(() => {
+    const storedCalibrations: Record<string, LotusDropperCalibration> = {
+      ...lotusCalibrationState.legacyInputs,
+    };
+    for (const calibrationStyle of ['round', 'straight'] as const) {
+      const calibration = lotusCalibrationInputs[calibrationStyle];
+      if (calibration) storedCalibrations[calibrationStyle] = calibration;
+    }
     saveDiyConcentrateInputs({
       ...loadDiyConcentrateInputs(),
-      lotusCalibrationInputs,
+      lotusCalibrationInputs: storedCalibrations,
     });
-  }, [lotusCalibrationInputs]);
+  }, [lotusCalibrationInputs, lotusCalibrationState.legacyInputs]);
 
   const updateLotusCalibration = (
-    dropperId: string,
+    calibrationStyle: LotusDropperStyle,
     field: 'dropsInput' | 'weightInput',
     value: string,
   ) => {
-    setLotusCalibrationInputs(previous => ({
+    setLotusCalibrationState(previous => ({
       ...previous,
-      [dropperId]: {
-        ...(previous[dropperId] ?? { dropsInput: '', weightInput: '' }),
-        [field]: value,
-        style,
+      calibrations: {
+        ...previous.calibrations,
+        [calibrationStyle]: {
+          ...(previous.calibrations[calibrationStyle] ?? {
+            dropsInput: '',
+            weightInput: '',
+          }),
+          [field]: value,
+          style: calibrationStyle,
+        },
       },
     }));
+  };
+
+  const resolveLotusCalibrationConflict = (
+    calibrationStyle: LotusDropperStyle,
+    candidateId: string,
+  ) => {
+    const candidate = lotusCalibrationState.conflicts[calibrationStyle]
+      ?.find(item => item.id === candidateId);
+    if (!candidate) return;
+    setLotusCalibrationState(previous => {
+      const legacyInputs = { ...previous.legacyInputs };
+      for (const item of previous.conflicts[calibrationStyle] ?? []) {
+        delete legacyInputs[item.id];
+      }
+      return {
+        ...previous,
+        calibrations: {
+          ...previous.calibrations,
+          [calibrationStyle]: {
+            ...candidate.calibration,
+            style: calibrationStyle,
+          },
+        },
+        conflicts: {
+          ...previous.conflicts,
+          [calibrationStyle]: undefined,
+        },
+        legacyInputs,
+      };
+    });
+  };
+
+  const assignLotusCalibrationStyle = (
+    candidate: LotusCalibrationLegacyCandidate,
+    calibrationStyle: LotusDropperStyle,
+  ) => {
+    const existing = lotusCalibrationInputs[calibrationStyle];
+    const hasExistingValues = Boolean(
+      existing?.dropsInput.trim() || existing?.weightInput.trim(),
+    );
+    if (hasExistingValues && !window.confirm(
+      `Replace the saved ${calibrationStyle} calibration with the measurement from ${candidate.label}?`,
+    )) {
+      return;
+    }
+    setLotusCalibrationState(previous => {
+      const legacyInputs = { ...previous.legacyInputs };
+      delete legacyInputs[candidate.id];
+      return {
+        ...previous,
+        calibrations: {
+          ...previous.calibrations,
+          [calibrationStyle]: {
+            ...candidate.calibration,
+            style: calibrationStyle,
+          },
+        },
+        unassigned: previous.unassigned.filter(item => item.id !== candidate.id),
+        legacyInputs,
+      };
+    });
   };
 
   const handleSaveLotusImage = async () => {
@@ -10020,6 +10100,160 @@ function LotusDropsSection({
           </div>
         </div>
       </div>
+      <section
+        className="rounded-xl border border-rose-300/20 bg-rose-400/[0.05] p-3"
+        aria-labelledby="lotus-shared-calibration-title"
+        data-testid="lotus-shared-calibration"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 id="lotus-shared-calibration-title" className="text-sm font-semibold text-rose-100">
+              Shared dropper calibration
+            </h3>
+            <p className="mt-1 max-w-3xl text-[10px] leading-relaxed text-slate-400">
+              Calibrate each tip style once. The selected style and its measured rate apply to every Lotus solution card.
+              Weigh dispensed water; 1 g is treated as 1 mL.
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-slate-700/60 bg-slate-900/60 p-1" role="group" aria-label="Active Lotus dropper style">
+            {(['round', 'straight'] as const).map(option => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => onStyleChange(option)}
+                aria-pressed={style === option}
+                className={`rounded-md px-3 py-1.5 text-[10px] font-semibold capitalize transition ${
+                  style === option
+                    ? 'bg-rose-400/15 text-rose-200 ring-1 ring-rose-300/30'
+                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {(['round', 'straight'] as const).map(conflictStyle => {
+          const candidates = lotusCalibrationState.conflicts[conflictStyle];
+          if (!candidates?.length) return null;
+          return (
+            <div
+              key={`conflict-${conflictStyle}`}
+              role="alert"
+              className="mt-3 rounded-lg border border-amber-300/30 bg-amber-400/[0.08] p-3"
+            >
+              <p className="text-[11px] font-semibold text-amber-100">
+                Saved {conflictStyle} measurements differ. Choose which one to use for all {conflictStyle} droppers.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {candidates.map(candidate => (
+                  <button
+                    key={candidate.id}
+                    type="button"
+                    onClick={() => resolveLotusCalibrationConflict(conflictStyle, candidate.id)}
+                    className="rounded-md border border-amber-200/25 bg-slate-950/50 px-2.5 py-1.5 text-left text-[10px] text-amber-50 hover:bg-slate-800"
+                    aria-label={`Use ${candidate.label} measurement for ${conflictStyle} droppers`}
+                  >
+                    {candidate.label}: {candidate.calibration.dropsInput || '—'} drops / {candidate.calibration.weightInput || '—'} g
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[10px] text-amber-100/70">
+                The nominal model remains active until you choose a saved measurement.
+              </p>
+            </div>
+          );
+        })}
+
+        {lotusCalibrationState.unassigned.length > 0 && (
+          <div role="alert" className="mt-3 rounded-lg border border-amber-300/30 bg-amber-400/[0.08] p-3">
+            <p className="text-[11px] font-semibold text-amber-100">
+              Some saved measurements have no tip style. Assign each one before it can be used.
+            </p>
+            <div className="mt-2 space-y-2">
+              {lotusCalibrationState.unassigned.map(candidate => (
+                <div key={candidate.id} className="flex flex-wrap items-center justify-between gap-2 text-[10px]">
+                  <span className="text-amber-50">
+                    {candidate.label}: {candidate.calibration.dropsInput || '—'} drops / {candidate.calibration.weightInput || '—'} g
+                  </span>
+                  <div className="flex gap-1.5">
+                    {(['round', 'straight'] as const).map(candidateStyle => (
+                      <button
+                        key={candidateStyle}
+                        type="button"
+                        onClick={() => assignLotusCalibrationStyle(candidate, candidateStyle)}
+                        className="rounded-md border border-amber-200/25 bg-slate-950/50 px-2 py-1 capitalize text-amber-50 hover:bg-slate-800"
+                      >
+                        Use for {candidateStyle}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {(['round', 'straight'] as const).map(calibrationStyle => {
+            const calibration = lotusCalibrationInputs[calibrationStyle];
+            const measuredRate = lotusMeasuredDropsPerMl(calibration);
+            const estimatedRate = lotusDropsPerMl(calibrationStyle, straightBaselineDropsPerMl);
+            return (
+              <div
+                key={calibrationStyle}
+                className="rounded-lg border border-rose-200/15 bg-slate-950/35 p-2.5"
+                data-testid={`lotus-shared-calibration-${calibrationStyle}`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h4 className="text-[11px] font-semibold capitalize text-rose-100">{calibrationStyle} tip</h4>
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500">
+                    {style === calibrationStyle ? 'Active for all cards' : 'Saved for this style'}
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Measured drops</span>
+                    <StableNumberInput
+                      min="1"
+                      step="1"
+                      value={calibration?.dropsInput ?? ''}
+                      onChange={event => updateLotusCalibration(calibrationStyle, 'dropsInput', event.target.value)}
+                      placeholder="e.g. 100"
+                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                      aria-label={`${calibrationStyle} tip measured number of drops`}
+                      data-testid={`input-lotus-calibration-drops-${calibrationStyle}`}
+                    />
+                  </label>
+                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Water weight (g)</span>
+                    <StableNumberInput
+                      min="0.01"
+                      step="0.01"
+                      value={calibration?.weightInput ?? ''}
+                      onChange={event => updateLotusCalibration(calibrationStyle, 'weightInput', event.target.value)}
+                      placeholder="e.g. 5"
+                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                      aria-label={`${calibrationStyle} tip calibration water weight in grams`}
+                      data-testid={`input-lotus-calibration-weight-${calibrationStyle}`}
+                    />
+                  </label>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
+                  <span className="text-slate-500">Rate used when {calibrationStyle} is selected</span>
+                  <strong className="font-semibold tabular-nums text-rose-100">
+                    {measuredRate === null
+                      ? `${estimatedRate.toFixed(1)} drops/mL · estimate`
+                      : `${measuredRate.toFixed(1)} drops/mL · calibrated`}
+                  </strong>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
          <div className="flex flex-wrap items-center gap-2">
@@ -10087,60 +10321,18 @@ function LotusDropsSection({
                  <SummaryMetric label="Concentrate strength" value={`${plan.saltMgPerMl.toFixed(3)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
                  <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(3)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
-              <div className="mt-3 rounded-lg border border-rose-300/20 bg-rose-400/[0.06] p-2">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/80">Dropper calibration</div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <label>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-500">Tip</span>
-                    <span className="mt-1 flex gap-1 rounded-md border border-slate-700/60 bg-slate-900/60 p-1">
-                      {(['round', 'straight'] as LotusDropperStyle[]).map(option => (
-                        <button key={option} type="button" onClick={() => onStyleChange(option)} aria-pressed={style === option}
-                        className={`flex-1 rounded px-2 py-1 text-[10px] font-semibold ${style === option ? 'bg-rose-400/15 text-rose-200' : 'text-slate-500'}`}>
-                          {option}
-                        </button>
-                      ))}
-                    </span>
-                  </label>
-                  <label>
-                    <span className="text-[9px] uppercase tracking-wider text-slate-500">Concentrate volume (mL)</span>
-                    <StableNumberInput min="1" step="1" value={stockVolumeInput} onChange={event => setStockVolumeInput(event.target.value)}
-                      className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
-                      aria-label="Four-mineral concentrate volume in milliliters" />
-                  </label>
-                </div>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
-                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Measured number of drops</span>
-                    <StableNumberInput
-                      min="1"
-                      step="1"
-                      value={lotusCalibrationInputs[plan.id]?.dropsInput ?? ''}
-                      onChange={event => updateLotusCalibration(plan.id, 'dropsInput', event.target.value)}
-                      placeholder="e.g. 100"
-                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                      aria-label={`${plan.label} measured number of drops`}
-                      data-testid={`input-lotus-calibration-drops-${plan.id}`}
-                    />
-                  </label>
-                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
-                    <span className="block text-[9px] uppercase tracking-wider text-slate-500">Water weight (g)</span>
-                    <StableNumberInput
-                      min="0.01"
-                      step="0.01"
-                      value={lotusCalibrationInputs[plan.id]?.weightInput ?? ''}
-                      onChange={event => updateLotusCalibration(plan.id, 'weightInput', event.target.value)}
-                      placeholder="e.g. 5"
-                      className="mt-1 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
-                      aria-label={`${plan.label} calibration water weight in grams`}
-                      data-testid={`input-lotus-calibration-weight-${plan.id}`}
-                    />
-                  </label>
-                </div>
-                <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
-                  <span className="text-slate-500">Drops per mL</span>
-                  <strong className="font-semibold tabular-nums text-rose-100">{plan.dropsPerMl.toFixed(1)}</strong>
-                </div>
-                <p className="mt-1 text-[9px] text-slate-500">Use water; 1 g is treated as 1 mL.</p>
+              <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/35 p-2">
+                <label className="block max-w-xs">
+                  <span className="text-[9px] uppercase tracking-wider text-slate-500">Concentrate volume (mL)</span>
+                  <StableNumberInput
+                    min="1"
+                    step="1"
+                    value={stockVolumeInput}
+                    onChange={event => setStockVolumeInput(event.target.value)}
+                    className="mt-1 w-full rounded-md border border-slate-700/60 bg-slate-900/60 px-2 py-1.5 text-sm font-semibold text-slate-100 outline-none"
+                    aria-label={`${plan.label} concentrate volume in milliliters`}
+                  />
+                </label>
               </div>
                {salt && (() => {
                  const isExpanded = Boolean(expandedDropReferences[plan.id]);
