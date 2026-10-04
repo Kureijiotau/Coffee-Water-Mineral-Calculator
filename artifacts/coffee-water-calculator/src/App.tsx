@@ -9789,7 +9789,7 @@ function LotusTipGlyph({ style }: { style: LotusDropperStyle }) {
       aria-hidden="true"
       viewBox="0 0 24 24"
       fill="none"
-      className="h-4 w-4 shrink-0 text-rose-200"
+      className={`h-4 w-4 shrink-0 ${style === 'round' ? 'text-rose-200' : 'text-cyan-200'}`}
       stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"
@@ -10141,13 +10141,15 @@ function LotusDropsSection({
                 type="button"
                 onClick={() => onStyleChange(option)}
                 aria-pressed={style === option}
-                className={`rounded-md px-3 py-1.5 text-[10px] font-semibold capitalize transition ${
-                  style === option
-                    ? 'bg-rose-400/15 text-rose-200 ring-1 ring-rose-300/30'
-                    : 'text-slate-500 hover:bg-slate-800 hover:text-slate-300'
+                className={`flex min-w-[88px] items-center justify-center rounded-md px-3 py-1.5 text-[10px] font-bold capitalize transition ${
+                  style !== option
+                    ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                    : option === 'round'
+                      ? 'bg-rose-300 text-slate-950 shadow-sm shadow-rose-300/40 ring-2 ring-rose-100'
+                      : 'bg-cyan-300 text-slate-950 shadow-sm shadow-cyan-300/40 ring-2 ring-cyan-100'
                 }`}
               >
-                {option}
+                <span>{option}</span>
               </button>
             ))}
           </div>
@@ -10219,14 +10221,27 @@ function LotusDropsSection({
             const calibration = lotusCalibrationInputs[calibrationStyle];
             const measuredRate = lotusMeasuredDropsPerMl(calibration);
             const estimatedRate = lotusDropsPerMl(calibrationStyle, straightBaselineDropsPerMl);
+            const accent = calibrationStyle === 'round'
+              ? {
+                card: 'border-rose-300/25 bg-rose-400/[0.035]',
+                heading: 'text-rose-100',
+                inputBorder: 'border-rose-200/15',
+                rate: 'text-rose-100',
+              }
+              : {
+                card: 'border-cyan-300/25 bg-cyan-400/[0.035]',
+                heading: 'text-cyan-100',
+                inputBorder: 'border-cyan-200/15',
+                rate: 'text-cyan-100',
+              };
             return (
               <div
                 key={calibrationStyle}
-                className="rounded-lg border border-rose-200/15 bg-slate-950/35 p-2.5"
+                className={`rounded-lg border p-2.5 ${accent.card}`}
                 data-testid={`lotus-shared-calibration-${calibrationStyle}`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="flex items-center gap-1.5 text-[11px] font-semibold capitalize text-rose-100">
+                  <h4 className={`flex items-center gap-1.5 text-[11px] font-semibold capitalize ${accent.heading}`}>
                     <LotusTipGlyph style={calibrationStyle} />
                     <span>{calibrationStyle} tip</span>
                   </h4>
@@ -10235,7 +10250,7 @@ function LotusDropsSection({
                   </span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
-                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                  <label className={`rounded-md border ${accent.inputBorder} bg-slate-900/55 px-2 py-1.5`}>
                     <span className="block text-[9px] uppercase tracking-wider text-slate-500">Measured drops</span>
                     <StableNumberInput
                       min="1"
@@ -10248,7 +10263,7 @@ function LotusDropsSection({
                       data-testid={`input-lotus-calibration-drops-${calibrationStyle}`}
                     />
                   </label>
-                  <label className="rounded-md border border-rose-200/15 bg-slate-900/55 px-2 py-1.5">
+                  <label className={`rounded-md border ${accent.inputBorder} bg-slate-900/55 px-2 py-1.5`}>
                     <span className="block text-[9px] uppercase tracking-wider text-slate-500">Water weight (g)</span>
                     <StableNumberInput
                       min="0.01"
@@ -10264,7 +10279,7 @@ function LotusDropsSection({
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-2 text-[10px]">
                   <span className="text-slate-500">Rate used when {calibrationStyle} is selected</span>
-                  <strong className="font-semibold tabular-nums text-rose-100">
+                  <strong className={`font-semibold tabular-nums ${accent.rate}`}>
                     {measuredRate === null
                       ? `${estimatedRate.toFixed(1)} drops/mL · estimate`
                       : `${measuredRate.toFixed(1)} drops/mL · calibrated`}
