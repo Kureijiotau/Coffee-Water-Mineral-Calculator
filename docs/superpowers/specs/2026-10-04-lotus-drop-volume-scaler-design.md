@@ -47,26 +47,35 @@ create per-card calibration overrides in this design.
 
 Place the scaler controls above the Lotus solution cards:
 
-1. **Reference water volume:** Start at 450 mL, clearly labeled as the current
+1. **Lotus recipe:** Add a selector populated from the existing published
+   `LOTUS_RECIPES` data. Default to the first listed preset, Light and Bright.
+   Selecting a preset fills the four standard dropper counts using the existing
+   Lotus published-count model for the selected style.
+2. **Reference water volume:** Start at 450 mL, clearly labeled as the current
    Lotus recipe basis and editable by the user.
-2. **Target water volume:** One value applied to the entire set of solution
+3. **Target water volume:** One value applied to the entire set of solution
    cards.
-3. **Volume units:** Support mL, L, and US gallons. Normalize values to mL for
+4. **Volume units:** Support mL, L, and US gallons. Normalize values to mL for
    calculation; use 1 L = 1,000 mL and 1 US gal = 3,785.411784 mL.
 
 Each solution card starts from its current Lotus recipe drop count for the
 selected recipe/style. Keep that source count editable so users can adapt a
-recipe without changing the Lotus defaults. Scale each solution independently
-using the same reference and target water volumes:
+recipe without changing the selected Lotus preset. The optional Bonus Epsom
+card is not part of the published Lotus recipes and starts at zero drops. If a
+recipe or style change would replace edited counts, ask for confirmation; if
+cancelled, keep the current recipe, style, and counts. Scale each solution
+independently using the same reference and target water volumes:
 
 ```text
 scaledDropsExact =
   editableRecipeDrops * targetWaterVolumeMl / referenceWaterVolumeMl
 ```
 
-The selected tip style continues to determine the recipe's Round or Straight
-drop counts and the matching shared calibration. Changing water volume must
-not change the solution's recipe proportions or the salt chemistry model.
+The selected tip style determines the recipe's Round or Straight source counts
+and the matching shared calibration. Changing water volume alone preserves
+the recipe proportions; editing an individual source count intentionally
+changes that solution's proportion. Neither action changes the salt chemistry
+model.
 
 ### Results and rounding
 
@@ -117,8 +126,12 @@ Add or update tests to verify:
   changing the other style's calibration.
 - Missing calibrations use the existing nominal rate and are labeled as
   estimates.
-- The Lotus recipe's default drop counts and the 450 mL reference basis are
-  prefilled, and user edits are used in scaling.
+- Each published Lotus recipe/style combination produces the expected source
+  drop counts, and the 450 mL reference basis is prefilled.
+- Changing a recipe or style after count edits asks before replacing them;
+  canceling preserves the current selection and counts.
+- The Bonus Epsom card starts at zero for published recipes and remains
+  independently editable.
 - mL, L, and US gallon conversions produce equivalent results.
 - Scaling follows the stated formula for increases and decreases in water
   volume.
