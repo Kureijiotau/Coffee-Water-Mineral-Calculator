@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
+  lotusCalibratedStockPlan,
   lotusDropsPerMl,
   lotusPublishedDrops,
   lotusRecipeById,
@@ -75,5 +76,43 @@ describe('DIY Lotus Drops calculations', () => {
     expect(lotusStraightBaselineFromMeasuredRate(11.2, 'round')).toBeCloseTo(20, 8);
     expect(lotusStraightBaselineFromMeasuredRate(20, 'straight')).toBeCloseTo(20, 8);
     expect(lotusStraightBaselineFromMeasuredRate(0, 'round', 18)).toBe(18);
+  });
+
+  it('uses each dropper’s measurements to calculate its own stock strength', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    const calcium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'calcium')!;
+    const magnesiumPlan = lotusCalibratedStockPlan(magnesium, 'round', 59, 20, {
+      dropsInput: '60',
+      weightInput: '5',
+      style: 'round',
+    });
+    const calciumPlan = lotusCalibratedStockPlan(calcium, 'straight', 59, 20, {
+      dropsInput: '100',
+      weightInput: '4',
+      style: 'straight',
+    });
+
+    expect(magnesiumPlan.dropsPerMl).toBeCloseTo(12, 8);
+    expect(calciumPlan.dropsPerMl).toBeCloseTo(25, 8);
+    expect(magnesiumPlan.saltMgPerDrop).toBeCloseTo(lotusStockPlan(magnesium, 'round').saltMgPerDrop, 8);
+    expect(calciumPlan.saltMgPerDrop).toBeCloseTo(lotusStockPlan(calcium, 'straight').saltMgPerDrop, 8);
+    expect(magnesiumPlan.saltMassG / lotusStockPlan(magnesium, 'round').saltMassG).toBeCloseTo(12 / 11.2, 8);
+    expect(calciumPlan.saltMassG / lotusStockPlan(calcium, 'straight').saltMassG).toBeCloseTo(25 / 20, 8);
+  });
+
+  it('uses the default calibration when either measurement is missing or invalid', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    const fallback = lotusStockPlan(magnesium, 'straight');
+
+    expect(lotusCalibratedStockPlan(magnesium, 'straight', 59, 20, {
+      dropsInput: '100',
+      weightInput: '',
+      style: 'straight',
+    })).toEqual(fallback);
+    expect(lotusCalibratedStockPlan(magnesium, 'straight', 59, 20, {
+      dropsInput: '-100',
+      weightInput: '-5',
+      style: 'straight',
+    })).toEqual(fallback);
   });
 });

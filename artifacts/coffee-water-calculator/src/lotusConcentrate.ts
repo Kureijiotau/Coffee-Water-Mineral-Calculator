@@ -7,6 +7,11 @@ import {
 
 export type LotusDropperStyle = 'round' | 'straight';
 export type LotusDropperId = 'magnesium' | 'calcium' | 'potassium' | 'sodium' | 'bonus-epsom';
+export interface LotusDropperCalibration {
+  dropsInput: string;
+  weightInput: string;
+  style?: LotusDropperStyle;
+}
 
 export const LOTUS_BREW_VOLUME_ML = 450;
 export const LOTUS_BOTTLE_VOLUME_ML = 59;
@@ -157,6 +162,29 @@ export function lotusStockPlan(
     saltMassMg,
     saltMassG: saltMassMg / 1000,
   };
+}
+
+export function lotusCalibratedStockPlan(
+  dropper: typeof LOTUS_DROPPER_DEFINITIONS[number],
+  style: LotusDropperStyle,
+  stockVolumeMl: number,
+  fallbackStraightDropsPerMl: number,
+  calibration?: LotusDropperCalibration,
+): LotusStockPlan {
+  const measuredDrops = Number(calibration?.dropsInput);
+  const measuredWeightG = Number(calibration?.weightInput);
+  const measuredDropsPerMl = Number.isFinite(measuredDrops)
+    && measuredDrops > 0
+    && Number.isFinite(measuredWeightG)
+    && measuredWeightG > 0
+    ? measuredDrops / measuredWeightG
+    : 0;
+  const straightBaseline = lotusStraightBaselineFromMeasuredRate(
+    measuredDropsPerMl,
+    calibration?.style ?? 'straight',
+    fallbackStraightDropsPerMl,
+  );
+  return lotusStockPlan(dropper, style, stockVolumeMl, straightBaseline);
 }
 
 export function lotusRecipeDosing(

@@ -101,8 +101,8 @@ import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+  lotusCalibratedStockPlan,
   lotusDropsPerMl,
-  lotusStraightBaselineFromMeasuredRate,
   lotusStockPlan,
   type LotusDropperStyle,
 } from './lotusConcentrate';
@@ -9809,21 +9809,13 @@ function LotusDropsSection({
   const stockPlans = LOTUS_DROPPER_DEFINITIONS
     .filter(dropper => !dropper.isBonus || showBonusEpsom)
     .map(dropper => {
-      const calibration = lotusCalibrationInputs[dropper.id];
-      const measuredDropsPerMl = calibration
-        ? computeDiyDropsPerMlFromCalibration(
-          Number(calibration.dropsInput),
-          Number(calibration.weightInput),
-        )
-        : 0;
-      const calibratedBaseline = measuredDropsPerMl > 0
-        ? lotusStraightBaselineFromMeasuredRate(
-          measuredDropsPerMl,
-          calibration?.style ?? 'straight',
-          straightBaselineDropsPerMl,
-        )
-        : straightBaselineDropsPerMl;
-      return lotusStockPlan(dropper, style, stockVolumeMl, calibratedBaseline);
+      return lotusCalibratedStockPlan(
+        dropper,
+        style,
+        stockVolumeMl,
+        straightBaselineDropsPerMl,
+        lotusCalibrationInputs[dropper.id],
+      );
     });
 
   useEffect(() => {

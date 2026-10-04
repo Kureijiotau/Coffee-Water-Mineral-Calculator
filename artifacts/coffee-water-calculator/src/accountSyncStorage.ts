@@ -1,6 +1,7 @@
 import type { WaterProfile } from "@/waterData";
 import type { WatermancerProfile } from "./watermancerProfiles";
 import type { WaterTastingCollection } from "./waterTasting";
+import type { LotusDropperCalibration } from "./lotusConcentrate";
 
 export const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = "coffee-water-diy-concentrate-inputs";
 export const ACCOUNT_SYNC_LOCAL_CHANGE_EVENT = "cwm:account-sync-local-change";
@@ -16,11 +17,7 @@ export type DiyConcentrateStoredInputs = {
   desiredPpmInput?: string;
   desiredSaltMgInput?: string;
   desiredDoseBasis?: "caco3" | "salt-mg";
-  lotusCalibrationInputs?: Record<string, {
-    dropsInput: string;
-    weightInput: string;
-    style?: "round" | "straight";
-  }>;
+  lotusCalibrationInputs?: Record<string, LotusDropperCalibration>;
 };
 
 export type AccountSyncLocalData = {
