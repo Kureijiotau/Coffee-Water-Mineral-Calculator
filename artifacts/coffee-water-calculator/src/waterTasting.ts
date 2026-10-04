@@ -687,6 +687,29 @@ export function buildWaterTastingProfileOptions(
   ];
 }
 
+function waterTastingProfileSortName(name: string): string {
+  return name.trim().replace(/^(?:Recipe|Profile) · /i, '').trim();
+}
+
+export function sortWaterTastingProfileOptionsByName(
+  options: readonly WaterTastingProfileOption[],
+): WaterTastingProfileOption[] {
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true });
+  const groupOrder = (group: WaterTastingProfileGroup) => group === 'Alchemist' ? 0 : 1;
+
+  return options
+    .map((option, index) => ({ option, index }))
+    .sort((a, b) => (
+      groupOrder(a.option.group) - groupOrder(b.option.group)
+      || collator.compare(
+        waterTastingProfileSortName(a.option.name),
+        waterTastingProfileSortName(b.option.name),
+      )
+      || a.index - b.index
+    ))
+    .map(({ option }) => option);
+}
+
 export function sortWaterTastingsNewestFirst(
   records: readonly WaterTastingRecord[],
 ): WaterTastingRecord[] {

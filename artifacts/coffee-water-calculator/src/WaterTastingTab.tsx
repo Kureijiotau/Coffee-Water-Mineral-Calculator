@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { ArrowRight, BookOpen, Check, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,7 +14,8 @@ import {
   createNeutralWaterTastingSpectrum,
   calculateWaterTastingTotal, createWaterTastingRecord, createWaterTastingDeletionMarker,
   isCvaWaterTastingRecord, updateWaterTastingRecord,
-  loadWaterTastingCollection, saveWaterTastingCollection, sortWaterTastingsByName, sortWaterTastingsNewestFirst,
+  loadWaterTastingCollection, saveWaterTastingCollection, sortWaterTastingProfileOptionsByName,
+  sortWaterTastingsByName, sortWaterTastingsNewestFirst,
   type WaterTastingCvaDraft, type WaterTastingLegacyDraft,
   type WaterTastingCollection, type WaterTastingEditorValues, type WaterTastingProfileOption,
   type WaterTastingRecord, type WaterTastingStorageError,
@@ -106,14 +107,17 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       window.removeEventListener('storage', refreshRecords);
     };
   }, [editingId, form]);
-  const profileChoices = editingRecord && !profileOptions.some(option => option.sourceId === editingRecord.profileSourceId)
-    ? [...profileOptions, {
-      sourceId: editingRecord.profileSourceId,
-      name: `${editingRecord.profileNameSnapshot} (no longer available)`,
-      group: editingRecord.profileSourceId.startsWith('alchemist:') ? 'Alchemist' as const : 'Watermancer' as const,
-      readings: { ions: {} },
-    }]
-    : profileOptions;
+  const profileChoices = useMemo(() => {
+    const choices = editingRecord && !profileOptions.some(option => option.sourceId === editingRecord.profileSourceId)
+      ? [...profileOptions, {
+        sourceId: editingRecord.profileSourceId,
+        name: `${editingRecord.profileNameSnapshot} (no longer available)`,
+        group: editingRecord.profileSourceId.startsWith('alchemist:') ? 'Alchemist' as const : 'Watermancer' as const,
+        readings: { ions: {} },
+      }]
+      : profileOptions;
+    return sortWaterTastingProfileOptionsByName(choices);
+  }, [editingRecord, profileOptions]);
   function beginNew() {
     setEditingId(null);
     form.reset(emptyDraft());

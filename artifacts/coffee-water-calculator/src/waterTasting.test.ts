@@ -10,6 +10,7 @@ import {
   replaceWaterTastingCollection,
   saveWaterTastings,
   sortWaterTastingsNewestFirst,
+  sortWaterTastingProfileOptionsByName,
   updateWaterTastingRecord,
   WATER_TASTING_DESCRIPTORS,
   WATER_TASTING_AFFECTIVE_ATTRIBUTES,
@@ -203,6 +204,70 @@ describe('Water Tasting CVA-informed scales', () => {
 });
 
 describe('Water Tasting profile options', () => {
+  it('sorts every choice by natural name within its group without changing the source options', () => {
+    const options = buildWaterTastingProfileOptions(
+      [
+        {
+          sourceId: 'alchemist:recipe:kenya-10',
+          name: 'Recipe · Kenya 10',
+          readings: { ions: { calcium: 10 } },
+        },
+        {
+          sourceId: 'alchemist:profile:brazil',
+          name: 'Profile · Brazil',
+          readings: { ions: { calcium: 20 } },
+        },
+        {
+          sourceId: 'alchemist:recipe:kenya-2',
+          name: 'Recipe · Kenya 2',
+          readings: { ions: { calcium: 30 } },
+        },
+        {
+          sourceId: 'alchemist:profile:kenya-2',
+          name: 'Kenya 2',
+          readings: { ions: { calcium: 40 } },
+        },
+      ],
+      [
+        {
+          sourceId: 'watermancer:recipe:alpha-10',
+          name: 'Recipe · Alpha 10',
+          readings: { ions: { sodium: 10 } },
+        },
+        {
+          sourceId: 'watermancer:profile:zeta',
+          name: 'Profile · Zeta',
+          readings: { ions: { sodium: 20 } },
+        },
+        {
+          sourceId: 'watermancer:recipe:alpha-2',
+          name: 'Recipe · alpha 2',
+          readings: { ions: { sodium: 30 } },
+        },
+      ],
+    );
+    const reversedGroups = [
+      ...options.filter(option => option.group === 'Watermancer'),
+      ...options.filter(option => option.group === 'Alchemist'),
+    ];
+    const originalIds = reversedGroups.map(option => option.sourceId);
+
+    const sorted = sortWaterTastingProfileOptionsByName(reversedGroups);
+
+    expect(sorted.map(option => option.sourceId)).toEqual([
+      'alchemist:profile:brazil',
+      'alchemist:recipe:kenya-2',
+      'alchemist:profile:kenya-2',
+      'alchemist:recipe:kenya-10',
+      'watermancer:recipe:alpha-2',
+      'watermancer:recipe:alpha-10',
+      'watermancer:profile:zeta',
+    ]);
+    expect(sorted[1]).toBe(reversedGroups.find(option => option.sourceId === 'alchemist:recipe:kenya-2'));
+    expect(sorted[1]?.readings.ions).toEqual({ calcium: 30 });
+    expect(reversedGroups.map(option => option.sourceId)).toEqual(originalIds);
+  });
+
   it('keeps both mode catalogs in exactly two groups with their own readings', () => {
     const options = buildWaterTastingProfileOptions(
       [
