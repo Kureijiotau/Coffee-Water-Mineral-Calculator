@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
+  LOTUS_SOURCE_DROP_MASS_MG,
   lotusCalibratedStockPlan,
   lotusDropsPerMl,
   lotusMeasuredDropsPerMl,
@@ -53,25 +54,56 @@ describe('DIY Lotus Drops calculations', () => {
     const magnesium = LOTUS_DROPPER_DEFINITIONS[0];
     const round = lotusStockPlan(magnesium, 'round');
     const straight = lotusStockPlan(magnesium, 'straight');
+    const sourceStraightSaltMgPerDrop = 9.148545;
+    const sourceRoundSaltMgPerDrop = sourceStraightSaltMgPerDrop / 0.56;
+    const estimatedSaltMgPerGramWater = (
+      sourceStraightSaltMgPerDrop / (LOTUS_SOURCE_DROP_MASS_MG.straight - sourceStraightSaltMgPerDrop)
+      + sourceRoundSaltMgPerDrop / (LOTUS_SOURCE_DROP_MASS_MG.round - sourceRoundSaltMgPerDrop)
+    ) / 2 * 1000;
 
     expect(lotusDropsPerMl('round')).toBeCloseTo(11.2, 8);
     expect(lotusDropsPerMl('straight')).toBeCloseTo(20, 8);
+    expect(LOTUS_SOURCE_DROP_MASS_MG).toEqual({ round: 71.6, straight: 40 });
     expect(round.saltMgPerMl).toBeCloseTo(straight.saltMgPerMl, 8);
-    expect(round.saltMgPerDrop).toBeCloseTo(16.3366875, 7);
-    expect(straight.saltMgPerDrop).toBeCloseTo(9.148545, 7);
-    expect(round.ionPpmPerDrop).toBeCloseTo(4.3401786, 6);
-    expect(straight.ionPpmPerDrop).toBeCloseTo(2.4305, 4);
-    expect(round.saltMassG).toBeCloseTo(10.7953, 3);
+    expect(round.saltMgPerMl).toBeCloseTo(estimatedSaltMgPerGramWater, 6);
+    expect(round.saltMgPerDrop).toBeCloseTo(round.saltMgPerMl / round.dropsPerMl, 8);
+    expect(straight.saltMgPerDrop).toBeCloseTo(straight.saltMgPerMl / straight.dropsPerMl, 8);
+    expect(round.ionPpmPerDrop).toBeCloseTo(7.02308349, 6);
+    expect(straight.ionPpmPerDrop).toBeCloseTo(3.93292675, 6);
+    expect(round.saltMassG).toBeCloseTo(17.4684, 3);
     expect(round.stockVolumeMl).toBe(LOTUS_BOTTLE_VOLUME_ML);
   });
 
-  it('supports an editable calibrated straight-drop baseline', () => {
+  it('keeps the public-data salt estimate independent of the editable drop-rate baseline', () => {
     const potassium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'potassium')!;
     const plan = lotusStockPlan(potassium, 'round', 100, 18);
+    const nominalPlan = lotusStockPlan(potassium, 'round', 100, 20);
 
     expect(plan.dropsPerMl).toBeCloseTo(10.08, 8);
     expect(plan.stockVolumeMl).toBe(100);
+    expect(plan.saltMgPerMl).toBeCloseTo(nominalPlan.saltMgPerMl, 8);
+    expect(plan.saltMassG).toBeCloseTo(nominalPlan.saltMassG, 8);
+    expect(plan.saltMgPerDrop).toBeCloseTo(plan.saltMgPerMl / plan.dropsPerMl, 8);
     expect(plan.saltMassG).toBeGreaterThan(0);
+  });
+
+  it('uses one style- and calibration-independent stock-mass estimate for all four Lotus salts', () => {
+    const commercialDroppers = LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus);
+    expect(commercialDroppers.map(dropper => dropper.id)).toEqual([
+      'magnesium',
+      'calcium',
+      'potassium',
+      'sodium',
+    ]);
+
+    for (const dropper of commercialDroppers) {
+      const round = lotusStockPlan(dropper, 'round', 59, 18);
+      const straight = lotusStockPlan(dropper, 'straight', 59, 25);
+
+      expect(round.saltMassG).toBeGreaterThan(0);
+      expect(round.saltMgPerMl).toBeCloseTo(straight.saltMgPerMl, 8);
+      expect(round.saltMassG).toBeCloseTo(straight.saltMassG, 8);
+    }
   });
 
   it('converts a measured rate to a straight-drop baseline using the measured tip style', () => {

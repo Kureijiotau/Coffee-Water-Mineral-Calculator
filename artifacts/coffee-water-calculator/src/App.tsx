@@ -10052,12 +10052,12 @@ function LotusDropsSection({
         <div className="rounded-xl border border-amber-300/20 bg-amber-400/[0.06] px-3 py-3 text-[11px] leading-relaxed text-amber-100/80">
           <div className="font-semibold text-amber-200">What this independent model means</div>
           <p className="mt-1">
-            The public Lotus recipe calculator lists 450 mL recipe inputs, rounded drops, a 0.56
-             Round/1.00 Straight style factor, and a 59 mL bottle size—but not a proprietary batch
-             formula or guaranteed drop volume. This calibration tells the calculator how many drops
-             your selected tip actually produces from 1 mL. Measure a known volume with your finished
-             dropper and enter the resulting drops/mL here. Once your droppers are prepared, use the official recipe instructions
-            to select the drop counts for your brew.
+            The public Lotus calculator gives recipe inputs and a 0.56 Round/1.00 Straight dose factor.
+            Lotus publishes an average 0.04 g Straight-tip drop and a 0.0716 g Round-tip study average.
+            We combine those total drop masses with inferred salt mass per drop to estimate each salt-to-water
+            ratio. Lotus does not publish the original salt concentrations or hydrate forms, so these bottle
+            weights remain estimates. Your measured calibration adjusts per-drop values, not the salt mass
+            to weigh; the mg/mL display approximates 1 g water as 1 mL.
           </p>
         </div>
         <div className="rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
@@ -10379,8 +10379,8 @@ function LotusDropsSection({
                  </div>
                )}
                <div className="mt-3 grid grid-cols-2 gap-2">
-                 <SummaryMetric label="Concentrate strength" value={`${plan.saltMgPerMl.toFixed(3)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
-                 <SummaryMetric label="Salt to weigh" value={`${plan.saltMassG.toFixed(3)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
+                  <SummaryMetric label="Estimated stock strength" value={`${plan.saltMgPerMl.toFixed(3)} mg/mL`} detail={plan.saltName} tone="fuchsia" />
+                  <SummaryMetric label="Estimated salt to weigh" value={`${plan.saltMassG.toFixed(3)} g`} detail={`for ${stockVolumeMl.toFixed(1)} g water`} tone="sky" />
               </div>
               <div className="mt-3 rounded-lg border border-slate-700/60 bg-slate-900/35 p-2">
                 <label className="block max-w-xs">
@@ -10464,7 +10464,7 @@ function LotusDropsSection({
                 calibrate the finished concentrate dropper before relying on whole-drop dosing.
               </p>
               <div className="mt-2 text-[10px] text-slate-600">
-                Weight-first preparation uses approximately 1 g water ≈ 1 mL; dissolved salt changes final volume slightly, so calibration matters.
+                 Salt-mass estimate uses Lotus's 0.04 g Straight and 0.0716 g Round average drop weights plus its 0.56 dose factor. Exact salt concentrations and hydrates are not public; mg/mL display assumes about 1 g water ≈ 1 mL. Calibration changes per-drop values only.
               </div>
             </article>
           );
@@ -10481,7 +10481,11 @@ function LotusDropsSection({
         </a>
         {' · '}
         <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/blogs/lotus-blog/precision-brewing-an-exploration-of-dropper-variability-in-making-water-for-coffee" target="_blank" rel="noreferrer">
-          Dropper calibration reference
+          Round-tip drop-weight study
+        </a>
+        {' · '}
+        <a className="text-rose-300 underline decoration-rose-300/40 underline-offset-2 hover:text-rose-200" href="https://lotuscoffeeproducts.com/products/precision-dropper-straight-tipped" target="_blank" rel="noreferrer">
+          Straight-tip drop-weight reference
         </a>
       </p>
     </section>

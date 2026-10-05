@@ -32,7 +32,18 @@ export interface LotusCalibrationMigration {
 
 export const LOTUS_BREW_VOLUME_ML = 450;
 export const LOTUS_BOTTLE_VOLUME_ML = 59;
+// Fallback for per-drop estimates when a user has not measured their own tip.
 export const LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML = 20;
+/**
+ * Published average drop masses, converted to mg. The Round value is from
+ * Lotus's drop-weight study; the Straight value is from its product page.
+ * These support a mass-balance estimate but do not disclose exact stock
+ * concentrations or salt hydration forms.
+ */
+export const LOTUS_SOURCE_DROP_MASS_MG: Record<LotusDropperStyle, number> = {
+  round: 71.6,
+  straight: 40,
+};
 export const LOTUS_STYLE_FACTORS: Record<LotusDropperStyle, number> = {
   round: 0.56,
   straight: 1,
@@ -204,6 +215,14 @@ function hydrationIonFraction(saltId: string, ionId: IonId): number {
   return anhydrousFraction * salt.anhydrousMass / form.molarMass;
 }
 
+function lotusSaltToWaterRatio(saltMgPerDrop: number, style: LotusDropperStyle): number {
+  const waterMgPerDrop = LOTUS_SOURCE_DROP_MASS_MG[style] - saltMgPerDrop;
+  if (!Number.isFinite(waterMgPerDrop) || waterMgPerDrop <= 0) {
+    throw new RangeError(`Inferred salt mass must be below the published ${style} drop mass.`);
+  }
+  return saltMgPerDrop / waterMgPerDrop;
+}
+
 export interface LotusStockPlan {
   id: LotusDropperId;
   isBonus: boolean;
@@ -224,10 +243,9 @@ export interface LotusStockPlan {
 }
 
 /**
- * Infer the stock strength required for the Lotus calculator's source model.
- * The style factor and style-specific drops/mL cancel when both are calibrated
- * from the same nominal straight-drop baseline, leaving one shared chemistry
- * strength per bottle.
+ * Estimate stock strength from Lotus's published average drop masses and
+ * recipe outputs. Average the Straight and Round salt:water mass ratios so
+ * user calibration and active tip style cannot change the salt mass to weigh.
  */
 export function lotusStockPlan(
   dropper: typeof LOTUS_DROPPER_DEFINITIONS[number],
@@ -239,17 +257,26 @@ export function lotusStockPlan(
   const form = salt.hydrationForms[salt.defaultFormIdx ?? 0] ?? salt.hydrationForms[0];
   const ionFraction = hydrationIonFraction(dropper.saltId, dropper.ionId);
   const sourceIonFactor = lotusIonTargetsExact({ magnesium: 1, calcium: 1, potassium: 1, sodium: 1 })[dropper.inputKey];
-  const idealDrops = sourceInputMultiplier(dropper.id)
-    * (LOTUS_BREW_VOLUME_ML / 4500)
-    * lotusStyleFactor(style);
   const safeStockVolumeMl = Number.isFinite(stockVolumeMl) && stockVolumeMl > 0 ? stockVolumeMl : LOTUS_BOTTLE_VOLUME_ML;
   const dropsPerMl = lotusDropsPerMl(style, straightDropsPerMl);
-  const ionMgPerDrop = idealDrops > 0
-    ? sourceIonFactor * (LOTUS_BREW_VOLUME_ML / 1000) / idealDrops
+  const sourceStraightDrops = sourceInputMultiplier(dropper.id)
+    * (LOTUS_BREW_VOLUME_ML / 4500);
+  const sourceIonMgPerDrop = sourceStraightDrops > 0
+    ? sourceIonFactor * (LOTUS_BREW_VOLUME_ML / 1000) / sourceStraightDrops
     : 0;
-  const saltMgPerDrop = ionFraction > 0 ? ionMgPerDrop / ionFraction : 0;
-  const saltMgPerMl = saltMgPerDrop * dropsPerMl;
+  const sourceSaltMgPerDrop = ionFraction > 0 ? sourceIonMgPerDrop / ionFraction : 0;
+  const sourceRoundSaltMgPerDrop = sourceSaltMgPerDrop / lotusStyleFactor('round');
+  const saltToWaterRatio = (
+    lotusSaltToWaterRatio(sourceSaltMgPerDrop, 'straight')
+    + lotusSaltToWaterRatio(sourceRoundSaltMgPerDrop, 'round')
+  ) / 2;
+  // The target volume field is used as grams of water in the mixing steps.
+  // Convert the mass ratio to mg/g water; display as mg/mL under the app's
+  // stated approximation that 1 g water is about 1 mL.
+  const saltMgPerMl = saltToWaterRatio * 1000;
   const saltMassMg = saltMgPerMl * safeStockVolumeMl;
+  const saltMgPerDrop = dropsPerMl > 0 ? saltMgPerMl / dropsPerMl : 0;
+  const ionMgPerDrop = saltMgPerDrop * ionFraction;
   const ionPpmPerDrop = ionMgPerDrop / (LOTUS_BREW_VOLUME_ML / 1000);
 
   return {
@@ -286,12 +313,13 @@ export function lotusCalibratedStockPlan(
   // The tip style and its calibration identify the physical drop size. They
   // must not change the chemistry of the stock bottle or the salt mass to
   // weigh. Adjust only the per-drop values to match the measured drop rate.
-  const perDropScale = referencePlan.dropsPerMl / measuredDropsPerMl;
+  const saltMgPerDrop = referencePlan.saltMgPerMl / measuredDropsPerMl;
+  const ionFraction = hydrationIonFraction(dropper.saltId, dropper.ionId);
   return {
     ...referencePlan,
     dropsPerMl: measuredDropsPerMl,
-    saltMgPerDrop: referencePlan.saltMgPerDrop * perDropScale,
-    ionPpmPerDrop: referencePlan.ionPpmPerDrop * perDropScale,
+    saltMgPerDrop,
+    ionPpmPerDrop: saltMgPerDrop * ionFraction / (LOTUS_BREW_VOLUME_ML / 1000),
   };
 }
 
