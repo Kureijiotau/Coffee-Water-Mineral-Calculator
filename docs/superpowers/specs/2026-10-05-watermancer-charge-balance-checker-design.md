@@ -6,7 +6,7 @@ Let users freely choose any Watermancer ion targets, then explicitly run a charg
 
 ## Design
 
-Place a **Check charge balance** control directly below the Watermancer ion target cards. Do not calculate or enforce balance while the user edits targets. Before the first check, show only a short explanation and the action button. On activation, calculate and show:
+Place a compact **Check balance** control directly below the Watermancer ion target cards. Keep the full results and suggestions opt-in: they appear only after the user clicks. A lightweight relative-gap calculation may update the button color and its visible `≥20% gap` label as targets change; this is only an attention cue and never changes targets.
 
 - Total positive and negative charge in meq/L.
 - Signed difference, defined as positive charge minus negative charge.
@@ -25,6 +25,8 @@ Sum ions with positive signed charge into the cation total and ions with negativ
 
 Keep charge calculations at full numeric precision, but round each proposed target to the nearest `0.1 ppm` and apply that rounded value. Display current and proposed target ppm to one decimal place; keep charge totals and difference to three decimal places so the residual remains visible. Treat an absolute difference at or below the worst-case charge change from rounding one target by `0.05 ppm` as balanced (currently about `0.00412 meq/L` across the active ions). This tolerance reflects display/application precision, not a taste or solver threshold. If every active target is zero, show “No ion targets to check” rather than a balanced result.
 
+For the compact control, define relative charge gap as `abs(positive_meq_per_L - negative_meq_per_L) / max(positive_meq_per_L, negative_meq_per_L)`, or zero when both totals are zero. Turn the control red and show `≥20% gap` at or above `20%`; otherwise keep its standard cyan treatment. This user-selected relative alert can flag low-total profiles and is independent of the absolute rounding tolerance and the detailed result status. It does not imply a taste or solver rule.
+
 Applying an alternative must:
 
 1. Confirm that the suggestion still matches the current target snapshot; if targets or the selected source changed after the check, disable application and ask the user to run the check again.
@@ -36,7 +38,7 @@ Explain the scope in the UI: this checks only the eight core targetable ions usi
 
 ## Data flow and boundaries
 
-1. Read the current unscaled Watermancer target map and create a stable snapshot when the user runs the check.
+1. Read the current unscaled Watermancer target map to drive the compact control's relative-gap cue. Create a stable result snapshot only when the user runs the check.
 2. Calculate cation total, anion total, signed difference, and all valid single-ion alternatives from that snapshot.
 3. Render results from the snapshot. Compare the current target map and source with the snapshot to detect stale results.
 4. On apply, update one field in the current target map and invoke the existing target-override handler so Watermancer's normal recalculation and manual-mode behavior remain in control.
