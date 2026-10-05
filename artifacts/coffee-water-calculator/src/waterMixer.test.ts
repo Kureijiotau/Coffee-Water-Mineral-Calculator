@@ -5,6 +5,7 @@ import {
   createWaterMixRecipe,
   deleteWaterMixRecipe,
   dedupeWaterMixSourceSnapshots,
+  groupWaterMixerSources,
   isValidWaterMixRecipe,
   loadImportedWaterMixSources,
   loadWaterMixRecipes,
@@ -72,6 +73,32 @@ describe('water mixer calculation', () => {
     expect(result.valid).toBe(false);
     expect(result.finalIons.calcium).toBe(0);
     expect(result.errors.some(error => error.code === 'zero-total-volume')).toBe(true);
+  });
+
+  it('groups sources alphabetically and removes only exact Watermancer matches from Built-in', () => {
+    const grouped = (name: string, group: 'watermancer' | 'alchemist' | 'built-in', calcium: number) => ({
+      ...source(name, { calcium }, 'saved-recipe'),
+      id: `${group}:${name}`,
+      group,
+    });
+    const groups = groupWaterMixerSources([
+      grouped('Watermancer B', 'watermancer', 12),
+      grouped('Watermancer A', 'watermancer', 10),
+      grouped('Alchemist A', 'alchemist', 10),
+      grouped('Watermancer A', 'built-in', 10),
+      grouped('Watermancer A', 'built-in', 10.0000001),
+      grouped('Watermancer Alias', 'built-in', 10),
+      grouped('Built-in unique', 'built-in', 15),
+    ]);
+
+    expect(groups.map(group => group.id)).toEqual(['watermancer', 'alchemist', 'built-in']);
+    expect(groups[0].sources.map(item => item.name)).toEqual(['Watermancer A', 'Watermancer B']);
+    expect(groups[1].sources.map(item => item.name)).toEqual(['Alchemist A']);
+    expect(groups[2].sources.map(item => item.name)).toEqual([
+      'Built-in unique',
+      'Watermancer A',
+      'Watermancer Alias',
+    ]);
   });
 
   it('rejects negative, non-finite, and incomplete values without stale readings', () => {

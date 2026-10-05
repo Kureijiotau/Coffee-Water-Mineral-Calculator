@@ -97,7 +97,7 @@
 - [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before PNG metadata
 - [Salt-mass bottle-volume anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve strength and scale that bottle after a physical-mass edit
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
-- [Mixer picker cleanup](mixer-picker-cleanup.md) — hide finished-water entries locally in Mixer without deleting reusable source profiles or sessions
+- [Mixer source picker](mixer-picker-cleanup.md) — preserve source records, group recipes by origin, and remove only exact Watermancer duplicates from Built-in
 - [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength
 - [Silica target scope](silica-target-scope.md) — silica-only target controls; do not generalize Use/Not used to other ions or salts
 - [Lotus shared calibration](lotus-shared-calibration.md) — store one calibration per tip style and share it across Lotus solution cards

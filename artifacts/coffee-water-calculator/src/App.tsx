@@ -122,6 +122,7 @@ import {
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
 import type { WaterMixerDatabaseWater, WaterMixerSavedSource } from './WaterMixer';
+import { saltRecipeToWaterMixerSource } from './waterMixerRecipeSources';
 import { buildWaterTastingProfileOptions } from './waterTasting';
 import { readWaterMixerImportFile, type WaterMixerImportResult } from './waterMixerImport';
 import {
@@ -1220,6 +1221,7 @@ function waterPlanToMixerSource(
       ) as Record<IonId, number>
       : computeWatermancerFinalIons(entries, batchMl, savedSaltTargets)),
     provenance: snapshot.nerdLevel === 'watermancer' ? 'Saved Watermancer session' : 'Saved Alchemist session',
+    group: snapshot.nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist',
   };
 }
 
@@ -1241,6 +1243,7 @@ function watermancerProfileToMixerSource(profile: WatermancerProfile): WaterMixe
     provenance: profile.source
       ? `Watermancer saved profile · ${profile.source}`
       : 'Watermancer saved profile',
+    group: 'watermancer',
   };
 }
 
@@ -3442,7 +3445,7 @@ function App() {
   );
   const mixerSavedPlanSources = useMemo<WaterMixerSavedSource[]>(
     () => savedPlans
-      .filter(plan => !isAutoSavedWaterPlan(plan))
+      .filter(plan => !isAutoSavedWaterPlan(plan) && plan.snapshot.nerdLevel !== 'brewer')
       .map(plan => waterPlanToMixerSource(plan, mixerCatalogWaters)),
     [mixerCatalogWaters, savedPlans],
   );
@@ -3450,9 +3453,22 @@ function App() {
     () => wmProfiles.map(watermancerProfileToMixerSource),
     [wmProfiles],
   );
+  const mixerSavedAlchemistRecipeSources = useMemo<WaterMixerSavedSource[]>(
+    () => savedRecipes.map(recipe => saltRecipeToWaterMixerSource(recipe, 'alchemist')),
+    [savedRecipes],
+  );
+  const mixerBuiltInRecipeSources = useMemo<WaterMixerSavedSource[]>(
+    () => RECIPES.map(recipe => saltRecipeToWaterMixerSource(recipe, 'built-in')),
+    [],
+  );
   const mixerSavedSources = useMemo<WaterMixerSavedSource[]>(
-    () => [...mixerSavedPlanSources, ...mixerWatermancerProfileSources],
-    [mixerSavedPlanSources, mixerWatermancerProfileSources],
+    () => [
+      ...mixerSavedPlanSources,
+      ...mixerWatermancerProfileSources,
+      ...mixerSavedAlchemistRecipeSources,
+      ...mixerBuiltInRecipeSources,
+    ],
+    [mixerBuiltInRecipeSources, mixerSavedAlchemistRecipeSources, mixerSavedPlanSources, mixerWatermancerProfileSources],
   );
   const handleImportMixerRecipeFile = useCallback(async (file: File): Promise<WaterMixerImportResult> => {
     const parsed = await readWaterMixerImportFile(file);

@@ -17,6 +17,7 @@ import {
   createWaterMixRecipe,
   deleteWaterMixRecipe,
   dedupeWaterMixSourceSnapshots,
+  groupWaterMixerSources,
   loadImportedWaterMixSources,
   loadWaterMixRecipes,
   migrateWaterMixSourceSnapshot,
@@ -28,6 +29,7 @@ import {
   type WaterMixResult,
   type WaterMixSourceKind,
   type WaterMixSourceSnapshot,
+  type WaterMixerSourceGroup,
 } from './waterMixer';
 import type { WaterMixerImportResult, WaterMixerImportedRecipe } from './waterMixerImport';
 import { buildRecipeShareCardSvg, embedWaterRecipeJsonInPng, rasterizeRecipeShareCard } from './waterRecipeImage';
@@ -46,6 +48,7 @@ export type WaterMixerDatabaseWater = {
 export type WaterMixerSavedSource = WaterMixSourceSnapshot & {
   id?: string;
   provenance?: string;
+  group?: 'watermancer' | 'alchemist' | 'built-in' | 'mixer';
 };
 
 export type WaterMixerProps = {
@@ -274,6 +277,7 @@ function SourcePicker({
   side,
   card,
   savedSources,
+  sourceGroups,
   databaseWaters,
   databaseLoading,
   databaseError,
@@ -286,6 +290,7 @@ function SourcePicker({
   side: 'a' | 'b';
   card: CardState;
   savedSources: WaterMixerSavedSource[];
+  sourceGroups: WaterMixerSourceGroup<WaterMixerSavedSource>[];
   databaseWaters: WaterMixerDatabaseWater[];
   databaseLoading: boolean;
   databaseError?: string | null;
@@ -334,10 +339,14 @@ function SourcePicker({
             aria-label={`Select finished source for Water ${side.toUpperCase()}`}
           >
             <option value="">Select a finished water</option>
-            {savedSources.map((item, index) => (
-              <option key={item.id ?? item.sourceId ?? `${item.name}-${index}`} value={item.id ?? item.sourceId ?? item.name}>
-                {item.name}{item.provenance ? ` · ${item.provenance}` : ''}
-              </option>
+            {sourceGroups.map(group => (
+              <optgroup key={group.id} label={group.label}>
+                {group.sources.map((item, index) => (
+                  <option key={item.id ?? item.sourceId ?? `${item.name}-${index}`} value={item.id ?? item.sourceId ?? item.name}>
+                    {item.name}{item.provenance ? ` · ${item.provenance}` : ''}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
           {!savedSources.length && <p className="mt-2 text-xs text-slate-500" data-testid={`status-mixer-saved-empty-${side}`}>No finalized water recipes are available yet.</p>}
@@ -408,6 +417,7 @@ function SourceCard({
   card,
   volume,
   savedSources,
+  sourceGroups,
   databaseWaters,
   databaseLoading,
   databaseError,
@@ -420,6 +430,7 @@ function SourceCard({
   card: CardState;
   volume: string;
   savedSources: WaterMixerSavedSource[];
+  sourceGroups: WaterMixerSourceGroup<WaterMixerSavedSource>[];
   databaseWaters: WaterMixerDatabaseWater[];
   databaseLoading: boolean;
   databaseError?: string | null;
@@ -462,6 +473,7 @@ function SourceCard({
         side={side}
         card={card}
         savedSources={savedSources}
+        sourceGroups={sourceGroups}
         databaseWaters={databaseWaters}
         databaseLoading={databaseLoading}
         databaseError={databaseError}
@@ -1004,14 +1016,15 @@ export default function WaterMixer({
     () => buildMixerSaltSteps(saltTargets, formIdxBySaltId, result.totalVolumeMl),
     [formIdxBySaltId, result.totalVolumeMl, saltTargets],
   );
-  const eligibleSources = useMemo<WaterMixerSavedSource[]>(() => dedupeWaterMixSourceSnapshots([
-    ...savedSources
+  const sourceGroups = useMemo<WaterMixerSourceGroup<WaterMixerSavedSource>[]>(() => {
+    const candidates = [
+      ...savedSources
       .filter(source => {
         const id = mixerSourceStorageId(source);
         return !id || !hiddenSourceIds.has(id);
       })
       .map(migrateWaterMixSourceSnapshot),
-    ...importedSources.map(migrateWaterMixSourceSnapshot),
+      ...importedSources.map(source => migrateWaterMixSourceSnapshot({ ...source, group: 'mixer' as const })),
     ...storedRecipes.map(recipe => ({
       id: recipe.id,
       name: recipe.name,
@@ -1020,8 +1033,15 @@ export default function WaterMixer({
       ions: recipe.finalIons,
       metadata: recipe.finalMetadata,
       provenance: 'Mixer recipe',
+      group: 'mixer' as const,
     })).map(migrateWaterMixSourceSnapshot),
-  ]), [hiddenSourceIds, importedSources, savedSources, storedRecipes]);
+    ];
+    return groupWaterMixerSources(candidates);
+  }, [hiddenSourceIds, importedSources, savedSources, storedRecipes]);
+  const eligibleSources = useMemo<WaterMixerSavedSource[]>(
+    () => sourceGroups.flatMap(group => group.sources),
+    [sourceGroups],
+  );
 
   const rememberImportedSource = (source: WaterMixerSavedSource) => {
     setImportedSources(previous => {
@@ -1260,8 +1280,8 @@ export default function WaterMixer({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.16fr)_minmax(21rem,0.84fr)]">
         <div className="grid gap-4 md:grid-cols-2">
-          <SourceCard side="a" card={cardA} volume={volumeA} savedSources={eligibleSources} databaseWaters={databaseWaters} databaseLoading={databaseLoading} databaseError={databaseError} onLoadCommunityWaters={onLoadCommunityWaters} onChange={next => setCardA(next)} onVolume={setVolumeA} onClear={() => { setCardA(emptyCard()); setVolumeA('250'); }} />
-          <SourceCard side="b" card={cardB} volume={volumeB} savedSources={eligibleSources} databaseWaters={databaseWaters} databaseLoading={databaseLoading} databaseError={databaseError} onLoadCommunityWaters={onLoadCommunityWaters} onChange={next => setCardB(next)} onVolume={setVolumeB} onClear={() => { setCardB(emptyCard()); setVolumeB('250'); }} />
+          <SourceCard side="a" card={cardA} volume={volumeA} savedSources={eligibleSources} sourceGroups={sourceGroups} databaseWaters={databaseWaters} databaseLoading={databaseLoading} databaseError={databaseError} onLoadCommunityWaters={onLoadCommunityWaters} onChange={next => setCardA(next)} onVolume={setVolumeA} onClear={() => { setCardA(emptyCard()); setVolumeA('250'); }} />
+          <SourceCard side="b" card={cardB} volume={volumeB} savedSources={eligibleSources} sourceGroups={sourceGroups} databaseWaters={databaseWaters} databaseLoading={databaseLoading} databaseError={databaseError} onLoadCommunityWaters={onLoadCommunityWaters} onChange={next => setCardB(next)} onVolume={setVolumeB} onClear={() => { setCardB(emptyCard()); setVolumeB('250'); }} />
         </div>
 
         <section className="flex flex-col rounded-2xl border border-slate-700/70 bg-slate-900/70 p-4 shadow-2xl shadow-slate-950/30" data-testid="panel-mixer-result">

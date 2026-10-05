@@ -25,6 +25,26 @@ export type WaterMixSourceSnapshot = {
   metadata?: WaterMetadata;
 };
 
+export type WaterMixerSourceGroupId = 'watermancer' | 'alchemist' | 'built-in' | 'mixer';
+
+export type WaterMixerGroupedSource = WaterMixSourceSnapshot & {
+  id?: string;
+  group?: WaterMixerSourceGroupId;
+};
+
+export type WaterMixerSourceGroup<T extends WaterMixerGroupedSource = WaterMixerGroupedSource> = {
+  id: WaterMixerSourceGroupId;
+  label: string;
+  sources: T[];
+};
+
+const WATER_MIXER_SOURCE_GROUP_DEFINITIONS: Array<Pick<WaterMixerSourceGroup, 'id' | 'label'>> = [
+  { id: 'watermancer', label: 'Watermancer recipes' },
+  { id: 'alchemist', label: 'Alchemist recipes' },
+  { id: 'built-in', label: 'Built-in recipes' },
+  { id: 'mixer', label: 'Mixer recipes' },
+];
+
 export type WaterMixInput = {
   sourceA: WaterMixSourceSnapshot;
   sourceB: WaterMixSourceSnapshot;
@@ -167,6 +187,34 @@ export function dedupeWaterMixSourceSnapshots<T extends WaterMixSourceSnapshot>(
     if (sourceId) seenIds.add(sourceId);
     seenSnapshots.add(snapshotKey);
     return true;
+  });
+}
+
+function sameExactFinalWater(left: WaterMixSourceSnapshot, right: WaterMixSourceSnapshot): boolean {
+  if (left.name.trim() !== right.name.trim()) return false;
+  const leftIons = left.ions as Record<string, number | undefined>;
+  const rightIons = right.ions as Record<string, number | undefined>;
+  const ionIds = new Set([...Object.keys(leftIons), ...Object.keys(rightIons)]);
+  return [...ionIds].every(ionId => (leftIons[ionId] ?? 0) === (rightIons[ionId] ?? 0));
+}
+
+export function groupWaterMixerSources<T extends WaterMixerGroupedSource>(
+  sources: T[],
+): WaterMixerSourceGroup<T>[] {
+  const watermancerSources = sources.filter(source => source.group === 'watermancer');
+
+  return WATER_MIXER_SOURCE_GROUP_DEFINITIONS.flatMap(({ id, label }) => {
+    const groupSources = sources
+      .filter(source => (source.group ?? 'mixer') === id)
+      .filter(source => id !== 'built-in' || !watermancerSources.some(watermancerSource => (
+        sameExactFinalWater(source, watermancerSource)
+      )));
+    const sortedSources = dedupeWaterMixSourceSnapshots(groupSources)
+      .sort((left, right) => (
+        left.name.localeCompare(right.name, undefined, { sensitivity: 'base', numeric: true })
+        || (left.sourceId ?? left.id ?? '').localeCompare(right.sourceId ?? right.id ?? '')
+      ));
+    return sortedSources.length > 0 ? [{ id, label, sources: sortedSources }] : [];
   });
 }
 
