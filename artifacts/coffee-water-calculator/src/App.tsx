@@ -24,6 +24,7 @@ import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMet
 import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
+import WatermancerChargeBalanceChecker from './WatermancerChargeBalanceChecker';
 import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
@@ -11137,7 +11138,7 @@ function LegacyRecipeConcentrateBuilder({
                 <div className="mt-1 flex items-center gap-2">
                   <StableNumberInput
                     min="0.1"
-                    step="0.1"
+                    step="any"
                     value={measuredDropsPerMlInput}
                     onChange={event => setMeasuredDropsPerMlInput(event.target.value)}
                     placeholder={`${assumedDropsPerMl.toFixed(1)} assumed`}
@@ -13818,7 +13819,7 @@ function WatermancerIonProfileCard({
               ) : (
                 <>
                   <div className={`text-xs ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'} mt-0.5`}>
-                    Ceiling: {target.toFixed(1)} ppm
+                    Ceiling: {target.toFixed(2)} ppm
                   </div>
                   <div className="mt-1 text-[10px] text-slate-500">
                     {gap > 0.05 ? `${gap.toFixed(1)} ppm still needed` : 'Target covered'}
@@ -13926,6 +13927,18 @@ function WatermancerIonProfileCard({
           );
         })}
       </div>
+      <WatermancerChargeBalanceChecker
+        targetIons={targetIons}
+        targetSource={watermancerTargetSource}
+        onApplyTargets={targets => {
+          if (editing || editingIonId !== null) {
+            setDraftTargets(Object.fromEntries(
+              ACTIVE_ION_IDS.map(id => [id, String(targets[id] ?? 0)]),
+            ) as Partial<Record<IonId, string>>);
+          }
+          onTargetOverrideChange(targets);
+        }}
+      />
       {/* Naming dialog */}
       {isEditingAny && namingMode === 'new' && (
        <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">
