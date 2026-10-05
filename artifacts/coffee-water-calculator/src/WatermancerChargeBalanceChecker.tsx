@@ -145,7 +145,7 @@ export default function WatermancerChargeBalanceChecker({
               data-testid="watermancer-charge-check-applied"
             >
               Applied {getChargeBalanceIonName(checkedSnapshot.applied.ionId)} target:
-              {' '}{checkedSnapshot.applied.targetPpm.toFixed(2)} ppm. This is a current target
+              {' '}{checkedSnapshot.applied.targetPpm.toFixed(1)} ppm. This is a current target
               override; save the profile separately if you want to keep it.
             </p>
           )}
@@ -171,7 +171,7 @@ export default function WatermancerChargeBalanceChecker({
               role="status"
             >
               <Check className="h-4 w-4" aria-hidden="true" />
-              The target profile is charge-balanced within the calculation tolerance.
+              The target profile is balanced within the rounding tolerance for 0.1 ppm targets.
             </p>
           )}
 
@@ -179,7 +179,7 @@ export default function WatermancerChargeBalanceChecker({
             <>
               <p className="mt-3 flex items-center gap-2 text-xs font-medium text-amber-100">
                 <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Choose one target change to balance the profile. Other targets will stay unchanged.
+              Choose one target change rounded to 0.1 ppm. Other targets will stay unchanged.
               </p>
               <ul className="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {checkedSnapshot.analysis.alternatives.map(alternative => {
@@ -197,10 +197,10 @@ export default function WatermancerChargeBalanceChecker({
                           <span className="ml-1.5 font-normal text-slate-400">{ionFormula}</span>
                         </div>
                         <div className="mt-0.5 tabular-nums text-[11px] text-slate-400">
-                          {alternative.currentTargetPpm.toFixed(2)}
+                          {alternative.currentTargetPpm.toFixed(1)}
                           {' → '}
                           <span className="font-semibold text-cyan-100">
-                            {alternative.proposedTargetPpm.toFixed(2)} ppm
+                            {alternative.proposedTargetPpm.toFixed(1)} ppm
                           </span>
                         </div>
                       </div>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIVE_ION_IDS, ION_CHEMISTRY } from '@/waterData';
 import {
+  CHARGE_BALANCE_PPM_STEP,
+  CHARGE_BALANCE_TOLERANCE_MEQ_PER_L,
   applyChargeBalanceAlternative,
   analyzeWatermancerChargeBalance,
   getWatermancerTargetSignature,
@@ -29,7 +31,7 @@ describe('Watermancer charge balance', () => {
       .toBe('balanced');
   });
 
-  it('offers exact one-ion fixes for a positive imbalance, including zero-target anions', () => {
+  it('offers one-ion fixes within 0.1 ppm precision for a positive imbalance', () => {
     const analysis = analyzeWatermancerChargeBalance({ sodium: 5 });
 
     expect(analysis.status).toBe('unbalanced');
@@ -41,7 +43,10 @@ describe('Watermancer charge balance', () => {
         [alternative.ionId]: alternative.proposedTargetPpm,
       };
       const updated = analyzeWatermancerChargeBalance(changedTargets);
-      expect(Math.abs(updated.differenceMeqPerL)).toBeLessThanOrEqual(1e-9);
+      expect(['balanced', 'no-targets']).toContain(updated.status);
+      expect(Math.abs(updated.differenceMeqPerL)).toBeLessThanOrEqual(CHARGE_BALANCE_TOLERANCE_MEQ_PER_L);
+      expect(alternative.proposedTargetPpm / CHARGE_BALANCE_PPM_STEP)
+        .toBeCloseTo(Math.round(alternative.proposedTargetPpm / CHARGE_BALANCE_PPM_STEP), 10);
     }
 
     const chloride = analysis.alternatives.find(item => item.ionId === 'chloride');
@@ -54,7 +59,7 @@ describe('Watermancer charge balance', () => {
       .toBe(true);
   });
 
-  it('offers exact one-ion fixes for a negative imbalance, including zero-target cations', () => {
+  it('offers one-ion fixes within 0.1 ppm precision for a negative imbalance', () => {
     const analysis = analyzeWatermancerChargeBalance({ bicarbonate: 5.2 });
 
     expect(analysis.status).toBe('unbalanced');
@@ -65,7 +70,8 @@ describe('Watermancer charge balance', () => {
         bicarbonate: 5.2,
         [alternative.ionId]: alternative.proposedTargetPpm,
       });
-      expect(Math.abs(updated.differenceMeqPerL)).toBeLessThanOrEqual(1e-9);
+      expect(['balanced', 'no-targets']).toContain(updated.status);
+      expect(Math.abs(updated.differenceMeqPerL)).toBeLessThanOrEqual(CHARGE_BALANCE_TOLERANCE_MEQ_PER_L);
     }
 
     const magnesium = analysis.alternatives.find(item => item.ionId === 'magnesium');
@@ -73,7 +79,7 @@ describe('Watermancer charge balance', () => {
       direction: 'increase',
       currentTargetPpm: 0,
     });
-    expect(magnesium?.proposedTargetPpm).toBeCloseTo(1.0356656, 7);
+    expect(magnesium?.proposedTargetPpm).toBe(1);
     expect(analysis.alternatives.every(item => item.ionId !== 'bicarbonate' || item.direction === 'decrease'))
       .toBe(true);
   });

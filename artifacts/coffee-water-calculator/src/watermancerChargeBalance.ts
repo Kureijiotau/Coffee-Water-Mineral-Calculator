@@ -6,7 +6,14 @@ import {
   type IonId,
 } from '@/waterData';
 
-export const CHARGE_BALANCE_TOLERANCE_MEQ_PER_L = 1e-9;
+export const CHARGE_BALANCE_PPM_STEP = 0.1;
+export const CHARGE_BALANCE_TOLERANCE_MEQ_PER_L = Math.max(
+  ...ACTIVE_ION_IDS.map(id => (
+    CHARGE_BALANCE_PPM_STEP / 2
+    * Math.abs(ION_CHEMISTRY[id].charge)
+    / ION_CHEMISTRY[id].molarMass
+  )),
+);
 
 export interface ChargeBalanceAlternative {
   ionId: IonId;
@@ -94,18 +101,21 @@ export function analyzeWatermancerChargeBalance(
     const targetDeltaPpm = excessMeqPerL
       * ION_CHEMISTRY[ionId].molarMass
       / Math.abs(charge);
-    const proposedTargetPpm = direction === 'increase'
+    const unroundedTargetPpm = direction === 'increase'
       ? currentTargetPpm + targetDeltaPpm
       : currentTargetPpm - targetDeltaPpm;
 
     // Do not offer a target decrease that would require a negative concentration.
-    if (proposedTargetPpm < -1e-12) continue;
+    if (unroundedTargetPpm < -1e-12) continue;
 
     alternatives.push({
       ionId,
       direction,
       currentTargetPpm,
-      proposedTargetPpm: Math.max(proposedTargetPpm, 0),
+      proposedTargetPpm: Number((
+        Math.round(Math.max(unroundedTargetPpm, 0) / CHARGE_BALANCE_PPM_STEP)
+        * CHARGE_BALANCE_PPM_STEP
+      ).toFixed(1)),
     });
   }
 

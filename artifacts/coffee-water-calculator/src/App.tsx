@@ -13819,7 +13819,7 @@ function WatermancerIonProfileCard({
               ) : (
                 <>
                   <div className={`text-xs ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'} mt-0.5`}>
-                    Ceiling: {target.toFixed(2)} ppm
+                    Ceiling: {target.toFixed(1)} ppm
                   </div>
                   <div className="mt-1 text-[10px] text-slate-500">
                     {gap > 0.05 ? `${gap.toFixed(1)} ppm still needed` : 'Target covered'}
