@@ -25,6 +25,50 @@ export const DEFAULT_CUSTOM_ION_RATIO_PAIR: CustomIonRatioPair = {
   right: 'potassium',
 };
 
+export const CUSTOM_ION_RATIO_STORAGE_KEY = 'coffee-water-watermancer-custom-ion-ratio';
+
+function isCustomIonRatioIonId(value: unknown): value is CustomIonRatioIonId {
+  return typeof value === 'string'
+    && (CUSTOM_ION_RATIO_CYCLE as readonly string[]).includes(value);
+}
+
+export function parseCustomIonRatioPair(value: string | null): CustomIonRatioPair {
+  if (!value) return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+    }
+
+    const pair = parsed as { left?: unknown; right?: unknown };
+    if (
+      !isCustomIonRatioIonId(pair.left)
+      || !isCustomIonRatioIonId(pair.right)
+      || pair.left === pair.right
+    ) {
+      return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+    }
+
+    return { left: pair.left, right: pair.right };
+  } catch {
+    return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+  }
+}
+
+export function loadCustomIonRatioPair(
+  storage: Pick<Storage, 'getItem'>,
+): CustomIonRatioPair {
+  return parseCustomIonRatioPair(storage.getItem(CUSTOM_ION_RATIO_STORAGE_KEY));
+}
+
+export function saveCustomIonRatioPair(
+  pair: CustomIonRatioPair,
+  storage: Pick<Storage, 'setItem'>,
+): void {
+  storage.setItem(CUSTOM_ION_RATIO_STORAGE_KEY, JSON.stringify(pair));
+}
+
 export function getNextCustomIonRatioIon(
   currentIon: CustomIonRatioIonId,
   otherIon: CustomIonRatioIonId,

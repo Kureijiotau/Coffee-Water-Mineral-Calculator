@@ -5,8 +5,12 @@ import { WatermancerCustomIonRatio } from './WatermancerCustomIonRatio';
 import {
   advanceCustomIonRatioPair,
   CUSTOM_ION_RATIO_CYCLE,
+  CUSTOM_ION_RATIO_STORAGE_KEY,
   DEFAULT_CUSTOM_ION_RATIO_PAIR,
   formatCustomIonRatio,
+  loadCustomIonRatioPair,
+  parseCustomIonRatioPair,
+  saveCustomIonRatioPair,
 } from './watermancerCustomIonRatio';
 
 describe('Watermancer custom ion ratio', () => {
@@ -15,6 +19,37 @@ describe('Watermancer custom ion ratio', () => {
       left: 'sodium',
       right: 'potassium',
     });
+  });
+
+  it('restores a valid distinct pair from browser storage', () => {
+    const stored = JSON.stringify({ left: 'magnesium', right: 'citrates' });
+    expect(parseCustomIonRatioPair(stored)).toEqual({
+      left: 'magnesium',
+      right: 'citrates',
+    });
+  });
+
+  it('falls back to Na:K for malformed, invalid, or duplicate stored pairs', () => {
+    expect(parseCustomIonRatioPair(null)).toEqual(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+    expect(parseCustomIonRatioPair('{bad json')).toEqual(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+    expect(parseCustomIonRatioPair(JSON.stringify({ left: 'phosphate', right: 'sodium' })))
+      .toEqual(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+    expect(parseCustomIonRatioPair(JSON.stringify({ left: 'sodium', right: 'sodium' })))
+      .toEqual(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+  });
+
+  it('round-trips the selected pair through browser storage', () => {
+    const entries = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => entries.get(key) ?? null,
+      setItem: (key: string, value: string) => entries.set(key, value),
+    };
+    const pair = { left: 'chloride', right: 'potassium' } as const;
+
+    saveCustomIonRatioPair(pair, storage);
+
+    expect(entries.get(CUSTOM_ION_RATIO_STORAGE_KEY)).toBe(JSON.stringify(pair));
+    expect(loadCustomIonRatioPair(storage)).toEqual(pair);
   });
 
   it('cycles the left side through the requested sequence without changing the right', () => {

@@ -16,13 +16,13 @@ Each side is a separate keyboard-accessible button. Clicking a side advances onl
 
 Keep the selected pair distinct: when advancing would select the ion already shown on the other side, advance to the next ion instead. The two controls retain left/right orientation; selecting a different ion on one side never swaps the pair or changes the other side.
 
-The comparison uses the same live ion values as the existing Watermancer ratios: modeled final-mixture ions when a mixture is available, otherwise the selected target preview. The selection is a temporary display preference, defaults to Na:K on a fresh Watermancer view, and does not update target values, saved profiles, recipe ratios, or solver inputs.
+The comparison uses the same live ion values as the existing Watermancer ratios: modeled final-mixture ions when a mixture is available, otherwise the selected target preview. Persist the selected pair as a browser-local display preference and restore the last valid, distinct pair after refresh. If no valid pair is stored, default to Na:K. This preference does not update target values, saved profiles, recipe ratios, account sync, or solver inputs.
 
 ## Data flow and boundaries
 
-1. Pass the current ratio ion values and selected left/right ion IDs into the standalone ratio display.
+1. Load and validate the selected pair from browser storage, then pass the current ratio ion values and selected left/right ion IDs into the standalone ratio display.
 2. Derive `left_ppm / right_ppm` for presentation only; do not feed the result into water matching, recipe editing, saved profiles, or charge-balance behavior.
-3. Keep cycling order and distinct-pair handling in small deterministic helpers so both behaviors can be unit-tested.
+3. Persist pair changes in browser storage only. Keep stored-pair validation, cycling order, and distinct-pair handling in small deterministic helpers so these behaviors can be unit-tested.
 4. Render the standalone comparison outside the existing combined/pairwise relationship toggle so it remains independently visible.
 
 ## Accessibility and responsive behavior
@@ -34,6 +34,7 @@ The comparison uses the same live ion values as the existing Watermancer ratios:
 ## Verification
 
 - Test the default Na:K pair and the full cycling order, including wraparound.
+- Test restoring a valid pair after refresh, saving a changed pair, and falling back to Na:K for malformed, invalid, or duplicate stored values.
 - Test that cycling one side leaves the other unchanged and skips it to prevent identical ions.
 - Test left/right orientation, one-decimal ratio formatting, a zero numerator, and a zero right-side denominator.
 - Verify both compact and classic displays show the independent ratio in combined and pairwise modes.

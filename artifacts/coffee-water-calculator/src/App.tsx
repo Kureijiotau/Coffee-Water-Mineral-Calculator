@@ -83,6 +83,8 @@ import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIon
 import {
   advanceCustomIonRatioPair,
   DEFAULT_CUSTOM_ION_RATIO_PAIR,
+  loadCustomIonRatioPair,
+  saveCustomIonRatioPair,
 } from './watermancerCustomIonRatio';
 import {
   DEFAULT_WATERMANCER_STRENGTH_PERCENT,
@@ -14185,7 +14187,20 @@ function WatermancerIonCoverageBars({
     hasModeledIons ? 'final-mixture' : 'targets',
   );
   const [ionRelationshipView, setIonRelationshipView] = useState<'combined' | 'pairwise'>('combined');
-  const [customIonRatioPair, setCustomIonRatioPair] = useState(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+  const [customIonRatioPair, setCustomIonRatioPair] = useState(() => {
+    try {
+      return loadCustomIonRatioPair(localStorage);
+    } catch {
+      return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+    }
+  });
+  useEffect(() => {
+    try {
+      saveCustomIonRatioPair(customIonRatioPair, localStorage);
+    } catch {
+      // Keep the in-session selector usable if browser storage is unavailable.
+    }
+  }, [customIonRatioPair]);
   const cycleCustomIonRatioSide = (side: 'left' | 'right') => {
     setCustomIonRatioPair(current => advanceCustomIonRatioPair(current, side));
   };
