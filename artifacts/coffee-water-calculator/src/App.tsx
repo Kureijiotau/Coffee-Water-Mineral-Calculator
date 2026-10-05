@@ -84,6 +84,7 @@ import {
   advanceCustomIonRatioPair,
   DEFAULT_CUSTOM_ION_RATIO_PAIR,
   loadCustomIonRatioPair,
+  normalizeCustomIonRatioPair,
   saveCustomIonRatioPair,
 } from './watermancerCustomIonRatio';
 import {
@@ -14194,15 +14195,31 @@ function WatermancerIonCoverageBars({
       return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
     }
   });
+  const customRatioCitrateAvailable = (actualIons.citrates ?? 0) > 0;
   useEffect(() => {
+    const availablePair = normalizeCustomIonRatioPair(
+      customIonRatioPair,
+      customRatioCitrateAvailable,
+    );
+    if (
+      availablePair.left !== customIonRatioPair.left
+      || availablePair.right !== customIonRatioPair.right
+    ) {
+      setCustomIonRatioPair(availablePair);
+      return;
+    }
     try {
-      saveCustomIonRatioPair(customIonRatioPair, localStorage);
+      saveCustomIonRatioPair(availablePair, localStorage);
     } catch {
       // Keep the in-session selector usable if browser storage is unavailable.
     }
-  }, [customIonRatioPair]);
+  }, [customIonRatioPair, customRatioCitrateAvailable]);
   const cycleCustomIonRatioSide = (side: 'left' | 'right') => {
-    setCustomIonRatioPair(current => advanceCustomIonRatioPair(current, side));
+    setCustomIonRatioPair(current => advanceCustomIonRatioPair(
+      current,
+      side,
+      customRatioCitrateAvailable,
+    ));
   };
   const previousHasModeledIonsRef = useRef(hasModeledIons);
   useEffect(() => {

@@ -102,3 +102,4 @@
 - [Silica target scope](silica-target-scope.md) — silica-only target controls; do not generalize Use/Not used to other ions or salts
 - [Lotus shared calibration](lotus-shared-calibration.md) — store one calibration per tip style and share it across Lotus solution cards
 - [Ratio preview usefulness](ratio-preview-usefulness.md) — colored ion ratios help users understand recipes and draw comparisons
+- [Citrate ratio eligibility](citrate-ratio-eligibility.md) — offer Citrates in the custom Watermancer ratio only when its current final reading is positive

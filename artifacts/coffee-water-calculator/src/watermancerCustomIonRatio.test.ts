@@ -8,6 +8,7 @@ import {
   CUSTOM_ION_RATIO_STORAGE_KEY,
   DEFAULT_CUSTOM_ION_RATIO_PAIR,
   formatCustomIonRatio,
+  normalizeCustomIonRatioPair,
   loadCustomIonRatioPair,
   parseCustomIonRatioPair,
   saveCustomIonRatioPair,
@@ -86,6 +87,46 @@ describe('Watermancer custom ion ratio', () => {
       'bicarbonate',
       'citrates',
     ]);
+  });
+
+  it('skips Citrates in the ratio cycle when it is unused', () => {
+    let pair = { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+    for (const expected of ['chloride', 'magnesium', 'calcium', 'sulfate', 'bicarbonate', 'sodium', 'chloride']) {
+      pair = advanceCustomIonRatioPair(pair, 'left', false);
+      expect(pair.left).toBe(expected);
+      expect(pair.left).not.toBe('citrates');
+    }
+  });
+
+  it('resets a saved Citrates ratio to Na:K when Citrates becomes unused', () => {
+    expect(normalizeCustomIonRatioPair({
+      left: 'magnesium',
+      right: 'citrates',
+    }, false)).toEqual(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+    expect(advanceCustomIonRatioPair({
+      left: 'citrates',
+      right: 'sodium',
+    }, 'left', false)).toEqual({
+      left: 'chloride',
+      right: 'potassium',
+    });
+  });
+
+  it('keeps Citrates available in the ratio when it is used', () => {
+    expect(advanceCustomIonRatioPair({
+      left: 'bicarbonate',
+      right: 'sodium',
+    }, 'left', true)).toEqual({
+      left: 'citrates',
+      right: 'sodium',
+    });
+    expect(normalizeCustomIonRatioPair({
+      left: 'magnesium',
+      right: 'citrates',
+    }, true)).toEqual({
+      left: 'magnesium',
+      right: 'citrates',
+    });
   });
 
   it('formats left divided by right as a ratio to one', () => {

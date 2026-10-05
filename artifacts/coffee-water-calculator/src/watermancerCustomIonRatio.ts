@@ -72,27 +72,48 @@ export function saveCustomIonRatioPair(
 export function getNextCustomIonRatioIon(
   currentIon: CustomIonRatioIonId,
   otherIon: CustomIonRatioIonId,
+  citrateAvailable = true,
 ): CustomIonRatioIonId {
-  const currentIndex = CUSTOM_ION_RATIO_CYCLE.indexOf(currentIon);
+  const cycle: readonly CustomIonRatioIonId[] = citrateAvailable
+    ? CUSTOM_ION_RATIO_CYCLE
+    : CUSTOM_ION_RATIO_CYCLE.filter(ionId => ionId !== 'citrates');
+  const currentIndex = cycle.indexOf(currentIon);
 
-  for (let offset = 1; offset <= CUSTOM_ION_RATIO_CYCLE.length; offset += 1) {
-    const candidate = CUSTOM_ION_RATIO_CYCLE[
-      (currentIndex + offset) % CUSTOM_ION_RATIO_CYCLE.length
-    ];
+  for (let offset = 1; offset <= cycle.length; offset += 1) {
+    const candidate = cycle[(currentIndex + offset + cycle.length) % cycle.length];
     if (candidate !== otherIon) return candidate;
   }
 
   return currentIon;
 }
 
+export function normalizeCustomIonRatioPair(
+  pair: CustomIonRatioPair,
+  citrateAvailable: boolean,
+): CustomIonRatioPair {
+  if (
+    citrateAvailable
+    || (pair.left !== 'citrates' && pair.right !== 'citrates')
+  ) {
+    return { ...pair };
+  }
+  return { ...DEFAULT_CUSTOM_ION_RATIO_PAIR };
+}
+
 export function advanceCustomIonRatioPair(
   pair: CustomIonRatioPair,
   side: CustomIonRatioSide,
+  citrateAvailable = true,
 ): CustomIonRatioPair {
+  const availablePair = normalizeCustomIonRatioPair(pair, citrateAvailable);
   const otherSide = side === 'left' ? 'right' : 'left';
   return {
-    ...pair,
-    [side]: getNextCustomIonRatioIon(pair[side], pair[otherSide]),
+    ...availablePair,
+    [side]: getNextCustomIonRatioIon(
+      availablePair[side],
+      availablePair[otherSide],
+      citrateAvailable,
+    ),
   };
 }
 
