@@ -3,7 +3,9 @@ import { ChevronDown, Pin, PinOff } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_MAP, type IonId } from './waterData';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
+import { WatermancerCustomIonRatio } from './WatermancerCustomIonRatio';
 import type { WatermancerMetricValues } from './watermancerMetricValues';
+import type { CustomIonRatioPair, CustomIonRatioSide } from './watermancerCustomIonRatio';
 
 type RatioSummary = {
   id: 'gh-kh' | 'mg-ca' | 'cl-so4';
@@ -33,6 +35,9 @@ export function WatermancerCompactReadings({
   ionRelationshipView,
   onIonRelationshipViewChange,
   pairwiseIonRatios,
+  customIonRatioPair,
+  customIonRatioValues,
+  onCycleCustomIonRatioSide,
   onSwapRatio,
   expanded,
   onToggleExpanded,
@@ -52,6 +57,9 @@ export function WatermancerCompactReadings({
   ionRelationshipView: 'combined' | 'pairwise';
   onIonRelationshipViewChange: (view: 'combined' | 'pairwise') => void;
   pairwiseIonRatios: { potassium: number; magnesium: number; sodium: number; calcium: number };
+  customIonRatioPair: CustomIonRatioPair;
+  customIonRatioValues: Partial<Record<IonId, number>>;
+  onCycleCustomIonRatioSide: (side: CustomIonRatioSide) => void;
   onSwapRatio: (key: RatioSummary['id']) => void;
   expanded: boolean;
   onToggleExpanded: () => void;
@@ -225,6 +233,11 @@ export function WatermancerCompactReadings({
             onViewChange={onIonRelationshipViewChange}
             {...pairwiseIonRatios}
             combined={monovalentRatio}
+          />
+          <WatermancerCustomIonRatio
+            pair={customIonRatioPair}
+            ionValues={customIonRatioValues}
+            onCycleSide={onCycleCustomIonRatioSide}
           />
         </div>
       </div>

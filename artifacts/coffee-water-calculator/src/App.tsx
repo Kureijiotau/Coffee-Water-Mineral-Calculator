@@ -71,6 +71,7 @@ import {
 } from './accountSyncStorage';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
+import { WatermancerCustomIonRatio } from './WatermancerCustomIonRatio';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import {
   computeWatermancerMetricValues,
@@ -79,6 +80,10 @@ import {
   type WatermancerMetricValues,
 } from './watermancerMetricValues';
 import { createIonRatioDraftFromTargets, DEFAULT_ION_RATIO_DRAFT, mergeDirectIonTargets, type IonRatioDraft } from './ionRatios';
+import {
+  advanceCustomIonRatioPair,
+  DEFAULT_CUSTOM_ION_RATIO_PAIR,
+} from './watermancerCustomIonRatio';
 import {
   DEFAULT_WATERMANCER_STRENGTH_PERCENT,
   normalizeWatermancerStrengthPercent,
@@ -14180,6 +14185,10 @@ function WatermancerIonCoverageBars({
     hasModeledIons ? 'final-mixture' : 'targets',
   );
   const [ionRelationshipView, setIonRelationshipView] = useState<'combined' | 'pairwise'>('combined');
+  const [customIonRatioPair, setCustomIonRatioPair] = useState(DEFAULT_CUSTOM_ION_RATIO_PAIR);
+  const cycleCustomIonRatioSide = (side: 'left' | 'right') => {
+    setCustomIonRatioPair(current => advanceCustomIonRatioPair(current, side));
+  };
   const previousHasModeledIonsRef = useRef(hasModeledIons);
   useEffect(() => {
     if (previousHasModeledIonsRef.current === hasModeledIons) return;
@@ -14293,6 +14302,9 @@ function WatermancerIonCoverageBars({
           }}
           ionRelationshipView={ionRelationshipView}
           onIonRelationshipViewChange={setIonRelationshipView}
+          customIonRatioPair={customIonRatioPair}
+          customIonRatioValues={ratioIons}
+          onCycleCustomIonRatioSide={cycleCustomIonRatioSide}
           pairwiseIonRatios={{
             potassium: ratioIons.potassium ?? 0,
             magnesium: ratioIons.magnesium ?? 0,
@@ -14534,6 +14546,11 @@ function WatermancerIonCoverageBars({
                      : 'normal',
                }}
              />
+              <WatermancerCustomIonRatio
+                pair={customIonRatioPair}
+                ionValues={ratioIons}
+                onCycleSide={cycleCustomIonRatioSide}
+              />
        </div>
         {readingsView === 'classic' && (
           <WatermancerMetricSummary
