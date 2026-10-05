@@ -5,6 +5,7 @@ import {
   CHARGE_BALANCE_TOLERANCE_MEQ_PER_L,
   applyChargeBalanceAlternative,
   analyzeWatermancerChargeBalance,
+  hasHighRelativeChargeGap,
   getWatermancerTargetSignature,
 } from './watermancerChargeBalance';
 
@@ -29,6 +30,14 @@ describe('Watermancer charge balance', () => {
     expect(analyzeWatermancerChargeBalance({}).status).toBe('no-targets');
     expect(analyzeWatermancerChargeBalance({ sodium: 22.989769, chloride: 35.45 }).status)
       .toBe('balanced');
+  });
+
+  it('flags a relative charge gap at 20%, even at small total charge', () => {
+    expect(hasHighRelativeChargeGap({ sodium: 22.989769, chloride: 28.36 })).toBe(true);
+    expect(hasHighRelativeChargeGap({ sodium: 22.989769, chloride: 28.7145 })).toBe(false);
+    expect(hasHighRelativeChargeGap({ sodium: 0.01 })).toBe(true);
+    expect(hasHighRelativeChargeGap({})).toBe(false);
+    expect(hasHighRelativeChargeGap({ sodium: Number.NaN })).toBe(false);
   });
 
   it('offers one-ion fixes within 0.1 ppm precision for a positive imbalance', () => {

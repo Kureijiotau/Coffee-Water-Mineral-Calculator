@@ -7,6 +7,7 @@ import {
 } from '@/waterData';
 
 export const CHARGE_BALANCE_PPM_STEP = 0.1;
+export const CHARGE_BALANCE_HIGH_RELATIVE_GAP = 0.2;
 export const CHARGE_BALANCE_TOLERANCE_MEQ_PER_L = Math.max(
   ...ACTIVE_ION_IDS.map(id => (
     CHARGE_BALANCE_PPM_STEP / 2
@@ -29,6 +30,37 @@ export interface ChargeBalanceAnalysis {
   differenceMeqPerL: number;
   invalidIonIds: IonId[];
   alternatives: ChargeBalanceAlternative[];
+}
+
+function getChargeTotals(targets: Partial<Record<IonId, number>>) {
+  const positiveMeqPerL = ACTIVE_ION_IDS.reduce((total, id) => (
+    ION_CHEMISTRY[id].charge > 0
+      ? total + computeIonMeqPerL(id, targets[id] ?? 0)
+      : total
+  ), 0);
+  const negativeMeqPerL = ACTIVE_ION_IDS.reduce((total, id) => (
+    ION_CHEMISTRY[id].charge < 0
+      ? total + computeIonMeqPerL(id, targets[id] ?? 0)
+      : total
+  ), 0);
+
+  return { positiveMeqPerL, negativeMeqPerL };
+}
+
+export function hasHighRelativeChargeGap(
+  targets: Partial<Record<IonId, number>>,
+): boolean {
+  const hasInvalidTarget = ACTIVE_ION_IDS.some(id => {
+    const value = targets[id];
+    return value !== undefined && (!Number.isFinite(value) || value < 0);
+  });
+  if (hasInvalidTarget) return false;
+
+  const { positiveMeqPerL, negativeMeqPerL } = getChargeTotals(targets);
+  const largerChargeTotal = Math.max(positiveMeqPerL, negativeMeqPerL);
+  return largerChargeTotal > 0
+    && Math.abs(positiveMeqPerL - negativeMeqPerL) / largerChargeTotal
+      >= CHARGE_BALANCE_HIGH_RELATIVE_GAP;
 }
 
 export function analyzeWatermancerChargeBalance(
@@ -54,16 +86,7 @@ export function analyzeWatermancerChargeBalance(
     ACTIVE_ION_IDS.map(id => [id, targets[id] ?? 0]),
   ) as Record<IonId, number>;
   const hasAnyTarget = ACTIVE_ION_IDS.some(id => targetValues[id] > 0);
-  const positiveMeqPerL = ACTIVE_ION_IDS.reduce((total, id) => (
-    ION_CHEMISTRY[id].charge > 0
-      ? total + computeIonMeqPerL(id, targetValues[id])
-      : total
-  ), 0);
-  const negativeMeqPerL = ACTIVE_ION_IDS.reduce((total, id) => (
-    ION_CHEMISTRY[id].charge < 0
-      ? total + computeIonMeqPerL(id, targetValues[id])
-      : total
-  ), 0);
+  const { positiveMeqPerL, negativeMeqPerL } = getChargeTotals(targetValues);
   const differenceMeqPerL = positiveMeqPerL - negativeMeqPerL;
 
   if (!hasAnyTarget) {

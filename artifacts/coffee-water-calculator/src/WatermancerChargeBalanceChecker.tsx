@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Scale } from 'lucide-react';
 import { ION_MAP, type IonId } from '@/waterData';
 import type { IonicTargetValues } from './watermancerProfiles';
 import {
+  hasHighRelativeChargeGap,
   applyChargeBalanceAlternative,
   analyzeWatermancerChargeBalance,
   getChargeBalanceIonName,
@@ -38,6 +39,7 @@ export default function WatermancerChargeBalanceChecker({
   const [checkedSnapshot, setCheckedSnapshot] = useState<CheckedSnapshot | null>(null);
   const currentSignature = getWatermancerTargetSignature(targetSource, targetIons);
   const isStale = checkedSnapshot !== null && checkedSnapshot.signature !== currentSignature;
+  const hasHighRelativeGap = hasHighRelativeChargeGap(targetIons);
 
   const runCheck = () => {
     setCheckedSnapshot({
@@ -64,34 +66,52 @@ export default function WatermancerChargeBalanceChecker({
 
   return (
     <section
-      className="mx-3 my-3 rounded-xl border border-cyan-400/20 bg-slate-950/35 p-3 sm:mx-4 sm:p-4"
-      aria-labelledby="watermancer-charge-balance-title"
+      className={checkedSnapshot
+        ? 'mx-3 my-3 rounded-xl border border-cyan-400/20 bg-slate-950/35 p-3 sm:mx-4 sm:p-4'
+        : 'mx-3 my-2 sm:mx-4'}
+      aria-label="Watermancer charge-balance checker"
       data-testid="watermancer-charge-balance-checker"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <Scale className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
-          <div className="min-w-0">
-            <h3
-              id="watermancer-charge-balance-title"
-              className="text-sm font-semibold text-slate-100"
-            >
-              Charge-balance reality check
-            </h3>
-            <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
-              Checks the selected target profile at 100% strength. It uses the eight core target ions
-              and their configured charges; it does not account for pH-dependent speciation,
-              supplemental carriers, source or salt availability, solubility, or taste.
-            </p>
+        {checkedSnapshot && (
+          <div className="flex min-w-0 flex-1 items-start gap-2.5">
+            <Scale className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+            <div className="min-w-0">
+              <h3
+                id="watermancer-charge-balance-title"
+                className="text-sm font-semibold text-slate-100"
+              >
+                Charge-balance reality check
+              </h3>
+              <p className="mt-1 max-w-3xl text-[11px] leading-relaxed text-slate-400">
+                Checks the selected target profile at 100% strength. It uses the eight core target ions
+                and their configured charges; it does not account for pH-dependent speciation,
+                supplemental carriers, source or salt availability, solubility, or taste.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <button
           type="button"
           onClick={runCheck}
+          aria-label={hasHighRelativeGap
+            ? 'Check charge balance; relative charge gap is at least 20 percent'
+            : checkedSnapshot ? 'Run charge-balance check again' : 'Check charge balance'}
+          title="Turns red when the relative charge gap reaches 20%."
           data-testid="watermancer-charge-check-run"
-          className="min-h-9 shrink-0 rounded-lg border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/60"
+          className={`inline-flex min-h-8 shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+            hasHighRelativeGap
+              ? 'border-rose-300/45 bg-rose-500/15 text-rose-100 hover:border-rose-200/60 hover:bg-rose-500/25 focus-visible:ring-rose-300/70'
+              : 'border-cyan-300/30 bg-cyan-400/10 text-cyan-100 hover:border-cyan-200/50 hover:bg-cyan-400/20 focus-visible:ring-cyan-300/60'
+          }`}
         >
-          {checkedSnapshot ? 'Run check again' : 'Check charge balance'}
+          <Scale className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>{checkedSnapshot ? 'Run check again' : 'Check balance'}</span>
+          {hasHighRelativeGap && (
+            <span className="rounded-full border border-rose-200/25 bg-rose-300/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wide">
+              ≥20% gap
+            </span>
+          )}
         </button>
       </div>
 
@@ -171,7 +191,7 @@ export default function WatermancerChargeBalanceChecker({
               role="status"
             >
               <Check className="h-4 w-4" aria-hidden="true" />
-              The target profile is balanced within the rounding tolerance for 0.1 ppm targets.
+              The absolute charge difference is within the 0.1 ppm rounding tolerance.
             </p>
           )}
 
