@@ -280,12 +280,19 @@ export function lotusCalibratedStockPlan(
   calibration?: LotusDropperCalibration,
 ): LotusStockPlan {
   const measuredDropsPerMl = lotusMeasuredDropsPerMl(calibration) ?? 0;
-  const straightBaseline = lotusStraightBaselineFromMeasuredRate(
-    measuredDropsPerMl,
-    calibration?.style ?? 'straight',
-    fallbackStraightDropsPerMl,
-  );
-  return lotusStockPlan(dropper, style, stockVolumeMl, straightBaseline);
+  const referencePlan = lotusStockPlan(dropper, style, stockVolumeMl, fallbackStraightDropsPerMl);
+  if (measuredDropsPerMl <= 0 || referencePlan.dropsPerMl <= 0) return referencePlan;
+
+  // The tip style and its calibration identify the physical drop size. They
+  // must not change the chemistry of the stock bottle or the salt mass to
+  // weigh. Adjust only the per-drop values to match the measured drop rate.
+  const perDropScale = referencePlan.dropsPerMl / measuredDropsPerMl;
+  return {
+    ...referencePlan,
+    dropsPerMl: measuredDropsPerMl,
+    saltMgPerDrop: referencePlan.saltMgPerDrop * perDropScale,
+    ionPpmPerDrop: referencePlan.ionPpmPerDrop * perDropScale,
+  };
 }
 
 export function lotusRecipeDosing(

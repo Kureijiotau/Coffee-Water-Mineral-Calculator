@@ -6,11 +6,15 @@ description: Lotus dropper calibration is shared across solution cards by tip st
 The Lotus page should store one calibrated drop rate for Round tips and one for
 Straight tips. The active tip style's rate applies to all Lotus solution cards;
 do not require the same calibration to be entered separately for each salt
-dropper.
+dropper. Tip style is a reference for which dropper the user is using; neither
+style nor calibration should change the salt chemistry or salt mass for a fixed
+concentrate volume. Calibration may change per-drop values and drop counts.
 
-**Why:** The user wants one calibration to apply across the droppers, while
-keeping Round and Straight rates separate because their drop behavior differs.
+**Why:** The user said both tip styles should give the same recipe numbers, with
+the style selector identifying which dropper is on hand rather than changing
+the recipe chemistry.
 
-**How to apply:** Keep shared Lotus calibration state keyed by tip style, not by
-solution card. Preserve the existing style distinction and use the selected
-style's shared measurement for all cards.
+**How to apply:** Keep one calibration per style and share it across Lotus
+solution cards. Keep salt concentration and salt-to-weigh independent of the
+selected style and its measured rate; use calibration only for actual drops/mL
+and per-drop outputs.

@@ -80,7 +80,7 @@ describe('DIY Lotus Drops calculations', () => {
     expect(lotusStraightBaselineFromMeasuredRate(0, 'round', 18)).toBe(18);
   });
 
-  it('uses each dropper’s measurements to calculate its own stock strength', () => {
+  it('uses calibration for per-drop values without changing stock chemistry', () => {
     const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
     const calcium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'calcium')!;
     const magnesiumPlan = lotusCalibratedStockPlan(magnesium, 'round', 59, 20, {
@@ -96,10 +96,38 @@ describe('DIY Lotus Drops calculations', () => {
 
     expect(magnesiumPlan.dropsPerMl).toBeCloseTo(12, 8);
     expect(calciumPlan.dropsPerMl).toBeCloseTo(25, 8);
-    expect(magnesiumPlan.saltMgPerDrop).toBeCloseTo(lotusStockPlan(magnesium, 'round').saltMgPerDrop, 8);
-    expect(calciumPlan.saltMgPerDrop).toBeCloseTo(lotusStockPlan(calcium, 'straight').saltMgPerDrop, 8);
-    expect(magnesiumPlan.saltMassG / lotusStockPlan(magnesium, 'round').saltMassG).toBeCloseTo(12 / 11.2, 8);
-    expect(calciumPlan.saltMassG / lotusStockPlan(calcium, 'straight').saltMassG).toBeCloseTo(25 / 20, 8);
+    expect(magnesiumPlan.saltMgPerMl).toBeCloseTo(lotusStockPlan(magnesium, 'round').saltMgPerMl, 8);
+    expect(calciumPlan.saltMgPerMl).toBeCloseTo(lotusStockPlan(calcium, 'straight').saltMgPerMl, 8);
+    expect(magnesiumPlan.saltMassG).toBeCloseTo(lotusStockPlan(magnesium, 'round').saltMassG, 8);
+    expect(calciumPlan.saltMassG).toBeCloseTo(lotusStockPlan(calcium, 'straight').saltMassG, 8);
+    expect(magnesiumPlan.saltMgPerDrop).toBeCloseTo(
+      magnesiumPlan.saltMgPerMl / magnesiumPlan.dropsPerMl,
+      8,
+    );
+    expect(calciumPlan.saltMgPerDrop).toBeCloseTo(
+      calciumPlan.saltMgPerMl / calciumPlan.dropsPerMl,
+      8,
+    );
+  });
+
+  it('keeps equal salt amounts for Round and Straight at equal measured rates', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    const roundPlan = lotusCalibratedStockPlan(magnesium, 'round', 1, 20, {
+      dropsInput: '100',
+      weightInput: '5',
+      style: 'round',
+    });
+    const straightPlan = lotusCalibratedStockPlan(magnesium, 'straight', 1, 20, {
+      dropsInput: '100',
+      weightInput: '5',
+      style: 'straight',
+    });
+
+    expect(roundPlan.dropsPerMl).toBe(20);
+    expect(straightPlan.dropsPerMl).toBe(20);
+    expect(roundPlan.saltMgPerMl).toBeCloseTo(straightPlan.saltMgPerMl, 8);
+    expect(roundPlan.saltMassG).toBeCloseTo(straightPlan.saltMassG, 8);
+    expect(roundPlan.saltMgPerDrop).toBeCloseTo(straightPlan.saltMgPerDrop, 8);
   });
 
   it('applies one shared style calibration to every Lotus stock plan', () => {
