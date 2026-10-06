@@ -184,7 +184,7 @@ export default function WatermancerIonCrafting({
                 data-testid="watermancer-ion-crafting-primary"
                 aria-label="Ion to adjust"
                 value={primaryIonId}
-                style={primaryAccent}
+                style={{ ...primaryAccent, colorScheme: 'dark' }}
                 onChange={event => {
                   const nextPrimary = event.currentTarget.value as IonId;
                   setPrimaryIonId(nextPrimary);
@@ -202,7 +202,10 @@ export default function WatermancerIonCrafting({
                   <option
                     key={id}
                     value={id}
-                    style={{ color: ION_MAP[id].color.foreground }}
+                    style={{
+                      color: ION_MAP[id].color.foreground,
+                      backgroundColor: '#0f172a',
+                    }}
                   >
                     {ION_MAP[id].name} · {ION_MAP[id].formula}
                   </option>
@@ -223,7 +226,7 @@ export default function WatermancerIonCrafting({
                 data-testid="watermancer-ion-crafting-counterion"
                 aria-label="Balancing counter-ion"
                 value={counterionId}
-                style={counterionAccent}
+                style={{ ...counterionAccent, colorScheme: 'dark' }}
                 onChange={event => {
                   setCounterionId(event.currentTarget.value as IonId);
                   setNotice('');
@@ -234,7 +237,10 @@ export default function WatermancerIonCrafting({
                   <option
                     key={id}
                     value={id}
-                    style={{ color: ION_MAP[id].color.foreground }}
+                    style={{
+                      color: ION_MAP[id].color.foreground,
+                      backgroundColor: '#0f172a',
+                    }}
                   >
                     {ION_MAP[id].name} · {ION_MAP[id].formula}
                   </option>
@@ -247,10 +253,17 @@ export default function WatermancerIonCrafting({
                 aria-label="Ion target step size"
                 value={stepSize}
                 onChange={event => setStepSize(Number(event.currentTarget.value))}
+                style={{ colorScheme: 'dark' }}
                 className="mt-1 block min-h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-slate-100 outline-none focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
               >
                 {STEP_SIZES.map(size => (
-                  <option key={size} value={size}>{size} ppm</option>
+                  <option
+                    key={size}
+                    value={size}
+                    style={{ color: '#f1f5f9', backgroundColor: '#0f172a' }}
+                  >
+                    {size} ppm
+                  </option>
                 ))}
               </select>
             </label>
