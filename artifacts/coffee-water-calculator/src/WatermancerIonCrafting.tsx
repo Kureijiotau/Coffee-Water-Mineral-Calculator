@@ -120,7 +120,7 @@ export default function WatermancerIonCrafting({
   };
 
   return (
-    <div className="mx-3 mb-3 sm:mx-4">
+    <div className="shrink-0">
       <Dialog
         open={open}
         onOpenChange={nextOpen => {

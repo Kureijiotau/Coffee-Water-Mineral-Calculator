@@ -13399,13 +13399,13 @@ function WatermancerIonProfileCard({
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
       {/* Header */}
       <div className="app-section-header border-b border-indigo-400/15 text-slate-300">
-        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-indigo-300" aria-hidden="true" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Set your target water</h2>
             </div>
-            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:w-auto">
+            <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
               {selectedTargetSourceUrl && (
                 <a
                   href={selectedTargetSourceUrl}
@@ -13428,9 +13428,8 @@ function WatermancerIonProfileCard({
               />
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-start gap-3">
+          <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-950/25 p-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="flex flex-wrap items-center gap-2">
               {!isEditingAny && !zeroProfileNamePromptOpen ? (
                 <>
                   <button
@@ -13449,7 +13448,7 @@ function WatermancerIonProfileCard({
                     onClick={startEditing}
                     data-testid="watermancer-profile-edit"
                     aria-label="Edit Watermancer targets"
-                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-400/25 bg-violet-500/10 px-2.5 py-1.5 text-xs text-violet-200 transition hover:border-violet-300/45 hover:bg-violet-500/20 hover:text-violet-100"
+                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-indigo-300/40 hover:bg-indigo-500/10 hover:text-indigo-100"
                     title="Edit the current Watermancer targets"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -13492,12 +13491,11 @@ function WatermancerIonProfileCard({
                  </button>
                </>
               ) : null}
-              </div>
               {!zeroProfileNamePromptOpen && (selectedSavedProfile || selectedSavedRecipe) && (
                 <button
                   type="button"
                   onClick={selectedSavedProfile ? handleDeleteSelectedProfile : handleDeleteSelectedRecipe}
-                  className="flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+                  className="flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-400/25 bg-transparent px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/10 hover:text-rose-100"
                   aria-label={`Delete ${selectedSavedProfile ? 'saved profile' : 'saved recipe'} ${selectedSavedProfile?.name ?? selectedSavedRecipe?.name ?? ''}`}
                   title={selectedSavedProfile ? 'Delete this saved profile' : 'Delete this saved recipe'}
                 >
@@ -13506,7 +13504,8 @@ function WatermancerIonProfileCard({
                 </button>
               )}
            </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <span className="mx-1 hidden h-6 w-px bg-slate-700 sm:block" aria-hidden="true" />
+             <div className="flex flex-wrap items-center gap-2">
            <button
              type="button"
              onClick={onShareRecipe}
@@ -13515,7 +13514,7 @@ function WatermancerIonProfileCard({
                  ? 'text-rose-200 bg-rose-500/10 border border-rose-400/40 hover:border-rose-300/60 hover:bg-rose-500/20'
                  : shareStatus !== 'idle'
                    ? 'text-emerald-200 bg-emerald-500/10 border border-emerald-400/40'
-                   : 'text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45'
+                    : 'text-slate-300 hover:text-white bg-slate-800/55 hover:bg-slate-700/70 border border-slate-600/70 hover:border-slate-500'
              }`}
               aria-label={shareStatus === 'downloaded' ? 'Profile downloaded' : shareStatus === 'error' ? 'Profile download failed' : 'Download current profile'}
              aria-live="polite"
@@ -13527,14 +13526,14 @@ function WatermancerIonProfileCard({
                  ? 'Profile downloaded'
                  : shareStatus === 'error'
                    ? 'Download failed'
-                   : 'Share'}
+                    : 'Download'}
              </span>
            </button>
            {hasSaltRecipeTargets && (
              <button
                type="button"
                onClick={onSendRecipeToConcentrate}
-                 className="flex min-h-9 items-center gap-1.5 rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs text-fuchsia-200 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-500/20 hover:text-fuchsia-100"
+                 className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
                 aria-label="Use current profile in Concentrate"
                title="Open this recipe in the Concentrate workspace"
              >
@@ -13545,7 +13544,7 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={() => importRecipeInputRef.current?.click()}
-               className="flex min-h-9 items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
+               className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
               aria-label="Import water profile"
              title="Import water profile"
            >
@@ -13555,7 +13554,7 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={onReset}
-               className="flex min-h-9 items-center gap-1.5 text-xs text-amber-200 hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 hover:border-amber-300/45 rounded-lg px-2.5 py-1.5 transition"
+               className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
               aria-label="Reset Watermancer inputs"
              title="Reset all inputs to defaults"
            >
@@ -13656,7 +13655,7 @@ function WatermancerIonProfileCard({
                   handleSaveAsNew();
                 }
               }}
-              className="flex flex-col gap-3 rounded-xl border border-emerald-300/20 bg-slate-950/25 p-3 sm:flex-row sm:items-end sm:justify-between"
+              className="w-full basis-full flex flex-col gap-3 rounded-xl border border-emerald-300/20 bg-slate-950/25 p-3 sm:flex-row sm:items-end sm:justify-between"
             >
               <div className="min-w-0 flex-1">
                 <label
@@ -13707,13 +13706,13 @@ function WatermancerIonProfileCard({
           )}
         </div>
       </div>
-      <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="border-b border-indigo-400/15 px-4 py-2 sm:px-6">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             aria-expanded={compareProfilesOpen}
             onClick={() => setCompareProfilesOpen(open => !open)}
-            className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
               compareProfilesOpen
                 ? 'border-cyan-300/60 bg-cyan-400/15 text-cyan-100'
                 : 'border-slate-600/70 bg-slate-900/35 text-slate-300 hover:border-cyan-300/45 hover:bg-cyan-500/10 hover:text-cyan-100'
@@ -13723,11 +13722,17 @@ function WatermancerIonProfileCard({
             Compare profiles
             <ChevronDown className={`h-3.5 w-3.5 transition-transform ${compareProfilesOpen ? 'rotate-180' : ''}`} />
           </button>
+          <WatermancerIonCrafting
+            targets={isEditingAny ? draftAsTargets() : targetIons}
+            isEditing={isEditingAny}
+            onBeginEditing={startEditing}
+            onApplyTargets={applyCraftedTargets}
+          />
            {SHOW_WATERMANCER_RATIO_CONTROLS && (
              <button
                type="button"
                onClick={onOpenIonRatios}
-               className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/[0.12] focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] px-3 py-2 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-400/[0.12] focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
                aria-label="Set ion ratios"
              >
                <Scale className="h-4 w-4" aria-hidden="true" />
@@ -13924,12 +13929,6 @@ function WatermancerIonProfileCard({
          </div>
        )}
      </div>
-      <WatermancerIonCrafting
-        targets={isEditingAny ? draftAsTargets() : targetIons}
-        isEditing={isEditingAny}
-        onBeginEditing={startEditing}
-        onApplyTargets={applyCraftedTargets}
-      />
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
          {ACTIVE_ION_IDS.map((id, idx) => {
