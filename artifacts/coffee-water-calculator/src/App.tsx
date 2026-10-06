@@ -24,7 +24,6 @@ import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMet
 import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
-import WatermancerChargeBalanceChecker from './WatermancerChargeBalanceChecker';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
   HardnessCard as SharedHardnessCard,
@@ -13972,18 +13971,6 @@ function WatermancerIonProfileCard({
           );
         })}
       </div>
-      <WatermancerChargeBalanceChecker
-        targetIons={targetIons}
-        targetSource={watermancerTargetSource}
-        onApplyTargets={targets => {
-          if (editing || editingIonId !== null) {
-            setDraftTargets(Object.fromEntries(
-              ACTIVE_ION_IDS.map(id => [id, String(targets[id] ?? 0)]),
-            ) as Partial<Record<IonId, string>>);
-          }
-          onTargetOverrideChange(targets);
-        }}
-      />
       {/* Naming dialog */}
       {isEditingAny && namingMode === 'new' && (
        <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">

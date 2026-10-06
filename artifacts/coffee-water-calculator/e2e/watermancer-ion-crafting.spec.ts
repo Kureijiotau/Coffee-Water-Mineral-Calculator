@@ -6,6 +6,7 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
 
   await expect(page.getByText('1. Set your target water', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('watermancer-charge-balance-checker')).toHaveCount(0);
   const craftingToggle = page.getByTestId('watermancer-ion-crafting-toggle');
   await expect(craftingToggle).toBeVisible();
   await craftingToggle.click();
@@ -26,9 +27,4 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   expect(Number(await page.getByTestId('watermancer-ion-target-sulfate').inputValue()))
     .toBeGreaterThan(0);
   await expect(chlorideTarget).toHaveValue(chlorideBefore);
-
-  await page.getByTestId('watermancer-charge-check-run').click();
-  await expect(page.getByText(
-    'The absolute charge difference is within the 0.1 ppm rounding tolerance.',
-  )).toBeVisible();
 });
