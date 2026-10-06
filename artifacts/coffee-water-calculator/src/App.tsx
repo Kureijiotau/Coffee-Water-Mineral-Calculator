@@ -53,6 +53,7 @@ import {
 } from './waterPlans';
 import {
   createWatermancerProfile, loadWatermancerProfiles, saveWatermancerProfiles, WATERMANCER_PROFILES_STORAGE_KEY,
+  hasWatermancerFinalReadingDrift, overwriteWatermancerProfileWithFinalReadings,
   type IonicTargetValues, type WatermancerProfile,
 } from './watermancerProfiles';
 import {
@@ -6765,6 +6766,7 @@ function App() {
             <WatermancerIonProfileCard
               ions={ionProfileIons}
               supplementalIons={watermancerSupplementalIonTotals}
+              finalReadingsAvailable={watermancerCurrentStatus !== 'blocked'}
               silicaTargetEnabled={watermancerSilicaTargetEnabled}
               silicaTargetPpmInput={watermancerSilicaTargetPpmInput}
               onSilicaTargetPpmInputChange={handleWatermancerSilicaTargetChange}
@@ -12927,6 +12929,7 @@ function CalibrationInput({
 function WatermancerIonProfileCard({
   ions,
   currentFinalIons,
+  finalReadingsAvailable,
   supplementalIons,
   silicaTargetEnabled,
   silicaTargetPpmInput,
@@ -12964,6 +12967,7 @@ function WatermancerIonProfileCard({
 }: {
   ions: Partial<Record<IonId, number>>;
   currentFinalIons: Partial<Record<IonId, number>>;
+  finalReadingsAvailable: boolean;
   supplementalIons: Partial<Record<SupplementalIonId, number>>;
   silicaTargetEnabled: boolean;
   silicaTargetPpmInput: string;
@@ -13252,6 +13256,8 @@ function WatermancerIonProfileCard({
   const selectedSavedProfile = currentDropdownValue.startsWith('saved:')
     ? wmProfiles.find(profile => profile.id === currentDropdownValue.slice('saved:'.length))
     : undefined;
+  const finalReadingsDifferFromSelectedProfile = finalReadingsAvailable
+    && hasWatermancerFinalReadingDrift(selectedSavedProfile, currentFinalIons);
   const selectedSavedRecipe = currentDropdownValue.startsWith('recipe:')
     ? savedRecipes.find(recipe => recipe.id === currentDropdownValue.slice('recipe:'.length))
     : undefined;
@@ -13276,6 +13282,31 @@ function WatermancerIonProfileCard({
       ...selectedSavedProfile,
       targets: draftAsTargets(),
     });
+    finishEditing();
+  };
+
+  const handleOverwriteWithFinalReadings = () => {
+    if (
+      !selectedSavedProfile
+      || !finalReadingsAvailable
+      || !hasWatermancerFinalReadingDrift(selectedSavedProfile, currentFinalIons)
+    ) return;
+
+    const hasUnsavedProfileChanges = editing
+      || editingIonId !== null
+      || namingMode === 'new'
+      || zeroProfileNamePromptOpen;
+    const unsavedWarning = hasUnsavedProfileChanges
+      ? '\n\nThis will discard any unsaved profile edits or naming prompt.'
+      : '';
+    if (!window.confirm(
+      `Replace the saved targets and finished readings for “${selectedSavedProfile.name}” with the current final ion readings?${unsavedWarning}`,
+    )) return;
+
+    onSaveWmProfile(
+      overwriteWatermancerProfileWithFinalReadings(selectedSavedProfile, currentFinalIons),
+    );
+    setZeroProfileNamePromptOpen(false);
     finishEditing();
   };
 
@@ -13399,8 +13430,8 @@ function WatermancerIonProfileCard({
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
       {/* Header */}
       <div className="app-section-header border-b border-indigo-400/15 text-slate-300">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-4 py-3 sm:px-6">
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-3 sm:w-auto">
+        <div className="flex flex-col items-stretch gap-2 px-4 py-3 sm:px-6">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-indigo-300" aria-hidden="true" />
               <h2 className="text-sm font-semibold uppercase tracking-wider">Set your target water</h2>
@@ -13428,8 +13459,11 @@ function WatermancerIonProfileCard({
               />
             </div>
           </div>
-          <div className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-950/25 p-1.5">
-            <div className="flex flex-wrap items-center gap-2">
+          <div
+            data-testid="watermancer-profile-toolbar"
+            className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/25 p-1 md:flex-nowrap"
+          >
+            <div className="flex flex-wrap items-center gap-1 md:flex-nowrap">
               {!isEditingAny && !zeroProfileNamePromptOpen ? (
                 <>
                   <button
@@ -13438,7 +13472,7 @@ function WatermancerIonProfileCard({
                     data-testid="watermancer-profile-new"
                     aria-label="Create a new zero-target profile"
                     title="Create a new profile with all ion targets set to zero"
-                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-300/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-500/20"
+                     className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-300/30 bg-emerald-500/10 px-2 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-500/20"
                   >
                     <span className="text-base leading-none" aria-hidden="true">+</span>
                     <span>New</span>
@@ -13448,7 +13482,7 @@ function WatermancerIonProfileCard({
                     onClick={startEditing}
                     data-testid="watermancer-profile-edit"
                     aria-label="Edit Watermancer targets"
-                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-200 transition hover:border-indigo-300/40 hover:bg-indigo-500/10 hover:text-indigo-100"
+                    className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-600/70 bg-slate-800/55 px-2 py-1.5 text-xs text-slate-200 transition hover:border-indigo-300/40 hover:bg-indigo-500/10 hover:text-indigo-100"
                     title="Edit the current Watermancer targets"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
@@ -13462,7 +13496,7 @@ function WatermancerIonProfileCard({
                   onClick={() => setNamingMode('new')}
                   data-testid="watermancer-profile-save-as-new"
                   aria-label="Start saving as a new Watermancer profile"
-                  className="flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
+                   className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-600 px-2 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
                >
                   <Save className="h-3.5 w-3.5" aria-hidden="true" />
                   <span className="hidden sm:inline">Save as new</span>
@@ -13474,7 +13508,7 @@ function WatermancerIonProfileCard({
                       data-testid="watermancer-profile-overwrite"
                       aria-label="Overwrite selected Watermancer profile"
                       title="Replace the selected saved profile with these edited targets"
-                      className="flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                       className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
                    >
                       <Save className="h-3.5 w-3.5" aria-hidden="true" />
                      <span className="hidden sm:inline">Overwrite selected</span>
@@ -13484,7 +13518,7 @@ function WatermancerIonProfileCard({
                    type="button"
                    onClick={cancelEditing}
                     aria-label="Cancel target editing"
-                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+                     className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-600/60 bg-slate-700/50 px-2 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
                  >
                     <X className="h-3.5 w-3.5" aria-hidden="true" />
                    <span className="hidden sm:inline">Cancel</span>
@@ -13495,7 +13529,7 @@ function WatermancerIonProfileCard({
                 <button
                   type="button"
                   onClick={selectedSavedProfile ? handleDeleteSelectedProfile : handleDeleteSelectedRecipe}
-                  className="flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-400/25 bg-transparent px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/10 hover:text-rose-100"
+                   className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-rose-400/25 bg-transparent px-2 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/10 hover:text-rose-100"
                   aria-label={`Delete ${selectedSavedProfile ? 'saved profile' : 'saved recipe'} ${selectedSavedProfile?.name ?? selectedSavedRecipe?.name ?? ''}`}
                   title={selectedSavedProfile ? 'Delete this saved profile' : 'Delete this saved recipe'}
                 >
@@ -13503,13 +13537,26 @@ function WatermancerIonProfileCard({
                   <span className="hidden sm:inline">Delete</span>
                 </button>
               )}
+              {finalReadingsDifferFromSelectedProfile && (
+                <button
+                  type="button"
+                  onClick={handleOverwriteWithFinalReadings}
+                  data-testid="watermancer-profile-overwrite-final"
+                  aria-label={`Overwrite ${selectedSavedProfile?.name ?? 'selected Watermancer profile'} with final readings`}
+                  title="Replace this profile’s saved targets and finished readings with the current final ion readings"
+                  className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-cyan-300/35 bg-cyan-500/10 px-2 py-1.5 text-[11px] font-semibold text-cyan-100 transition hover:border-cyan-200/60 hover:bg-cyan-500/20"
+                >
+                  <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Overwrite final</span>
+                </button>
+              )}
            </div>
             <span className="mx-1 hidden h-6 w-px bg-slate-700 sm:block" aria-hidden="true" />
-             <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1 md:flex-nowrap">
            <button
              type="button"
              onClick={onShareRecipe}
-              className={`flex min-h-9 items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
+               className={`flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap text-xs rounded-lg px-2 py-1.5 transition ${
                shareStatus === 'error'
                  ? 'text-rose-200 bg-rose-500/10 border border-rose-400/40 hover:border-rose-300/60 hover:bg-rose-500/20'
                  : shareStatus !== 'idle'
@@ -13533,7 +13580,7 @@ function WatermancerIonProfileCard({
              <button
                type="button"
                onClick={onSendRecipeToConcentrate}
-                 className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
+                  className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-600/70 bg-slate-800/55 px-2 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
                 aria-label="Use current profile in Concentrate"
                title="Open this recipe in the Concentrate workspace"
              >
@@ -13544,7 +13591,7 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={() => importRecipeInputRef.current?.click()}
-               className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
+                className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-600/70 bg-slate-800/55 px-2 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
               aria-label="Import water profile"
              title="Import water profile"
            >
@@ -13554,7 +13601,7 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={onReset}
-               className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-800/55 px-2.5 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
+                className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-slate-600/70 bg-slate-800/55 px-2 py-1.5 text-xs text-slate-300 transition hover:border-slate-500 hover:bg-slate-700/70 hover:text-white"
               aria-label="Reset Watermancer inputs"
              title="Reset all inputs to defaults"
            >
@@ -13570,7 +13617,7 @@ function WatermancerIonProfileCard({
                 aria-controls="watermancer-strength-panel"
                 aria-haspopup="dialog"
                 onClick={() => setStrengthPopoverOpen(open => !open)}
-                 className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                  className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-2 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
               >
                 <span className="hidden sm:inline">Strength</span>
                 <span className="tabular-nums">{strengthPercent}%</span>

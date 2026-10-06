@@ -250,6 +250,65 @@ test('overwrites only the selected profile targets and keeps that profile select
   });
 });
 
+test('overwrites a saved profile with final readings only when they differ and keeps the toolbar on one row', async ({ page }) => {
+  await page.setViewportSize({ width: 1009, height: 900 });
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const picker = await openSavedPicker(page);
+  await picker.getByRole('group', { name: 'My saved profiles' })
+    .getByRole('option', { name: 'Profile · Beta water' }).click();
+  await expect(targetPicker).toContainText('Profile · Beta water');
+
+  const finalOverwrite = page.getByTestId('watermancer-profile-overwrite-final');
+  await expect(finalOverwrite).toHaveCount(0);
+
+  // A 1 L batch with an empty water source is a valid zero-ion final mixture.
+  await page.getByRole('button', { name: 'Add water source' }).click();
+  await expect(finalOverwrite).toBeVisible();
+
+  const toolbar = page.getByTestId('watermancer-profile-toolbar');
+  const toolbarButtons = toolbar.locator('button:visible');
+  await expect(toolbar.getByTestId('watermancer-profile-new')).toBeVisible();
+  await expect(toolbar.getByTestId('watermancer-profile-edit')).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Delete saved profile Beta water' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Download current profile' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Import water profile' })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: 'Reset Watermancer inputs' })).toBeVisible();
+  await expect(toolbar.getByTestId('watermancer-strength-toggle')).toBeVisible();
+  const buttonTops = await toolbarButtons.evaluateAll(buttons => (
+    buttons.map(button => button.getBoundingClientRect().top)
+  ));
+  expect(Math.max(...buttonTops) - Math.min(...buttonTops)).toBeLessThanOrEqual(1);
+
+  let confirmationMessage = '';
+  page.once('dialog', async dialog => {
+    confirmationMessage = dialog.message();
+    await dialog.dismiss();
+  });
+  await finalOverwrite.click();
+  expect(confirmationMessage).toContain('Beta water');
+  await expect(finalOverwrite).toBeVisible();
+
+  page.once('dialog', dialog => dialog.accept());
+  await finalOverwrite.click();
+  await expect(finalOverwrite).toHaveCount(0);
+  await expect.poll(async () => page.evaluate(profilesKey => {
+    const profiles = JSON.parse(localStorage.getItem(profilesKey) ?? '[]') as Array<{
+      id: string;
+      targets: Record<string, number>;
+      finishedIons?: Record<string, number>;
+    }>;
+    return profiles.find(profile => profile.id === 'watermancer-1000000000000-beta') ?? null;
+  }, SAVED_PROFILES_KEY)).toMatchObject({
+    id: 'watermancer-1000000000000-beta',
+    targets: { calcium: 0, magnesium: 0, sodium: 0, bicarbonate: 0, chloride: 0, sulfate: 0 },
+    finishedIons: { calcium: 0, magnesium: 0, sodium: 0, bicarbonate: 0, chloride: 0, sulfate: 0 },
+  });
+});
+
 test('keeps the selected Watermancer target when sync replaces its duplicate ID', async ({ page }) => {
   const previousProfile = makeProfile('local-water-target', 'Saved target');
   const survivingProfile = { ...previousProfile, id: 'cloud-water-target' };

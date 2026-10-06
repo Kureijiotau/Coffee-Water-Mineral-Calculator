@@ -15,6 +15,38 @@ export interface WatermancerProfile {
   details?: string;
 }
 
+export function hasWatermancerFinalReadingDrift(
+  profile: Pick<WatermancerProfile, 'targets'> | null | undefined,
+  finalIons: IonicTargetValues,
+): boolean {
+  if (!profile) return false;
+
+  return ACTIVE_ION_IDS.some(id => {
+    const finalReading = finalIons[id] ?? 0;
+    const target = profile.targets[id] ?? 0;
+    if (!Number.isFinite(finalReading) || !Number.isFinite(target)) return false;
+    return Number(finalReading.toFixed(4)) !== Number(target.toFixed(4));
+  });
+}
+
+export function overwriteWatermancerProfileWithFinalReadings(
+  profile: WatermancerProfile,
+  finalIons: IonicTargetValues,
+): WatermancerProfile {
+  const finalReadings = Object.fromEntries(
+    ACTIVE_ION_IDS.map(id => {
+      const reading = Number(finalIons[id] ?? 0);
+      return [id, Number.isFinite(reading) ? Math.max(reading, 0) : 0];
+    }),
+  ) as IonicTargetValues;
+
+  return {
+    ...profile,
+    targets: finalReadings,
+    finishedIons: finalReadings,
+  };
+}
+
 export const WATERMANCER_PROFILES_STORAGE_KEY = 'cwm.watermancerProfiles';
 
 function readProfiles(): WatermancerProfile[] {
