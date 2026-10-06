@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const SAVED_PROFILE_SORT_KEY = 'coffee-water-profile-picker-sort-mode';
 const SAVED_PROFILES_KEY = 'cwm.watermancerProfiles';
 const SAVED_RECIPES_KEY = 'cwc-saved-recipes';
+const TEST_SEED_MARKER = 'watermancer-profile-save-test-seeded';
 
 const existingOptionsNewestFirst = [
   'Profile · Zebra water',
@@ -28,14 +29,17 @@ function makeProfile(id: string, name: string) {
 }
 
 async function seedSavedItems(page: Page): Promise<void> {
-  await page.addInitScript(({ profilesKey, recipesKey, sortKey, profiles, recipes }) => {
+  await page.addInitScript(({ profilesKey, recipesKey, sortKey, seedMarker, profiles, recipes }) => {
+    if (localStorage.getItem(seedMarker) === 'true') return;
     localStorage.setItem(profilesKey, JSON.stringify(profiles));
     localStorage.setItem(recipesKey, JSON.stringify(recipes));
     localStorage.setItem(sortKey, 'newest-first');
+    localStorage.setItem(seedMarker, 'true');
   }, {
     profilesKey: SAVED_PROFILES_KEY,
     recipesKey: SAVED_RECIPES_KEY,
     sortKey: SAVED_PROFILE_SORT_KEY,
+    seedMarker: TEST_SEED_MARKER,
     profiles: [
       makeProfile('watermancer-1000000000000-beta', 'Beta water'),
       makeProfile('watermancer-1100000000000-zebra', 'Zebra water'),
@@ -82,8 +86,9 @@ for (const viewport of [
     await page.getByRole('button', { name: 'Select mineral recipe' }).click();
 
     const beginSave = await page.evaluate(() => performance.now());
-    await page.getByTitle('Edit this Watermancer profile before saving').click();
-    await page.locator('button').filter({ hasText: 'Save as new' }).click();
+    await page.getByTestId('watermancer-profile-edit').click();
+    await page.getByTestId('watermancer-ion-target-calcium').fill('31.5');
+    await page.getByTestId('watermancer-profile-save-as-new').click();
     const profileName = page.getByPlaceholder('Name your profile');
     await expect(profileName).toBeVisible();
     const editorOpenMs = await page.evaluate(start => performance.now() - start, beginSave);
@@ -91,7 +96,7 @@ for (const viewport of [
 
     await profileName.fill('Browser save profile');
     const beginCommit = await page.evaluate(() => performance.now());
-    await profileName.locator('xpath=..').locator('button').first().click();
+    await page.getByTestId('watermancer-profile-save-as-new-confirm').click();
 
     const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
     await expect(targetPicker).toContainText('Profile · Browser save profile');
@@ -108,6 +113,7 @@ for (const viewport of [
     expect(savedProfiles.map(profile => profile.name)).toContain('Browser save profile');
     const savedProfile = savedProfiles.find(profile => profile.name === 'Browser save profile');
     expect(savedProfile).toBeDefined();
+    expect(savedProfile!.targets.calcium).toBe(31.5);
 
     const pickerAfterSave = await openSavedPicker(page);
     const savedGroup = pickerAfterSave.getByRole('group', { name: 'My saved profiles' });
@@ -144,6 +150,105 @@ for (const viewport of [
     }
   });
 }
+
+test('creates and selects a named zero-target Watermancer profile immediately', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  await page.getByTestId('watermancer-profile-new').click();
+  const nameInput = page.getByTestId('watermancer-new-profile-name');
+  await expect(nameInput).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Create zero-target profile' })).toBeDisabled();
+  await nameInput.fill('Zero target profile');
+  await nameInput.press('Enter');
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  await expect(targetPicker).toContainText('Profile · Zero target profile');
+  await expect.poll(async () => page.evaluate(profilesKey => {
+    const profiles = JSON.parse(localStorage.getItem(profilesKey) ?? '[]') as Array<{
+      id: string;
+      name: string;
+      targets: Record<string, number>;
+    }>;
+    return profiles.find(profile => profile.name === 'Zero target profile') ?? null;
+  }, SAVED_PROFILES_KEY)).toMatchObject({
+    name: 'Zero target profile',
+    targets: {
+      bicarbonate: 0,
+      calcium: 0,
+      chloride: 0,
+      citrates: 0,
+      magnesium: 0,
+      potassium: 0,
+      sodium: 0,
+      sulfate: 0,
+    },
+  });
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+  await expect(targetPicker).toContainText('Profile · Zero target profile');
+});
+
+test('canceling the zero-target profile name prompt leaves saved profiles and selection unchanged', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const selectedSourceBefore = await targetPicker.textContent();
+  const profilesBefore = await page.evaluate(profilesKey => localStorage.getItem(profilesKey), SAVED_PROFILES_KEY);
+
+  await page.getByTestId('watermancer-profile-new').click();
+  await page.getByTestId('watermancer-new-profile-name').fill('Do not save');
+  await page.getByRole('button', { name: 'Cancel new profile' }).click();
+
+  await expect(page.getByTestId('watermancer-new-profile-form')).toHaveCount(0);
+  await expect(targetPicker).toHaveText(selectedSourceBefore ?? '');
+  expect(await page.evaluate(profilesKey => localStorage.getItem(profilesKey), SAVED_PROFILES_KEY))
+    .toBe(profilesBefore);
+});
+
+test('overwrites only the selected profile targets and keeps that profile selected', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const picker = await openSavedPicker(page);
+  await picker.getByRole('group', { name: 'My saved profiles' })
+    .getByRole('option', { name: 'Profile · Beta water' }).click();
+  await expect(targetPicker).toContainText('Profile · Beta water');
+
+  await page.getByRole('button', { name: 'Edit Calcium target' }).click();
+  const calciumTarget = page.getByTestId('watermancer-ion-target-calcium');
+  await expect(calciumTarget).toBeVisible();
+  await calciumTarget.fill('37.5');
+  await page.getByTestId('watermancer-profile-overwrite').click();
+
+  await expect(targetPicker).toContainText('Profile · Beta water');
+  await expect.poll(async () => page.evaluate(profilesKey => {
+    const profiles = JSON.parse(localStorage.getItem(profilesKey) ?? '[]') as Array<{
+      id: string;
+      name: string;
+      targets: Record<string, number>;
+    }>;
+    return profiles.find(profile => profile.id === 'watermancer-1000000000000-beta') ?? null;
+  }, SAVED_PROFILES_KEY)).toMatchObject({
+    id: 'watermancer-1000000000000-beta',
+    name: 'Beta water',
+    targets: {
+      calcium: 37.5,
+      magnesium: 5,
+      sodium: 2,
+      potassium: 1,
+      bicarbonate: 30,
+      sulfate: 10,
+      chloride: 8,
+      citrates: 0,
+    },
+  });
+});
 
 test('keeps the selected Watermancer target when sync replaces its duplicate ID', async ({ page }) => {
   const previousProfile = makeProfile('local-water-target', 'Saved target');

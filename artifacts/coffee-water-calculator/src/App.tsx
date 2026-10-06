@@ -13005,6 +13005,8 @@ function WatermancerIonProfileCard({
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
+  const [zeroProfileNamePromptOpen, setZeroProfileNamePromptOpen] = useState(false);
+  const zeroProfileSaveInFlightRef = useRef(false);
   const importRecipeInputRef = useRef<HTMLInputElement>(null);
   const [compareProfilesOpen, setCompareProfilesOpen] = useState(false);
   const [strengthPopoverOpen, setStrengthPopoverOpen] = useState(false);
@@ -13218,6 +13220,35 @@ function WatermancerIonProfileCard({
     finishEditing();
   };
 
+  const startZeroProfileCreation = () => {
+    setNewName('');
+    setZeroProfileNamePromptOpen(true);
+  };
+
+  const cancelZeroProfileCreation = () => {
+    setZeroProfileNamePromptOpen(false);
+    setNewName('');
+  };
+
+  const handleCreateZeroProfile = () => {
+    const name = newName.trim();
+    if (!zeroProfileNamePromptOpen || !name || zeroProfileSaveInFlightRef.current) return;
+
+    zeroProfileSaveInFlightRef.current = true;
+    try {
+      const zeroTargets = Object.fromEntries(
+        ACTIVE_ION_IDS.map(id => [id, 0]),
+      ) as IonicTargetValues;
+      const profile = createWatermancerProfile(name, zeroTargets);
+      onSaveWmProfile(profile);
+      onTargetSourceChange(`saved:${profile.id}` as WatermancerTargetSourceId);
+      setZeroProfileNamePromptOpen(false);
+      finishEditing();
+    } finally {
+      zeroProfileSaveInFlightRef.current = false;
+    }
+  };
+
   const selectedSavedProfile = currentDropdownValue.startsWith('saved:')
     ? wmProfiles.find(profile => profile.id === currentDropdownValue.slice('saved:'.length))
     : undefined;
@@ -13367,96 +13398,126 @@ function WatermancerIonProfileCard({
   return (
     <div className="app-card app-panel-surface bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/30 overflow-hidden">
       {/* Header */}
-      <div className="app-section-header flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 border-b border-indigo-400/15 text-slate-300">
-        <div className="flex items-center gap-2">
-          <Gauge className="w-4 h-4 text-indigo-300" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider">Set your target water</h2>
-        </div>
-         <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
-           {selectedTargetSourceUrl && (
-             <a
-               href={selectedTargetSourceUrl}
-               target="_blank"
-               rel="noreferrer"
-               aria-label={`Open source page for ${selectedTargetSourceName}`}
-               title={`Open source page for ${selectedTargetSourceName}`}
-               className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[10px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
-             >
-               ?
-             </a>
-           )}
-           <MineralRecipePicker
-             value={currentDropdownValue}
-             groups={targetSourcePickerGroups}
-             onChange={handleDropdownChange}
-             sortMode={profileSortMode}
-             sortableValues={savedProfileValues}
-             onSortModeChange={onProfileSortModeChange}
-           />
-           <div className="flex items-center gap-2">
-             {!isEditingAny ? (
+      <div className="app-section-header border-b border-indigo-400/15 text-slate-300">
+        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+              <h2 className="text-sm font-semibold uppercase tracking-wider">Set your target water</h2>
+            </div>
+            <div className="flex w-full min-w-0 flex-1 flex-wrap items-center gap-2 sm:w-auto">
+              {selectedTargetSourceUrl && (
+                <a
+                  href={selectedTargetSourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`Open source page for ${selectedTargetSourceName}`}
+                  title={`Open source page for ${selectedTargetSourceName}`}
+                  className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300/35 bg-indigo-500/15 text-[10px] font-bold leading-none text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 hover:text-white"
+                >
+                  ?
+                </a>
+              )}
+              <MineralRecipePicker
+                value={currentDropdownValue}
+                groups={targetSourcePickerGroups}
+                onChange={handleDropdownChange}
+                sortMode={profileSortMode}
+                sortableValues={savedProfileValues}
+                onSortModeChange={onProfileSortModeChange}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+              {!isEditingAny && !zeroProfileNamePromptOpen ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={startZeroProfileCreation}
+                    data-testid="watermancer-profile-new"
+                    aria-label="Create a new zero-target profile"
+                    title="Create a new profile with all ion targets set to zero"
+                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-emerald-300/30 bg-emerald-500/10 px-2.5 py-1.5 text-xs font-semibold text-emerald-100 transition hover:border-emerald-200/60 hover:bg-emerald-500/20"
+                  >
+                    <span className="text-base leading-none" aria-hidden="true">+</span>
+                    <span>New</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={startEditing}
+                    data-testid="watermancer-profile-edit"
+                    aria-label="Edit Watermancer targets"
+                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-400/25 bg-violet-500/10 px-2.5 py-1.5 text-xs text-violet-200 transition hover:border-violet-300/45 hover:bg-violet-500/20 hover:text-violet-100"
+                    title="Edit the current Watermancer targets"
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Edit</span>
+                  </button>
+                </>
+              ) : isEditingAny ? (
+                <>
                <button
                  type="button"
-                 onClick={startEditing}
-                 className="flex items-center gap-1.5 text-xs text-violet-200 hover:text-violet-100 bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/25 hover:border-violet-300/45 rounded-lg px-2.5 py-1.5 transition"
-                 title="Edit this Watermancer profile before saving"
+                  onClick={() => setNamingMode('new')}
+                  data-testid="watermancer-profile-save-as-new"
+                  aria-label="Start saving as a new Watermancer profile"
+                  className="flex min-h-9 items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
                >
-                 <Save className="h-3.5 w-3.5" />
-                 <span className="hidden sm:inline">Save</span>
+                  <Save className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Save as new</span>
                </button>
-             ) : (
-               <>
-                 <button
-                   type="button"
-                   onClick={() => setNamingMode('new')}
-                   className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] text-white transition hover:bg-emerald-500"
-                 >
-                   <Save className="h-3.5 w-3.5" />
-                   <span className="hidden sm:inline">Save as new</span>
-                 </button>
                  {canOverwrite && (
                    <button
                      type="button"
                      onClick={handleOverwrite}
-                     className="flex items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                      data-testid="watermancer-profile-overwrite"
+                      aria-label="Overwrite selected Watermancer profile"
+                      title="Replace the selected saved profile with these edited targets"
+                      className="flex min-h-9 items-center gap-1.5 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
                    >
-                     <Save className="h-3.5 w-3.5" />
+                      <Save className="h-3.5 w-3.5" aria-hidden="true" />
                      <span className="hidden sm:inline">Overwrite selected</span>
                    </button>
                  )}
                  <button
                    type="button"
                    onClick={cancelEditing}
-                   className="flex items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+                    aria-label="Cancel target editing"
+                    className="flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-2.5 py-1.5 text-[11px] text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
                  >
-                   <X className="h-3.5 w-3.5" />
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
                    <span className="hidden sm:inline">Cancel</span>
                  </button>
                </>
-             )}
+              ) : null}
+              </div>
+              {!zeroProfileNamePromptOpen && (selectedSavedProfile || selectedSavedRecipe) && (
+                <button
+                  type="button"
+                  onClick={selectedSavedProfile ? handleDeleteSelectedProfile : handleDeleteSelectedRecipe}
+                  className="flex min-h-9 items-center gap-1.5 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
+                  aria-label={`Delete ${selectedSavedProfile ? 'saved profile' : 'saved recipe'} ${selectedSavedProfile?.name ?? selectedSavedRecipe?.name ?? ''}`}
+                  title={selectedSavedProfile ? 'Delete this saved profile' : 'Delete this saved recipe'}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">Delete</span>
+                </button>
+              )}
            </div>
-             {(selectedSavedProfile || selectedSavedRecipe) && (
-              <button
-                type="button"
-                 onClick={selectedSavedProfile ? handleDeleteSelectedProfile : handleDeleteSelectedRecipe}
-                className="flex items-center gap-1.5 rounded-lg border border-rose-400/25 bg-rose-500/10 px-2.5 py-1.5 text-xs text-rose-200 transition hover:border-rose-300/50 hover:bg-rose-500/20 hover:text-rose-100"
-                 aria-label={`Delete ${selectedSavedProfile ? 'saved profile' : 'saved recipe'} ${selectedSavedProfile?.name ?? selectedSavedRecipe?.name ?? ''}`}
-                 title={selectedSavedProfile ? 'Delete this saved profile' : 'Delete this saved recipe'}
-              >
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">Delete</span>
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
            <button
              type="button"
              onClick={onShareRecipe}
-             className={`flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
+              className={`flex min-h-9 items-center gap-1.5 text-xs rounded-lg px-2.5 py-1.5 transition ${
                shareStatus === 'error'
                  ? 'text-rose-200 bg-rose-500/10 border border-rose-400/40 hover:border-rose-300/60 hover:bg-rose-500/20'
                  : shareStatus !== 'idle'
                    ? 'text-emerald-200 bg-emerald-500/10 border border-emerald-400/40'
                    : 'text-emerald-200 hover:text-emerald-100 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/25 hover:border-emerald-300/45'
              }`}
+              aria-label={shareStatus === 'downloaded' ? 'Profile downloaded' : shareStatus === 'error' ? 'Profile download failed' : 'Download current profile'}
              aria-live="polite"
              title="Download the current profile"
            >
@@ -13473,7 +13534,8 @@ function WatermancerIonProfileCard({
              <button
                type="button"
                onClick={onSendRecipeToConcentrate}
-                className="flex items-center gap-1.5 rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs text-fuchsia-200 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-500/20 hover:text-fuchsia-100"
+                 className="flex min-h-9 items-center gap-1.5 rounded-lg border border-fuchsia-400/25 bg-fuchsia-500/10 px-2.5 py-1.5 text-xs text-fuchsia-200 transition hover:border-fuchsia-300/45 hover:bg-fuchsia-500/20 hover:text-fuchsia-100"
+                aria-label="Use current profile in Concentrate"
                title="Open this recipe in the Concentrate workspace"
              >
                <FlaskConical className="h-3.5 w-3.5" />
@@ -13483,7 +13545,8 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={() => importRecipeInputRef.current?.click()}
-              className="flex items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
+               className="flex min-h-9 items-center gap-1.5 text-xs text-sky-200 hover:text-sky-100 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-400/25 hover:border-sky-300/45 rounded-lg px-2.5 py-1.5 transition"
+              aria-label="Import water profile"
              title="Import water profile"
            >
              <Import className="h-3.5 w-3.5" aria-hidden="true" />
@@ -13492,7 +13555,8 @@ function WatermancerIonProfileCard({
            <button
              type="button"
              onClick={onReset}
-              className="flex items-center gap-1.5 text-xs text-amber-200 hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 hover:border-amber-300/45 rounded-lg px-2.5 py-1.5 transition"
+               className="flex min-h-9 items-center gap-1.5 text-xs text-amber-200 hover:text-amber-100 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-400/25 hover:border-amber-300/45 rounded-lg px-2.5 py-1.5 transition"
+              aria-label="Reset Watermancer inputs"
              title="Reset all inputs to defaults"
            >
              <RotateCcw className="h-3.5 w-3.5" />
@@ -13507,7 +13571,7 @@ function WatermancerIonProfileCard({
                 aria-controls="watermancer-strength-panel"
                 aria-haspopup="dialog"
                 onClick={() => setStrengthPopoverOpen(open => !open)}
-                className="inline-flex min-h-8 items-center gap-1 rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                 className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-2.5 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
               >
                 <span className="hidden sm:inline">Strength</span>
                 <span className="tabular-nums">{strengthPercent}%</span>
@@ -13579,6 +13643,68 @@ function WatermancerIonProfileCard({
                event.target.value = '';
              }}
            />
+            </div>
+          </div>
+          {(zeroProfileNamePromptOpen || (isEditingAny && namingMode === 'new')) && (
+            <form
+              data-testid={zeroProfileNamePromptOpen ? 'watermancer-new-profile-form' : 'watermancer-save-as-new-form'}
+              onSubmit={event => {
+                event.preventDefault();
+                if (zeroProfileNamePromptOpen) {
+                  handleCreateZeroProfile();
+                } else {
+                  handleSaveAsNew();
+                }
+              }}
+              className="flex flex-col gap-3 rounded-xl border border-emerald-300/20 bg-slate-950/25 p-3 sm:flex-row sm:items-end sm:justify-between"
+            >
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor={zeroProfileNamePromptOpen ? 'watermancer-zero-profile-name' : 'watermancer-profile-name'}
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-emerald-100/80"
+                >
+                  {zeroProfileNamePromptOpen ? 'New zero-target profile' : 'Save as new profile'}
+                </label>
+                <input
+                  id={zeroProfileNamePromptOpen ? 'watermancer-zero-profile-name' : 'watermancer-profile-name'}
+                  data-testid={zeroProfileNamePromptOpen ? 'watermancer-new-profile-name' : 'watermancer-profile-name'}
+                  type="text"
+                  value={newName}
+                  onChange={event => setNewName(event.target.value)}
+                  placeholder={zeroProfileNamePromptOpen ? 'Name your zero-target profile' : 'Name your profile'}
+                  autoFocus
+                  className="w-full rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                  onKeyDown={event => {
+                    if (event.key === 'Escape') {
+                      if (zeroProfileNamePromptOpen) cancelZeroProfileCreation();
+                      else cancelEditing();
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="submit"
+                  data-testid={zeroProfileNamePromptOpen ? 'watermancer-new-profile-create' : 'watermancer-profile-save-as-new-confirm'}
+                  disabled={!newName.trim()}
+                  aria-label={zeroProfileNamePromptOpen ? 'Create zero-target profile' : 'Save as new Watermancer profile'}
+                  className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-emerald-400/30 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  {zeroProfileNamePromptOpen ? 'Create profile' : 'Save as new'}
+                </button>
+                <button
+                  type="button"
+                  onClick={zeroProfileNamePromptOpen ? cancelZeroProfileCreation : cancelEditing}
+                  aria-label={zeroProfileNamePromptOpen ? 'Cancel new profile' : 'Cancel save as new'}
+                  className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-600/60 bg-slate-700/50 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/80 hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
       <div className="border-b border-indigo-400/15 px-4 py-3 sm:px-6">
@@ -13809,6 +13935,7 @@ function WatermancerIonProfileCard({
          {ACTIVE_ION_IDS.map((id, idx) => {
           const ion = ION_MAP[id];
           const ppm = ions[id] ?? 0;
+           const cardCanOpenEditor = !editing && !zeroProfileNamePromptOpen;
            const cardEditing = editing || editingIonId === id;
            const draftBaseTarget = cardEditing ? parseFloat(draftTargets[id] ?? '0') : 0;
            const target = cardEditing
@@ -13821,18 +13948,18 @@ function WatermancerIonProfileCard({
           return (
               <div
               key={id}
-                 className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${!editing ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
+                 className={`group/ion relative rounded-xl border px-4 py-3 transition ${aboveTarget ? 'border-amber-500/40 bg-amber-500/10' : 'border-emerald-500/40 bg-emerald-500/10'} ${cardCanOpenEditor ? 'cursor-pointer hover:border-indigo-300/60 hover:bg-indigo-500/10' : ''}`}
                  style={{ ...ionVisualStyle(id), boxShadow: 'inset 3px 0 0 var(--ion-border)' }}
-                role={!editing ? 'button' : undefined}
-                tabIndex={!editing ? 0 : -1}
-                onClick={!editing ? () => startIonEditing(id) : undefined}
-                onKeyDown={!editing ? event => {
+                role={cardCanOpenEditor ? 'button' : undefined}
+                tabIndex={cardCanOpenEditor ? 0 : -1}
+                onClick={cardCanOpenEditor ? () => startIonEditing(id) : undefined}
+                onKeyDown={cardCanOpenEditor ? event => {
                  if (event.key === 'Enter' || event.key === ' ') {
                    event.preventDefault();
                    startIonEditing(id);
                  }
                } : undefined}
-                aria-label={!editing ? `Edit ${ion.name} target` : undefined}
+                aria-label={cardCanOpenEditor ? `Edit ${ion.name} target` : undefined}
             >
               <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="min-w-0">
@@ -13971,38 +14098,6 @@ function WatermancerIonProfileCard({
           );
         })}
       </div>
-      {/* Naming dialog */}
-      {isEditingAny && namingMode === 'new' && (
-       <div className="border-t border-indigo-400/10 px-4 py-3 sm:px-6">
-         <div className="flex items-center gap-2">
-           <input
-             type="text"
-             value={newName}
-             onChange={e => setNewName(e.target.value)}
-             placeholder="Name your profile"
-             autoFocus
-             className="flex-1 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 transition"
-             onKeyDown={e => {
-                if (e.key === 'Enter') handleSaveAsNew();
-               if (e.key === 'Escape') cancelEditing();
-             }}
-           />
-           <button
-             onClick={handleSaveAsNew}
-             disabled={!newName.trim()}
-             className="flex items-center justify-center w-9 h-9 text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 rounded-lg hover:bg-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition"
-           >
-             <Check className="w-4 h-4" />
-           </button>
-           <button
-             onClick={cancelEditing}
-             className="flex items-center justify-center w-9 h-9 text-slate-400 bg-slate-700/40 border border-slate-600/40 rounded-lg hover:bg-slate-700/60 transition"
-           >
-             <X className="w-4 h-4" />
-           </button>
-         </div>
-        </div>
-     )}
     </div>
   );
 }
