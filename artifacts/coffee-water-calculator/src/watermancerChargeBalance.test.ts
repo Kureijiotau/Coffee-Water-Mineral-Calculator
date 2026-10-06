@@ -5,6 +5,7 @@ import {
   CHARGE_BALANCE_TOLERANCE_MEQ_PER_L,
   applyChargeBalanceAlternative,
   analyzeWatermancerChargeBalance,
+  calculateBalancedIonPairTargets,
   hasHighRelativeChargeGap,
   getWatermancerTargetSignature,
 } from './watermancerChargeBalance';
@@ -120,6 +121,74 @@ describe('Watermancer charge balance', () => {
   it('rejects non-finite and negative target values instead of silently balancing them', () => {
     expect(analyzeWatermancerChargeBalance({ sodium: Number.NaN }).status).toBe('invalid');
     expect(analyzeWatermancerChargeBalance({ sodium: -1 }).status).toBe('invalid');
+  });
+
+  it('balances the complete target set by recalculating the selected counter-ion', () => {
+    const targets = {
+      sodium: 8,
+      magnesium: 12,
+      chloride: 5,
+      sulfate: 2,
+      bicarbonate: 10,
+    };
+    const result = calculateBalancedIonPairTargets(targets, 'magnesium', 'sulfate', 40);
+
+    expect(result.status).toBe('balanced');
+    if (result.status !== 'balanced') return;
+
+    expect(result.primaryTargetPpm).toBe(40);
+    expect(result.counterionTargetPpm).toBeGreaterThan(2);
+    expect(result.targets.magnesium).toBe(40);
+    expect(result.targets.chloride).toBe(5);
+    expect(result.targets.sodium).toBe(8);
+    const analysis = analyzeWatermancerChargeBalance(result.targets);
+    expect(analysis.status).toBe('balanced');
+    expect(Math.abs(analysis.differenceMeqPerL))
+      .toBeLessThanOrEqual(CHARGE_BALANCE_TOLERANCE_MEQ_PER_L);
+  });
+
+  it('balances magnesium with chloride using their different charge equivalents', () => {
+    const result = calculateBalancedIonPairTargets(
+      { magnesium: 10 },
+      'magnesium',
+      'chloride',
+      20,
+    );
+
+    expect(result.status).toBe('balanced');
+    if (result.status !== 'balanced') return;
+    expect(result.counterionTargetPpm).toBeCloseTo(
+      20 * 2 * ION_CHEMISTRY.chloride.molarMass / ION_CHEMISTRY.magnesium.molarMass,
+      1,
+    );
+    expect(analyzeWatermancerChargeBalance(result.targets).status).toBe('balanced');
+  });
+
+  it('accounts for a pre-existing charge gap instead of merely preserving it', () => {
+    const result = calculateBalancedIonPairTargets(
+      { sodium: 10, bicarbonate: 4 },
+      'magnesium',
+      'sulfate',
+      5,
+    );
+
+    expect(result.status).toBe('balanced');
+    if (result.status !== 'balanced') return;
+    const analysis = analyzeWatermancerChargeBalance(result.targets);
+    expect(analysis.status).toBe('balanced');
+    expect(Math.abs(analysis.differenceMeqPerL))
+      .toBeLessThanOrEqual(CHARGE_BALANCE_TOLERANCE_MEQ_PER_L);
+  });
+
+  it('rejects incompatible, invalid, and impossible counter-ion combinations', () => {
+    expect(calculateBalancedIonPairTargets({}, 'magnesium', 'calcium', 10).status)
+      .toBe('same-charge');
+    expect(calculateBalancedIonPairTargets({ bicarbonate: 100 }, 'magnesium', 'sulfate', 0).status)
+      .toBe('negative-counterion-target');
+    expect(calculateBalancedIonPairTargets({ sodium: Number.NaN }, 'magnesium', 'sulfate', 10).status)
+      .toBe('invalid-targets');
+    expect(calculateBalancedIonPairTargets({}, 'magnesium', 'sulfate', -1).status)
+      .toBe('invalid-primary-target');
   });
 
   it('includes the selected source and normalized active targets in freshness signatures', () => {

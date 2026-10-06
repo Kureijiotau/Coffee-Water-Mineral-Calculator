@@ -25,6 +25,7 @@ import { DeferredPanelBoundary, DeferredPanelFallback } from './components/Defer
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import WatermancerChargeBalanceChecker from './WatermancerChargeBalanceChecker';
+import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
@@ -13268,6 +13269,14 @@ function WatermancerIonProfileCard({
     ) as IonicTargetValues);
   };
 
+  const applyCraftedTargets = (targets: IonicTargetValues) => {
+    const nextDraft = Object.fromEntries(
+      ACTIVE_ION_IDS.map(id => [id, String(targets[id] ?? 0)]),
+    ) as Partial<Record<IonId, string>>;
+    setDraftTargets(nextDraft);
+    onTargetOverrideChange(targets);
+  };
+
   const isEditingAny = editing || editingIonId !== null;
   const canOverwrite = Boolean(selectedSavedProfile);
   const savedTargetSourcePickerGroups = useMemo<RecipePickerGroup[]>(() => {
@@ -13790,6 +13799,12 @@ function WatermancerIonProfileCard({
           </div>
         )}
       </div>
+      {editing && (
+        <WatermancerIonCrafting
+          targets={draftAsTargets()}
+          onApplyTargets={applyCraftedTargets}
+        />
+      )}
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
          {ACTIVE_ION_IDS.map((id, idx) => {
@@ -13841,6 +13856,8 @@ function WatermancerIonProfileCard({
                     onChange={e => updateDraft(id, e.target.value)}
                     min="0"
                     step="0.1"
+                    aria-label={`${ion.name} target in ppm`}
+                    data-testid={`watermancer-ion-target-${id}`}
                     className="w-full bg-slate-900/60 border border-indigo-500/40 rounded-lg px-2 py-1 text-sm text-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                   />
                 </div>
