@@ -13428,7 +13428,7 @@ function WatermancerIonProfileCard({
               />
             </div>
           </div>
-          <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-start gap-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex flex-wrap items-center gap-2">
               {!isEditingAny && !zeroProfileNamePromptOpen ? (
