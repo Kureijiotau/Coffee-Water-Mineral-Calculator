@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { ChevronDown, Minus, Plus, Sparkles } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_CHEMISTRY, ION_MAP, type IonId } from '@/waterData';
 import type { IonicTargetValues } from './watermancerProfiles';
@@ -8,6 +8,17 @@ const STEP_SIZES = [0.1, 1, 5, 10, 25] as const;
 
 function formatPpm(value: number): string {
   return value.toFixed(1);
+}
+
+type IonAccentStyle = CSSProperties & Record<'--ion-fg' | '--ion-soft' | '--ion-border', string>;
+
+function ionAccentStyle(id: IonId): IonAccentStyle {
+  const { color } = ION_MAP[id];
+  return {
+    '--ion-fg': color.foreground,
+    '--ion-soft': color.soft,
+    '--ion-border': color.border,
+  };
 }
 
 function failureMessage(status: string): string {
@@ -50,6 +61,8 @@ export default function WatermancerIonCrafting({
   const [notice, setNotice] = useState('');
 
   const currentPrimaryTarget = targets[primaryIonId] ?? 0;
+  const primaryAccent = ionAccentStyle(primaryIonId);
+  const counterionAccent = ionAccentStyle(counterionId);
   const counterionOptions = ACTIVE_ION_IDS.filter(id => (
     Math.sign(ION_CHEMISTRY[id].charge) !== Math.sign(ION_CHEMISTRY[primaryIonId].charge)
   ));
@@ -120,6 +133,24 @@ export default function WatermancerIonCrafting({
           Craft ions
         </span>
         <span className="flex items-center gap-2">
+          <span
+            className="hidden items-center gap-1.5 sm:inline-flex"
+            aria-label={`${ION_MAP[primaryIonId].name} balanced with ${ION_MAP[counterionId].name}`}
+          >
+            <span
+              className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
+              style={primaryAccent}
+            >
+              {ION_MAP[primaryIonId].formula}
+            </span>
+            <span className="text-[10px] text-slate-500" aria-hidden="true">↔</span>
+            <span
+              className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
+              style={counterionAccent}
+            >
+              {ION_MAP[counterionId].formula}
+            </span>
+          </span>
           <span className="hidden text-[10px] text-slate-500 sm:inline">
             Adjust a target while balancing its counter-ion
           </span>
@@ -143,11 +174,20 @@ export default function WatermancerIonCrafting({
 
           <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem]">
             <label className="min-w-0 text-[10px] font-medium text-slate-400">
-              Adjust ion
+              <span className="flex items-center gap-1.5">
+                Adjust ion
+                <span
+                  className="font-semibold text-[color:var(--ion-fg)]"
+                  style={primaryAccent}
+                >
+                  {ION_MAP[primaryIonId].formula}
+                </span>
+              </span>
               <select
                 data-testid="watermancer-ion-crafting-primary"
                 aria-label="Ion to adjust"
                 value={primaryIonId}
+                style={primaryAccent}
                 onChange={event => {
                   const nextPrimary = event.currentTarget.value as IonId;
                   setPrimaryIonId(nextPrimary);
@@ -159,27 +199,48 @@ export default function WatermancerIonCrafting({
                   }
                   setNotice('');
                 }}
-                className="mt-1 block min-h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-slate-100 outline-none focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                className="mt-1 block min-h-9 w-full rounded-lg border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] px-2 text-xs text-[color:var(--ion-fg)] outline-none focus:border-[color:var(--ion-fg)] focus:ring-2 focus:ring-[color:var(--ion-fg)]/30"
               >
                 {ACTIVE_ION_IDS.map(id => (
-                  <option key={id} value={id}>{ION_MAP[id].name} · {ION_MAP[id].formula}</option>
+                  <option
+                    key={id}
+                    value={id}
+                    style={{ color: ION_MAP[id].color.foreground }}
+                  >
+                    {ION_MAP[id].name} · {ION_MAP[id].formula}
+                  </option>
                 ))}
               </select>
             </label>
             <label className="min-w-0 text-[10px] font-medium text-slate-400">
-              Balance with
+              <span className="flex items-center gap-1.5">
+                Balance with
+                <span
+                  className="font-semibold text-[color:var(--ion-fg)]"
+                  style={counterionAccent}
+                >
+                  {ION_MAP[counterionId].formula}
+                </span>
+              </span>
               <select
                 data-testid="watermancer-ion-crafting-counterion"
                 aria-label="Balancing counter-ion"
                 value={counterionId}
+                style={counterionAccent}
                 onChange={event => {
                   setCounterionId(event.currentTarget.value as IonId);
                   setNotice('');
                 }}
-                className="mt-1 block min-h-9 w-full rounded-lg border border-slate-700 bg-slate-900 px-2 text-xs text-slate-100 outline-none focus:border-cyan-300/50 focus:ring-2 focus:ring-cyan-300/20"
+                className="mt-1 block min-h-9 w-full rounded-lg border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] px-2 text-xs text-[color:var(--ion-fg)] outline-none focus:border-[color:var(--ion-fg)] focus:ring-2 focus:ring-[color:var(--ion-fg)]/30"
               >
                 {counterionOptions.map(id => (
-                  <option key={id} value={id}>{ION_MAP[id].name} · {ION_MAP[id].formula}</option>
+                  <option
+                    key={id}
+                    value={id}
+                    style={{ color: ION_MAP[id].color.foreground }}
+                  >
+                    {ION_MAP[id].name} · {ION_MAP[id].formula}
+                  </option>
                 ))}
               </select>
             </label>
@@ -200,15 +261,20 @@ export default function WatermancerIonCrafting({
 
           <div className="mt-3 grid gap-3 rounded-lg border border-slate-700/60 bg-slate-900/45 p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <div>
-              <label htmlFor="watermancer-ion-crafting-primary-target" className="text-[10px] font-medium text-slate-400">
-                {ION_MAP[primaryIonId].name} target (ppm)
+              <label
+                htmlFor="watermancer-ion-crafting-primary-target"
+                className="text-[10px] font-medium text-[color:var(--ion-fg)]"
+                style={primaryAccent}
+              >
+                {ION_MAP[primaryIonId].name} target <span className="text-slate-400">(ppm)</span>
               </label>
               <div className="mt-1 flex items-center gap-1.5">
                 <button
                   type="button"
                   aria-label={`Decrease ${ION_MAP[primaryIonId].name} by ${stepSize} ppm`}
                   onClick={() => changePrimaryTarget(-1)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-200 transition hover:border-cyan-300/40 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/60"
+                  style={primaryAccent}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] text-[color:var(--ion-fg)] transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ion-fg)]"
                 >
                   <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
@@ -224,27 +290,38 @@ export default function WatermancerIonCrafting({
                     setPrimaryTargetInput(event.currentTarget.value);
                     setNotice('');
                   }}
-                  className="min-w-0 flex-1 rounded-lg border border-cyan-300/25 bg-slate-950 px-2 py-2 text-center text-sm font-semibold tabular-nums text-cyan-100 outline-none focus:border-cyan-200/60 focus:ring-2 focus:ring-cyan-300/20"
+                  style={primaryAccent}
+                  className="min-w-0 flex-1 rounded-lg border border-[color:var(--ion-border)] bg-slate-950 px-2 py-2 text-center text-sm font-semibold tabular-nums text-[color:var(--ion-fg)] outline-none focus:border-[color:var(--ion-fg)] focus:ring-2 focus:ring-[color:var(--ion-fg)]/30"
                 />
                 <button
                   type="button"
                   aria-label={`Increase ${ION_MAP[primaryIonId].name} by ${stepSize} ppm`}
                   onClick={() => changePrimaryTarget(1)}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-200 transition hover:border-cyan-300/40 hover:text-cyan-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/60"
+                  style={primaryAccent}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] text-[color:var(--ion-fg)] transition hover:brightness-125 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--ion-fg)]"
                 >
                   <Plus className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </div>
             </div>
 
-            <div className="min-w-0 rounded-lg border border-violet-300/15 bg-violet-400/[0.04] px-3 py-2">
-              <div className="text-[10px] font-medium text-slate-400">
+            <div
+              className="min-w-0 rounded-lg border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] px-3 py-2"
+              style={counterionAccent}
+            >
+              <div className="flex items-center justify-between gap-2 text-[10px] font-medium text-[color:var(--ion-fg)]">
                 Calculated {ION_MAP[counterionId].name} target
+                <span className="rounded-md border border-[color:var(--ion-border)] px-1.5 py-0.5 font-semibold">
+                  {ION_MAP[counterionId].formula}
+                </span>
               </div>
               {calculation.status === 'balanced' ? (
                 <div className="mt-1 flex items-baseline justify-between gap-2 tabular-nums">
-                  <span className="truncate text-xs text-slate-400">
-                    {formatPpm(currentCounterionTarget)} → {formatPpm(calculation.counterionTargetPpm)} ppm
+                  <span className="truncate text-xs">
+                    <span className="text-slate-400">{formatPpm(currentCounterionTarget)} → </span>
+                    <span className="font-semibold text-[color:var(--ion-fg)]">
+                      {formatPpm(calculation.counterionTargetPpm)} ppm
+                    </span>
                   </span>
                   <span className="shrink-0 text-[10px] font-semibold text-emerald-200">
                     Δcharge {calculation.differenceMeqPerL.toFixed(3)} meq/L
