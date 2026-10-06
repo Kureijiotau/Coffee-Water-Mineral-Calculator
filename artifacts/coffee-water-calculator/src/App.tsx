@@ -13799,12 +13799,12 @@ function WatermancerIonProfileCard({
           </div>
         )}
       </div>
-      {editing && (
-        <WatermancerIonCrafting
-          targets={draftAsTargets()}
-          onApplyTargets={applyCraftedTargets}
-        />
-      )}
+      <WatermancerIonCrafting
+        targets={isEditingAny ? draftAsTargets() : targetIons}
+        isEditing={isEditingAny}
+        onBeginEditing={startEditing}
+        onApplyTargets={applyCraftedTargets}
+      />
       {/* Ion cards */}
       <div className="app-card-body grid grid-cols-1 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
          {ACTIVE_ION_IDS.map((id, idx) => {

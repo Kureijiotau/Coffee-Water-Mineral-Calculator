@@ -6,8 +6,10 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
 
   await expect(page.getByText('1. Set your target water', { exact: true })).toBeVisible();
-  await page.getByTitle('Edit this Watermancer profile before saving').click();
-  await page.getByTestId('watermancer-ion-crafting-toggle').click();
+  const craftingToggle = page.getByTestId('watermancer-ion-crafting-toggle');
+  await expect(craftingToggle).toBeVisible();
+  await craftingToggle.click();
+  await expect(page.getByTestId('watermancer-ion-crafting-panel')).toBeVisible();
 
   const chlorideTarget = page.getByTestId('watermancer-ion-target-chloride');
   const chlorideBefore = await chlorideTarget.inputValue();

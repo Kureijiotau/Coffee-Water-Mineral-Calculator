@@ -31,9 +31,13 @@ function failureMessage(status: string): string {
 
 export default function WatermancerIonCrafting({
   targets,
+  isEditing,
+  onBeginEditing,
   onApplyTargets,
 }: {
   targets: Partial<Record<IonId, number>>;
+  isEditing: boolean;
+  onBeginEditing: () => void;
   onApplyTargets: (targets: IonicTargetValues) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -53,6 +57,13 @@ export default function WatermancerIonCrafting({
   useEffect(() => {
     setPrimaryTargetInput(formatPpm(currentPrimaryTarget));
   }, [currentPrimaryTarget, primaryIonId]);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setOpen(false);
+      setNotice('');
+    }
+  }, [isEditing]);
 
   useEffect(() => {
     if (!counterionOptions.includes(counterionId)) {
@@ -94,7 +105,14 @@ export default function WatermancerIonCrafting({
         data-testid="watermancer-ion-crafting-toggle"
         aria-expanded={open}
         aria-controls="watermancer-ion-crafting-panel"
-        onClick={() => setOpen(value => !value)}
+        onClick={() => {
+          if (!isEditing) {
+            onBeginEditing();
+            setOpen(true);
+            return;
+          }
+          setOpen(value => !value);
+        }}
         className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-cyan-300/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/60"
       >
         <span className="flex items-center gap-2 text-xs font-semibold text-cyan-100">
