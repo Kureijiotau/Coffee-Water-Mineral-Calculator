@@ -8,10 +8,12 @@ This feature adjusts ion targets; it does not promise a particular taste, salt r
 
 ## User experience
 
-- Add a collapsed **Craft ions** control inside the existing Watermancer target-editing experience. Keep it closed by default so the tab does not gain another always-visible control surface.
-- In the panel, the user selects a primary ion, an opposite-charge balancing ion, and a target value. Provide small decrement/increment buttons and selectable ppm step sizes for precise changes.
+- Add a compact, labeled **Craft ions** button inside the existing Watermancer target-editing experience.
+- Clicking the button opens an accessible modal containing the existing crafting controls. Keep the ion colors and formula cues visible in the trigger and dialog.
+- In the modal, the user selects a primary ion, an opposite-charge balancing ion, and a target value. Provide small decrement/increment buttons and selectable ppm step sizes for precise changes.
 - Show the calculated balancing-ion target and a preview of both affected values before applying the adjustment.
 - Apply the primary and balancing-ion values atomically to the existing target draft. Do not expose an intermediate, unbalanced target set to the Watermancer matcher.
+- Keep the modal open after Apply and show the existing confirmation. Allow dismissal through the dialog close button, Escape, or the backdrop; close it when the existing edit session ends.
 - Keep every other ion target unchanged. Repeating the operation with another primary/counter-ion pair allows users to shape multiple parts of the profile.
 - Example: increasing Mg²⁺ while balancing with SO₄²⁻ recalculates sulfate from the other current targets, so chloride remains unchanged. The user can then adjust chloride using a suitable cation as its balancing ion.
 
@@ -28,7 +30,7 @@ This feature adjusts ion targets; it does not promise a particular taste, salt r
 
 - Reuse the existing Watermancer target draft and save/cancel behavior; do not add a separate profile store or change target-source persistence.
 - Continue sending the resulting target set through the existing Watermancer plan and solver. Do not change salt selection, water selection, matching strategy, or chemistry rules.
-- Keep the existing charge-balance checker and its correction suggestions as an independent full-profile verification. The crafting control should produce balanced targets directly, not depend on a later checker correction.
+- Do not add a separate full-profile checker or correction-suggestion surface. Craft ions itself calculates a balanced pair against all active target values.
 - The solver may still report that selected salts or waters cannot realize a balanced target. Charge neutrality is necessary for ionic plausibility, not a guarantee of recipe feasibility.
 
 ## Testing
@@ -36,5 +38,5 @@ This feature adjusts ion targets; it does not promise a particular taste, salt r
 - Unit-test charge-equivalent partner calculations across monovalent and multivalent ion pairs, including Mg²⁺/SO₄²⁻ and Mg²⁺/Cl⁻.
 - Verify a successful calculation balances the entire target set, accounts for a pre-existing charge gap, and leaves all non-pair targets unchanged.
 - Verify impossible negative partner values, invalid inputs, and rounding outside the existing balance tolerance are rejected without modifying the draft.
-- Add UI tests for the collapsed panel, opposite-charge partner options, preview values, atomic apply, and use within existing save/cancel behavior.
-- Confirm the existing charge checker remains available and reports the applied target set as balanced.
+- Add UI tests for the compact trigger, modal open/close behavior, opposite-charge partner options, preview values, atomic apply, and use within existing save/cancel behavior.
+- Confirm Apply keeps the modal open and shows its confirmation, and verify the removed full-profile checker does not reappear.

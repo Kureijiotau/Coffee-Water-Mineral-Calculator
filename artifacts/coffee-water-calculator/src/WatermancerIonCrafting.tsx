@@ -1,6 +1,14 @@
 import { useEffect, useState, type CSSProperties } from 'react';
-import { ChevronDown, Minus, Plus, Sparkles } from 'lucide-react';
+import { Minus, Plus, Sparkles } from 'lucide-react';
 import { ACTIVE_ION_IDS, ION_CHEMISTRY, ION_MAP, type IonId } from '@/waterData';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import type { IonicTargetValues } from './watermancerProfiles';
 import { calculateBalancedIonPairTargets } from './watermancerChargeBalance';
 
@@ -112,67 +120,56 @@ export default function WatermancerIonCrafting({
   };
 
   return (
-    <section className="mx-3 mb-3 rounded-xl border border-cyan-300/20 bg-slate-950/25 sm:mx-4">
-      <button
-        type="button"
-        data-testid="watermancer-ion-crafting-toggle"
-        aria-expanded={open}
-        aria-controls="watermancer-ion-crafting-panel"
-        onClick={() => {
-          if (!isEditing) {
-            onBeginEditing();
-            setOpen(true);
-            return;
-          }
-          setOpen(value => !value);
+    <div className="mx-3 mb-3 sm:mx-4">
+      <Dialog
+        open={open}
+        onOpenChange={nextOpen => {
+          if (nextOpen && !isEditing) onBeginEditing();
+          setOpen(nextOpen);
         }}
-        className="flex min-h-10 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition hover:bg-cyan-300/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/60"
       >
-        <span className="flex items-center gap-2 text-xs font-semibold text-cyan-100">
-          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-          Craft ions
-        </span>
-        <span className="flex items-center gap-2">
-          <span
-            className="hidden items-center gap-1.5 sm:inline-flex"
-            aria-label={`${ION_MAP[primaryIonId].name} balanced with ${ION_MAP[counterionId].name}`}
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            data-testid="watermancer-ion-crafting-toggle"
+            aria-label={`Craft ions; adjust ${ION_MAP[primaryIonId].name} balanced with ${ION_MAP[counterionId].name}`}
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-cyan-300/25 bg-cyan-400/10 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-sm transition hover:border-cyan-200/50 hover:bg-cyan-400/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/60"
           >
-            <span
-              className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
-              style={primaryAccent}
-            >
-              {ION_MAP[primaryIonId].formula}
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Craft ions</span>
+            <span className="inline-flex items-center gap-1.5" aria-hidden="true">
+              <span
+                className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
+                style={primaryAccent}
+              >
+                {ION_MAP[primaryIonId].formula}
+              </span>
+              <span className="text-[10px] text-slate-500">↔</span>
+              <span
+                className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
+                style={counterionAccent}
+              >
+                {ION_MAP[counterionId].formula}
+              </span>
             </span>
-            <span className="text-[10px] text-slate-500" aria-hidden="true">↔</span>
-            <span
-              className="rounded-md border px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--ion-fg)]"
-              style={counterionAccent}
-            >
-              {ION_MAP[counterionId].formula}
-            </span>
-          </span>
-          <span className="hidden text-[10px] text-slate-500 sm:inline">
-            Adjust a target while balancing its counter-ion
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 text-cyan-200/70 transition-transform ${open ? 'rotate-180' : ''}`}
-            aria-hidden="true"
-          />
-        </span>
-      </button>
-
-      {open && (
+          </button>
+        </DialogTrigger>
+        <DialogContent className="w-[calc(100%-1.5rem)] max-h-[88vh] max-w-2xl overflow-y-auto border border-cyan-300/20 bg-slate-950 p-4 text-slate-100 shadow-2xl sm:p-5">
+          <DialogHeader className="pr-7 text-left">
+            <DialogTitle className="text-base font-semibold text-slate-100 sm:text-lg">
+              Craft ions
+            </DialogTitle>
+            <DialogDescription className="max-w-3xl text-[11px] leading-relaxed text-slate-400">
+              The counter-ion is calculated from all active targets. Only this pair changes, and the
+              complete target set must balance before it can be applied.
+            </DialogDescription>
+          </DialogHeader>
         <div
           id="watermancer-ion-crafting-panel"
           data-testid="watermancer-ion-crafting-panel"
-          className="border-t border-cyan-300/15 px-3 pb-3 pt-2.5"
+          className="space-y-3"
         >
-          <p className="max-w-3xl text-[10px] leading-relaxed text-slate-400">
-            The counter-ion is calculated from all active targets. Only this pair changes, and the
-            complete target set must balance before it can be applied.
-          </p>
-
-          <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem]">
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_7rem]">
             <label className="min-w-0 text-[10px] font-medium text-slate-400">
               <span className="flex items-center gap-1.5">
                 Adjust ion
@@ -259,7 +256,7 @@ export default function WatermancerIonCrafting({
             </label>
           </div>
 
-          <div className="mt-3 grid gap-3 rounded-lg border border-slate-700/60 bg-slate-900/45 p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-3 rounded-lg border border-slate-700/60 bg-slate-900/45 p-2.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end">
             <div>
               <label
                 htmlFor="watermancer-ion-crafting-primary-target"
@@ -345,12 +342,18 @@ export default function WatermancerIonCrafting({
             </button>
           </div>
           {notice && (
-            <p className="mt-2 text-[10px] text-emerald-200" role="status" aria-live="polite">
+            <p
+              className="text-[10px] text-emerald-200"
+              role="status"
+              aria-live="polite"
+              data-testid="watermancer-ion-crafting-notice"
+            >
               {notice}
             </p>
           )}
         </div>
-      )}
-    </section>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

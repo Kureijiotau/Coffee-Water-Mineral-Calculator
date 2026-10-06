@@ -10,6 +10,8 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   const craftingToggle = page.getByTestId('watermancer-ion-crafting-toggle');
   await expect(craftingToggle).toBeVisible();
   await craftingToggle.click();
+  const craftingDialog = page.getByRole('dialog');
+  await expect(craftingDialog).toBeVisible();
   await expect(page.getByTestId('watermancer-ion-crafting-panel')).toBeVisible();
 
   const chlorideTarget = page.getByTestId('watermancer-ion-target-chloride');
@@ -27,4 +29,9 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   expect(Number(await page.getByTestId('watermancer-ion-target-sulfate').inputValue()))
     .toBeGreaterThan(0);
   await expect(chlorideTarget).toHaveValue(chlorideBefore);
+  await expect(page.getByTestId('watermancer-ion-crafting-notice')).toBeVisible();
+  await expect(craftingDialog).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(craftingDialog).toBeHidden();
 });
