@@ -250,6 +250,79 @@ test('overwrites only the selected profile targets and keeps that profile select
   });
 });
 
+test('renames the selected profile when overwriting its target edits', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const picker = await openSavedPicker(page);
+  await picker.getByRole('group', { name: 'My saved profiles' })
+    .getByRole('option', { name: 'Profile · Beta water' }).click();
+
+  await page.getByTestId('watermancer-profile-edit').click();
+  const profileName = page.getByTestId('watermancer-profile-rename-input');
+  await expect(profileName).toHaveValue('Beta water');
+  await profileName.fill('  Beta water renamed  ');
+  await page.getByTestId('watermancer-ion-target-calcium').fill('37.5');
+  await page.getByTestId('watermancer-profile-overwrite').click();
+
+  await expect(targetPicker).toContainText('Profile · Beta water renamed');
+  const savedProfile = await page.evaluate(profilesKey => {
+    const profiles = JSON.parse(localStorage.getItem(profilesKey) ?? '[]') as Array<{
+      id: string;
+      name: string;
+      targets: Record<string, number>;
+    }>;
+    return profiles.find(profile => profile.id === 'watermancer-1000000000000-beta') ?? null;
+  }, SAVED_PROFILES_KEY);
+  expect(savedProfile).toMatchObject({
+    id: 'watermancer-1000000000000-beta',
+    name: 'Beta water renamed',
+    targets: {
+      calcium: 37.5,
+      magnesium: 5,
+      sodium: 2,
+      potassium: 1,
+      bicarbonate: 30,
+      sulfate: 10,
+      chloride: 8,
+      citrates: 0,
+    },
+  });
+});
+
+test('rejects a blank rename and cancels both profile edit drafts', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const picker = await openSavedPicker(page);
+  await picker.getByRole('group', { name: 'My saved profiles' })
+    .getByRole('option', { name: 'Profile · Beta water' }).click();
+  const savedProfilesBefore = await page.evaluate(
+    profilesKey => localStorage.getItem(profilesKey),
+    SAVED_PROFILES_KEY,
+  );
+
+  await page.getByTestId('watermancer-profile-edit').click();
+  const profileName = page.getByTestId('watermancer-profile-rename-input');
+  await profileName.fill('   ');
+  await page.getByTestId('watermancer-ion-target-calcium').fill('37.5');
+  await expect(page.getByText('Profile name cannot be empty.')).toBeVisible();
+  const overwriteButton = page.getByTestId('watermancer-profile-overwrite');
+  await expect(overwriteButton).toBeDisabled();
+
+  await page.getByRole('button', { name: 'Cancel target editing' }).click();
+  await expect(profileName).toHaveCount(0);
+  await expect(targetPicker).toContainText('Profile · Beta water');
+  await expect.poll(() => page.evaluate(
+    profilesKey => localStorage.getItem(profilesKey),
+    SAVED_PROFILES_KEY,
+  )).toBe(savedProfilesBefore);
+});
+
 test('overwrites a saved profile with final readings only when they differ and keeps the toolbar on one row', async ({ page }) => {
   await page.setViewportSize({ width: 1009, height: 900 });
   await seedSavedItems(page);

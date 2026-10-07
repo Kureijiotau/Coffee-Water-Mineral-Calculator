@@ -13009,6 +13009,7 @@ function WatermancerIonProfileCard({
   const [draftTargets, setDraftTargets] = useState<Partial<Record<IonId, string>>>({});
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
+  const [draftProfileName, setDraftProfileName] = useState('');
   const [zeroProfileNamePromptOpen, setZeroProfileNamePromptOpen] = useState(false);
   const zeroProfileSaveInFlightRef = useRef(false);
   const importRecipeInputRef = useRef<HTMLInputElement>(null);
@@ -13175,6 +13176,10 @@ function WatermancerIonProfileCard({
         ACTIVE_ION_IDS.map(id => [id, String(baseTargets[id] ?? 0)]),
       ) as Partial<Record<IonId, string>>,
     );
+    const selectedProfileId = currentDropdownValue.startsWith('saved:')
+      ? currentDropdownValue.slice('saved:'.length)
+      : '';
+    setDraftProfileName(wmProfiles.find(profile => profile.id === selectedProfileId)?.name ?? '');
     setEditing(true);
     setEditingIonId(null);
     setNamingMode(null);
@@ -13186,6 +13191,7 @@ function WatermancerIonProfileCard({
       setEditing(false);
       setEditingIonId(id);
       setNamingMode(null);
+      setDraftProfileName('');
       return;
     }
     setDraftTargets(
@@ -13197,6 +13203,7 @@ function WatermancerIonProfileCard({
     setEditingIonId(id);
     setNamingMode(null);
     setNewName('');
+    setDraftProfileName('');
   };
 
   const cancelEditing = () => {
@@ -13205,6 +13212,7 @@ function WatermancerIonProfileCard({
     setDraftTargets({});
     setNamingMode(null);
     setNewName('');
+    setDraftProfileName('');
     onTargetOverrideChange(null);
   };
 
@@ -13277,9 +13285,11 @@ function WatermancerIonProfileCard({
   };
 
   const handleOverwrite = () => {
-    if (!selectedSavedProfile) return;
+    const name = draftProfileName.trim();
+    if (!selectedSavedProfile || !name) return;
     onSaveWmProfile({
       ...selectedSavedProfile,
+      name,
       targets: draftAsTargets(),
     });
     finishEditing();
@@ -13315,6 +13325,7 @@ function WatermancerIonProfileCard({
     setEditingIonId(null);
     setNamingMode(null);
     setNewName('');
+    setDraftProfileName('');
     setDraftTargets({});
     onTargetOverrideChange(null);
   };
@@ -13459,6 +13470,35 @@ function WatermancerIonProfileCard({
               />
             </div>
           </div>
+          {editing && selectedSavedProfile && namingMode !== 'new' && (
+            <div className="w-full max-w-md">
+              <label
+                htmlFor="watermancer-profile-rename"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-indigo-100/80"
+              >
+                Profile name
+              </label>
+              <input
+                id="watermancer-profile-rename"
+                data-testid="watermancer-profile-rename-input"
+                type="text"
+                value={draftProfileName}
+                onChange={event => setDraftProfileName(event.target.value)}
+                aria-invalid={!draftProfileName.trim()}
+                aria-describedby={!draftProfileName.trim() ? 'watermancer-profile-rename-error' : undefined}
+                className="w-full rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+              {!draftProfileName.trim() && (
+                <p
+                  id="watermancer-profile-rename-error"
+                  role="alert"
+                  className="mt-1 text-xs text-rose-300"
+                >
+                  Profile name cannot be empty.
+                </p>
+              )}
+            </div>
+          )}
           <div
             data-testid="watermancer-profile-toolbar"
             className="flex w-full flex-wrap items-center gap-1 rounded-xl border border-slate-700/60 bg-slate-950/25 p-1 md:flex-nowrap"
@@ -13507,8 +13547,9 @@ function WatermancerIonProfileCard({
                      onClick={handleOverwrite}
                       data-testid="watermancer-profile-overwrite"
                       aria-label="Overwrite selected Watermancer profile"
+                      disabled={!draftProfileName.trim()}
                       title="Replace the selected saved profile with these edited targets"
-                       className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25"
+                      className="flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2 py-1.5 text-[11px] text-indigo-100 transition hover:border-indigo-300/60 hover:bg-indigo-500/25 disabled:cursor-not-allowed disabled:opacity-40"
                    >
                       <Save className="h-3.5 w-3.5" aria-hidden="true" />
                      <span className="hidden sm:inline">Overwrite selected</span>
