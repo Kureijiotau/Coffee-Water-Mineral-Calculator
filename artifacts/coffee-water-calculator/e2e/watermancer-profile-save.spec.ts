@@ -292,6 +292,49 @@ test('renames the selected profile when overwriting its target edits', async ({ 
   });
 });
 
+test('renames a saved recipe without changing its salt data or ion draft', async ({ page }) => {
+  await seedSavedItems(page);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
+
+  const targetPicker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const picker = await openSavedPicker(page);
+  await picker.getByRole('option', { name: 'Recipe · Espresso recipe' }).click();
+  await expect(targetPicker).toContainText('Recipe · Espresso recipe');
+
+  await page.getByTestId('watermancer-profile-edit').click();
+  const recipeName = page.getByTestId('watermancer-profile-rename-input');
+  await expect(recipeName).toHaveValue('Espresso recipe');
+  const calciumTarget = page.getByTestId('watermancer-ion-target-calcium');
+  await calciumTarget.fill('37.5');
+
+  const renameButton = page.getByTestId('watermancer-recipe-rename');
+  await recipeName.fill('   ');
+  await expect(page.getByText('Recipe name cannot be empty.')).toBeVisible();
+  await expect(renameButton).toBeDisabled();
+
+  await recipeName.fill('  Espresso recipe renamed  ');
+  await renameButton.click();
+  await expect(targetPicker).toContainText('Recipe · Espresso recipe renamed');
+  await expect(page.getByRole('status').getByText('Recipe renamed.')).toBeVisible();
+  await expect(calciumTarget).toHaveValue('37.5');
+
+  await page.getByRole('button', { name: 'Cancel target editing' }).click();
+  const savedRecipeId = `saved-${(1_050_000_000_000).toString(36)}-abcde`;
+  await expect.poll(() => page.evaluate(({ recipesKey, id }) => {
+    const recipes = JSON.parse(localStorage.getItem(recipesKey) ?? '[]') as Array<{
+      id: string;
+      name: string;
+      salts: Record<string, { target: string; formIdx: number }>;
+    }>;
+    return recipes.find(recipe => recipe.id === id) ?? null;
+  }, { recipesKey: SAVED_RECIPES_KEY, id: savedRecipeId })).toMatchObject({
+    id: savedRecipeId,
+    name: 'Espresso recipe renamed',
+    salts: { nacl: { target: '10', formIdx: 0 } },
+  });
+});
+
 test('rejects a blank rename and cancels both profile edit drafts', async ({ page }) => {
   await seedSavedItems(page);
   await page.goto('/');

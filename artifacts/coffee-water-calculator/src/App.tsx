@@ -5272,6 +5272,12 @@ function App() {
     }
   };
 
+  const handleRenameSavedRecipe = (recipeId: string, name: string) => {
+    setSavedRecipes(prev => prev.map(recipe => (
+      recipe.id === recipeId ? { ...recipe, name } : recipe
+    )));
+  };
+
   const handleExportRecipe = () => {
     const salts = buildCurrentSalts();
     if (Object.keys(salts).length === 0) {
@@ -6796,6 +6802,7 @@ function App() {
               onSaveWmProfile={handleSaveWmProfile}
               onDeleteWmProfile={handleDeleteWmProfile}
                onDeleteRecipe={handleDeleteRecipe}
+                onRenameRecipe={handleRenameSavedRecipe}
                hasSaltRecipeTargets={hasSaltRecipeTargets}
                onSendRecipeToConcentrate={handleSendRecipeToConcentrate}
                onShareRecipe={handleShareWatermancerPlan}
@@ -12957,6 +12964,7 @@ function WatermancerIonProfileCard({
   onSaveWmProfile,
   onDeleteWmProfile,
   onDeleteRecipe,
+  onRenameRecipe,
   hasSaltRecipeTargets,
   onSendRecipeToConcentrate,
   onShareRecipe,
@@ -12995,6 +13003,7 @@ function WatermancerIonProfileCard({
   onSaveWmProfile: (profile: WatermancerProfile) => void;
   onDeleteWmProfile: (id: string) => void;
   onDeleteRecipe: (id: string) => void;
+  onRenameRecipe: (id: string, name: string) => void;
   hasSaltRecipeTargets: boolean;
   onSendRecipeToConcentrate: () => void;
   onShareRecipe: () => void;
@@ -13010,6 +13019,7 @@ function WatermancerIonProfileCard({
   const [namingMode, setNamingMode] = useState<'new' | null>(null);
   const [newName, setNewName] = useState('');
   const [draftProfileName, setDraftProfileName] = useState('');
+  const [recipeRenameMessage, setRecipeRenameMessage] = useState('');
   const [zeroProfileNamePromptOpen, setZeroProfileNamePromptOpen] = useState(false);
   const zeroProfileSaveInFlightRef = useRef(false);
   const importRecipeInputRef = useRef<HTMLInputElement>(null);
@@ -13179,7 +13189,13 @@ function WatermancerIonProfileCard({
     const selectedProfileId = currentDropdownValue.startsWith('saved:')
       ? currentDropdownValue.slice('saved:'.length)
       : '';
-    setDraftProfileName(wmProfiles.find(profile => profile.id === selectedProfileId)?.name ?? '');
+    const selectedRecipeId = currentDropdownValue.startsWith('recipe:')
+      ? currentDropdownValue.slice('recipe:'.length)
+      : '';
+    const selectedProfileName = wmProfiles.find(profile => profile.id === selectedProfileId)?.name;
+    const selectedRecipeName = savedRecipes.find(recipe => recipe.id === selectedRecipeId)?.name;
+    setDraftProfileName(selectedProfileName ?? selectedRecipeName ?? '');
+    setRecipeRenameMessage('');
     setEditing(true);
     setEditingIonId(null);
     setNamingMode(null);
@@ -13192,6 +13208,7 @@ function WatermancerIonProfileCard({
       setEditingIonId(id);
       setNamingMode(null);
       setDraftProfileName('');
+      setRecipeRenameMessage('');
       return;
     }
     setDraftTargets(
@@ -13204,6 +13221,7 @@ function WatermancerIonProfileCard({
     setNamingMode(null);
     setNewName('');
     setDraftProfileName('');
+    setRecipeRenameMessage('');
   };
 
   const cancelEditing = () => {
@@ -13213,6 +13231,7 @@ function WatermancerIonProfileCard({
     setNamingMode(null);
     setNewName('');
     setDraftProfileName('');
+    setRecipeRenameMessage('');
     onTargetOverrideChange(null);
   };
 
@@ -13295,6 +13314,18 @@ function WatermancerIonProfileCard({
     finishEditing();
   };
 
+  const handleRenameSelectedRecipe = () => {
+    const name = draftProfileName.trim();
+    if (!selectedSavedRecipe || !name) return;
+    if (name === selectedSavedRecipe.name) {
+      setRecipeRenameMessage('Recipe name is unchanged.');
+      return;
+    }
+    onRenameRecipe(selectedSavedRecipe.id, name);
+    setDraftProfileName(name);
+    setRecipeRenameMessage('Recipe renamed.');
+  };
+
   const handleOverwriteWithFinalReadings = () => {
     if (
       !selectedSavedProfile
@@ -13326,6 +13357,7 @@ function WatermancerIonProfileCard({
     setNamingMode(null);
     setNewName('');
     setDraftProfileName('');
+    setRecipeRenameMessage('');
     setDraftTargets({});
     onTargetOverrideChange(null);
   };
@@ -13470,31 +13502,56 @@ function WatermancerIonProfileCard({
               />
             </div>
           </div>
-          {editing && selectedSavedProfile && namingMode !== 'new' && (
+          {editing && (selectedSavedProfile || selectedSavedRecipe) && namingMode !== 'new' && (
             <div className="w-full max-w-md">
-              <label
-                htmlFor="watermancer-profile-rename"
-                className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-indigo-100/80"
-              >
-                Profile name
-              </label>
-              <input
-                id="watermancer-profile-rename"
-                data-testid="watermancer-profile-rename-input"
-                type="text"
-                value={draftProfileName}
-                onChange={event => setDraftProfileName(event.target.value)}
-                aria-invalid={!draftProfileName.trim()}
-                aria-describedby={!draftProfileName.trim() ? 'watermancer-profile-rename-error' : undefined}
-                className="w-full rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-              />
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
+                  <label
+                    htmlFor="watermancer-profile-rename"
+                    className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-indigo-100/80"
+                  >
+                    {selectedSavedProfile ? 'Profile name' : 'Recipe name'}
+                  </label>
+                  <input
+                    id="watermancer-profile-rename"
+                    data-testid="watermancer-profile-rename-input"
+                    type="text"
+                    value={draftProfileName}
+                    onChange={event => {
+                      setDraftProfileName(event.target.value);
+                      setRecipeRenameMessage('');
+                    }}
+                    aria-invalid={!draftProfileName.trim()}
+                    aria-describedby={!draftProfileName.trim() ? 'watermancer-profile-rename-error' : undefined}
+                    className="w-full rounded-lg border border-slate-600/60 bg-slate-900/60 px-3 py-2 text-sm text-slate-100 placeholder-slate-500 transition focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+                </div>
+                {selectedSavedRecipe && (
+                  <button
+                    type="button"
+                    data-testid="watermancer-recipe-rename"
+                    onClick={handleRenameSelectedRecipe}
+                    disabled={!draftProfileName.trim()}
+                    className="flex h-10 shrink-0 items-center justify-center rounded-lg border border-emerald-400/35 bg-emerald-500/10 px-3 text-xs font-medium text-emerald-100 transition hover:border-emerald-300/60 hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Rename recipe
+                  </button>
+                )}
+              </div>
               {!draftProfileName.trim() && (
                 <p
                   id="watermancer-profile-rename-error"
                   role="alert"
                   className="mt-1 text-xs text-rose-300"
                 >
-                  Profile name cannot be empty.
+                  {selectedSavedProfile
+                    ? 'Profile name cannot be empty.'
+                    : 'Recipe name cannot be empty.'}
+                </p>
+              )}
+              {selectedSavedRecipe && recipeRenameMessage && (
+                <p role="status" className="mt-1 text-xs text-emerald-300">
+                  {recipeRenameMessage}
                 </p>
               )}
             </div>
