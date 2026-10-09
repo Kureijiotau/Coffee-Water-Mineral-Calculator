@@ -61,11 +61,16 @@ test('renders a grouped salt-only Brewer workspace at desktop and mobile widths'
   await expect(page.getByLabel('Taste profile position')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toBeVisible();
   await expect(page.getByText('Salt Recipe Summary (as CaCO₃)')).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm' }))
-    .toHaveAttribute('placeholder', 'X ppm');
-  await expect(page.getByRole('textbox', { name: 'Magnesium Sulfate direct dose in milligrams' }))
-    .toHaveAttribute('placeholder', 'Y mg');
-  await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm' }).fill('1');
+  const magnesiumTargetInput = page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm' });
+  const magnesiumDoseInput = page.getByRole('textbox', { name: 'Magnesium Sulfate direct dose in milligrams' });
+  await expect(magnesiumTargetInput).toHaveAttribute('placeholder', '0.0000');
+  await expect(magnesiumDoseInput).toHaveAttribute('placeholder', '0.00');
+  await expect(magnesiumTargetInput.locator('..').getByText('ppm', { exact: true })).toBeVisible();
+  await expect(magnesiumDoseInput.locator('..').getByText('mg', { exact: true })).toBeVisible();
+  await magnesiumTargetInput.fill('1');
+  await expect(magnesiumTargetInput).toHaveValue('1');
+  await expect(magnesiumDoseInput).toHaveValue(/^\d+(\.\d+)?$/);
+  await expect(magnesiumDoseInput.locator('..').getByText('mg', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Make Concentrate' })).toBeVisible();
   await expect(page.getByRole('button', { name: /recipe steps|get recipe card|see how to make/i })).toBeVisible();
 
