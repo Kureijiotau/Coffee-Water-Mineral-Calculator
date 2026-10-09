@@ -45,7 +45,9 @@ import {
   loadActiveProfileId,
   loadIndicatorOn,
   loadNerdLevel,
+  loadCalculatorMode,
   saveActiveProfileId,
+  saveCalculatorMode,
   createProfile,
   emptyRangeSet,
   EMPIRICAL_PROFILES,
@@ -60,6 +62,63 @@ function makeCustomProfile(name: string, overrides: Partial<IonRanges> = {}): Wa
   }
   return createProfile(name, ranges);
 }
+
+describe('calculator mode preference', () => {
+  beforeEach(() => localStorageMock.clear());
+
+  it.each(['brewer', 'alchemist', 'watermancer'] as const)(
+    'round-trips the explicit %s mode',
+    mode => {
+      saveCalculatorMode(mode);
+      expect(loadCalculatorMode()).toBe(mode);
+    },
+  );
+
+  it.each([
+    { modern: null, legacy: null, expected: 'alchemist' },
+    { modern: null, legacy: 'brewer', expected: 'alchemist' },
+    { modern: null, legacy: 'alchemist', expected: 'alchemist' },
+    { modern: null, legacy: 'watermancer', expected: 'watermancer' },
+    { modern: 'invalid', legacy: 'watermancer', expected: 'watermancer' },
+    { modern: 'invalid', legacy: 'brewer', expected: 'alchemist' },
+  ] as const)('uses legacy fallback for $legacy when modern value is $modern', ({ modern, legacy, expected }) => {
+    if (modern !== null) localStorageMock.setItem('cwm.calculatorMode', modern);
+    if (legacy !== null) localStorageMock.setItem('cwm.nerdLevel', legacy);
+
+    expect(loadCalculatorMode()).toBe(expected);
+  });
+
+  it('prefers a valid modern mode over the legacy preference', () => {
+    localStorageMock.setItem('cwm.calculatorMode', 'brewer');
+    localStorageMock.setItem('cwm.nerdLevel', 'watermancer');
+
+    expect(loadCalculatorMode()).toBe('brewer');
+  });
+
+  it('falls back to Alchemist when storage reads are blocked', () => {
+    const originalGetItem = localStorageMock.getItem;
+    localStorageMock.getItem = () => {
+      throw new Error('storage unavailable');
+    };
+    try {
+      expect(loadCalculatorMode()).toBe('alchemist');
+    } finally {
+      localStorageMock.getItem = originalGetItem;
+    }
+  });
+
+  it('does not throw when mode persistence is blocked', () => {
+    const originalSetItem = localStorageMock.setItem;
+    localStorageMock.setItem = () => {
+      throw new Error('storage unavailable');
+    };
+    try {
+      expect(() => saveCalculatorMode('brewer')).not.toThrow();
+    } finally {
+      localStorageMock.setItem = originalSetItem;
+    }
+  });
+});
 
 // ─── loadProfiles / saveProfiles round-trips ─────────────────────────────────
 

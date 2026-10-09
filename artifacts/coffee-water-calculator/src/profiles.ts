@@ -9,8 +9,10 @@ export const PROFILES_KEY = 'cwm.profiles';
 const ACTIVE_KEY = 'cwm.activeProfileId';
 const INDICATOR_KEY = 'cwm.indicatorOn';
 const NERD_LEVEL_KEY = 'cwm.nerdLevel';
+const CALCULATOR_MODE_KEY = 'cwm.calculatorMode';
 
 export type NerdLevel = 'brewer' | 'alchemist' | 'watermancer';
+export type CalculatorMode = 'brewer' | 'alchemist' | 'watermancer';
 
 export const EMPIRICAL_PROFILES: WaterProfile[] = EMPIRICAL_WATERS.map(water => ({
   id: `${water.id}-ionic-profile`,
@@ -142,6 +144,26 @@ export function saveNerdLevel(level: NerdLevel): void {
     localStorage.setItem(NERD_LEVEL_KEY, level);
   } catch {
     /* ignore */
+  }
+}
+
+export function loadCalculatorMode(): CalculatorMode {
+  try {
+    const mode = localStorage.getItem(CALCULATOR_MODE_KEY);
+    if (mode === 'brewer' || mode === 'alchemist' || mode === 'watermancer') {
+      return mode;
+    }
+    return localStorage.getItem(NERD_LEVEL_KEY) === 'watermancer' ? 'watermancer' : 'alchemist';
+  } catch {
+    return 'alchemist';
+  }
+}
+
+export function saveCalculatorMode(mode: CalculatorMode): void {
+  try {
+    localStorage.setItem(CALCULATOR_MODE_KEY, mode);
+  } catch {
+    /* ignore quota / privacy mode errors */
   }
 }
 
