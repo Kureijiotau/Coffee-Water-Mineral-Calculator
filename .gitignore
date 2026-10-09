@@ -49,3 +49,6 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local git worktrees for isolated development
+.worktrees/
