@@ -32,13 +32,15 @@ import {
 } from './components/MetricCards';
 import {
   loadProfiles, loadUserCreatedProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
-  loadNerdLevel, saveNerdLevel, createProfile,
+  saveNerdLevel, loadCalculatorMode, saveCalculatorMode, createProfile,
   type NerdLevel,
+  type CalculatorMode,
 } from '@/profiles';
 import {
   createWaterPlan,
   isAutoSavedWaterPlan,
   isValidWaterPlan,
+  resolveWaterPlanCalculatorMode,
   loadWaterPlans,
   parseWaterRecipeFile,
   parseWaterPlanFile,
@@ -766,7 +768,6 @@ type WatermancerComparisonProfile = {
   targets: Partial<Record<IonId, number>>;
 };
 type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrates' | 'ion-ratios' | 'mixer';
-type CalculatorMode = 'alchemist' | 'watermancer';
 type ConcentrateWorkspaceTab = 'recipe' | 'diy';
 type ConcentrateMode = 'builder' | 'lotus';
 
@@ -2969,6 +2970,7 @@ function App() {
   const [showBrewerSteps, setShowBrewerSteps] = useState<'dry' | 'dropper' | null>(null);
   const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
+  const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>(() => loadCalculatorMode());
   const [concentrateWorkspaceTab, setConcentrateWorkspaceTab] = useState<ConcentrateWorkspaceTab>('diy');
   const [ionRatioSeedDraft, setIonRatioSeedDraft] = useState<IonRatioDraft | null>(null);
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
@@ -2979,7 +2981,7 @@ function App() {
   const [pendingConcentrateRestore, setPendingConcentrateRestore] = useState<WaterPlanConcentrateSnapshot | null>(null);
   const [volumeUnit, setVolumeUnit] = useState<VolumeUnit>('liters');
   const [nerdLevel, setNerdLevel] = useState<NerdLevel>(() => (
-    loadNerdLevel() === 'watermancer' ? 'watermancer' : 'alchemist'
+    calculatorMode === 'watermancer' ? 'watermancer' : 'alchemist'
   ));
   const [watermancerTargetSource, setWatermancerTargetSource] = useState<WatermancerTargetSourceId>(
     () => loadWatermancerTargetSource(),
@@ -3136,15 +3138,16 @@ function App() {
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? AIKI_DEFAULT_PROFILE;
   const activeRanges: RangeSet = activeProfile.ranges;
-  const showAlchemist = nerdLevel === 'alchemist';
-  const showWatermancer = nerdLevel === 'watermancer';
-  const effectiveAutoFillPreset: AutoFillPriorityPreset = showAlchemist
+  const showBrewer = calculatorMode === 'brewer';
+  const showAlchemist = calculatorMode === 'alchemist';
+  const showWatermancer = calculatorMode === 'watermancer';
+  const effectiveAutoFillPreset: AutoFillPriorityPreset = showAlchemist || showBrewer
     ? 'balanced-gh-kh'
     : autoFillPriorityPreset;
   const activeAutoFillPriority = effectiveAutoFillPreset === 'custom'
     ? autoFillCustomPriority
     : AUTO_FILL_PRIORITY_PRESETS[effectiveAutoFillPreset].ions;
-  const effectiveAutoFillDeviationPpm = showAlchemist ? 0 : autoFillDeviationPpm;
+  const effectiveAutoFillDeviationPpm = showAlchemist || showBrewer ? 0 : autoFillDeviationPpm;
   const waterComparisonSources = useMemo<WaterComparisonSource[]>(() => {
     const seenProfiles = new Set<string>();
     const sources: WaterComparisonSource[] = [];
@@ -3228,7 +3231,8 @@ function App() {
     setNerdLevel(level);
   };
   const handleCalculatorModeChange = (mode: CalculatorMode) => {
-    handleNerdLevelChange(mode);
+    handleNerdLevelChange(mode === 'watermancer' ? 'watermancer' : 'alchemist');
+    setCalculatorMode(mode);
     setAppTab('calculator');
   };
   const handleOpenConcentrates = () => {
@@ -3245,6 +3249,7 @@ function App() {
   }, [profiles], 250, skipProfilesPersistenceRef);
   useDebouncedPersistence(() => saveActiveProfileId(activeProfileId), [activeProfileId]);
   useDebouncedPersistence(() => saveNerdLevel(nerdLevel), [nerdLevel]);
+  useDebouncedPersistence(() => saveCalculatorMode(calculatorMode), [calculatorMode]);
   useDebouncedPersistence(() => {
     const latestProfiles = wmProfilesRef.current;
     saveWatermancerProfiles(latestProfiles);
@@ -5106,7 +5111,9 @@ function App() {
     setActiveRecipeId(recipe.id);
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
     if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
-      setNerdLevel(requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
+      handleCalculatorModeChange(
+        requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist',
+      );
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
@@ -5184,7 +5191,9 @@ function App() {
     setActiveRecipeId('custom');
     const requiredNerdLevel = nerdLevelForRecipe(recipe);
     if (shouldEscalateNerdLevel(nerdLevel, requiredNerdLevel)) {
-      setNerdLevel(requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
+      handleCalculatorModeChange(
+        requiredNerdLevel === 'watermancer' ? 'watermancer' : 'alchemist',
+      );
     }
     const brewerFlavor = brewerFlavorFromRecipe(recipe);
     if (brewerFlavor) setBrewerFlavor(brewerFlavor);
@@ -5874,7 +5883,8 @@ function App() {
     appTab: appTab === 'concentrates'
       ? concentrateWorkspaceTab === 'diy' ? 'diy-concentrate' : 'concentrate'
       : 'calculator',
-    nerdLevel,
+    nerdLevel: calculatorMode === 'watermancer' ? 'watermancer' : 'alchemist',
+    calculatorMode,
     liters,
     volumeUnit,
     rows: safeRows.map(row => ({ target: row.target, formIdx: row.formIdx })),
@@ -6039,7 +6049,9 @@ function App() {
     setWatermancerManualRoute(null);
     watermancerMatchModeRef.current = 'automatic';
 
-    setNerdLevel(snapshot.nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist');
+    const restoredCalculatorMode = resolveWaterPlanCalculatorMode(snapshot);
+    setCalculatorMode(restoredCalculatorMode);
+    setNerdLevel(restoredCalculatorMode === 'watermancer' ? 'watermancer' : 'alchemist');
     setLiters(snapshot.liters);
     setVolumeUnit(snapshot.volumeUnit);
     setRows(snapshot.rows.map(row => ({ target: row.target, formIdx: row.formIdx })));
@@ -6170,7 +6182,7 @@ function App() {
       SALTS.filter((_, index) => num(restoredRows[index]?.target ?? '') > 0).map(salt => salt.id),
     );
     if (hasSourceWaters) {
-      setNerdLevel('watermancer');
+      handleCalculatorModeChange('watermancer');
       setWatermancerTargetOverride(null);
       setWatermancerImportedRecipeName(payload.name);
       setWatermancerTargetSource(
@@ -6181,7 +6193,7 @@ function App() {
             : 'salt-table',
       );
     } else {
-      setNerdLevel('alchemist');
+      handleCalculatorModeChange('alchemist');
       setWatermancerImportedRecipeName(null);
       setWatermancerTargetOverride(null);
       setWatermancerTargetSource('salt-table');
@@ -6290,7 +6302,22 @@ function App() {
   ]);
 
   const renderCalculatorModeTabs = (activeMode: CalculatorMode) => (
-    <div className="mode-switcher grid w-full grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+    <div className="mode-switcher grid w-full grid-cols-3 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1 sm:w-auto">
+      <button
+        type="button"
+        onClick={() => handleCalculatorModeChange('brewer')}
+        aria-pressed={activeMode === 'brewer'}
+        data-testid="mode-brewer"
+        title="Simple salt recipe workspace"
+        className={`mode-switcher__button inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${
+          activeMode === 'brewer'
+            ? 'border border-amber-400/40 bg-amber-500/15 text-amber-200 shadow-sm'
+            : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+        }`}
+      >
+        <Coffee className={`h-3.5 w-3.5 ${activeMode === 'brewer' ? 'text-amber-200' : 'text-slate-500'}`} aria-hidden="true" />
+        Brewer
+      </button>
       <button
         type="button"
         onClick={() => handleCalculatorModeChange('alchemist')}
@@ -6459,8 +6486,7 @@ function App() {
                     );
                   }}
                   onOpenWatermancer={() => {
-                    setAppTab('calculator');
-                    setNerdLevel('watermancer');
+                    handleCalculatorModeChange('watermancer');
                   }}
                 />
               </Suspense>
@@ -6517,8 +6543,7 @@ function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    setAppTab('calculator');
-                    setNerdLevel('watermancer');
+                    handleCalculatorModeChange('watermancer');
                   }}
                   className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 hover:text-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
                 >
@@ -6721,15 +6746,17 @@ function App() {
               <div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">Calculator mode</div>
                 <div className="mt-0.5 text-xs text-slate-500">
-                  {nerdLevel === 'alchemist'
+                  {showBrewer
+                    ? <>Use salts to build a balanced recipe, with GH and KH contributors clearly separated.</>
+                    : showAlchemist
                     ? <>Use <strong className="font-semibold text-white">mineral salts</strong> to craft your recipe. Pick, save, share, or import recipes. Make all in one, separate GH KH or separate salt concentrates.</>
-                    : nerdLevel === 'watermancer'
+                    : showWatermancer
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
                       : 'Choose how much detail to show for your water recipe.'}
                 </div>
               </div>
             </div>
-            {renderCalculatorModeTabs(nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist')}
+            {renderCalculatorModeTabs(calculatorMode)}
           </div>
         </div>
 
