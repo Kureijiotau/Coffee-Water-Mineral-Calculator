@@ -61,6 +61,10 @@ test('renders a grouped salt-only Brewer workspace at desktop and mobile widths'
   await expect(page.getByLabel('Taste profile position')).toHaveCount(0);
   await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toBeVisible();
   await expect(page.getByText('Salt Recipe Summary (as CaCO₃)')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm' }))
+    .toHaveAttribute('placeholder', 'X ppm');
+  await expect(page.getByRole('textbox', { name: 'Magnesium Sulfate direct dose in milligrams' }))
+    .toHaveAttribute('placeholder', 'Y mg');
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm' }).fill('1');
   await expect(page.getByRole('button', { name: 'Make Concentrate' })).toBeVisible();
   await expect(page.getByRole('button', { name: /recipe steps|get recipe card|see how to make/i })).toBeVisible();

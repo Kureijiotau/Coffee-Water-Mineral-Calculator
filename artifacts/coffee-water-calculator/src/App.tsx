@@ -7187,7 +7187,7 @@ function App() {
                        onKeyDown={e => {
                          if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                        }}
-                       placeholder="0"
+                        placeholder="X ppm"
                         className="mineral-recipe-table__input mineral-recipe-table__input--target w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
                      />
                       {coveredByMineralWater && (
@@ -7198,7 +7198,9 @@ function App() {
                     </div>
                 </div>
                  <div className="mineral-recipe-table__dose-cell col-span-2 sm:col-span-1 flex items-center justify-center gap-2">
-                  <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
+                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">
+                     {showRecipeMode ? 'Direct dose (mg)' : 'Dose'}
+                   </span>
                   {showRecipeMode ? (
                      <div className="mineral-recipe-table__dose-entry flex items-center justify-center gap-2">
                        <StableNumberInput
@@ -7225,10 +7227,9 @@ function App() {
                         onKeyDown={e => {
                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                         }}
-                        placeholder="0"
+                         placeholder="Y mg"
                          className="mineral-recipe-table__input mineral-recipe-table__input--dose min-w-0 w-full bg-slate-900/60 border rounded-lg px-3 py-2 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
                       />
-                      <span className="shrink-0 text-[10px] text-slate-500">mg</span>
                     </div>
                   ) : (
                     <span className="text-sm font-mono text-emerald-300">
