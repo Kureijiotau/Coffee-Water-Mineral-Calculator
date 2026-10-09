@@ -1,4 +1,4 @@
-import type { NerdLevel } from './profiles';
+import type { CalculatorMode, NerdLevel } from './profiles';
 import type { SaltRecipeEntry } from './waterData';
 import type { WatermancerMatchingMode } from './watermancerPlan';
 
@@ -38,6 +38,8 @@ export type WaterPlanSnapshot = {
   version: 1;
   appTab: 'calculator' | 'concentrate' | 'diy-concentrate';
   nerdLevel: NerdLevel;
+  /** Optional so existing version-1 plans keep their legacy mode mapping. */
+  calculatorMode?: CalculatorMode;
   liters: string;
   volumeUnit: WaterPlanVolumeUnit;
   rows: WaterPlanSaltRow[];
@@ -136,6 +138,9 @@ const isStringRecord = (value: unknown): value is Record<string, string> =>
 const isNumberRecord = (value: unknown): value is Record<string, number> =>
   isRecord(value) && Object.values(value).every(item => typeof item === 'number' && Number.isFinite(item));
 
+const isCalculatorMode = (value: unknown): value is CalculatorMode =>
+  value === 'brewer' || value === 'alchemist' || value === 'watermancer';
+
 const isStringArray = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every(item => typeof item === 'string');
 
@@ -154,6 +159,7 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
   if (value.version !== WATER_PLAN_VERSION) return false;
   if (!['calculator', 'concentrate', 'diy-concentrate'].includes(String(value.appTab))) return false;
   if (!['brewer', 'alchemist', 'watermancer'].includes(String(value.nerdLevel))) return false;
+  if (value.calculatorMode !== undefined && !isCalculatorMode(value.calculatorMode)) return false;
   if (typeof value.liters !== 'string' || !['liters', 'gallons'].includes(String(value.volumeUnit))) return false;
   if (!Array.isArray(value.rows)
     || value.rows.some(row => !isRecord(row) || typeof row.target !== 'string' || !Number.isInteger(row.formIdx))
@@ -220,6 +226,13 @@ export function isValidWaterPlan(value: unknown): value is WaterPlan {
     && typeof value.createdAt === 'string'
     && typeof value.updatedAt === 'string'
     && isWaterPlanSnapshot(value.snapshot);
+}
+
+export function resolveWaterPlanCalculatorMode(
+  snapshot: Pick<WaterPlanSnapshot, 'calculatorMode' | 'nerdLevel'>,
+): CalculatorMode {
+  if (isCalculatorMode(snapshot.calculatorMode)) return snapshot.calculatorMode;
+  return snapshot.nerdLevel === 'watermancer' ? 'watermancer' : 'alchemist';
 }
 
 function readPlans(): WaterPlan[] {

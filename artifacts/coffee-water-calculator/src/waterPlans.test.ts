@@ -4,6 +4,7 @@ import {
   isValidWaterPlan,
   parseWaterRecipeFile,
   parseWaterPlanFile,
+  resolveWaterPlanCalculatorMode,
   serializeWaterRecipeFile,
   serializeWaterPlanFile,
   type WaterPlanSnapshot,
@@ -92,6 +93,51 @@ describe('water plan persistence', () => {
     expect(parsed?.snapshot.watermancerSilicaTargetPpm).toBe('25');
     expect(parsed?.snapshot.watermancerStrengthPercent).toBe(135);
   });
+
+  it('round-trips an explicit Brewer mode in a version-1 plan', () => {
+    const brewerSnapshot = {
+      ...snapshot,
+      nerdLevel: 'alchemist',
+      calculatorMode: 'brewer',
+    } as unknown as WaterPlanSnapshot;
+    const parsed = parseWaterPlanFile(serializeWaterPlanFile(createWaterPlan('Brewer plan', brewerSnapshot)));
+
+    expect(parsed?.snapshot.calculatorMode).toBe('brewer');
+    expect(resolveWaterPlanCalculatorMode(parsed!.snapshot)).toBe('brewer');
+  });
+
+  it('rejects an invalid modern calculator mode', () => {
+    const invalidSnapshot = {
+      ...snapshot,
+      calculatorMode: 'legacy-brewer',
+    } as unknown as WaterPlanSnapshot;
+
+    expect(isValidWaterPlan(createWaterPlan('Invalid mode', invalidSnapshot))).toBe(false);
+  });
+
+  it('keeps a legacy Brewer snapshot valid but resolves it to Alchemist', () => {
+    const legacySnapshot = {
+      ...snapshot,
+      nerdLevel: 'brewer',
+    };
+    const plan = createWaterPlan('Legacy Brewer', legacySnapshot);
+
+    expect(isValidWaterPlan(plan)).toBe(true);
+    expect(resolveWaterPlanCalculatorMode(plan.snapshot)).toBe('alchemist');
+  });
+
+  it.each(['brewer', 'alchemist', 'watermancer'] as const)(
+    'honors the explicit %s mode over legacy mode',
+    mode => {
+      const explicitSnapshot = {
+        ...snapshot,
+        nerdLevel: 'brewer',
+        calculatorMode: mode,
+      } as unknown as WaterPlanSnapshot;
+
+      expect(resolveWaterPlanCalculatorMode(explicitSnapshot)).toBe(mode);
+    },
+  );
 
   it('accepts legacy snapshots without a matching mode and leaves them on target values', () => {
     const legacySnapshot = { ...snapshot };
