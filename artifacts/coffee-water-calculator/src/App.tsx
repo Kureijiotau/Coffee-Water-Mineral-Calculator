@@ -108,6 +108,7 @@ import {
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { WATERING_HOLE_WATER_RECIPES, type WateringHoleWaterRecipe } from './wateringHoleWaterRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
+import { buildBrewerSaltGroups, type BrewerSaltGroupId } from './brewerSaltGroups';
 import {
   LOTUS_BREW_VOLUME_ML,
   LOTUS_BOTTLE_VOLUME_ML,
@@ -2606,6 +2607,10 @@ function App() {
     }),
     [],
   );
+  const brewerSaltGroups = useMemo(
+    () => buildBrewerSaltGroups(mineralRecipeSaltRows),
+    [mineralRecipeSaltRows],
+  );
   const concentrateDiySaltForms = useMemo(
     () => Object.fromEntries(SALTS.map((salt, index) => [salt.id, safeRows[index].formIdx])),
     [safeRows],
@@ -3141,6 +3146,38 @@ function App() {
   const showBrewer = calculatorMode === 'brewer';
   const showAlchemist = calculatorMode === 'alchemist';
   const showWatermancer = calculatorMode === 'watermancer';
+  const showRecipeMode = showBrewer || showAlchemist;
+  const saltTableEntries = useMemo(() => {
+    type SaltTableEntry =
+      | { kind: 'group'; id: BrewerSaltGroupId; label: string }
+      | {
+        kind: 'salt';
+        salt: typeof SALTS[number];
+        index: number;
+        groupId: BrewerSaltGroupId | null;
+        contributesToKh: boolean;
+      };
+    const entries: SaltTableEntry[] = [];
+    if (showBrewer) {
+      for (const group of brewerSaltGroups) {
+        entries.push({ kind: 'group', id: group.id, label: group.label });
+        for (const row of group.rows) {
+          entries.push({
+            kind: 'salt',
+            salt: row.salt,
+            index: row.index,
+            groupId: group.id,
+            contributesToKh: row.contributesToKh,
+          });
+        }
+      }
+    } else {
+      for (const row of mineralRecipeSaltRows) {
+        entries.push({ kind: 'salt', ...row, groupId: null, contributesToKh: false });
+      }
+    }
+    return entries;
+  }, [brewerSaltGroups, mineralRecipeSaltRows, showBrewer]);
   const effectiveAutoFillPreset: AutoFillPriorityPreset = showAlchemist || showBrewer
     ? 'balanced-gh-kh'
     : autoFillPriorityPreset;
@@ -5293,28 +5330,31 @@ function App() {
       window.alert('Enter at least one salt target before exporting a recipe.');
       return;
     }
-    const name = activeRecipe?.name?.trim() || 'Alchemist water recipe';
+    const name = activeRecipe?.name?.trim() || (showBrewer ? 'Brewer water recipe' : 'Alchemist water recipe');
+    const exportedIons = showBrewer ? saltOnlyIons : ionTotals;
     const text = serializeRecipeFile({
       name,
       salts,
-      finishedWaterIons: ionTotals,
+      finishedWaterIons: exportedIons,
       finishedWaterMetadata: {
-        tds: Object.values(ionTotals).reduce((total, ppm) => total + ppm, 0),
+        tds: Object.values(exportedIons).reduce((total, ppm) => total + ppm, 0),
       },
-      sourceWaters: {
-        liters,
-        volumeUnit,
-        mineralWaters: mineralWaters.map(({ id: _id, ...water }) => ({
-          ...water,
-          ions: { ...water.ions },
-          metadata: { ...water.metadata },
-        })),
-        additionWaters: additionWaters.map(({ id: _id, ...water }) => ({
-          ...water,
-          ions: { ...water.ions },
-          metadata: { ...water.metadata },
-        })),
-      },
+      ...(!showBrewer && {
+        sourceWaters: {
+          liters,
+          volumeUnit,
+          mineralWaters: mineralWaters.map(({ id: _id, ...water }) => ({
+            ...water,
+            ions: { ...water.ions },
+            metadata: { ...water.metadata },
+          })),
+          additionWaters: additionWaters.map(({ id: _id, ...water }) => ({
+            ...water,
+            ions: { ...water.ions },
+            metadata: { ...water.metadata },
+          })),
+        },
+      }),
       ...(splitMode && {
         splitMode: true,
         splitStrengths: { ...splitStrengths },
@@ -6841,12 +6881,12 @@ function App() {
           </div>
          )}
          {/* Mineral Table */}
-           {showAlchemist && <div className="app-card app-panel-surface order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
+           {showRecipeMode && <div className="app-card app-panel-surface order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
             <div className="app-section-header flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <GiSaltShaker className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-100">
-                  {showAlchemist ? 'Mineral Recipe' : 'Target Mineral Profile'}
+                   {showRecipeMode ? 'Mineral Recipe' : 'Target Mineral Profile'}
                 </h2>
                <span className="text-xs text-sky-200/70 font-normal normal-case">
                  — {displayedRecipeName}
@@ -6915,7 +6955,7 @@ function App() {
                  <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Share</span>
               </button>
-              {showAlchemist && hasSaltRecipeTargets && (
+              {showRecipeMode && hasSaltRecipeTargets && (
                 <button
                   type="button"
                   onClick={handleSendRecipeToConcentrate}
@@ -6978,9 +7018,26 @@ function App() {
                  </span>
                ) : publishedTargetLabel}
             </span>
-               <span className="font-bold text-white">{showAlchemist ? 'Direct dose (mg)' : 'Dose'}</span>
+           <span className="font-bold text-white">{showRecipeMode ? 'Direct dose (mg)' : 'Dose'}</span>
           </div>
-           {mineralRecipeSaltRows.map(({ salt, index: i }) => {
+            {saltTableEntries.map(entry => {
+              if (entry.kind === 'group') {
+                const colorClasses = entry.id === 'gh'
+                  ? 'border-indigo-400/20 bg-indigo-500/[0.08] text-indigo-200'
+                  : entry.id === 'kh'
+                    ? 'border-amber-400/20 bg-amber-500/[0.08] text-amber-200'
+                    : 'border-slate-700/50 bg-slate-900/35 text-slate-300';
+                return (
+                  <div
+                    key={`brewer-salt-group-${entry.id}`}
+                    data-testid={`brewer-salt-group-${entry.id}`}
+                    className={`border-y px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] sm:px-6 ${colorClasses}`}
+                  >
+                    {entry.label}
+                  </div>
+                );
+              }
+              const { salt, index: i, groupId, contributesToKh } = entry;
              const isMemeSalt = MEME_SALT_IDS.has(salt.id);
              if (isMemeSalt && !showMemeSalts) return null;
             const row = safeRows[i];
@@ -7064,10 +7121,17 @@ function App() {
              return (
                <div
                  key={`${salt.id}-${isMemeSalt ? memeSaltFlashNonce : 0}`}
+                  data-testid={showBrewer ? `brewer-salt-row-${groupId}-${salt.id}` : undefined}
                   className={`mineral-recipe-table__row grid grid-cols-2 sm:grid-cols-[1.7fr_1fr_1fr] gap-x-3 gap-y-2 px-4 sm:px-6 py-3 sm:py-3 sm:items-center border-b last:border-b-0 hover:bg-slate-700/20 transition-colors ${
                     i % 2 === 0 ? 'mineral-recipe-table__row--stripe' : ''
                   } ${
                    isMemeSalt && memeSaltFlashNonce > 0 ? 'meme-salt-row-flash' : ''
+                  } ${
+                    showBrewer && groupId === 'gh'
+                      ? 'bg-indigo-500/10 border-l-2 border-indigo-400/50'
+                      : showBrewer && groupId === 'kh'
+                        ? 'bg-amber-500/10 border-l-2 border-amber-400/50'
+                        : ''
                  }`}
                >
                  <div className="mineral-recipe-table__salt-cell col-span-2 sm:col-span-1 flex min-w-0 flex-col items-center gap-1 text-center">
@@ -7075,6 +7139,11 @@ function App() {
                      {salt.name}
                    </span>
                    <SaltIonBadges salt={salt} className="text-xs" />
+                    {showBrewer && groupId === 'gh' && contributesToKh && (
+                      <span className="rounded-full border border-amber-300/25 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-200">
+                        Also KH
+                      </span>
+                    )}
                    {showAdvancedHydrationForms ? (
                      <label className="mt-1 flex max-w-full flex-col gap-1 text-[10px] uppercase tracking-wider text-slate-500">
                        Hydration form
@@ -7130,7 +7199,7 @@ function App() {
                 </div>
                  <div className="mineral-recipe-table__dose-cell col-span-2 sm:col-span-1 flex items-center justify-center gap-2">
                   <span className="sm:hidden text-[10px] uppercase tracking-wider text-slate-500">Dose</span>
-                  {showAlchemist ? (
+                  {showRecipeMode ? (
                      <div className="mineral-recipe-table__dose-entry flex items-center justify-center gap-2">
                        <StableNumberInput
                          ref={input => { directDoseInputRefs.current[salt.id] = input; }}
@@ -7189,12 +7258,12 @@ function App() {
              </div>
             </div>}
          {/* Water amount + Concentrate */}
-              {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface ${showAlchemist ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showAlchemist ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+              {(showRecipeMode || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface ${showRecipeMode ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showRecipeMode ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SharedSectionHeader
              icon={<Droplet className="w-4 h-4 text-cyan-300 drop-shadow-[0_0_6px_rgba(103,232,249,0.6)]" />}
-               title={showAlchemist ? '1. Batch volume' : '2. Add waters — Batch volume'}
+                title={showRecipeMode ? '1. Batch volume' : '2. Add waters — Batch volume'}
              after={
                <div className="flex items-center gap-2">
                   {showWatermancer ? (
@@ -7243,7 +7312,7 @@ function App() {
                />
             </div>
 
-              {showAlchemist && concentrateOn && !splitMode && (
+              {showRecipeMode && concentrateOn && !splitMode && (
                <div className="space-y-3 border border-teal-500/30 bg-teal-500/5 rounded-xl px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -7385,7 +7454,7 @@ function App() {
             )}
 
             {/* ── Split stocks panels ── */}
-             {showAlchemist && concentrateOn && splitMode && (
+             {showRecipeMode && concentrateOn && splitMode && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -7423,10 +7492,10 @@ function App() {
            </div>}
 
         {/* GH / KH Summary */}
-        {showAlchemist && <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showRecipeMode && <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
           <SharedSectionHeader
             icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
-            title="Base Salt Recipe Summary (as CaCO₃)"
+             title={showBrewer ? 'Salt Recipe Summary (as CaCO₃)' : 'Base Salt Recipe Summary (as CaCO₃)'}
           />
            <div className="app-card-body grid grid-cols-1 sm:grid-cols-3 gap-4">
              <SharedSimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
@@ -7680,13 +7749,14 @@ function App() {
                  const isEditingSavedWater = editingSavedWaterIds.has(entry.id);
                  const ionsLocked = isSavedWater && !isEditingSavedWater;
                  return (
-               <div key={entry.id} className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
+                <div key={entry.id} data-testid="mineral-water-entry" className="border border-slate-700/50 rounded-xl bg-slate-900/30 p-4 space-y-3">
                 {/* Entry header: name + volume + remove */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <input
                       type="text"
                       value={entry.name}
+                      data-testid="mineral-water-name"
                       onChange={e => updateMineralWater(entry.id, { name: e.target.value })}
                       placeholder="Water name (e.g. Solán de Cabras)"
                       className="flex-1 min-w-0 bg-slate-900/60 border border-slate-600/60 rounded-lg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
@@ -7695,6 +7765,7 @@ function App() {
                      <StableNumberInput
                         inputMode="decimal"
                         value={entry.volumeMl}
+                        data-testid="mineral-water-volume"
                         onChange={e => updateMineralWater(entry.id, { volumeMl: e.target.value })}
                         placeholder="0"
                         className="w-20 bg-slate-900/60 border border-slate-600/60 rounded-lg px-2.5 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500/60 focus:border-sky-400 transition"
@@ -7739,6 +7810,7 @@ function App() {
                        <StableNumberInput
                         inputMode="decimal"
                         value={entry.ions[id] ?? ''}
+                          data-testid={id === 'sodium' ? 'mineral-water-ion-sodium' : undefined}
                          disabled={ionsLocked}
                         onChange={e => updateMineralWater(entry.id, {
                           ions: { ...entry.ions, [id]: e.target.value }
@@ -8847,7 +8919,7 @@ function App() {
             </div>
           )}
        </div>
-      {(showAlchemist || showWatermancer) && (
+       {(showRecipeMode || showWatermancer) && (
         <button
           type="button"
           onClick={() => {
@@ -8855,19 +8927,19 @@ function App() {
             setShowBrewerSteps('dry');
           }}
           className={`fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur transition hover:-translate-y-0.5 active:translate-y-0 ${
-            showAlchemist && hasSaltRecipeTargets && !recipeStepsPromptDismissed
+             showRecipeMode && hasSaltRecipeTargets && !recipeStepsPromptDismissed
               ? 'max-w-[calc(100vw-2rem)] border-emerald-200/70 bg-emerald-400 text-slate-950 shadow-emerald-950/60 ring-2 ring-emerald-200/25 ring-offset-2 ring-offset-slate-950 hover:bg-emerald-300'
-              : showAlchemist
+               : showRecipeMode
                 ? 'border-emerald-300/45 bg-emerald-500/90 text-white shadow-emerald-950/40 hover:bg-emerald-400'
                 : showWatermancer
                   ? 'border-cyan-300/45 bg-indigo-600/90 text-white shadow-indigo-950/40 hover:bg-indigo-500'
                   : 'border-sky-300/45 bg-sky-600/90 text-white shadow-sky-950/40 hover:bg-sky-500'
           }`}
-          aria-label={showAlchemist && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open recipe steps'}
-          title={showAlchemist && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open the current recipe steps'}
+          aria-label={showRecipeMode && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open recipe steps'}
+          title={showRecipeMode && hasSaltRecipeTargets ? 'See how to make this recipe and save it as an image' : 'Open the current recipe steps'}
         >
           <ListChecks className="h-4 w-4 shrink-0" />
-          {showAlchemist && hasSaltRecipeTargets && !recipeStepsPromptDismissed ? (
+          {showRecipeMode && hasSaltRecipeTargets && !recipeStepsPromptDismissed ? (
             <span className="min-w-0 text-left">
               <span className="block truncate">Get recipe card</span>
               <span className="mt-0.5 block text-[10px] font-medium text-slate-800/75">Exact steps · Save as image</span>
@@ -8952,17 +9024,17 @@ function App() {
           liters={L}
            volumeUnit={volumeUnit}
           concentrateOn={concentrateOn}
-            allInOneConcentrate={showAlchemist && concentrateOn}
+             allInOneConcentrate={showRecipeMode && concentrateOn}
           concentrateLiters={concL}
           concentrateStrength={concentrateStrength}
-          baseWaters={nerdLevel === 'brewer' ? [] : mineralWaters}
-          additionWaters={nerdLevel === 'brewer' ? [] : additionWaters}
-          baseWaterScale={sourceScale}
+           baseWaters={showBrewer ? [] : mineralWaters}
+           additionWaters={showBrewer ? [] : additionWaters}
+          baseWaterScale={showBrewer ? 1 : sourceScale}
           batchMl={batchMl}
           suggestedSaltTargets={recipeStepsSuggestedSaltTargets}
           watermancerSilicaDrops={showWatermancer ? watermancerSilicaDrops : 0}
           nerdLevel={nerdLevel}
-          tdsTarget={nerdLevel === 'brewer' ? brewerModeTds : tdsForRecipeSteps}
+           tdsTarget={showBrewer ? tdsSalt : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
           dosingMethod={showBrewerSteps}
            profile={recipeShareProfile}
@@ -18244,7 +18316,7 @@ function IonWatchDisclosure({
       : 'green';
 
   return (
-    <details className="group border-t border-indigo-400/15 bg-indigo-500/[0.035]">
+    <details data-testid="ion-watch-disclosure" className="group border-t border-indigo-400/15 bg-indigo-500/[0.035]">
       <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-xs text-slate-300 hover:bg-indigo-500/[0.06] sm:px-6 [&::-webkit-details-marker]:hidden">
         <span
           className="flex h-5 w-5 items-center justify-center rounded-full border border-indigo-400/35 bg-indigo-500/10"
