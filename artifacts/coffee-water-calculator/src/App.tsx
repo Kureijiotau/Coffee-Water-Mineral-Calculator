@@ -4,6 +4,7 @@ import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
+import watermancerHeaderImage from '@assets/watermancer-header-256.webp';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
@@ -6402,7 +6403,7 @@ function App() {
       <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrates' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
-            src={watermancerMarkImage}
+            src={watermancerHeaderImage}
             alt=""
             aria-hidden="true"
             className="watermancer-header__mark h-20 w-20 shrink-0 object-cover sm:h-24 sm:w-24"
