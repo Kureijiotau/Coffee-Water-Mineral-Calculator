@@ -103,3 +103,4 @@
 - [Lotus shared calibration](lotus-shared-calibration.md) — store one calibration per tip style and share it across Lotus solution cards
 - [Ratio preview usefulness](ratio-preview-usefulness.md) — colored ion ratios help users understand recipes and draw comparisons
 - [Citrate ratio eligibility](citrate-ratio-eligibility.md) — offer Citrates in the custom Watermancer ratio only when its current final reading is positive
+- [Calculation confidence](calculation-confidence.md) — tighten numerical outputs so the owner and users can trust results without second-guessing.
