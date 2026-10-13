@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 
-type DeferredModule = 'WaterMixer' | 'WaterTastingTab' | 'IonRatioTable' | 'LabelScanner';
+type DeferredModule = 'WaterMixer' | 'WaterTastingTab' | 'IonRatioTable' | 'LabelScanner' | 'WatermancerGuide';
 
 function deferredModuleFromUrl(url: string): DeferredModule | null {
   const match = new URL(url).pathname.match(
-    /\/src\/(WaterMixer|WaterTastingTab|IonRatioTable|LabelScanner)\.tsx$/,
+    /\/src\/(WaterMixer|WaterTastingTab|IonRatioTable|LabelScanner|WatermancerGuide)\.tsx$/,
   );
   return (match?.[1] as DeferredModule | undefined) ?? null;
 }
@@ -35,6 +35,22 @@ test('requests standalone workspace modules only when selected', async ({ page }
   // The Ion Ratios entry point is currently feature-gated off. Its lazy chunk
   // must still stay out of the initial load.
   expect(requestedModules.has('IonRatioTable')).toBe(false);
+});
+
+test('requests the Watermancer Guide module only when its tab is selected', async ({ page }) => {
+  const requestedModules = new Set<DeferredModule>();
+  page.on('request', request => {
+    const module = deferredModuleFromUrl(request.url());
+    if (module) requestedModules.add(module);
+  });
+
+  await page.goto('/');
+  await expect(page.getByTestId('tab-watermancer-guide')).toBeVisible();
+  expect(requestedModules.has('WatermancerGuide')).toBe(false);
+
+  await page.getByTestId('tab-watermancer-guide').click();
+  await expect.poll(() => requestedModules.has('WatermancerGuide')).toBe(true);
+  await expect(page.getByTestId('watermancer-guide')).toBeVisible();
 });
 
 test('shows panel-local loading and recovery states for a deferred Mixer chunk', async ({ page }) => {

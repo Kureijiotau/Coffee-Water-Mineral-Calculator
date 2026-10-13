@@ -23,6 +23,7 @@
 - Do not save a pantry, guide progress, recipe inputs, or target changes from guide navigation.
 - Leave Magnesium Hydroxide and Calcium Carbonate out of the guide; their existing Watermancer chemistry remains unchanged.
 - Do not change the existing Guide / Brewer Week 1 flow, concentrate defaults, or Watermancer solver.
+- In DIY Lotus per-drop tables, identify the physical salt formula and hydration form beside the salt-mass value; keep the ppm column labeled as the finished-water ion contribution.
 
 ## Review Focus
 
@@ -47,25 +48,25 @@
 - `WatermancerGuide` default export accepts `{ onOpenDiyConcentrate: () => void; onOpenWatermancer: () => void }`.
 - The content module exports ordered guided steps and independently accessible reference topics; it contains no preparation or per-drop instructions for the two excluded powders.
 
-- [ ] **Step 1: Write the failing content test**
+- [x] **Step 1: Write the failing content test**
 
   Add `watermancer guide copy distinguishes salt mass from finished-water ions`. Assert that the ordered steps cover supplies, weighing a known number of drops, 1.00 mg/drop stock preparation, balanced targets with source water, hydration-form matching, the dose formula, and topping a 1 L batch to a verified 1 L line or brim with 0-TDS water. Assert that reference topics cover calibration, hydration form, charge balance, mineral-water contribution, final volume, dose conversion, and controlled taste iteration. Assert that no exported guide text contains “SodaStream”, “Magnesium Hydroxide”, or “Calcium Carbonate”.
 
-- [ ] **Step 2: Run the focused test and confirm it fails**
+- [x] **Step 2: Run the focused test and confirm it fails**
 
   Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/watermancerGuideContent.test.ts`
 
   Expected: FAIL because the content module is not implemented.
 
-- [ ] **Step 3: Implement the typed guide content**
+- [x] **Step 3: Implement the typed guide content**
 
   Create `watermancerGuideContent.ts` with six ordered steps and the eight reference topics defined in the approved spec. Preserve the spec's chemistry boundaries, exact dose formula, tool-owned preparation values, and careful distinctions between finished-water ions and conductivity-meter TDS.
 
-- [ ] **Step 4: Implement the guide component**
+- [x] **Step 4: Implement the guide component**
 
   Create `WatermancerGuide.tsx` using the exact callback props above. Use transient component state for step navigation only; provide accessible Previous step / Next step controls and independently openable reference topics. Include contextual actions named **Open DIY Concentrate** and **Open Watermancer**. Use the design subagent for this component only; leave app-tab integration to Task 2.
 
-- [ ] **Step 5: Verify the component and copy**
+- [x] **Step 5: Verify the component and copy**
 
   Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/watermancerGuideContent.test.ts`
 
@@ -83,6 +84,7 @@
 - Modify: `artifacts/coffee-water-calculator/src/App.tsx`
 - Modify: `artifacts/coffee-water-calculator/e2e/concentrates-mode.spec.ts`
 - Modify: `artifacts/coffee-water-calculator/e2e/deferred-workspaces.spec.ts`
+- Modify: `artifacts/coffee-water-calculator/e2e/lotus-drop-output.spec.ts`
 - Create: `artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts`
 
 **Interfaces:**
@@ -90,7 +92,7 @@
 - The top-level tab opens the guide independently of the existing **Guide** tab.
 - Guide actions call the existing `handleOpenConcentrates` and `handleCalculatorModeChange('watermancer')` navigation behavior; they do not write recipe or target state.
 
-- [ ] **Step 1: Write the failing browser tests**
+- [x] **Step 1: Write the failing browser tests**
 
   Update the expected app-workspace tab list to include **Watermancer Guide** as a separate entry after **Guide**. Extend the deferred-module check so the guide module is absent before selection and requested after selection. Add a browser test that verifies:
   - the new tab and existing Guide have independent selected states;
@@ -100,23 +102,20 @@
   - a previously entered `watermancer-ion-target-calcium` value remains unchanged after navigating away and back;
   - leaving and re-entering the guide starts at the first step;
   - the existing Week 1 Guide remains distinct and usable;
-  - the guide has no horizontal overflow at a 390 px viewport.
+  - the guide has no horizontal overflow at a 390 px viewport;
+  - DIY Lotus per-drop tables identify each physical salt formula and hydration form beside salt mg, without changing the ion ppm label.
 
-- [ ] **Step 2: Run the focused browser tests and confirm they fail**
+- [x] **Step 2: Confirm the browser-test red state before integration**
 
-  Run: `pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts e2e/concentrates-mode.spec.ts e2e/deferred-workspaces.spec.ts e2e/watermancer-guide.spec.ts --project=chromium`
+  The Playwright runner was not usable locally because the Node 24 / Playwright 1.52 startup attempts time out. Before integration, a headless Chromium CDP check confirmed that the new guide tab was absent; the ruling and limitation are recorded in the progress ledger.
 
-  Expected: FAIL because the new tab and guide component are not integrated.
+- [x] **Step 3: Integrate the new workspace**
 
-- [ ] **Step 3: Integrate the new workspace**
+  In `App.tsx`, add the app-tab value and accessible tab entry next to **Guide**, lazy-load `WatermancerGuide`, and render it with `Suspense` in its own app-tab branch. Pass callbacks that use the existing navigation handlers. Do not add guide state to persistence or recipe snapshots. In the existing DIY Lotus per-drop table, label the salt-dose column with the current physical salt formula and hydration form; leave the ion-contribution label unchanged.
 
-  In `App.tsx`, add the app-tab value and accessible tab entry next to **Guide**, lazy-load `WatermancerGuide`, and render it with `Suspense` in its own app-tab branch. Pass callbacks that use the existing navigation handlers. Do not add guide state to persistence or recipe snapshots.
+- [x] **Step 4: Verify browser behavior and run the complete package checks**
 
-- [ ] **Step 4: Run focused browser tests and the complete package checks**
-
-  Run: `pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts e2e/concentrates-mode.spec.ts e2e/deferred-workspaces.spec.ts e2e/watermancer-guide.spec.ts --project=chromium`
-
-  Expected: PASS for distinct tab selection, lazy loading, state preservation, ephemeral progress, and mobile overflow.
+  Manual Chromium CDP checks passed for separate tabs, keyboard activation, lazy guide loading, step navigation/reset, independent references, tool navigation, saved-target preservation, Lotus salt/hydration labels, and 390 px overflow. The Playwright runner itself remains unexecuted locally for the reason above.
 
   Run: `pnpm --filter @workspace/coffee-water-calculator run test`
 
@@ -126,6 +125,10 @@
 
   Expected: PASS.
 
+  Run: `pnpm --filter @workspace/coffee-water-calculator exec tsc --noEmit --skipLibCheck --target ES2022 --module ESNext --moduleResolution Bundler --types node e2e/watermancer-guide.spec.ts e2e/lotus-drop-output.spec.ts`
+
+  Expected: PASS.
+
   Run: `pnpm --filter @workspace/coffee-water-calculator run build`
 
-  Expected: build completes successfully.
+  Expected: build completes successfully. Vite may report existing sourcemap and large-chunk warnings.

@@ -261,6 +261,7 @@ import {
 } from './watermancerSilica';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
+const WatermancerGuide = lazy(() => import('./WatermancerGuide'));
 const WaterMixer = lazy(() => import('./WaterMixer'));
 const WaterTastingTab = lazy(() => import('./WaterTastingTab').then(module => ({
   default: module.WaterTastingTab,
@@ -768,7 +769,7 @@ type WatermancerComparisonProfile = {
   name: string;
   targets: Partial<Record<IonId, number>>;
 };
-type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'concentrates' | 'ion-ratios' | 'mixer';
+type AppTab = 'calculator' | 'water-tasting' | 'guide' | 'watermancer-guide' | 'concentrates' | 'ion-ratios' | 'mixer';
 type ConcentrateWorkspaceTab = 'recipe' | 'diy';
 type ConcentrateMode = 'builder' | 'lotus';
 
@@ -6399,7 +6400,7 @@ function App() {
 
   const appHeader = (
     <div className="app-header overflow-hidden rounded-2xl border border-white/10 bg-slate-800/70 shadow-2xl backdrop-blur-xl">
-      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrates' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
+      <div className={`app-header__bar flex flex-wrap items-center justify-between gap-x-3 gap-y-2 bg-gradient-to-r py-0 pr-4 sm:pr-6 ${appTab === 'concentrates' ? 'from-violet-950 via-fuchsia-950/80 to-slate-950' : appTab === 'guide' ? 'from-emerald-950 via-cyan-950/80 to-slate-950' : appTab === 'watermancer-guide' ? 'from-cyan-950 via-blue-950/80 to-slate-950' : 'from-slate-950 via-cyan-950/80 to-indigo-950'}`}>
         <div className="app-header__brand flex min-w-0 flex-1 items-center gap-3.5">
           <img
             src={watermancerHeaderImage}
@@ -6490,6 +6491,20 @@ function App() {
             >
               <ListChecks className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
               Guide
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="watermancer-guide-tab-button"
+              aria-controls="watermancer-guide-panel"
+              aria-selected={appTab === 'watermancer-guide'}
+              data-testid="tab-watermancer-guide"
+              title="Watermancer Guide"
+              onClick={() => setAppTab('watermancer-guide')}
+              className={`inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 whitespace-normal rounded-md border border-white/20 bg-black/15 px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-0 sm:px-3 sm:py-1.5 ${appTab === 'watermancer-guide' ? 'border-cyan-300/35 bg-cyan-300/10 text-cyan-100' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+            >
+              <Pipette className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
+              <span className="min-w-0">Watermancer Guide</span>
             </button>
           </div>
         </div>
@@ -6682,6 +6697,32 @@ function App() {
             }}
           />
         </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (appTab === 'watermancer-guide') {
+    return (
+      <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
+        <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
+          <div className="app-page-stack flex w-full max-w-6xl flex-col">
+            {appHeader}
+            <main
+              id="watermancer-guide-panel"
+              role="tabpanel"
+              aria-labelledby="watermancer-guide-tab-button"
+              tabIndex={0}
+              className="min-w-0"
+            >
+              <Suspense fallback={<div role="status" className="p-6 text-center text-sm text-cyan-100/80">Loading Watermancer Guide…</div>}>
+                <WatermancerGuide
+                  onOpenDiyConcentrate={handleOpenConcentrates}
+                  onOpenWatermancer={() => handleCalculatorModeChange('watermancer')}
+                />
+              </Suspense>
+            </main>
+          </div>
         </div>
       </div>
     );
@@ -10526,9 +10567,12 @@ function LotusDropsSection({
                         <table className="w-full min-w-[360px] table-fixed text-left text-[10px]">
                           <thead className="bg-slate-900/70 text-[9px] uppercase tracking-wider text-slate-500">
                             <tr>
-                              <th scope="col" className="w-[38%] px-2 py-1.5 font-semibold">Basis</th>
-                              <th scope="col" className="w-[40%] px-2 py-1.5 font-semibold">Ion contribution</th>
-                              <th scope="col" className="w-[22%] px-2 py-1.5 text-right font-semibold">Salt dose</th>
+                              <th scope="col" className="w-[36%] px-2 py-1.5 font-semibold">Basis</th>
+                              <th scope="col" className="w-[36%] px-2 py-1.5 font-semibold">Ion contribution</th>
+                              <th scope="col" className="w-[28%] px-2 py-1.5 text-right font-semibold">
+                                <span className="block">Salt dose</span>
+                                <span className="block text-[8px] font-normal normal-case tracking-normal text-slate-400">{plan.saltFormula} · {plan.hydrationForm}</span>
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-800/80">

@@ -12,6 +12,7 @@ test('keeps both concentrate workspaces under Concentrates and defaults to DIY',
     'Mixer',
     'Water grading',
     'Guide',
+    'Watermancer Guide',
   ]);
 
   await page.getByTestId('tab-concentrates').click();
