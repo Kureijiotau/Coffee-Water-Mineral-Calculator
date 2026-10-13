@@ -19,16 +19,20 @@ modeled salt mass per drop; exact stock ratios remain undisclosed.
 
 **Why:** The user said both tip styles should give the same recipe numbers, with
 the style selector identifying which dropper is on hand rather than changing
-the recipe chemistry. Public Lotus materials describe the recipe calculator,
-ingredients, bottle size, and drop weights, but not the original concentrate
-formulas. Mass balance on both published drop weights gives a closer public-data
-estimate than treating drop mass as drop volume, while keeping user calibration
-separate.
+the recipe chemistry. They also chose to show the fixed Lotus-model reference
+separately from their calibrated dropper output, so calibration cannot silently
+rewrite the source-based reference. Public Lotus materials describe the recipe
+calculator, ingredients, bottle size, and drop weights, but not the original
+concentrate formulas. Mass balance on both published drop weights gives a closer
+public-data estimate than treating drop mass as drop volume, while keeping user
+calibration separate.
 
 **How to apply:** Keep one calibration per style and share it across Lotus
 solution cards. Keep salt concentration and salt-to-weigh independent of the
 selected style and its measured rate; use calibration only for actual drops/mL
-and per-drop outputs. Preserve exact parity for published recipe inputs,
-drop-count conversion, and ion calculations; clearly identify any inferred
-concentrate mix as an estimate. The mg/mL display still assumes about 1 g water
-per mL; do not claim Lotus's proprietary salt recipe has been recovered.
+and user-dropper per-drop outputs. Keep the Lotus-model per-drop reference
+separate from that calibrated output: the reference follows the published style
+conversion but not measured drops/mL. Clearly mark inferred Lotus salt mass as
+estimated. Preserve exact parity for published recipe inputs, drop-count
+conversion, and ion calculations; do not claim Lotus's proprietary salt recipe
+has been recovered. The mg/mL display still assumes about 1 g water per mL.

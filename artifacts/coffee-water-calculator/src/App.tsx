@@ -10509,28 +10509,80 @@ function LotusDropsSection({
                {salt && (() => {
                  const isExpanded = Boolean(expandedDropReferences[plan.id]);
                  const referenceTableId = `lotus-drop-reference-table-${plan.id}`;
+                  const measuredDropsPerMl = lotusMeasuredDropsPerMl(lotusCalibrationInputs[style]);
                  return (
-                   <div className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-400/[0.05] p-2.5" data-testid={`lotus-drop-reference-${plan.id}`}>
-                     <button
-                       type="button"
-                       onClick={() => setExpandedDropReferences(previous => ({
-                         ...previous,
-                         [plan.id]: !previous[plan.id],
-                       }))}
-                       aria-expanded={isExpanded}
-                       aria-controls={referenceTableId}
-                       data-testid={`button-lotus-drop-reference-${plan.id}`}
-                       className="flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-left"
-                     >
-                       <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/80">Per-drop reference</span>
-                       <span className="flex items-center gap-2 text-[10px] font-semibold tabular-nums text-cyan-100">
-                         +{plan.ionPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name} / drop
-                       </span>
-                     </button>
+                    <section
+                      className="mt-3 rounded-lg border border-cyan-300/20 bg-cyan-400/[0.05] p-2.5"
+                      data-testid={`lotus-per-drop-summary-${plan.id}`}
+                      aria-labelledby={`lotus-per-drop-title-${plan.id}`}
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                        <h4 id={`lotus-per-drop-title-${plan.id}`} className="text-[10px] font-semibold uppercase tracking-wider text-cyan-200/90">
+                          Per drop into {LOTUS_BREW_VOLUME_ML} mL final water
+                        </h4>
+                        <span className="text-[9px] capitalize text-slate-500">{style} tip selected</span>
+                      </div>
+                      <div className="mt-2 overflow-x-auto rounded-md border border-slate-700/60">
+                        <table className="w-full min-w-[360px] table-fixed text-left text-[10px]">
+                          <thead className="bg-slate-900/70 text-[9px] uppercase tracking-wider text-slate-500">
+                            <tr>
+                              <th scope="col" className="w-[38%] px-2 py-1.5 font-semibold">Basis</th>
+                              <th scope="col" className="w-[40%] px-2 py-1.5 font-semibold">Ion contribution</th>
+                              <th scope="col" className="w-[22%] px-2 py-1.5 text-right font-semibold">Salt dose</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/80">
+                            <tr data-testid={`lotus-drop-lotus-${plan.id}`}>
+                              <th scope="row" className="px-2 py-1.5 font-semibold text-slate-300">
+                                <span className="block">{plan.isBonus ? 'Mg-matched Lotus reference' : 'Fixed Lotus reference'}</span>
+                                <span className="block text-[9px] font-normal capitalize text-slate-500">Based on {style} source-drop model</span>
+                              </th>
+                              <td className="px-2 py-1.5 font-semibold tabular-nums text-cyan-100">
+                                +{plan.lotusReferenceIonPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
+                                ~{plan.lotusReferenceSaltMgPerDrop.toFixed(3)} mg
+                              </td>
+                            </tr>
+                            <tr data-testid={`lotus-drop-user-${plan.id}`}>
+                              <th scope="row" className="px-2 py-1.5 font-semibold text-slate-300">
+                                <span className="block">Your {style} dropper</span>
+                                <span className="block text-[9px] font-normal text-slate-500">
+                                  {plan.dropsPerMl.toFixed(1)} drops/mL · {measuredDropsPerMl === null ? 'estimate' : 'calibrated'}
+                                </span>
+                              </th>
+                              <td className="px-2 py-1.5 font-semibold tabular-nums text-cyan-100">
+                                +{plan.ionPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name}
+                              </td>
+                              <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
+                                ~{plan.saltMgPerDrop.toFixed(3)} mg
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="mt-2 text-[9px] leading-relaxed text-slate-500">
+                        The Lotus row uses the published ion model and selected tip style. Salt mass is estimated because Lotus does not publish its stock ratios or hydration forms; your row also uses your measured drop rate when available.
+                        {plan.isBonus && ' The Epsom reference only matches Lotus’s magnesium contribution; Epsom is not a Lotus product.'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDropReferences(previous => ({
+                          ...previous,
+                          [plan.id]: !previous[plan.id],
+                        }))}
+                        aria-expanded={isExpanded}
+                        aria-controls={referenceTableId}
+                        data-testid={`button-lotus-drop-reference-${plan.id}`}
+                        className="mt-2 flex w-full items-center justify-between border-t border-slate-700/50 pt-2 text-left text-[10px] font-semibold text-cyan-200/80 hover:text-cyan-100"
+                      >
+                        <span>{isExpanded ? 'Hide' : 'Show'} 1–10 drop cumulative values</span>
+                        <span aria-hidden="true">{isExpanded ? '−' : '+'}</span>
+                      </button>
                      {isExpanded && (
                        <div id={referenceTableId}>
                          <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
-                           Cumulative contribution in {LOTUS_BREW_VOLUME_ML} mL of final water. Use the salt column when comparing physical dose.
+                            Cumulative contribution from your current dropper in {LOTUS_BREW_VOLUME_ML} mL of final water.
                          </p>
                          <div className="mt-2 overflow-hidden rounded-md border border-slate-700/60">
                            <table className="w-full text-left text-[10px]">
@@ -10564,7 +10616,7 @@ function LotusDropsSection({
                          </div>
                        </div>
                      )}
-                   </div>
+                    </section>
                  );
                })()}
               <p className="mt-3 text-[11px] leading-relaxed text-slate-400">

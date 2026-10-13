@@ -237,6 +237,8 @@ export interface LotusStockPlan {
   saltMgPerMl: number;
   saltMgPerDrop: number;
   ionPpmPerDrop: number;
+  lotusReferenceSaltMgPerDrop: number;
+  lotusReferenceIonPpmPerDrop: number;
   stockVolumeMl: number;
   saltMassMg: number;
   saltMassG: number;
@@ -265,6 +267,10 @@ export function lotusStockPlan(
     ? sourceIonFactor * (LOTUS_BREW_VOLUME_ML / 1000) / sourceStraightDrops
     : 0;
   const sourceSaltMgPerDrop = ionFraction > 0 ? sourceIonMgPerDrop / ionFraction : 0;
+  const lotusReferenceSaltMgPerDrop = sourceSaltMgPerDrop / lotusStyleFactor(style);
+  const lotusReferenceIonPpmPerDrop = sourceIonMgPerDrop
+    / (LOTUS_BREW_VOLUME_ML / 1000)
+    / lotusStyleFactor(style);
   const sourceRoundSaltMgPerDrop = sourceSaltMgPerDrop / lotusStyleFactor('round');
   const saltToWaterRatio = (
     lotusSaltToWaterRatio(sourceSaltMgPerDrop, 'straight')
@@ -293,6 +299,8 @@ export function lotusStockPlan(
     saltMgPerMl,
     saltMgPerDrop,
     ionPpmPerDrop,
+    lotusReferenceSaltMgPerDrop,
+    lotusReferenceIonPpmPerDrop,
     stockVolumeMl: safeStockVolumeMl,
     saltMassMg,
     saltMassG: saltMassMg / 1000,

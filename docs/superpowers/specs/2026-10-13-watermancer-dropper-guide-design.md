@@ -2,7 +2,7 @@
 
 ## Status
 
-Design approved section by section; written spec is pending user review.
+Design and specification approved; SodaStream-specific salts are excluded from the guide.
 
 ## Summary
 
@@ -34,7 +34,7 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 - **Scope:** Instruction only; no saved pantry.
 - **Recipe path:** Lead with balanced final-ion targets, then use Watermancer's calculated salt doses. Explain manual dose changes as a reference technique for taste iteration, not as the main path.
 - **Stock target:** For standard salt stocks, teach one salt per dropper at 1 mg of that physical salt per drop. The user's solubility confirmation applied to the catalog before the two SodaStream-specific entries were added; do not generalize it to their preparation method until confirmed. Do not present 1 mg/drop itself as inherently risky; continue to respect any specific warnings produced by the existing concentrate tool.
-- **SodaStream entries:** Magnesium Hydroxide and Calcium Carbonate are modeled from dry-powder mass to the resulting dissolved bicarbonate ions. Their preparation and dose-per-drop guidance is not yet specified for the guide.
+- **SodaStream entries:** Leave Magnesium Hydroxide and Calcium Carbonate out of this guide for now. Their existing Watermancer calculations remain unchanged.
 - **Batch method:** Use a 1 L final recipe and top up the measured ingredients with 0-TDS water to the bottle's verified 1 L brim or fill line.
 
 ## Navigation and page structure
@@ -77,15 +77,9 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 - Do not suppress specific concentrate warnings shown by the existing tool. The guide should not introduce a blanket warning that 1 mg/drop is unsafe.
 - For the SodaStream entries, treat the dry-powder dose and the final bicarbonate readings as separate quantities; Watermancer's existing model owns that conversion.
 
-## Open decision before implementation
+## Resolved decision
 
-The guide must account for the two SodaStream-specific Watermancer salts without assuming that their stock preparation matches the standard 1 mg/drop path. Confirm whether to:
-
-- Include them as 1 mg of dry powder per drop, with the existing full-bicarbonate conversion shown in Watermancer.
-- Teach them as a separate SodaStream method without promising a 1 mg/drop stock.
-- Leave them out of the guide for now.
-
-Until this is resolved, the guide should not give them a preparation recipe or claim a one-to-one drop count.
+The user chose to leave Magnesium Hydroxide and Calcium Carbonate out of the guide for now. Do not describe their preparation, dose-per-drop values, or SodaStream workflow. Their existing Watermancer chemistry remains available and unchanged.
 
 ## Implementation boundaries
 

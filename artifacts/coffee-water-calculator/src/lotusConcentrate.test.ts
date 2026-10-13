@@ -142,6 +142,27 @@ describe('DIY Lotus Drops calculations', () => {
     );
   });
 
+  it('keeps the Lotus source-drop reference separate from calibrated dropper output', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    const straight = lotusStockPlan(magnesium, 'straight');
+    const round = lotusStockPlan(magnesium, 'round');
+    const calibrated = lotusCalibratedStockPlan(magnesium, 'straight', 59, 20, {
+      dropsInput: '100',
+      weightInput: '4',
+      style: 'straight',
+    });
+
+    expect(straight).toHaveProperty('lotusReferenceIonPpmPerDrop');
+    expect(straight).toHaveProperty('lotusReferenceSaltMgPerDrop');
+    expect(straight.lotusReferenceIonPpmPerDrop).toBeCloseTo(2.4305, 6);
+    expect(straight.lotusReferenceSaltMgPerDrop).toBeCloseTo(9.148545, 6);
+    expect(round.lotusReferenceIonPpmPerDrop).toBeCloseTo(2.4305 / 0.56, 6);
+    expect(round.lotusReferenceSaltMgPerDrop).toBeCloseTo(9.148545 / 0.56, 6);
+    expect(calibrated.lotusReferenceIonPpmPerDrop).toBe(straight.lotusReferenceIonPpmPerDrop);
+    expect(calibrated.lotusReferenceSaltMgPerDrop).toBe(straight.lotusReferenceSaltMgPerDrop);
+    expect(calibrated.ionPpmPerDrop).not.toBeCloseTo(straight.ionPpmPerDrop, 4);
+  });
+
   it('keeps equal salt amounts for Round and Straight at equal measured rates', () => {
     const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
     const roundPlan = lotusCalibratedStockPlan(magnesium, 'round', 1, 20, {
