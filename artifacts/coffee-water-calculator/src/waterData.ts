@@ -569,6 +569,38 @@ export const SALTS: SaltInfo[] = [
       { ionId: 'malate', fraction: 132.071 / 156.376 },
     ],
   },
+  {
+    id: 'mgoh2',
+    name: 'Magnesium Hydroxide',
+    formula: 'Mg(OH)₂ → Mg(HCO₃)₂',
+    // Dose is the dry powder mass. The modeled bicarbonate includes CO₂
+    // absorbed during carbonation: Mg(OH)₂ + 2CO₂ → Mg²⁺ + 2HCO₃⁻.
+    anhydrousMass: 58.319,
+    hydrationForms: [
+      { label: 'Anhydrous powder', molarMass: 58.319 },
+    ],
+    defaultFormIdx: 0,
+    ions: [
+      { ionId: 'magnesium', fraction: 24.305 / 58.319 },
+      { ionId: 'bicarbonate', fraction: (2 * 61.0168) / 58.319 },
+    ],
+  },
+  {
+    id: 'caco3',
+    name: 'Calcium Carbonate',
+    formula: 'CaCO₃ → Ca(HCO₃)₂',
+    // Dose is the dry powder mass. The modeled bicarbonate includes CO₂
+    // absorbed during carbonation: CaCO₃ + CO₂ + H₂O → Ca²⁺ + 2HCO₃⁻.
+    anhydrousMass: 100.086,
+    hydrationForms: [
+      { label: 'Anhydrous powder', molarMass: 100.086 },
+    ],
+    defaultFormIdx: 0,
+    ions: [
+      { ionId: 'calcium', fraction: 40.078 / 100.086 },
+      { ionId: 'bicarbonate', fraction: (2 * 61.0168) / 100.086 },
+    ],
+  },
 ];
 
 export const WATERMANCER_SALT_ORDER = [
@@ -585,7 +617,14 @@ export const WATERMANCER_SALT_ORDER = [
   'mgmalate',
   'mgcit',
   'cacit',
+  'mgoh2',
+  'caco3',
 ] as const;
+
+/** Opt-in salts kept behind the meme-salts reveal control. */
+export const MEME_SALT_IDS = new Set(['calact', 'mggly', 'mgmalate', 'mgoh2', 'caco3']);
+/** Salts kept behind WaterMixer's separate specialty-salts reveal control. */
+export const MIXER_MEME_SALT_IDS = new Set(['calact', 'mggly', 'mgoh2', 'caco3']);
 
 export const ACTIVE_ION_IDS: IonId[] = [
   'sodium', 'potassium', 'magnesium', 'calcium', 'chloride', 'sulfate', 'bicarbonate', 'citrates',

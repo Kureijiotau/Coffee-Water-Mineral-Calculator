@@ -38,6 +38,24 @@ describe('solveBoundedCoupledSaltTargets', () => {
     expect(result?.score).toBeLessThan(1e-5);
   });
 
+  it.each([
+    ['mgoh2', 58.319],
+    ['caco3', 100.086],
+  ])('matches the resulting bicarbonate-water target from %s', (saltId, powderDose) => {
+    const targetIons = computeIonTotals({ [saltId]: powderDose }, {}, 1);
+    const result = solveBoundedCoupledSaltTargets({
+      allowedSalts: SALTS.filter(salt => salt.id === saltId),
+      fixedIonTotals: {},
+      targetIons,
+      ionWeights: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 1])),
+      scoreCandidate: candidate => ionError(candidate, targetIons),
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.saltTargets[saltId]).toBeCloseTo(powderDose, 4);
+    expect(result?.score).toBeLessThan(1e-5);
+  });
+
   it('keeps an optional salt at zero when another salt avoids its counter-ion', () => {
     const mgso4 = SALTS.find(salt => salt.id === 'mgso4')!;
     const targetIons = computeIonTotals({ mgso4: 30 }, {}, 1);

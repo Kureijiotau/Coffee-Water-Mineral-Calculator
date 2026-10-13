@@ -11,7 +11,7 @@ import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Che
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
-  SALTS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
+  SALTS, MEME_SALT_IDS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
   computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
@@ -360,7 +360,6 @@ export function positiveSaltIdsFromRows(rows: SaltRow[]): string[] {
     .filter((_, index) => num(rows[index]?.target ?? '') > 0)
     .map(salt => salt.id);
 }
-const MEME_SALT_IDS = new Set(['calact', 'mggly', 'mgmalate']);
 export type ConcentrateRecipeHandoff = {
   name: string;
   salts: Record<string, SaltRecipeEntry>;

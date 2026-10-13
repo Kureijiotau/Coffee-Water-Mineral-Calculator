@@ -10,8 +10,11 @@ import {
   computeGH,
   computeKH,
   SALTS,
+  MEME_SALT_IDS,
+  MIXER_MEME_SALT_IDS,
   IONS,
   ACTIVE_ION_IDS,
+  WATERMANCER_SALT_ORDER,
   computeSupplementalIonTotals,
   checkConcentrate,
   findWholeDropDosingStrengthCeiling,
@@ -396,6 +399,35 @@ describe('computeIonTotals', () => {
     expect(coreTotals.sulfate).toBe(0);
     expect(supplementalTotals.malate).toBeCloseTo(saltTarget * (132.071 / 156.376), 8);
     expect(coreTotals.magnesium + supplementalTotals.malate).toBeCloseTo(saltTarget, 8);
+  });
+
+  it('models carbonated magnesium hydroxide as magnesium bicarbonate from dry powder mass', () => {
+    const powderMassForOneMmolMgOh2 = 58.319;
+    const totals = computeIonTotals({ mgoh2: powderMassForOneMmolMgOh2 }, {}, 0);
+
+    expect(totals.magnesium).toBeCloseTo(24.305, 6);
+    expect(totals.bicarbonate).toBeCloseTo(2 * 61.0168, 6);
+    expect(computeIonMeqPerL('magnesium', totals.magnesium)).toBeCloseTo(2, 6);
+    expect(computeIonMeqPerL('bicarbonate', totals.bicarbonate)).toBeCloseTo(2, 6);
+  });
+
+  it('models carbonated calcium carbonate as calcium bicarbonate from dry powder mass', () => {
+    const powderMassForOneMmolCaCo3 = 100.086;
+    const totals = computeIonTotals({ caco3: powderMassForOneMmolCaCo3 }, {}, 0);
+
+    expect(totals.calcium).toBeCloseTo(40.078, 6);
+    expect(totals.bicarbonate).toBeCloseTo(2 * 61.0168, 6);
+    expect(computeIonMeqPerL('calcium', totals.calcium)).toBeCloseTo(2, 6);
+    expect(computeIonMeqPerL('bicarbonate', totals.bicarbonate)).toBeCloseTo(2, 6);
+  });
+
+  it('keeps SodaStream carbonate powders behind the meme-salt toggle and in Watermancer order', () => {
+    for (const saltId of ['mgoh2', 'caco3']) {
+      expect(SALTS.some(salt => salt.id === saltId)).toBe(true);
+      expect(MEME_SALT_IDS.has(saltId)).toBe(true);
+      expect(MIXER_MEME_SALT_IDS.has(saltId)).toBe(true);
+      expect(WATERMANCER_SALT_ORDER).toContain(saltId);
+    }
   });
 });
 

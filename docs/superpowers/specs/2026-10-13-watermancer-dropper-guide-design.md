@@ -12,7 +12,7 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 
 ## Goals
 
-- Teach users to calibrate each dropper and prepare a separate stock for each salt.
+- Teach users to calibrate each dropper and prepare separate stocks for salts covered by the standard 1 mg/drop workflow.
 - Use **1 mg of the selected physical salt per drop** as the standard pantry target.
 - Explain how balanced final-ion targets and a chosen mineral-water base lead to Watermancer's recommended salt doses.
 - Make the dose conversion straightforward: when the stock delivers 1 mg of that salt per drop, the displayed salt dose in mg is the same number of drops.
@@ -33,7 +33,8 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 - **Organization:** Include both a guided sequence and independently accessible reference topics.
 - **Scope:** Instruction only; no saved pantry.
 - **Recipe path:** Lead with balanced final-ion targets, then use Watermancer's calculated salt doses. Explain manual dose changes as a reference technique for taste iteration, not as the main path.
-- **Stock target:** Teach one salt per dropper at 1 mg of that salt per drop. The user states every salt in the current app catalog dissolves at this weak concentration. Do not present 1 mg/drop itself as inherently risky; continue to respect any specific warnings produced by the existing concentrate tool.
+- **Stock target:** For standard salt stocks, teach one salt per dropper at 1 mg of that physical salt per drop. The user's solubility confirmation applied to the catalog before the two SodaStream-specific entries were added; do not generalize it to their preparation method until confirmed. Do not present 1 mg/drop itself as inherently risky; continue to respect any specific warnings produced by the existing concentrate tool.
+- **SodaStream entries:** Magnesium Hydroxide and Calcium Carbonate are modeled from dry-powder mass to the resulting dissolved bicarbonate ions. Their preparation and dose-per-drop guidance is not yet specified for the guide.
 - **Batch method:** Use a 1 L final recipe and top up the measured ingredients with 0-TDS water to the bottle's verified 1 L brim or fill line.
 
 ## Navigation and page structure
@@ -50,7 +51,7 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 
 1. **Set up the supplies.** Gather the salts, separate droppers, a suitable scale, and one bottle for each stock. Keep each salt in its own bottle and label it with the salt and physical hydration form.
 2. **Calibrate each dropper.** Count and weigh a known number of drops for each dropper. Enter the measured drop count and liquid mass in the existing DIY Concentrate workflow; verify the measured output using the prepared stock when practical.
-3. **Prepare 1 mg/drop stocks.** In **Concentrates → DIY Concentrate**, select one salt and its hydration form, enter the dropper calibration, and adjust stock strength until the existing tool reports 1.00 mg of that salt per drop. Follow the tool's preparation values. Repeat separately for every salt; the guide itself does not save the pantry.
+3. **Prepare 1 mg/drop stocks.** In **Concentrates → DIY Concentrate**, select one standard-path salt and its hydration form, enter the dropper calibration, and adjust stock strength until the existing tool reports 1.00 mg of that salt per drop. Follow the tool's preparation values. Repeat separately for each salt covered by this path; do not include a SodaStream preparation recipe until its guide treatment is confirmed. The guide itself does not save the pantry.
 4. **Set up the Watermancer recipe.** Open Watermancer, set the final batch volume to 1 L, and add the actual mineral-water source and volume that will be used. Choose or create the desired final-ion profile. Use **Craft ions** when adjusting a pair of ion targets so the complete target set stays charge balanced.
 5. **Read the salt plan.** Select the salts and hydration forms that match the prepared bottles. Watermancer calculates the salt amounts for the final target while accounting for the selected source water. For a stock that actually delivers 1.00 mg of the selected salt per drop, a 7 mg dose means 7 drops. If the measured stock output differs, use `required salt mg ÷ actual salt mg per drop` rather than assuming a one-to-one count.
 6. **Make and taste the 1 L batch.** Add the measured mineral-water base and calculated salt drops to a verified 1 L bottle, then top up with 0-TDS water to its final 1 L brim or fill line. Mix, review the final ion readings, and change one target or dose at a time when testing a new taste.
@@ -74,6 +75,17 @@ The guide has a step-by-step path plus quick-reference sections. It reuses the e
 - Do not imply that all water has exactly the same density or that conductivity-meter TDS ppm must match the sum of modeled ion mg/L.
 - Do not make taste guarantees or prescribe universal target values. The guide teaches users how to create and test their own target profiles.
 - Do not suppress specific concentrate warnings shown by the existing tool. The guide should not introduce a blanket warning that 1 mg/drop is unsafe.
+- For the SodaStream entries, treat the dry-powder dose and the final bicarbonate readings as separate quantities; Watermancer's existing model owns that conversion.
+
+## Open decision before implementation
+
+The guide must account for the two SodaStream-specific Watermancer salts without assuming that their stock preparation matches the standard 1 mg/drop path. Confirm whether to:
+
+- Include them as 1 mg of dry powder per drop, with the existing full-bicarbonate conversion shown in Watermancer.
+- Teach them as a separate SodaStream method without promising a 1 mg/drop stock.
+- Leave them out of the guide for now.
+
+Until this is resolved, the guide should not give them a preparation recipe or claim a one-to-one drop count.
 
 ## Implementation boundaries
 

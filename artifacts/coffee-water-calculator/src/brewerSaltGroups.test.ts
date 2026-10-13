@@ -23,16 +23,29 @@ describe('buildBrewerSaltGroups', () => {
       ['additional', 'Additional ions'],
     ]);
     expect(groups.map(group => group.rows.map(row => row.salt.id))).toEqual([
-      ['mgcl2', 'cacl2', 'mgso4', 'caso4', 'calact', 'mggly', 'mgmalate', 'mgcit', 'cacit'],
+      [
+        'mgcl2', 'cacl2', 'mgso4', 'caso4', 'calact', 'mggly', 'mgmalate',
+        'mgcit', 'cacit', 'mgoh2', 'caco3',
+      ],
       ['nahco3', 'khco3'],
       ['nacl', 'kcl'],
+    ]);
+    const carbonatedMineralSalts = groups[0].rows
+      .filter(row => ['mgoh2', 'caco3'].includes(row.salt.id));
+    expect(carbonatedMineralSalts.map(row => [
+      row.salt.id,
+      row.contributesToGh,
+      row.contributesToKh,
+    ])).toEqual([
+      ['mgoh2', true, true],
+      ['caco3', true, true],
     ]);
 
     const groupedRows = groups.flatMap(group => group.rows);
     expect(groupedRows).toHaveLength(SALTS.length);
     expect(new Set(groupedRows.map(row => row.salt.id)).size).toBe(SALTS.length);
     expect(groupedRows.map(row => row.index)).toEqual([
-      100, 101, 104, 105, 108, 109, 110, 111, 112, 106, 107, 102, 103,
+      100, 101, 104, 105, 108, 109, 110, 111, 112, 113, 114, 106, 107, 102, 103,
     ]);
     expect(groupedRows.flatMap(row => row.salt.id).sort()).toEqual(
       SALTS.map(salt => salt.id).sort(),
