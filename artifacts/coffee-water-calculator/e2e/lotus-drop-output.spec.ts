@@ -6,18 +6,22 @@ test('shows fixed Lotus-model and personal per-drop ppm/mg on every DIY Lotus ca
   await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
 
   const physicalSaltForms = {
-    magnesium: { formula: 'MgCl₂', form: 'Hexahydrate' },
-    calcium: { formula: 'CaCl₂', form: 'Dihydrate' },
-    potassium: { formula: 'KHCO₃', form: 'Anhydrous' },
-    sodium: { formula: 'NaHCO₃', form: 'Anhydrous' },
+    magnesium: { name: 'Magnesium Chloride', formula: 'MgCl₂', form: 'Hexahydrate' },
+    calcium: { name: 'Calcium Chloride', formula: 'CaCl₂', form: 'Dihydrate' },
+    potassium: { name: 'Potassium Bicarbonate', formula: 'KHCO₃', form: 'Anhydrous' },
+    sodium: { name: 'Sodium Bicarbonate', formula: 'NaHCO₃', form: 'Anhydrous' },
   };
 
   for (const [id, salt] of Object.entries(physicalSaltForms)) {
-    await expect(page.getByTestId(`lotus-per-drop-summary-${id}`)).toBeVisible();
-    await expect(page.getByTestId(`lotus-drop-lotus-${id}`)).toBeVisible();
-    await expect(page.getByTestId(`lotus-drop-user-${id}`)).toBeVisible();
-    const saltDoseHeader = page.getByTestId(`lotus-per-drop-summary-${id}`)
-      .getByRole('columnheader', { name: /salt dose/i });
+    const summary = page.getByTestId(`lotus-per-drop-summary-${id}`);
+    const lotusRow = page.getByTestId(`lotus-drop-lotus-${id}`);
+    const userRow = page.getByTestId(`lotus-drop-user-${id}`);
+    await expect(summary).toBeVisible();
+    await expect(lotusRow).toBeVisible();
+    await expect(userRow).toBeVisible();
+    await expect(lotusRow).toContainText(salt.name);
+    await expect(userRow).toContainText(salt.name);
+    const saltDoseHeader = summary.getByRole('columnheader', { name: /salt dose/i });
     await expect(saltDoseHeader).toContainText(salt.formula);
     await expect(saltDoseHeader).toContainText(salt.form);
   }
@@ -42,6 +46,8 @@ test('shows fixed Lotus-model and personal per-drop ppm/mg on every DIY Lotus ca
   await expect(epsom).toBeVisible();
   await expect(epsom).toContainText('Mg-matched Lotus reference');
   await expect(epsom).toContainText('Salt mass is estimated');
+  await expect(page.getByTestId('lotus-drop-lotus-bonus-epsom')).toContainText('Magnesium Sulfate');
+  await expect(page.getByTestId('lotus-drop-user-bonus-epsom')).toContainText('Magnesium Sulfate');
   const epsomHeader = epsom.getByRole('columnheader', { name: /salt dose/i });
   await expect(epsomHeader).toContainText('MgSO₄');
   await expect(epsomHeader).toContainText('Heptahydrate (Epsom)');

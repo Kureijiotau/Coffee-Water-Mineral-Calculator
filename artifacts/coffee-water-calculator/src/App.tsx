@@ -262,6 +262,7 @@ import {
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
 const WatermancerGuide = lazy(() => import('./WatermancerGuide'));
+const WATERMANCER_GUIDE_PREVIEW_ONLY = import.meta.env.DEV;
 const WaterMixer = lazy(() => import('./WaterMixer'));
 const WaterTastingTab = lazy(() => import('./WaterTastingTab').then(module => ({
   default: module.WaterTastingTab,
@@ -6492,20 +6493,22 @@ function App() {
               <ListChecks className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
               Guide
             </button>
-            <button
-              type="button"
-              role="tab"
-              id="watermancer-guide-tab-button"
-              aria-controls="watermancer-guide-panel"
-              aria-selected={appTab === 'watermancer-guide'}
-              data-testid="tab-watermancer-guide"
-              title="Watermancer Guide"
-              onClick={() => setAppTab('watermancer-guide')}
-              className={`inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 whitespace-normal rounded-md border border-white/20 bg-black/15 px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-0 sm:px-3 sm:py-1.5 ${appTab === 'watermancer-guide' ? 'border-cyan-300/35 bg-cyan-300/10 text-cyan-100' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
-            >
-              <Pipette className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
-              <span className="min-w-0">Watermancer Guide</span>
-            </button>
+            {WATERMANCER_GUIDE_PREVIEW_ONLY && (
+              <button
+                type="button"
+                role="tab"
+                id="watermancer-guide-tab-button"
+                aria-controls="watermancer-guide-panel"
+                aria-selected={appTab === 'watermancer-guide'}
+                data-testid="tab-watermancer-guide"
+                title="Watermancer Guide"
+                onClick={() => setAppTab('watermancer-guide')}
+                className={`inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 whitespace-normal rounded-md border border-white/20 bg-black/15 px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-0 sm:px-3 sm:py-1.5 ${appTab === 'watermancer-guide' ? 'border-cyan-300/35 bg-cyan-300/10 text-cyan-100' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              >
+                <Pipette className="h-3.5 w-3.5 shrink-0 text-cyan-300" aria-hidden="true" />
+                <span className="min-w-0">Watermancer Guide</span>
+              </button>
+            )}
           </div>
         </div>
          </div>
@@ -6702,7 +6705,7 @@ function App() {
     );
   }
 
-  if (appTab === 'watermancer-guide') {
+  if (WATERMANCER_GUIDE_PREVIEW_ONLY && appTab === 'watermancer-guide') {
     return (
       <div className="app-shell min-h-screen bg-slate-900 font-sans text-slate-100">
         <div className="flex min-h-screen items-start justify-center p-4 sm:p-6">
@@ -10582,7 +10585,7 @@ function LotusDropsSection({
                                 <span className="block text-[9px] font-normal capitalize text-slate-500">Based on {style} source-drop model</span>
                               </th>
                               <td className="px-2 py-1.5 font-semibold tabular-nums text-cyan-100">
-                                +{plan.lotusReferenceIonPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name}
+                                +{plan.lotusReferenceIonPpmPerDrop.toFixed(3)} ppm {plan.saltName}
                               </td>
                               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
                                 ~{plan.lotusReferenceSaltMgPerDrop.toFixed(3)} mg
@@ -10596,7 +10599,7 @@ function LotusDropsSection({
                                 </span>
                               </th>
                               <td className="px-2 py-1.5 font-semibold tabular-nums text-cyan-100">
-                                +{plan.ionPpmPerDrop.toFixed(3)} ppm {ION_MAP[plan.ionId].name}
+                                +{plan.ionPpmPerDrop.toFixed(3)} ppm {plan.saltName}
                               </td>
                               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
                                 ~{plan.saltMgPerDrop.toFixed(3)} mg
