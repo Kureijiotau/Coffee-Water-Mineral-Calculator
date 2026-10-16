@@ -4,6 +4,7 @@ import {
   WATERMANCER_GUIDE_STEPS,
   type WatermancerGuideEntry,
 } from './watermancerGuideContent';
+import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
 
 type WatermancerGuideProps = {
   onOpenDiyConcentrate: () => void;
@@ -78,10 +79,13 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
 
           <article className="app-card-body min-w-0" aria-labelledby={`wg-step-${step.id}`} data-testid={`step-${step.id}`}>
             {step.id === 'supplies' && (
-              <p className="mb-5 text-sm leading-relaxed text-slate-300" data-testid="guide-welcome">
-                <strong className="font-semibold text-slate-100">Welcome to the Watermancer Guide.</strong>{' '}
-                This guide will help you set up a separate dropper for each mineral salt so you can fine-tune your water recipes down to the individual ion levels and gain precise control over your water profile.
-              </p>
+              <>
+                <p className="mb-5 text-sm leading-relaxed text-slate-300" data-testid="guide-welcome">
+                  <strong className="font-semibold text-slate-100">Welcome to the Watermancer Guide.</strong>{' '}
+                  This guide will help you set up a separate dropper for each mineral salt so you can fine-tune your water recipes down to the individual ion levels and gain precise control over your water profile.
+                </p>
+                <WatermancerGuideCounterionComparison />
+              </>
             )}
             <div className="flex items-start gap-3">
               <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>

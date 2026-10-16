@@ -26,6 +26,8 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await expect(page.getByTestId('guide-welcome')).toHaveText(
     'Welcome to the Watermancer Guide. This guide will help you set up a separate dropper for each mineral salt so you can fine-tune your water recipes down to the individual ion levels and gain precise control over your water profile.'
   );
+  await expect(page.getByTestId('guide-counterion-comparison')).toBeVisible();
+  await expect(page.getByTestId('guide-counterion-comparison').getByRole('img')).toHaveCount(2);
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
   await expect(page.getByRole('list', { name: 'Guide steps' })).toBeVisible();
   await expect(page.getByTestId('button-previous-step')).toBeDisabled();
@@ -43,6 +45,7 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 2 of 6');
   await expect(page.getByTestId('step-calibrate')).toBeVisible();
   await expect(page.getByTestId('guide-welcome')).toHaveCount(0);
+  await expect(page.getByTestId('guide-counterion-comparison')).toHaveCount(0);
   await page.getByTestId('button-previous-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
 
