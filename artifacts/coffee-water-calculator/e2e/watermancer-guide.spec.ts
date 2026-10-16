@@ -20,28 +20,27 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await expect(watermancerGuideTab).toHaveAttribute('aria-selected', 'true');
   await expect(weekOneGuideTab).toHaveAttribute('aria-selected', 'false');
   await expect(page.getByTestId('watermancer-guide')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Watermancer Guide', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Watermancer Guide', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Quick reference', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Set up the supplies', exact: true })).toBeVisible();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
+  await expect(page.getByRole('list', { name: 'Guide steps' })).toBeVisible();
   await expect(page.getByTestId('button-previous-step')).toBeDisabled();
+
+  const stepNavigation = page.getByRole('list', { name: 'Guide steps' });
+  const stepContent = page.getByTestId('step-supplies');
+  await expect(stepContent).toBeVisible();
+  const navigationPrecedesCurrentStep = await stepNavigation.evaluate(navigation => {
+    const content = document.querySelector('[data-testid="step-supplies"]');
+    return Boolean(content && (navigation.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  expect(navigationPrecedesCurrentStep).toBe(true);
 
   await page.getByTestId('button-next-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 2 of 6');
   await expect(page.getByTestId('step-calibrate')).toBeVisible();
   await page.getByTestId('button-previous-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
-
-  const calibrationReference = page.getByTestId('button-reference-drop-calibration');
-  const doseReference = page.getByTestId('button-reference-mg-per-drop');
-  await calibrationReference.click();
-  await doseReference.click();
-  await expect(calibrationReference).toHaveAttribute('aria-expanded', 'true');
-  await expect(doseReference).toHaveAttribute('aria-expanded', 'true');
-  await expect(page.getByTestId('reference-drop-calibration')).toBeVisible();
-  await expect(page.getByTestId('reference-mg-per-drop')).toBeVisible();
-  await calibrationReference.click();
-  await expect(calibrationReference).toHaveAttribute('aria-expanded', 'false');
-  await expect(doseReference).toHaveAttribute('aria-expanded', 'true');
 
   await page.getByTestId('button-step-set-targets').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 4 of 6');
