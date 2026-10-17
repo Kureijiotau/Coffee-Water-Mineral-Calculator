@@ -122,6 +122,7 @@ export const WATERMANCER_COUNTERION_EXAMPLES = COMPARISON_RECIPES.map(recipe => 
   const rendered = buildRecipeShareCardSvg(model);
   return {
     id: recipe.id,
+    recipeName: recipe.recipeName,
     imageAlt: recipe.imageAlt,
     model,
     imageSrc: toSvgDataUrl(rendered.svg),

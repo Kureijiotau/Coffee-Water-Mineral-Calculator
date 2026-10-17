@@ -28,6 +28,12 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   );
   await expect(page.getByTestId('guide-counterion-comparison')).toBeVisible();
   await expect(page.getByTestId('guide-counterion-comparison').getByRole('img')).toHaveCount(2);
+  await page.getByRole('button', { name: 'View larger image: Chloride + sodium example' }).click();
+  const zoomDialog = page.getByRole('dialog', { name: 'Chloride + sodium example' });
+  await expect(zoomDialog).toBeVisible();
+  await expect(zoomDialog.getByRole('img')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(zoomDialog).toHaveCount(0);
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
   await expect(page.getByRole('list', { name: 'Guide steps' })).toBeVisible();
   await expect(page.getByTestId('button-previous-step')).toBeDisabled();
