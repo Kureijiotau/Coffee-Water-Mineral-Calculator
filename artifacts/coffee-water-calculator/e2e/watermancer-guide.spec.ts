@@ -32,6 +32,14 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   const zoomDialog = page.getByRole('dialog', { name: 'Chloride + sodium example' });
   await expect(zoomDialog).toBeVisible();
   await expect(zoomDialog.getByRole('img')).toBeVisible();
+  const zoomImage = zoomDialog.getByTestId('zoom-image');
+  const imageBounds = await zoomImage.boundingBox();
+  if (!imageBounds) throw new Error('Zoom image should have a visible bounding box');
+  await page.mouse.move(imageBounds.x + imageBounds.width * 0.2, imageBounds.y + imageBounds.height * 0.3);
+  await expect(zoomImage).toHaveCSS('transform', 'matrix(2.2, 0, 0, 2.2, 0, 0)');
+  const firstZoomOrigin = await zoomImage.evaluate(image => image.style.transformOrigin);
+  await page.mouse.move(imageBounds.x + imageBounds.width * 0.8, imageBounds.y + imageBounds.height * 0.7);
+  await expect.poll(() => zoomImage.evaluate(image => image.style.transformOrigin)).not.toBe(firstZoomOrigin);
   await page.keyboard.press('Escape');
   await expect(zoomDialog).toHaveCount(0);
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');

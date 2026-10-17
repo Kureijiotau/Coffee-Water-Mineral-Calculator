@@ -8,6 +8,7 @@ import { WATERMANCER_COUNTERION_EXAMPLES } from './watermancerGuideExamples';
 
 export default function WatermancerGuideCounterionComparison() {
   const [zoomedExampleId, setZoomedExampleId] = React.useState<string | null>(null);
+  const [zoomOrigin, setZoomOrigin] = React.useState<string | null>(null);
   const zoomedExample = WATERMANCER_COUNTERION_EXAMPLES.find(
     example => example.id === zoomedExampleId,
   );
@@ -51,20 +52,40 @@ export default function WatermancerGuideCounterionComparison() {
       <Dialog
         open={Boolean(zoomedExample)}
         onOpenChange={open => {
-          if (!open) setZoomedExampleId(null);
+          if (!open) {
+            setZoomedExampleId(null);
+            setZoomOrigin(null);
+          }
         }}
       >
         {zoomedExample && (
-          <DialogContent className="w-[calc(100vw-1rem)] max-w-[1200px] max-h-[96dvh] overflow-y-auto border-slate-700 bg-slate-950 p-3 text-slate-100 sm:p-4">
+          <DialogContent className="w-[calc(100vw-1rem)] max-w-[1200px] max-h-[96dvh] overflow-hidden border-slate-700 bg-slate-950 p-3 text-slate-100 sm:p-4">
             <DialogTitle className="pr-8 text-sm font-medium text-slate-200">
               {zoomedExample.recipeName}
             </DialogTitle>
-            <img
-              src={zoomedExample.imageSrc}
-              alt={zoomedExample.imageAlt}
-              className="mx-auto block max-h-[calc(96dvh-5rem)] w-auto max-w-full object-contain"
-              decoding="async"
-            />
+            <div className="flex h-[calc(96dvh-5rem)] w-full items-center justify-center overflow-hidden">
+              <img
+                data-testid="zoom-image"
+                src={zoomedExample.imageSrc}
+                alt={zoomedExample.imageAlt}
+                title="Move the pointer over the image to zoom and inspect details"
+                className={`block max-h-full max-w-full object-contain ${zoomOrigin ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+                style={{
+                  transform: zoomOrigin ? 'scale(2.2)' : 'scale(1)',
+                  transformOrigin: zoomOrigin ?? '50% 50%',
+                }}
+                onPointerMove={event => {
+                  if (event.pointerType === 'touch') return;
+                  const { offsetWidth, offsetHeight } = event.currentTarget;
+                  if (offsetWidth === 0 || offsetHeight === 0) return;
+                  const x = (event.nativeEvent.offsetX / offsetWidth) * 100;
+                  const y = (event.nativeEvent.offsetY / offsetHeight) * 100;
+                  setZoomOrigin(`${x}% ${y}%`);
+                }}
+                onPointerLeave={() => setZoomOrigin(null)}
+                decoding="async"
+              />
+            </div>
           </DialogContent>
         )}
       </Dialog>
