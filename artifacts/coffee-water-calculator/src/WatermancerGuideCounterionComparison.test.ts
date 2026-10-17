@@ -10,7 +10,8 @@ describe('Watermancer Guide counterion comparison', () => {
     expect(html).toContain('Same GH and KH. Different salts.');
     expect(html).toContain('can affect taste');
     expect((html.match(/<img /g) ?? [])).toHaveLength(2);
-    expect((html.match(/aria-label="View larger image:/g) ?? [])).toHaveLength(2);
+    expect((html.match(/aria-pressed="false"/g) ?? [])).toHaveLength(2);
+    expect(html).not.toContain('role="dialog"');
     expect(html).toContain('alt="Recipe steps image for magnesium chloride');
     expect(html).toContain('alt="Recipe steps image for magnesium sulfate');
     expect(html).toContain('same magnesium, calcium, and bicarbonate targets');
