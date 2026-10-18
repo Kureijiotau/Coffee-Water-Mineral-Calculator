@@ -12,7 +12,6 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     summary: 'Keep each physical salt in its own labeled dropper bottle.',
     details: [
       'Gather the salts, separate droppers, a scale suitable for small masses, and one bottle for each stock.',
-      'Label each bottle with the salt and the physical hydration form you weighed.',
     ],
   },
   {

@@ -12,6 +12,9 @@ describe('Watermancer Guide copy', () => {
 
     expect(WATERMANCER_GUIDE_STEPS).toHaveLength(6);
     expect(WATERMANCER_GUIDE_REFERENCES).toHaveLength(8);
+    expect(WATERMANCER_GUIDE_STEPS[0]?.details).not.toContain(
+      'Label each bottle with the salt and the physical hydration form you weighed.',
+    );
 
     expect(stepText).toMatch(/supplies/i);
     expect(stepText).toMatch(/count and weigh/i);
