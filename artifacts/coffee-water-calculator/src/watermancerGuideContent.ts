@@ -32,10 +32,9 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   {
     id: 'prepare-stocks',
     title: 'Prepare 1 mg per drop stocks',
-    summary: 'Use the DIY Concentrate tool to prepare one salt at a time.',
+    summary: 'For a fixed tip calibration, bottle size—not salt type—sets the salt mass.',
     details: [
-      'Select one standard-path salt and the same hydration form as the physical powder. Enter that dropper’s calibration.',
-      'Adjust the stock strength until the tool reports 1.00 mg of that salt per drop, then follow the tool’s preparation values. Repeat for each salt.',
+      'Each drop contains 1.00 mg of its physical salt; the salt type changes which ions those drops contribute.',
     ],
   },
   {

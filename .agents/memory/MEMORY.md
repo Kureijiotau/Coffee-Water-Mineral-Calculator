@@ -104,5 +104,5 @@
 - [Ratio preview usefulness](ratio-preview-usefulness.md) — colored ion ratios help users understand recipes and draw comparisons
 - [Citrate ratio eligibility](citrate-ratio-eligibility.md) — offer Citrates in the custom Watermancer ratio only when its current final reading is positive
 - [Calculation confidence](calculation-confidence.md) — tighten numerical outputs so the owner and users can trust results without second-guessing.
-- [Watermancer 1 mg/drop guide](watermancer-one-mg-drop-guide.md) — keep standard salt stocks distinct from the unconfirmed SodaStream stock method.
+- [Watermancer 1 mg/drop guide](watermancer-one-mg-drop-guide.md) — mirror the DIY mass model, reserve 5 mL headroom, and keep SodaStream salts out of the guide
 - [SodaStream bicarbonate salt model](watermancer-carbonated-salt-model.md) — model Mg(OH)₂ and CaCO₃ powder doses as full CO₂-reacted bicarbonate ions in final water.

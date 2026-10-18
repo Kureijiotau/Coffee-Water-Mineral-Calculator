@@ -21,6 +21,7 @@ import {
   type WatermancerGuideEntry,
 } from './watermancerGuideContent';
 import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
+import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
 
 type WatermancerGuideProps = {
   onOpenDiyConcentrate: () => void;
@@ -219,6 +220,10 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
   const [savedCalibrations, setSavedCalibrations] = useState(() =>
     migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations,
   );
+  const [stockBottleVolumeInput, setStockBottleVolumeInput] = useState('');
+  const [stockDropperStyle, setStockDropperStyle] = useState<LotusDropperStyle>(() =>
+    savedCalibrations.straight ? 'straight' : savedCalibrations.round ? 'round' : 'straight',
+  );
   const total = WATERMANCER_GUIDE_STEPS.length;
   const step = WATERMANCER_GUIDE_STEPS[stepIndex];
   const useCalibration = (style: LotusDropperStyle, calibration: LotusDropperCalibration) => {
@@ -292,6 +297,19 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
               </>
             )}
             <EntryDetails entry={step} />
+
+            {step.id === 'prepare-stocks' && (
+              <WatermancerGuideStockPreparation
+                calibrations={savedCalibrations}
+                dropperStyle={stockDropperStyle}
+                onDropperStyleChange={setStockDropperStyle}
+                bottleVolumeInput={stockBottleVolumeInput}
+                onBottleVolumeInputChange={setStockBottleVolumeInput}
+                onOpenCalibration={() => setStepIndex(
+                  Math.max(0, WATERMANCER_GUIDE_STEPS.findIndex(entry => entry.id === 'calibrate')),
+                )}
+              />
+            )}
 
             {step.id === 'calibrate' && (
               <WatermancerGuideCalibrationCards

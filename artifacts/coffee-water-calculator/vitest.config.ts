@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      '@assets/1_1792294122443.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
       '@assets/4_1792294122444.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
       '@assets/5_1792294122444.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
       '@assets/9_1792294122446.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
