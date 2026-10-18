@@ -21,6 +21,7 @@ import {
   type WatermancerGuideEntry,
 } from './watermancerGuideContent';
 import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
+import WatermancerGuideStep5Intro from './WatermancerGuideStep5Intro';
 import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
 
 type WatermancerGuideProps = {
@@ -29,7 +30,7 @@ type WatermancerGuideProps = {
 };
 
 const DIY_STEP_IDS = new Set(['calibrate', 'prepare-stocks']);
-const WATERMANCER_STEP_IDS = new Set(['set-targets', 'read-dose-plan', 'make-and-taste']);
+const WATERMANCER_STEP_IDS = new Set(['read-dose-plan', 'make-and-taste']);
 
 function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
   if (entry.details.length === 0) return null;
@@ -283,7 +284,14 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
               <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>
               <div className="min-w-0">
                 <h3 id={`wg-step-${step.id}`} className="text-lg font-semibold text-slate-100">{step.title}</h3>
-                <p className="mt-1 text-sm font-medium text-cyan-100/80">{step.summary}</p>
+                {step.id === 'set-targets' ? (
+                  <WatermancerGuideStep5Intro
+                    summary={step.summary}
+                    onOpenWatermancer={onOpenWatermancer}
+                  />
+                ) : (
+                  <p className="mt-1 text-sm font-medium text-cyan-100/80">{step.summary}</p>
+                )}
               </div>
             </div>
 

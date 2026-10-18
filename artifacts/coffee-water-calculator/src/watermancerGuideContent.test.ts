@@ -25,6 +25,9 @@ describe('Watermancer Guide copy', () => {
     expect(WATERMANCER_GUIDE_STEPS[1]?.details).toContain(
       'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
     );
+    expect(WATERMANCER_GUIDE_STEPS[4]?.summary).toBe(
+      'With all your 1 mg/drop solutions ready, you can now make very precise water recipes using Watermancer.',
+    );
     expect(WATERMANCER_GUIDE_STEPS[1]?.details).not.toContain(
       'Label each bottle with the salt and the physical hydration form you weighed.',
     );

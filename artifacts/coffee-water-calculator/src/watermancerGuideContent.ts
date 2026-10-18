@@ -40,7 +40,7 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   {
     id: 'set-targets',
     title: 'Set up the Watermancer recipe',
-    summary: 'Start with charge-balanced final-ion targets, then include the mineral water you will actually use.',
+    summary: 'With all your 1 mg/drop solutions ready, you can now make very precise water recipes using Watermancer.',
     details: [
       'Choose or create the desired final-ion profile and set the final batch volume to 1 L.',
       'Select the actual mineral-water source and amount for the recipe. Use Craft ions when adjusting a pair so the complete target set stays charge balanced.',
