@@ -102,3 +102,31 @@ mtime_ms = 1790310397432
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/410ef0bd-7708-4e03-95b5-7b0729cd7201/200bd3c7-9707-4b7d-acd4-7390cd1c89a8"
 storage_version_token = "1790310457131867"
 content_type = "image/png"
+
+[[outputs]]
+id = "nJud5sjkx1gVlaVxoofLH"
+uri = "file://generated-artifacts/watermancer-guide-step5-landscape-preview.jpg"
+type = "image"
+title = "Step 5 crop A — full row"
+description = "Tight landscape crop showing the full dropper lineup (about 2.5:1)."
+logical_id = "284d4acc-7af4-440a-9710-7c7d4983cf31"
+content_hash = "sha256:b3fb88d928b504ce9b950ab9184c7843414a74044b266e585815f4ac1d441402"
+size = 314447
+mtime_ms = 1792302093081
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/284d4acc-7af4-440a-9710-7c7d4983cf31/698d624b-ffc0-4625-8a3c-cd5324e9f860"
+storage_version_token = "1792302130620514"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "7Ln7o2L7DBsGeLcAaigT9"
+uri = "file://generated-artifacts/watermancer-guide-step5-square-preview.jpg"
+type = "image"
+title = "Step 5 crop B — near-square"
+description = "Square crop of the central droppers; bottles at the ends are omitted."
+logical_id = "c57bdaf1-a1ce-4ecd-bd7b-3b4e623f5300"
+content_hash = "sha256:fc6873c04d94b6313f11766654a4778117dadb46641ba072d1fb6621dba8d49c"
+size = 600548
+mtime_ms = 1792302094041
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a139bc10-b994-4dbd-bf26-6bccf7196089/c57bdaf1-a1ce-4ecd-bd7b-3b4e623f5300/823ef841-451f-4be6-9196-38dcfc5ccc5d"
+storage_version_token = "1792302131978086"
+content_type = "image/jpeg"
