@@ -82,6 +82,60 @@ export function lotusMeasuredDropsPerMl(
   return drops / waterWeight;
 }
 
+export function getDiyDropperRateForStyle(
+  style: LotusDropperStyle,
+  nominalStraightDropsPerMl: number,
+  calibrations?: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>,
+): number {
+  return lotusMeasuredDropsPerMl(calibrations?.[style])
+    ?? lotusDropsPerMl(style, nominalStraightDropsPerMl);
+}
+
+export type DiyDropperCalibrationResolution = {
+  calibration: LotusDropperCalibration | null;
+  dropsPerMl: number;
+  source: 'guide' | 'manual' | 'assumed' | 'awaiting-guide';
+};
+
+export function resolveDiyDropperCalibration(
+  style: LotusDropperStyle,
+  guideCalibrations: Partial<Record<LotusDropperStyle, LotusDropperCalibration>> | undefined,
+  manualCalibration: LotusDropperCalibration | undefined,
+  nominalStraightDropsPerMl: number,
+): DiyDropperCalibrationResolution {
+  const savedCalibration = guideCalibrations?.[style];
+  const savedRate = lotusMeasuredDropsPerMl(savedCalibration);
+  if (savedCalibration && savedRate !== null) {
+    return {
+      calibration: savedCalibration,
+      dropsPerMl: getDiyDropperRateForStyle(style, nominalStraightDropsPerMl, guideCalibrations),
+      source: 'guide',
+    };
+  }
+
+  const hasAnyGuideCalibration = Object.values(guideCalibrations ?? {}).some(
+    calibration => lotusMeasuredDropsPerMl(calibration) !== null,
+  );
+  if (hasAnyGuideCalibration) {
+    return {
+      calibration: null,
+      dropsPerMl: lotusDropsPerMl(style, nominalStraightDropsPerMl),
+      source: 'awaiting-guide',
+    };
+  }
+
+  const manualRate = lotusMeasuredDropsPerMl(manualCalibration);
+  if (manualCalibration && manualRate !== null) {
+    return { calibration: manualCalibration, dropsPerMl: manualRate, source: 'manual' };
+  }
+
+  return {
+    calibration: null,
+    dropsPerMl: lotusDropsPerMl(style, nominalStraightDropsPerMl),
+    source: 'assumed',
+  };
+}
+
 function calibrationSignature(calibration: LotusDropperCalibration): string {
   const measuredRate = lotusMeasuredDropsPerMl(calibration);
   if (measuredRate !== null) {

@@ -1,8 +1,21 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, FlaskConical, Pipette } from 'lucide-react';
+import straightTipPhoto from '@assets/4_1792294122444.jpg';
+import roundTipPhoto from '@assets/5_1792294122444.jpg';
 import saltPantryPhoto from '@assets/9_1792294122446.jpg';
 import dropperBottlesPhoto from '@assets/2_1792294122443.jpg';
 import scalePhoto from '@assets/6_1792294122444.jpg';
+import {
+  loadDiyConcentrateInputs,
+  saveDiyConcentrateInputs,
+  withDiyLotusCalibration,
+} from './accountSyncStorage';
+import {
+  lotusMeasuredDropsPerMl,
+  migrateLotusCalibrationInputs,
+  type LotusDropperCalibration,
+  type LotusDropperStyle,
+} from './lotusConcentrate';
 import {
   WATERMANCER_GUIDE_STEPS,
   type WatermancerGuideEntry,
@@ -34,10 +47,188 @@ function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
 
 const actionClass = 'app-control inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-colors';
 
+type WatermancerGuideCalibrationCardsProps = {
+  calibrations?: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
+  onUse: (style: LotusDropperStyle, calibration: LotusDropperCalibration) => void;
+};
+
+const TIP_CALIBRATION_CARDS: readonly {
+  style: LotusDropperStyle;
+  photo: string;
+  photoAlt: string;
+  panel: string;
+  title: string;
+  inputLabel: string;
+  value: string;
+}[] = [
+  {
+    style: 'straight',
+    photo: straightTipPhoto,
+    photoAlt: 'Close-up of a straight dropper tip.',
+    panel: 'border-cyan-300/20 bg-cyan-400/[0.035]',
+    title: 'Straight tip',
+    inputLabel: 'Straight',
+    value: 'text-cyan-100',
+  },
+  {
+    style: 'round',
+    photo: roundTipPhoto,
+    photoAlt: 'Close-up of a round dropper tip.',
+    panel: 'border-rose-300/20 bg-rose-400/[0.035]',
+    title: 'Round tip',
+    inputLabel: 'Round',
+    value: 'text-rose-100',
+  },
+];
+
+export function WatermancerGuideCalibrationCards({
+  calibrations = {},
+  onUse,
+}: WatermancerGuideCalibrationCardsProps) {
+  const [drafts, setDrafts] = useState<Partial<Record<LotusDropperStyle, LotusDropperCalibration>>>(() =>
+    Object.fromEntries(TIP_CALIBRATION_CARDS.map(({ style }) => [
+      style,
+      {
+        dropsInput: calibrations[style]?.dropsInput ?? '',
+        weightInput: calibrations[style]?.weightInput ?? '',
+        style,
+      },
+    ])) as Partial<Record<LotusDropperStyle, LotusDropperCalibration>>,
+  );
+
+  const updateDraft = (
+    style: LotusDropperStyle,
+    field: 'dropsInput' | 'weightInput',
+    value: string,
+  ) => {
+    setDrafts(previous => ({
+      ...previous,
+      [style]: {
+        dropsInput: previous[style]?.dropsInput ?? '',
+        weightInput: previous[style]?.weightInput ?? '',
+        ...previous[style],
+        [field]: value,
+        style,
+      },
+    }));
+  };
+
+  return (
+    <div className="mt-4" data-testid="guide-tip-calibrations">
+      <p className="mb-3 text-xs leading-relaxed text-slate-400">
+        Weigh water drops; for water, 1 g is treated as about 1 mL.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {TIP_CALIBRATION_CARDS.map(card => {
+          const calibration = drafts[card.style] ?? {
+            dropsInput: '',
+            weightInput: '',
+            style: card.style,
+          };
+          const rate = lotusMeasuredDropsPerMl(calibration);
+          const isApplied = calibrations[card.style]?.dropsInput === calibration.dropsInput
+            && calibrations[card.style]?.weightInput === calibration.weightInput
+            && rate !== null;
+
+          return (
+            <div key={card.style} className="min-w-0" data-testid={`guide-tip-calibration-${card.style}`}>
+              <figure className="overflow-hidden rounded-xl border border-slate-700/60 bg-slate-950/60">
+                <img
+                  src={card.photo}
+                  alt={card.photoAlt}
+                  width={1024}
+                  height={1024}
+                  loading="lazy"
+                  decoding="async"
+                  data-testid={`guide-calibration-photo-${card.style}`}
+                  className="aspect-square w-full object-contain"
+                />
+              </figure>
+              <section className={`mt-3 rounded-xl border p-3 ${card.panel}`}>
+                <h4 className={`text-sm font-semibold ${card.value}`}>{card.title} calibration</h4>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="min-w-0 rounded-lg border border-slate-700/60 bg-slate-950/55 px-2.5 py-2">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      Measured drops
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      inputMode="numeric"
+                      value={calibration.dropsInput}
+                      onChange={event => updateDraft(card.style, 'dropsInput', event.target.value)}
+                      placeholder="e.g. 100"
+                      aria-label={`${card.inputLabel} measured drops`}
+                      className="mt-1 w-full min-w-0 bg-transparent text-base font-semibold tabular-nums text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    />
+                  </label>
+                  <label className="min-w-0 rounded-lg border border-slate-700/60 bg-slate-950/55 px-2.5 py-2">
+                    <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      Water weight (g)
+                    </span>
+                    <input
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={calibration.weightInput}
+                      onChange={event => updateDraft(card.style, 'weightInput', event.target.value)}
+                      placeholder="e.g. 5"
+                      aria-label={`${card.inputLabel} water weight in grams`}
+                      className="mt-1 w-full min-w-0 bg-transparent text-base font-semibold tabular-nums text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-slate-700/60 bg-slate-950/45 px-3 py-2">
+                  <span className="text-xs text-slate-400">Calibration value</span>
+                  <strong className={`text-sm tabular-nums ${card.value}`} aria-live="polite">
+                    {rate === null ? '— drops/mL' : `${rate.toFixed(1)} drops/mL`}
+                  </strong>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span role="status" aria-live="polite" className="min-w-0 text-[10px] text-emerald-200/90">
+                    {isApplied ? 'Applied to DIY tools' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onUse(card.style, calibration)}
+                    disabled={rate === null}
+                    aria-label={`Use ${card.style} tip calibration`}
+                    data-testid={`button-use-guide-calibration-${card.style}`}
+                    className={`app-control min-h-10 shrink-0 rounded-lg border px-4 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                      card.style === 'straight'
+                        ? 'border-cyan-300/35 bg-cyan-400/10 text-cyan-100 hover:bg-cyan-400/20'
+                        : 'border-rose-300/35 bg-rose-400/10 text-rose-100 hover:bg-rose-400/20'
+                    }`}
+                  >
+                    Use
+                  </button>
+                </div>
+              </section>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermancer }: WatermancerGuideProps) {
   const [stepIndex, setStepIndex] = useState(0);
+  const [savedCalibrations, setSavedCalibrations] = useState(() =>
+    migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations,
+  );
   const total = WATERMANCER_GUIDE_STEPS.length;
   const step = WATERMANCER_GUIDE_STEPS[stepIndex];
+  const useCalibration = (style: LotusDropperStyle, calibration: LotusDropperCalibration) => {
+    const next = withDiyLotusCalibration(loadDiyConcentrateInputs(), style, calibration);
+    saveDiyConcentrateInputs(next);
+    setSavedCalibrations(previous => ({
+      ...previous,
+      [style]: { ...calibration, style },
+    }));
+  };
 
   const diyButton = (
     <button type="button" onClick={onOpenDiyConcentrate} data-testid="button-open-diy-concentrate"
@@ -101,6 +292,13 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
               </>
             )}
             <EntryDetails entry={step} />
+
+            {step.id === 'calibrate' && (
+              <WatermancerGuideCalibrationCards
+                calibrations={savedCalibrations}
+                onUse={useCalibration}
+              />
+            )}
 
             {step.id === 'supplies' && (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="guide-supplies-photos">

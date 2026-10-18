@@ -30,7 +30,7 @@ describe('Watermancer Guide copy', () => {
     );
 
     expect(stepText).toMatch(/supplies/i);
-    expect(stepText).toMatch(/count and weigh/i);
+    expect(stepText).toMatch(/count a known number of water drops.*weigh the water/i);
     expect(stepText).toMatch(/1\.00 mg.*per drop/i);
     expect(stepText).toMatch(/balanced.*target/i);
     expect(stepText).toMatch(/mineral.water/i);

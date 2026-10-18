@@ -23,10 +23,10 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   {
     id: 'calibrate',
     title: 'Calibrate each dropper',
-    summary: 'Measure each dropper instead of assuming every tip releases the same amount.',
+    summary: 'Measure straight and round tips separately instead of assuming they release the same amount.',
     details: [
-      'Count and weigh a known number of drops for each dropper: tare a small vessel, dispense the drops, and weigh the liquid delivered.',
-      'Enter that drop count and liquid mass in the existing DIY Concentrate workflow. Verify the prepared stock output when practical.',
+      'Count a known number of water drops from each tip style into a tared vessel, then weigh the water.',
+      'Enter each result below and press Use. The saved calibration is shared by DIY Stock Builder and DIY Lotus Drops.',
     ],
   },
   {

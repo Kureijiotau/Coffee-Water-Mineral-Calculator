@@ -111,6 +111,8 @@ import { WATERING_HOLE_WATER_RECIPES, type WateringHoleWaterRecipe } from './wat
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
 import { buildBrewerSaltGroups, type BrewerSaltGroupId } from './brewerSaltGroups';
 import {
+  getDiyDropperRateForStyle,
+  resolveDiyDropperCalibration,
   LOTUS_BREW_VOLUME_ML,
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
@@ -9266,6 +9268,7 @@ function DiySingleSaltConcentrateBuilder({
   diySaltForms,
   diyFinalLiters,
   onPlanChange,
+  sharedCalibrations,
 }: {
   volumeUnit: VolumeUnit;
   onToggleVolumeUnit: () => void;
@@ -9277,6 +9280,7 @@ function DiySingleSaltConcentrateBuilder({
   diySaltForms: Record<string, number>;
   diyFinalLiters: number;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+  sharedCalibrations?: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
 }) {
   const activeSaltIds = useMemo(
     () => SALTS
@@ -9420,6 +9424,7 @@ function DiySingleSaltConcentrateBuilder({
         onClear={() => undefined}
         onPlanChange={onPlanChange}
         singleSaltOnly
+        sharedCalibrations={sharedCalibrations}
       />
     </div>
   );
@@ -9473,6 +9478,9 @@ function ConcentrateWorkspace({
   const [recipeConcentratePlan, setRecipeConcentratePlan] = useState<ConcentratePlanSnapshot | null>(null);
   const [dropperStyle, setDropperStyle] = useState<LotusDropperStyle>('straight');
   const [straightDropsPerMlInput, setStraightDropsPerMlInput] = useState(String(LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML));
+  const sharedDiyCalibrations = workspaceMode === 'diy'
+    ? migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations
+    : {};
 
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
   const safeFormIdx = Math.min(formIdx, Math.max(0, salt.hydrationForms.length - 1));
@@ -9614,6 +9622,7 @@ function ConcentrateWorkspace({
           diySaltForms={diySaltForms}
           diyFinalLiters={diyFinalLiters}
           onPlanChange={setRecipeConcentratePlan}
+          sharedCalibrations={sharedDiyCalibrations}
         />
         <button
           type="button"
@@ -12121,6 +12130,7 @@ function DiySingleSaltConcentratePanel({
   straightDropsPerMl,
   onToggleVolumeUnit,
   onPlanChange,
+  sharedCalibrations,
 }: {
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
@@ -12129,6 +12139,7 @@ function DiySingleSaltConcentratePanel({
   straightDropsPerMl: number;
   onToggleVolumeUnit: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
+  sharedCalibrations?: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
 }) {
   const saltId = Object.keys(handoff.salts)[0] ?? '';
   const salt = SALTS.find(item => item.id === saltId) ?? SALTS[0];
@@ -12155,13 +12166,17 @@ function DiySingleSaltConcentratePanel({
 
   const stockWeightG = Math.max(0, Number(stockWeightInput) || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
-  const calibrationDrops = Number(calibrationDropsInput);
-  const calibrationWeightG = Number(calibrationWeightInput);
-  const hasCalibration = calibrationDrops > 0 && calibrationWeightG > 0;
+  const calibrationResolution = resolveDiyDropperCalibration(
+    dropperStyle,
+    sharedCalibrations,
+    { dropsInput: calibrationDropsInput, weightInput: calibrationWeightInput, style: dropperStyle },
+    straightDropsPerMl,
+  );
+  const calibrationDrops = Number(calibrationResolution.calibration?.dropsInput ?? 0);
+  const calibrationWeightG = Number(calibrationResolution.calibration?.weightInput ?? 0);
+  const hasCalibration = calibrationResolution.calibration !== null;
   const assumedDropsPerMl = lotusDropsPerMl(dropperStyle, straightDropsPerMl);
-  const activeDropsPerMl = hasCalibration
-    ? computeDiyDropsPerMlFromCalibration(calibrationDrops, calibrationWeightG)
-    : assumedDropsPerMl;
+  const activeDropsPerMl = calibrationResolution.dropsPerMl;
   const targetCaCo3Ppm = computeDiyCaCo3PpmPerDrop({
     salt,
     formMolarMass: form.molarMass,
@@ -12209,6 +12224,8 @@ function DiySingleSaltConcentratePanel({
     ? saltMassMg * dropWeightG / stockWeightG
     : 0;
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
+  const calibrationInputsReadOnly = calibrationResolution.source === 'guide'
+    || calibrationResolution.source === 'awaiting-guide';
 
   useEffect(() => {
     saveDiyConcentrateInputs({
@@ -12362,27 +12379,102 @@ function DiySingleSaltConcentratePanel({
           <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" aria-hidden="true" />
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Dropper calibration</div>
-            <h2 className="mt-1 text-base font-semibold text-white">Measure this before dosing</h2>
-            <p className="mt-1 text-xs leading-relaxed text-slate-300">Drop size varies by bottle and tip. We use these two measurements to calculate the actual contribution of every drop.</p>
+            <h2 className="mt-1 text-base font-semibold text-white">
+              {calibrationResolution.source === 'guide'
+                ? 'Calibration in use'
+                : calibrationResolution.source === 'awaiting-guide'
+                  ? 'Select a tip calibration in the Guide'
+                  : 'Measure this before dosing'}
+            </h2>
+            <p className="mt-1 text-xs leading-relaxed text-slate-300">
+              {calibrationResolution.source === 'guide'
+                ? `Using the saved ${dropperStyle} tip calibration from the Watermancer Guide.`
+                : calibrationResolution.source === 'awaiting-guide'
+                  ? `No ${dropperStyle} tip calibration is saved yet; the estimate is used until you set it in the Guide.`
+                  : 'Drop size varies by bottle and tip. These measurements calculate the contribution of every drop.'}
+            </p>
           </div>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-sky-200/15 bg-slate-950/30 p-1" role="group" aria-label="Stock Builder dropper tip style">
+          {(['straight', 'round'] as const).map(style => {
+            const guideRate = getDiyDropperRateForStyle(style, straightDropsPerMl, sharedCalibrations);
+            const displayedRate = style === dropperStyle && calibrationResolution.source === 'manual'
+              ? activeDropsPerMl
+              : guideRate;
+            return (
+              <button
+                key={style}
+                type="button"
+                onClick={() => onDropperStyleChange(style)}
+                aria-pressed={dropperStyle === style}
+                aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip, ${displayedRate.toFixed(1)} drops per mL`}
+                data-testid={`diy-stock-builder-tip-${style}`}
+                className={`rounded-md px-2 py-2 text-left text-[10px] font-semibold capitalize transition ${
+                  dropperStyle === style
+                    ? 'bg-sky-400/15 text-sky-100 shadow-sm'
+                    : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+                }`}
+              >
+                {style} tip · {displayedRate.toFixed(1)} drops/mL
+              </button>
+            );
+          })}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
-            <StableNumberInput min="1" step="1" value={calibrationDropsInput} onChange={event => setCalibrationDropsInput(event.target.value)} placeholder="e.g. 100" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured number of drops" />
+            <StableNumberInput
+              min="1"
+              step="1"
+              value={calibrationResolution.source === 'guide'
+                ? calibrationResolution.calibration?.dropsInput ?? ''
+                : calibrationResolution.source === 'awaiting-guide' ? '' : calibrationDropsInput}
+              onChange={event => setCalibrationDropsInput(event.target.value)}
+              readOnly={calibrationInputsReadOnly}
+              placeholder={calibrationResolution.source === 'awaiting-guide' ? 'Set in Guide' : 'e.g. 100'}
+              className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none read-only:text-sky-100"
+              aria-label="Measured number of drops"
+            />
           </label>
           <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
             <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
             <span className="mt-1 flex items-center gap-2">
-              <StableNumberInput min="0.01" step="0.01" value={calibrationWeightInput} onChange={event => setCalibrationWeightInput(event.target.value)} placeholder="e.g. 5" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" aria-label="Measured drop weight in grams" />
+              <StableNumberInput
+                min="0.01"
+                step="0.01"
+                value={calibrationResolution.source === 'guide'
+                  ? calibrationResolution.calibration?.weightInput ?? ''
+                  : calibrationResolution.source === 'awaiting-guide' ? '' : calibrationWeightInput}
+                onChange={event => setCalibrationWeightInput(event.target.value)}
+                readOnly={calibrationInputsReadOnly}
+                placeholder={calibrationResolution.source === 'awaiting-guide' ? 'Set in Guide' : 'e.g. 5'}
+                className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none read-only:text-sky-100"
+                aria-label="Measured drop weight in grams"
+              />
               <span className="text-sm text-slate-400">g</span>
             </span>
           </label>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <SummaryMetric label="Weight per drop" value={hasCalibration ? `${weightPerDrop.toFixed(4)} g` : 'Not measured'} detail="calibrated" tone="sky" />
-          <SummaryMetric label="Drops per mL" value={hasCalibration ? activeDropsPerMl.toFixed(1) : assumedDropsPerMl.toFixed(1)} detail={hasCalibration ? 'measured' : 'assumed'} tone="sky" />
-          <SummaryMetric label="Calibration status" value={hasCalibration ? 'Active' : 'Assumption'} detail={hasCalibration ? 'used in dose' : 'measure for accuracy'} tone={hasCalibration ? 'emerald' : 'slate'} />
+          <SummaryMetric
+            label={calibrationResolution.source === 'guide' ? 'Water mass per drop' : 'Weight per drop'}
+            value={hasCalibration ? `${weightPerDrop.toFixed(4)} g` : 'Not measured'}
+            detail={calibrationResolution.source === 'guide' ? 'from Guide' : hasCalibration ? 'calibrated' : 'assumed'}
+            tone="sky"
+          />
+          <SummaryMetric label="Drops per mL" value={activeDropsPerMl.toFixed(1)} detail={calibrationResolution.source === 'guide' ? 'from Guide' : calibrationResolution.source === 'manual' ? 'measured' : 'assumed'} tone="sky" />
+          <SummaryMetric
+            label="Calibration status"
+            value={calibrationResolution.source === 'guide'
+              ? 'Guide value'
+              : calibrationResolution.source === 'manual' ? 'Active' : 'Assumption'}
+            detail={calibrationResolution.source === 'guide'
+              ? 'shared with Lotus Drops'
+              : calibrationResolution.source === 'awaiting-guide'
+                ? 'set this tip in Guide'
+                : calibrationResolution.source === 'manual' ? 'used in dose' : 'measure for accuracy'}
+            tone={hasCalibration ? 'emerald' : 'slate'}
+          />
         </div>
       </section>
 
@@ -12530,6 +12622,7 @@ function RecipeConcentrateBuilder({
   onClear,
   onPlanChange,
   singleSaltOnly = false,
+  sharedCalibrations,
 }: {
   handoff: ConcentrateRecipeHandoff;
   volumeUnit: VolumeUnit;
@@ -12542,6 +12635,7 @@ function RecipeConcentrateBuilder({
   onClear: () => void;
   onPlanChange: (plan: ConcentratePlanSnapshot) => void;
   singleSaltOnly?: boolean;
+  sharedCalibrations?: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
 }) {
   const [strengthInput, setStrengthInput] = useState('500');
   const [physicalSaltPpmPerDropInput, setPhysicalSaltPpmPerDropInput] = useState<string | null>(null);
@@ -12841,6 +12935,7 @@ function RecipeConcentrateBuilder({
         straightDropsPerMl={straightDropsPerMl}
         onToggleVolumeUnit={onToggleVolumeUnit}
         onPlanChange={onPlanChange}
+        sharedCalibrations={sharedCalibrations}
       />
     );
   }

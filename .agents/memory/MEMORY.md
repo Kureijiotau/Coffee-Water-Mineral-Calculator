@@ -100,7 +100,7 @@
 - [Mixer source picker](mixer-picker-cleanup.md) — preserve source records, group recipes by origin, and remove only exact Watermancer duplicates from Built-in
 - [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength
 - [Silica target scope](silica-target-scope.md) — silica-only target controls; do not generalize Use/Not used to other ions or salts
-- [Lotus shared calibration](lotus-shared-calibration.md) — store one calibration per tip style and share it across Lotus solution cards
+- [Lotus shared calibration](lotus-shared-calibration.md) — share per-tip measurements with DIY Stock Builder and Lotus Drops only; keep regular recipe tools independent
 - [Ratio preview usefulness](ratio-preview-usefulness.md) — colored ion ratios help users understand recipes and draw comparisons
 - [Citrate ratio eligibility](citrate-ratio-eligibility.md) — offer Citrates in the custom Watermancer ratio only when its current final reading is positive
 - [Calculation confidence](calculation-confidence.md) — tighten numerical outputs so the owner and users can trust results without second-guessing.

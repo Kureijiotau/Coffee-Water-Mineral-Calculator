@@ -16,6 +16,9 @@ an independent estimate, not an exact reproduction of Lotus bottle contents.
 Estimate the salt-to-water mass ratio using Lotus's published 0.04 g Straight
 and 0.0716 g Round average drop masses, the official 0.56 Round factor, and the
 modeled salt mass per drop; exact stock ratios remain undisclosed.
+The Watermancer Guide's Step 3 calibration is shared only with the DIY Stock
+Builder and DIY Lotus Drops. Keep regular recipe-based concentrate calibration
+and Alchemist calibration independent.
 
 **Why:** The user said both tip styles should give the same recipe numbers, with
 the style selector identifying which dropper is on hand rather than changing
@@ -36,3 +39,6 @@ conversion but not measured drops/mL. Clearly mark inferred Lotus salt mass as
 estimated. Preserve exact parity for published recipe inputs, drop-count
 conversion, and ion calculations; do not claim Lotus's proprietary salt recipe
 has been recovered. The mg/mL display still assumes about 1 g water per mL.
+When the Guide saves a straight or round measurement, use that style-specific
+value in DIY Stock Builder and DIY Lotus Drops only; do not propagate it to
+standard recipe-based concentrates or Alchemist.
