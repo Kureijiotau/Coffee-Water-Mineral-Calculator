@@ -384,6 +384,7 @@ export type RecipeShareCardProfile = {
 
 export type RecipeShareCardModel = {
   recipeName: string;
+  colorIonReferences?: boolean;
   batchLabel: string;
   waterSteps: RecipeShareCardWaterStep[];
   saltTitle: string;
@@ -785,7 +786,7 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
         ...ionTextOutline,
       });
       svg += svgText(innerX, cursor + 36, ion.name, {
-        fill: '#0b1117',
+        fill: model.colorIonReferences ? recipeIonColor(ion.id) : '#0b1117',
         size: 12,
         weight: 600,
       });
@@ -819,15 +820,26 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   const metricWidth = innerWidth / metrics.length;
   metrics.forEach(([label, value], index) => {
     const metricX = innerX + metricWidth * index + metricWidth / 2;
+    const metricColor = model.colorIonReferences
+      ? label === 'GH'
+        ? recipeIonColor('magnesium')
+        : label === 'KH'
+          ? recipeIonColor('bicarbonate')
+          : '#47737a'
+      : '#47737a';
     svg += svgText(metricX, metricTop + 29, label, {
-      fill: '#47737a',
+      fill: metricColor,
       size: 10,
       weight: 700,
       letterSpacing: 1.2,
       anchor: 'middle',
     });
     svg += svgText(metricX, metricTop + 56, value.toFixed(0), {
-      fill: '#0d6170',
+      fill: model.colorIonReferences && label === 'GH'
+        ? recipeIonColor('magnesium')
+        : model.colorIonReferences && label === 'KH'
+          ? recipeIonColor('bicarbonate')
+          : '#0d6170',
       size: 25,
       weight: 700,
       family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
@@ -855,13 +867,17 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
       weight: 700,
     },
   );
-  svg += svgText(innerX + innerWidth, cursor + 4, `GH:KH ${ratio}`, {
-    fill: '#47737a',
-    size: 11,
-    weight: 700,
-    family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
-    anchor: 'end',
-  });
+  if (model.colorIonReferences) {
+    svg += `<text x="${innerX + innerWidth}" y="${cursor + 4}" fill="#47737a" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="11" font-weight="700" text-anchor="end"><tspan fill="${recipeIonColor('magnesium')}">GH</tspan><tspan>:</tspan><tspan fill="${recipeIonColor('bicarbonate')}">KH</tspan><tspan> ${escapeXml(ratio)}</tspan></text>`;
+  } else {
+    svg += svgText(innerX + innerWidth, cursor + 4, `GH:KH ${ratio}`, {
+      fill: '#47737a',
+      size: 11,
+      weight: 700,
+      family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+      anchor: 'end',
+    });
+  }
   const height = cursor - y + 32;
   const gridPatternId = 'recipe-analysis-grid';
   const gridOverlay = `

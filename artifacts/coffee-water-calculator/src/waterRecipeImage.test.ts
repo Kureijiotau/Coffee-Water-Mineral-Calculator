@@ -228,6 +228,19 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('…');
   });
 
+  it('colors guide-card ion names and hardness metrics with their matching ion palette', () => {
+    const svg = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      colorIonReferences: true,
+    }).svg;
+
+    expect(svg).toMatch(/fill="#fb923c"[^>]*>Calcium<\/text>/);
+    expect(svg).toMatch(/fill="#fde047"[^>]*>GH<\/text>/);
+    expect(svg).toMatch(/fill="#5eead4"[^>]*>KH<\/text>/);
+    expect(svg).toContain('<tspan fill="#fde047">GH</tspan>');
+    expect(svg).toContain('<tspan fill="#5eead4">KH</tspan>');
+  });
+
   it('exports a separate silica dose with its drop count, mass, and mg/L value', () => {
     const card = buildRecipeShareCardSvg({
       ...shareCardFixture,

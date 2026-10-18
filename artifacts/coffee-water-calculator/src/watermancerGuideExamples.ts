@@ -86,6 +86,7 @@ function buildRecipeCard(recipe: (typeof COMPARISON_RECIPES)[number]): RecipeSha
   };
   const model: RecipeShareCardInput = {
     recipeName: recipe.recipeName,
+    colorIonReferences: true,
     batchLabel: '1 L final-water example · 0-TDS base',
     waterSteps: [
       { label: '0-TDS water', name: 'Start with 0-TDS water', amount: 'Top up to 1.00 L' },

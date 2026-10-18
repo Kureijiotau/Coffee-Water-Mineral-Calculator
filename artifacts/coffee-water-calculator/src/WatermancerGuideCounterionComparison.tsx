@@ -1,5 +1,23 @@
 import React from 'react';
+import { ION_MAP, type IonId } from './waterData';
 import { WATERMANCER_COUNTERION_EXAMPLES } from './watermancerGuideExamples';
+
+function IonTerm({ id, children }: { id: IonId; children: React.ReactNode }) {
+  return (
+    <span className="font-semibold" style={{ color: ION_MAP[id].color.foreground }}>
+      {children}
+    </span>
+  );
+}
+
+function MetricTerm({ kind, children }: { kind: 'GH' | 'KH'; children: React.ReactNode }) {
+  const colorIon: IonId = kind === 'GH' ? 'magnesium' : 'bicarbonate';
+  return (
+    <span className="font-semibold" style={{ color: ION_MAP[colorIon].color.foreground }}>
+      {children}
+    </span>
+  );
+}
 
 function ZoomableRecipeImage({ example }: { example: (typeof WATERMANCER_COUNTERION_EXAMPLES)[number] }) {
   const [zoomEnabled, setZoomEnabled] = React.useState(false);
@@ -50,10 +68,10 @@ export default function WatermancerGuideCounterionComparison() {
     >
       <div>
         <h4 id="wg-counterion-heading" className="text-sm font-semibold text-slate-100">
-          Same GH and KH. Different salts.
+            Same <MetricTerm kind="GH">GH</MetricTerm> and <MetricTerm kind="KH">KH</MetricTerm>. Different salts.
         </h4>
         <p className="mt-1 text-sm leading-relaxed text-slate-300">
-          GH and KH don’t show every ion in your water. These recipes share the same magnesium, calcium, and bicarbonate targets, but their chloride or sulfate and sodium or potassium differ. Those ions can affect taste.
+            <MetricTerm kind="GH">GH</MetricTerm> and <MetricTerm kind="KH">KH</MetricTerm> don’t show every ion in your water. These recipes share the same <IonTerm id="magnesium">magnesium</IonTerm>, <IonTerm id="calcium">calcium</IonTerm>, and <IonTerm id="bicarbonate">bicarbonate</IonTerm> targets, but their <IonTerm id="chloride">chloride</IonTerm> or <IonTerm id="sulfate">sulfate</IonTerm> and <IonTerm id="sodium">sodium</IonTerm> or <IonTerm id="potassium">potassium</IonTerm> differ. Those ions can affect taste.
         </p>
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
