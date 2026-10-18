@@ -12,3 +12,9 @@ Step 1 should show that equal Mg, Ca, bicarbonate, GH, and KH can still yield di
 **Why:** The user's 1 L recipe workflow relies on reading a salt dose in milligrams as the same number of drops, making small taste experiments easy to measure. They explicitly excluded the two SodaStream powders from this guide and want users focused on one concise step at a time.
 
 **How to apply:** Teach the existing single-salt concentrate workflow, match the Watermancer hydration form to the physical stock, and equate milligrams to drops only when the measured stock actually delivers 1 mg per drop. Keep optional references out of the guided view unless the user asks to restore them. Do not change other concentrate or builder strength defaults.
+
+The nine user-supplied pantry photos are intended as guide assets, introduced in relevant steps incrementally rather than all at once.
+
+**Why:** The user wants to use these photos in the Watermancer Guide and review the guided path one step at a time.
+
+**How to apply:** Pair each selected photo with the instruction it demonstrates, keeping the current step focused.

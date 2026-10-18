@@ -7,11 +7,17 @@ export interface WatermancerGuideEntry {
 
 export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   {
+    id: 'why-profile',
+    title: 'Why taste needs a full profile',
+    summary: 'The same key targets can still produce different-tasting water.',
+    details: [],
+  },
+  {
     id: 'supplies',
     title: 'Set up the supplies',
     summary: 'Keep each physical salt in its own labeled dropper bottle.',
     details: [
-      'Gather the salts, separate droppers, a scale suitable for small masses, and one bottle for each stock.',
+      'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
     ],
   },
   {

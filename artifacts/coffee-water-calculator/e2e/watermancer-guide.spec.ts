@@ -22,7 +22,7 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await expect(page.getByTestId('watermancer-guide')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Watermancer Guide', exact: true })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Quick reference', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Set up the supplies', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Why taste needs a full profile', exact: true })).toBeVisible();
   await expect(page.getByTestId('guide-welcome')).toHaveText(
     'Welcome to the Watermancer Guide. This guide will help you set up a separate dropper for each mineral salt so you can fine-tune your water recipes down to the individual ion levels and gain precise control over your water profile.'
   );
@@ -44,33 +44,38 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await zoomToggle.click();
   await expect(zoomToggle).toHaveAttribute('aria-pressed', 'false');
   await expect(zoomImage).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 7');
   await expect(page.getByRole('list', { name: 'Guide steps' })).toBeVisible();
   await expect(page.getByTestId('button-previous-step')).toBeDisabled();
 
   const stepNavigation = page.getByRole('list', { name: 'Guide steps' });
-  const stepContent = page.getByTestId('step-supplies');
+  const stepContent = page.getByTestId('step-why-profile');
   await expect(stepContent).toBeVisible();
   const navigationPrecedesCurrentStep = await stepNavigation.evaluate(navigation => {
-    const content = document.querySelector('[data-testid="step-supplies"]');
+    const content = document.querySelector('[data-testid="step-why-profile"]');
     return Boolean(content && (navigation.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING));
   });
   expect(navigationPrecedesCurrentStep).toBe(true);
 
   await page.getByTestId('button-next-step').click();
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 2 of 6');
-  await expect(page.getByTestId('step-calibrate')).toBeVisible();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 2 of 7');
+  await expect(page.getByTestId('step-supplies')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Set up the supplies', exact: true })).toBeVisible();
+  await expect(page.getByText('Gather the salts, separate droppers', { exact: false })).toBeVisible();
+  await expect(page.getByTestId('guide-salt-photo')).toBeVisible();
+  await expect(page.getByTestId('guide-dropper-bottles-photo')).toBeVisible();
+  await expect(page.getByTestId('guide-scale-photo')).toBeVisible();
   await expect(page.getByTestId('guide-welcome')).toHaveCount(0);
   await expect(page.getByTestId('guide-counterion-comparison')).toHaveCount(0);
   await page.getByTestId('button-previous-step').click();
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 7');
 
   await page.getByTestId('button-step-set-targets').click();
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 4 of 6');
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 5 of 7');
   await weekOneGuideTab.click();
   await expect(page.getByRole('heading', { name: "Robert Asami's 7-day water crash course" })).toBeVisible();
   await watermancerGuideTab.click();
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 7');
 
   const pageWidths = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -100,7 +105,7 @@ test('opens the existing tools without changing the selected Watermancer target'
   await expect(calciumTarget).toHaveValue(calciumBefore);
 
   await watermancerGuideTab.click();
-  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 6');
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 7');
   await page.getByTestId('button-open-diy-concentrate').last().click();
   await expect(page.getByTestId('tab-concentrates')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('concentrate-workspace-diy')).toHaveAttribute('aria-selected', 'true');

@@ -10,9 +10,22 @@ describe('Watermancer Guide copy', () => {
     const referenceText = JSON.stringify(WATERMANCER_GUIDE_REFERENCES);
     const allText = `${stepText} ${referenceText}`;
 
-    expect(WATERMANCER_GUIDE_STEPS).toHaveLength(6);
+    expect(WATERMANCER_GUIDE_STEPS).toHaveLength(7);
     expect(WATERMANCER_GUIDE_REFERENCES).toHaveLength(8);
-    expect(WATERMANCER_GUIDE_STEPS[0]?.details).not.toContain(
+    expect(WATERMANCER_GUIDE_STEPS.map(step => step.id)).toEqual([
+      'why-profile',
+      'supplies',
+      'calibrate',
+      'prepare-stocks',
+      'set-targets',
+      'read-dose-plan',
+      'make-and-taste',
+    ]);
+    expect(WATERMANCER_GUIDE_STEPS[1]?.title).toBe('Set up the supplies');
+    expect(WATERMANCER_GUIDE_STEPS[1]?.details).toContain(
+      'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
+    );
+    expect(WATERMANCER_GUIDE_STEPS[1]?.details).not.toContain(
       'Label each bottle with the salt and the physical hydration form you weighed.',
     );
 

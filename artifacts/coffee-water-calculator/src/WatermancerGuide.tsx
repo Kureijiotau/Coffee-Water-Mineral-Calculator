@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, FlaskConical, Pipette } from 'lucide-react';
+import saltPantryPhoto from '@assets/9_1792294122446.jpg';
+import dropperBottlesPhoto from '@assets/2_1792294122443.jpg';
+import scalePhoto from '@assets/6_1792294122444.jpg';
 import {
   WATERMANCER_GUIDE_STEPS,
   type WatermancerGuideEntry,
@@ -15,6 +18,8 @@ const DIY_STEP_IDS = new Set(['calibrate', 'prepare-stocks']);
 const WATERMANCER_STEP_IDS = new Set(['set-targets', 'read-dose-plan', 'make-and-taste']);
 
 function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
+  if (entry.details.length === 0) return null;
+
   return (
     <ul className="mt-3 space-y-2">
       {entry.details.map((detail, index) => (
@@ -78,7 +83,7 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
           </ol>
 
           <article className="app-card-body min-w-0" aria-labelledby={`wg-step-${step.id}`} data-testid={`step-${step.id}`}>
-            {step.id === 'supplies' && (
+            {step.id === 'why-profile' && (
               <>
                 <p className="mb-5 text-sm leading-relaxed text-slate-300" data-testid="guide-welcome">
                   <strong className="font-semibold text-slate-100">Welcome to the Watermancer Guide.</strong>{' '}
@@ -95,6 +100,56 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
               </div>
             </div>
             <EntryDetails entry={step} />
+
+            {step.id === 'supplies' && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3" data-testid="guide-supplies-photos">
+                <figure className="min-w-0 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/30">
+                  <img
+                    src={saltPantryPhoto}
+                    alt="Potassium bicarbonate beside a jar of salt."
+                    width={1024}
+                    height={1024}
+                    loading="lazy"
+                    decoding="async"
+                    data-testid="guide-salt-photo"
+                    className="aspect-square w-full object-cover"
+                  />
+                  <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-xs font-medium text-slate-300">
+                    Salt containers
+                  </figcaption>
+                </figure>
+                <figure className="min-w-0 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/30">
+                  <img
+                    src={dropperBottlesPhoto}
+                    alt="A tray filled with amber dropper bottles."
+                    width={1024}
+                    height={1024}
+                    loading="lazy"
+                    decoding="async"
+                    data-testid="guide-dropper-bottles-photo"
+                    className="aspect-square w-full object-cover"
+                  />
+                  <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-xs font-medium text-slate-300">
+                    Dropper bottles
+                  </figcaption>
+                </figure>
+                <figure className="col-span-2 min-w-0 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/30 sm:col-span-1">
+                  <img
+                    src={scalePhoto}
+                    alt="A compact digital scale for weighing small amounts."
+                    width={1024}
+                    height={1024}
+                    loading="lazy"
+                    decoding="async"
+                    data-testid="guide-scale-photo"
+                    className="aspect-[4/3] w-full bg-slate-950/60 object-contain sm:aspect-square"
+                  />
+                  <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-xs font-medium text-slate-300">
+                    Digital scale
+                  </figcaption>
+                </figure>
+              </div>
+            )}
 
             {(DIY_STEP_IDS.has(step.id) || WATERMANCER_STEP_IDS.has(step.id)) && (
               <div className="mt-4 flex flex-wrap gap-2">
