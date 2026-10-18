@@ -83,6 +83,14 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
           </ol>
 
           <article className="app-card-body min-w-0" aria-labelledby={`wg-step-${step.id}`} data-testid={`step-${step.id}`}>
+            <div className="flex items-start gap-3">
+              <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>
+              <div className="min-w-0">
+                <h3 id={`wg-step-${step.id}`} className="text-lg font-semibold text-slate-100">{step.title}</h3>
+                <p className="mt-1 text-sm font-medium text-cyan-100/80">{step.summary}</p>
+              </div>
+            </div>
+
             {step.id === 'why-profile' && (
               <>
                 <p className="mb-5 text-sm leading-relaxed text-slate-300" data-testid="guide-welcome">
@@ -92,13 +100,6 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
                 <WatermancerGuideCounterionComparison />
               </>
             )}
-            <div className="flex items-start gap-3">
-              <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>
-              <div className="min-w-0">
-                <h3 id={`wg-step-${step.id}`} className="text-lg font-semibold text-slate-100">{step.title}</h3>
-                <p className="mt-1 text-sm font-medium text-cyan-100/80">{step.summary}</p>
-              </div>
-            </div>
             <EntryDetails entry={step} />
 
             {step.id === 'supplies' && (
@@ -114,9 +115,7 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
                     data-testid="guide-salt-photo"
                     className="aspect-square w-full object-cover"
                   />
-                  <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-xs font-medium text-slate-300">
-                    Salt containers
-                  </figcaption>
+                  <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-xs font-medium text-slate-300">Salts</figcaption>
                 </figure>
                 <figure className="min-w-0 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/30">
                   <img

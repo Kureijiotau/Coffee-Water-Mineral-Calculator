@@ -1,7 +1,9 @@
 import path from 'path';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  plugins: [react()],
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
@@ -9,6 +11,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      '@assets/9_1792294122446.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
+      '@assets/2_1792294122443.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
+      '@assets/6_1792294122444.jpg': path.resolve(import.meta.dirname, 'src', 'testAssetMock.ts'),
       '@assets/116-1167350_transparent-twitch-emote-monkas-monkas-png-png-dow_1785734255499.png': path.resolve(
         import.meta.dirname,
         'src',
