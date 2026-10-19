@@ -12,7 +12,9 @@ describe('Watermancer Guide Step 5 intro', () => {
       }),
     );
 
-    expect(html).toContain('With all your 1 mg/drop solutions ready');
+    expect(html).toContain('With all your ');
+    expect(html).toContain('title="0.001 g/drop">1 mg/drop</span>');
+    expect(html).toContain('solutions ready, you can now make very precise water recipes using');
     expect(html).toContain('data-testid="guide-step5-dropper-lineup"');
     expect(html).toContain('alt="A row of labeled mineral-salt dropper bottles."');
     expect(html).toContain('data-testid="button-open-watermancer-step5"');

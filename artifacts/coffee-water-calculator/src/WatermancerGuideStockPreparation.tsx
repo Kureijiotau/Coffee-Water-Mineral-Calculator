@@ -10,6 +10,7 @@ import {
   calculateOneMgPerDropStockPlan,
   WATERMANCER_GUIDE_STOCK_HEADROOM_ML,
 } from './watermancerGuideStock';
+import { MilligramTooltipText } from './MilligramTooltip';
 
 type WatermancerGuideStockPreparationProps = {
   calibrations: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
@@ -52,8 +53,12 @@ function Result({ label, value, note, tone }: {
   return (
     <div className={`min-w-0 rounded-xl border p-3 ${tones[tone]}`}>
       <div className="text-[10px] font-semibold uppercase tracking-wider opacity-75">{label}</div>
-      <div className="mt-1 text-lg font-bold tabular-nums">{value}</div>
-      <div className="mt-1 text-[10px] leading-relaxed text-slate-400">{note}</div>
+      <div className="mt-1 text-lg font-bold tabular-nums">
+        <MilligramTooltipText text={value} />
+      </div>
+      <div className="mt-1 text-[10px] leading-relaxed text-slate-400">
+        <MilligramTooltipText text={note} />
+      </div>
     </div>
   );
 }

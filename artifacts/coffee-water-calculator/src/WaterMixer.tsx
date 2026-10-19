@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Database, Download, FlaskConical, Minus, Plus, RotateCcw, Save, Search, SlidersHorizontal, Trash2, Upload, Waves, X } from 'lucide-react';
+import { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
 import {
   ACTIVE_ION_IDS,
   ION_MAP,
@@ -701,6 +702,7 @@ function MixerSaltTable({
                         }}
                         disabled={!used}
                         placeholder="0"
+                        title={doseValue.trim() ? formatMilligramsAsGrams(Number(doseValue)) : undefined}
                         className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label={`${salt.name} final dose in milligrams`}
                         data-testid={`input-mixer-salt-dose-${salt.id}`}
@@ -709,7 +711,12 @@ function MixerSaltTable({
                         {used ? 'Final blend' : ''}
                       </span>
                     </div>
-                    <span className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500">mg</span>
+                    <span
+                      className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500"
+                      title={doseValue.trim() ? formatMilligramsAsGrams(Number(doseValue)) : undefined}
+                    >
+                      mg
+                    </span>
                     <button
                       type="button"
                       onClick={() => onDoseChange(salt.id, formatSteppedSaltDose(activeMg + 1))}
@@ -903,7 +910,9 @@ function MixerRecipeCardModal({
                         {saltSteps.map(step => (
                           <div key={step.name} className="flex items-center justify-between gap-2 rounded-lg border border-indigo-300/20 bg-indigo-400/[0.08] px-2 py-1.5">
                             <span className="min-w-0 truncate text-xs font-semibold text-indigo-100">{step.name} <span className="font-normal text-indigo-200/70">· {step.form}</span></span>
-                            <span className="shrink-0 font-mono text-sm font-bold text-indigo-100">{step.amount}</span>
+                            <span className="shrink-0 font-mono text-sm font-bold text-indigo-100">
+                              <MilligramTooltipText text={step.amount} />
+                            </span>
                           </div>
                         ))}
                       </div>
@@ -1309,7 +1318,9 @@ export default function WaterMixer({
                         {mixerSaltSteps.map(step => (
                           <div key={step.name} className="flex items-center justify-between gap-2 rounded-lg border border-indigo-300/20 bg-indigo-400/[0.06] px-2 py-1.5">
                             <span className="min-w-0 truncate text-xs text-indigo-100">{step.name} <span className="text-indigo-200/60">· {step.form}</span></span>
-                            <strong className="shrink-0 font-mono text-xs text-indigo-100" data-testid={`text-mixer-step-salt-${step.name.toLowerCase().replaceAll(' ', '-')}`}>{step.amount}</strong>
+                            <strong className="shrink-0 font-mono text-xs text-indigo-100" data-testid={`text-mixer-step-salt-${step.name.toLowerCase().replaceAll(' ', '-')}`}>
+                              <MilligramTooltipText text={step.amount} />
+                            </strong>
                           </div>
                         ))}
                       </div>

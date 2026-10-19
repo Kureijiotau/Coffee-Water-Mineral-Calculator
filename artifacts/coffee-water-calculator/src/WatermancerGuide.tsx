@@ -23,6 +23,7 @@ import {
 import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
 import WatermancerGuideStep5Intro from './WatermancerGuideStep5Intro';
 import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
+import { MilligramTooltipText } from './MilligramTooltip';
 
 type WatermancerGuideProps = {
   onOpenDiyConcentrate: () => void;
@@ -40,7 +41,7 @@ function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
       {entry.details.map((detail, index) => (
         <li key={index} className="flex gap-2.5 text-sm leading-relaxed text-slate-300 break-words">
           <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/70" />
-          <span className="min-w-0">{detail}</span>
+          <span className="min-w-0"><MilligramTooltipText text={detail} /></span>
         </li>
       ))}
     </ul>
@@ -283,14 +284,18 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
             <div className="flex items-start gap-3">
               <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>
               <div className="min-w-0">
-                <h3 id={`wg-step-${step.id}`} className="text-lg font-semibold text-slate-100">{step.title}</h3>
+                <h3 id={`wg-step-${step.id}`} className="text-lg font-semibold text-slate-100">
+                  <MilligramTooltipText text={step.title} />
+                </h3>
                 {step.id === 'set-targets' ? (
                   <WatermancerGuideStep5Intro
                     summary={step.summary}
                     onOpenWatermancer={onOpenWatermancer}
                   />
                 ) : (
-                  <p className="mt-1 text-sm font-medium text-cyan-100/80">{step.summary}</p>
+                  <p className="mt-1 text-sm font-medium text-cyan-100/80">
+                    <MilligramTooltipText text={step.summary} />
+                  </p>
                 )}
               </div>
             </div>

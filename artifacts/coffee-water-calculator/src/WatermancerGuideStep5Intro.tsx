@@ -1,4 +1,5 @@
 import dropperLineupPhoto from '@assets/watermancer-guide-step5-dropper-lineup.jpg';
+import { MilligramTooltipText } from './MilligramTooltip';
 
 type WatermancerGuideStep5IntroProps = {
   summary: string;
@@ -15,7 +16,9 @@ export default function WatermancerGuideStep5Intro({
   return (
     <>
       <p className="mt-1 text-sm font-medium text-cyan-100/80">
-        {linkStart < 0 ? summary : summary.slice(0, linkStart)}
+        {linkStart < 0
+          ? <MilligramTooltipText text={summary} />
+          : <MilligramTooltipText text={summary.slice(0, linkStart)} />}
         {linkStart >= 0 && (
           <button
             type="button"
@@ -27,7 +30,9 @@ export default function WatermancerGuideStep5Intro({
             {linkText}
           </button>
         )}
-        {linkStart >= 0 && summary.slice(linkStart + linkText.length)}
+        {linkStart >= 0 && (
+          <MilligramTooltipText text={summary.slice(linkStart + linkText.length)} />
+        )}
       </p>
       <figure className="mt-4 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/30">
         <img

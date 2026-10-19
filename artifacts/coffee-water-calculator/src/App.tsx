@@ -25,6 +25,7 @@ import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMet
 import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
+import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
   HardnessCard as SharedHardnessCard,
@@ -7275,14 +7276,21 @@ function App() {
                            if (e.key === '-' || e.key === '+' || e.key === 'e' || e.key === 'E') e.preventDefault();
                         }}
                           placeholder={recipeMass.toFixed(2)}
+                          title={formatMilligramsAsGrams(directDoseInputValue.trim() ? Number(directDoseInputValue) : Number.NaN)}
                           className="mineral-recipe-table__input mineral-recipe-table__input--dose min-w-0 w-full bg-slate-900/60 border rounded-lg px-3 py-2 pr-12 text-sm font-mono text-emerald-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 focus:border-emerald-400 transition"
                       />
-                       <span aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-500">mg</span>
+                        <span
+                          aria-hidden="true"
+                          title={formatMilligramsAsGrams(directDoseInputValue.trim() ? Number(directDoseInputValue) : Number.NaN)}
+                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-500"
+                        >
+                          mg
+                        </span>
                     </div>
                   ) : (
-                    <span className="text-sm font-mono text-emerald-300">
-                      {displayMass > 0 ? massLabel : '—'}
-                    </span>
+                     <span className="text-sm font-mono text-emerald-300">
+                       <MilligramTooltipText text={displayMass > 0 ? massLabel : '—'} />
+                     </span>
                   )}
                 </div>
                 </div>
@@ -7465,7 +7473,7 @@ function App() {
                           w.severity === 'error' ? 'text-rose-400' : w.severity === 'warning' ? 'text-amber-400' : 'text-slate-400'
                         }`} />
                         <div className="space-y-0.5">
-                          <span className="text-xs">{w.message}</span>
+                          <span className="text-xs"><MilligramTooltipText text={w.message} /></span>
                           {w.severity === 'error' && w.maxSafeStrength && (
                             <div className="text-[11px] text-rose-300/70 mt-1 font-medium">
                               Try ×{w.maxSafeStrength} or lower, or keep the conflicting salts in separate stocks.
@@ -8381,6 +8389,7 @@ function App() {
                                 }}
                                 disabled={!used}
                                 placeholder="0"
+                                title={doseInputValue.trim() ? formatMilligramsAsGrams(Number(doseInputValue)) : undefined}
                                 className="min-w-0 w-16 rounded-lg border border-cyan-400/30 bg-slate-950/70 px-1.5 py-1.5 text-center text-xs font-semibold tabular-nums text-cyan-100 outline-none transition focus:border-cyan-300/80 focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-40"
                                 aria-label={`${salt.name} dose in milligrams`}
                               />
@@ -8388,7 +8397,12 @@ function App() {
                                 {used ? (doseIsAdjusted ? 'Adjusted' : 'Suggested') : ''}
                               </span>
                             </div>
-                              <span className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500">mg</span>
+                              <span
+                                className="watermancer-salt-table__dose-unit text-[10px] font-semibold uppercase tracking-wider text-slate-500"
+                                title={doseInputValue.trim() ? formatMilligramsAsGrams(Number(doseInputValue)) : undefined}
+                              >
+                                mg
+                              </span>
                             <HoldStepperButton
                               onStep={() => adjustWatermancerDose(salt.id, activeMg, 1)}
                               disabled={!used}
@@ -8449,7 +8463,9 @@ function App() {
                       <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">
                         Form / strength
                       </span>
-                      <span className="text-[11px] font-medium text-slate-300">Liquid · 12.5 mg SiO₂/drop</span>
+                      <span className="text-[11px] font-medium text-slate-300">
+                        <MilligramTooltipText text="Liquid · 12.5 mg SiO₂/drop" />
+                      </span>
                     </div>
                     <div className="watermancer-salt-table__dose">
                       <span className="watermancer-salt-table__dose-label text-[10px] font-semibold uppercase tracking-wider text-slate-500 sm:hidden">
@@ -8468,7 +8484,10 @@ function App() {
                         </button>
                         <div className="watermancer-salt-table__dose-value" aria-live="polite" data-testid="watermancer-silica-dose">
                           <span className="whitespace-nowrap text-[11px] font-semibold tabular-nums text-violet-100">
-                            {watermancerSilicaDrops} {watermancerSilicaDrops === 1 ? 'drop' : 'drops'} · {watermancerSilicaDoseMg(watermancerSilicaDrops).toFixed(1)} mg
+                            {watermancerSilicaDrops} {watermancerSilicaDrops === 1 ? 'drop' : 'drops'} ·{' '}
+                            <MilligramTooltip amountMg={watermancerSilicaDoseMg(watermancerSilicaDrops)}>
+                              {watermancerSilicaDoseMg(watermancerSilicaDrops).toFixed(1)} mg
+                            </MilligramTooltip>
                           </span>
                           <span className="text-[9px] font-semibold tabular-nums text-violet-200/70">
                             {watermancerSilicaConcentrationPpm.toFixed(2)} mg/L
@@ -8866,7 +8885,11 @@ function App() {
                                       <SaltIonBadges salt={salt} />
                                     </span>
                                   </span>
-                                  <span className="shrink-0 font-semibold tabular-nums text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{formatWatermancerSaltDoseMg(massMg)} mg</span>
+                                  <span className="shrink-0 font-semibold tabular-nums text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>
+                                    <MilligramTooltip amountMg={massMg}>
+                                      {formatWatermancerSaltDoseMg(massMg)} mg
+                                    </MilligramTooltip>
+                                  </span>
                                 </div>
                               );
                             })
@@ -9826,14 +9849,21 @@ function ConcentrateWorkspace({
           </label>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <SummaryMetric label="Salt to weigh" value={saltMassLabel} detail={salt.name} tone="fuchsia" />
+          <SummaryMetric
+            label="Salt to weigh"
+            value={<MilligramTooltipText text={saltMassLabel} />}
+            detail={salt.name}
+            tone="fuchsia"
+          />
           <SummaryMetric label="Water to weigh" value={`${waterMassG.toFixed(2)} g`} detail="distilled or RO water" tone="slate" />
           <SummaryMetric label="Salt per concentrate gram" value={`${saltMgPerStockG.toFixed(1)} mg`} detail={salt.name} tone="slate" />
         </div>
         {warnings.length > 0 && (
           <div className={`mt-3 rounded-xl border px-3 py-3 text-[11px] leading-relaxed ${hasError ? 'border-rose-400/30 bg-rose-500/[0.08] text-rose-200' : 'border-amber-400/30 bg-amber-500/[0.08] text-amber-200'}`}>
             <div className="font-semibold">{hasError ? 'Check this strength before mixing' : 'Mixing note'}</div>
-            {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
+            {warnings.map(warning => (
+              <p key={warning.message} className="mt-1"><MilligramTooltipText text={warning.message} /></p>
+            ))}
           </div>
         )}
       </section>
@@ -9849,7 +9879,13 @@ function ConcentrateWorkspace({
         <StepHeading number="3" title="Preparation" icon={<Layers className="h-3.5 w-3.5" aria-hidden="true" />} />
         <div className="mt-4 space-y-2">
            {[
-             <>Weigh <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{saltMassLabel} of {salt.name}</strong> ({form.label}).</>,
+             <>
+               Weigh{' '}
+               <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>
+                 <MilligramTooltipText text={saltMassLabel} /> of {salt.name}
+               </strong>{' '}
+               ({form.label}).
+             </>,
              <>Add <strong>{waterMassG.toFixed(2)} g</strong> of distilled or RO water.</>,
              <>Combine until the total concentrate weighs <strong>{totalStockMassG.toFixed(2)} g</strong>.</>,
              <>Shake until clear, then label: <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</strong> · {strengthPercent || 0}% w/w · {totalStockMassG.toFixed(2)} g total.</>,
@@ -9880,7 +9916,16 @@ function ConcentrateWorkspace({
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">
           <SummaryMetric label="Weight per drop" value={`${measuredGramsPerDrop.toFixed(4)} g`} detail="this dropper" tone="sky" />
-          <SummaryMetric label="Salt per drop" value={`${mgPerDrop.toFixed(2)} mg`} detail={salt.name} tone="sky" />
+          <SummaryMetric
+            label="Salt per drop"
+            value={(
+              <MilligramTooltip amountMg={mgPerDrop} suffix="/drop">
+                {mgPerDrop.toFixed(2)} mg
+              </MilligramTooltip>
+            )}
+            detail={salt.name}
+            tone="sky"
+          />
           <SummaryMetric label="Drops per gram" value={measuredGramsPerDrop > 0 ? `${(1 / measuredGramsPerDrop).toFixed(1)}` : '—'} detail="this concentrate" tone="sky" />
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
@@ -9901,6 +9946,7 @@ function ConcentrateWorkspace({
               value={targetSaltMass}
               onChange={setTargetSaltMass}
               ariaLabel={`Target ${salt.name} amount in milligrams`}
+              tooltipAmountMg={targetSaltMass.trim() ? Number(targetSaltMass) : undefined}
             />
             <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2">
               <span className="block text-[10px] text-slate-500">Recommended dose</span>
@@ -9910,7 +9956,10 @@ function ConcentrateWorkspace({
                 </strong>
                 {recommendedDrops > 0 && (
                   <span className="text-[11px] text-slate-400">
-                    delivers {recommendedSaltMassMg.toFixed(2)} mg
+                    delivers{' '}
+                    <MilligramTooltip amountMg={recommendedSaltMassMg}>
+                      {recommendedSaltMassMg.toFixed(2)} mg
+                    </MilligramTooltip>
                     {exactDropsForTarget > 0 ? ` · exact math: ${exactDropsForTarget.toFixed(1)} drops` : ''}
                   </span>
                 )}
@@ -9936,7 +9985,11 @@ function ConcentrateWorkspace({
         </div>
         <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-3">
            <span className="text-xs text-slate-400">
-             {finalDrops} drops × {mgPerDrop.toFixed(2)} mg/drop of{' '}
+              {finalDrops} drops ×{' '}
+              <MilligramTooltip amountMg={mgPerDrop} suffix="/drop">
+                {mgPerDrop.toFixed(2)} mg/drop
+              </MilligramTooltip>{' '}
+              of{' '}
              <strong className="text-[color:var(--salt-primary)]" style={{ '--salt-primary': getSaltColorTokens(salt).primary } as CSSProperties}>{salt.name}</strong>
            </span>
           <strong className="text-xl tabular-nums text-emerald-200">{resultingPpm.toFixed(2)} mg/L</strong>
@@ -10597,7 +10650,9 @@ function LotusDropsSection({
                                 +{plan.lotusReferenceIonPpmPerDrop.toFixed(3)} ppm {plan.saltName}
                               </td>
                               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
-                                ~{plan.lotusReferenceSaltMgPerDrop.toFixed(3)} mg
+                                <MilligramTooltip amountMg={plan.lotusReferenceSaltMgPerDrop} suffix="/drop">
+                                  ~{plan.lotusReferenceSaltMgPerDrop.toFixed(3)} mg
+                                </MilligramTooltip>
                               </td>
                             </tr>
                             <tr data-testid={`lotus-drop-user-${plan.id}`}>
@@ -10611,7 +10666,9 @@ function LotusDropsSection({
                                 +{plan.ionPpmPerDrop.toFixed(3)} ppm {plan.saltName}
                               </td>
                               <td className="px-2 py-1.5 text-right font-semibold tabular-nums text-slate-200">
-                                ~{plan.saltMgPerDrop.toFixed(3)} mg
+                                <MilligramTooltip amountMg={plan.saltMgPerDrop} suffix="/drop">
+                                  ~{plan.saltMgPerDrop.toFixed(3)} mg
+                                </MilligramTooltip>
                               </td>
                             </tr>
                           </tbody>
@@ -10659,7 +10716,9 @@ function LotusDropsSection({
                                        {drops === 1 && <span className="ml-1 font-normal text-cyan-200/70">(+1)</span>}
                                      </th>
                                      <td className="px-2 py-1 text-right tabular-nums text-slate-400">
-                                       {(drops * plan.saltMgPerDrop).toFixed(3)} mg
+                                        <MilligramTooltip amountMg={drops * plan.saltMgPerDrop}>
+                                          {(drops * plan.saltMgPerDrop).toFixed(3)} mg
+                                        </MilligramTooltip>
                                      </td>
                                      <td className="px-2 py-1 text-right font-semibold tabular-nums text-cyan-100">
                                        +{(drops * plan.ionPpmPerDrop).toFixed(3)}
@@ -11425,7 +11484,11 @@ function LegacyRecipeConcentrateBuilder({
             <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <SummaryMetric
                 label="Total salt per drop"
-                value={dropEquivalents.valid ? `${dropEquivalents.totalSaltMgPerDrop.toFixed(2)} mg` : '—'}
+                value={dropEquivalents.valid ? (
+                  <MilligramTooltip amountMg={dropEquivalents.totalSaltMgPerDrop} suffix="/drop">
+                    {dropEquivalents.totalSaltMgPerDrop.toFixed(2)} mg
+                  </MilligramTooltip>
+                ) : '—'}
                 detail="physical salt mass"
                 tone="sky"
               />
@@ -11475,8 +11538,8 @@ function LegacyRecipeConcentrateBuilder({
                 </h3>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
                   {limitingConstraint.kind === 'chemical'
-                    ? <>Limiting constraint: <strong className="text-slate-200">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. {limitingConstraint.message}</>
-                    : limitingConstraint.message}
+                    ? <>Limiting constraint: <strong className="text-slate-200">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. <MilligramTooltipText text={limitingConstraint.message} /></>
+                    : <MilligramTooltipText text={limitingConstraint.message} />}
                 </p>
               </div>
             </div>
@@ -11495,7 +11558,8 @@ function LegacyRecipeConcentrateBuilder({
                 <div className="font-semibold text-amber-200">At the entered strength</div>
                 {allInOneWarnings.map(warning => (
                   <p key={`${warning.severity}-${warning.message}`} className="mt-1">
-                    <span className="font-semibold">{warning.severity === 'error' ? 'Chemical limit' : 'Handling note'}:</span> {warning.message}
+                    <span className="font-semibold">{warning.severity === 'error' ? 'Chemical limit' : 'Handling note'}:</span>{' '}
+                    <MilligramTooltipText text={warning.message} />
                   </p>
                 ))}
               </div>
@@ -11529,7 +11593,11 @@ function LegacyRecipeConcentrateBuilder({
                          <span className="ml-2 text-[10px] text-slate-500">{row.formLabel}</span>
                          {salt && <SaltIonBadges salt={salt} className="ml-2 text-[10px]" />}
                       </div>
-                      <span className="text-xs font-semibold tabular-nums text-violet-200">{row.saltMgPerDrop.toFixed(2)} mg/drop</span>
+                                  <span className="text-xs font-semibold tabular-nums text-violet-200">
+                                    <MilligramTooltip amountMg={row.saltMgPerDrop} suffix="/drop">
+                                      {row.saltMgPerDrop.toFixed(2)} mg/drop
+                                    </MilligramTooltip>
+                                  </span>
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-400">
                        {Object.entries(row.ionPpmPerDrop).map(([ionId, value]) => (
@@ -11641,7 +11709,9 @@ function LegacyRecipeConcentrateBuilder({
                         <td className="px-3 py-3 text-slate-400">{row.form.label}</td>
                         <td className="px-3 py-3 text-right tabular-nums">{row.target.toFixed(2)} ppm</td>
                         <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tone.accent}`}>
-                          {row.massMg >= 1000 ? `${(row.massMg / 1000).toFixed(3)} g` : `${row.massMg.toFixed(1)} mg`}
+                          <MilligramTooltipText
+                            text={row.massMg >= 1000 ? `${(row.massMg / 1000).toFixed(3)} g` : `${row.massMg.toFixed(1)} mg`}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -11650,7 +11720,9 @@ function LegacyRecipeConcentrateBuilder({
               </div>
 
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-                <span>Total <strong className="text-slate-300">{recipeConcentrateMassLabel(totalSaltMassG)}</strong></span>
+                <span>
+                  Total <strong className="text-slate-300"><MilligramTooltipText text={recipeConcentrateMassLabel(totalSaltMassG)} /></strong>
+                </span>
               </div>
 
               {warnings.length > 0 && (
@@ -11662,7 +11734,9 @@ function LegacyRecipeConcentrateBuilder({
                   <div className="font-semibold">
                     {warnings.some(warning => warning.severity === 'error') ? 'Check strength' : 'Note'}
                   </div>
-                  {warnings.map(warning => <p key={warning.message} className="mt-1">{warning.message}</p>)}
+                  {warnings.map(warning => (
+                    <p key={warning.message} className="mt-1"><MilligramTooltipText text={warning.message} /></p>
+                  ))}
                 </div>
               )}
             </article>
@@ -11942,7 +12016,9 @@ function RecipeConcentrateBottleCard({
           <div className="mt-4 grid grid-cols-2 gap-2">
             <div className={`rounded-lg border px-3 py-2.5 ${colors.border} ${colors.soft} ${colors.accent}`}>
               <div className="text-[9px] font-bold uppercase tracking-[0.16em]">Salt to weigh</div>
-              <div className="mt-1 text-lg font-semibold tabular-nums">{recipeConcentrateMassLabel(totalSaltMassG)}</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums">
+                <MilligramTooltipText text={recipeConcentrateMassLabel(totalSaltMassG)} />
+              </div>
               <div className="mt-0.5 text-[9px] opacity-60">for this bottle</div>
             </div>
             <div className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
@@ -12094,11 +12170,13 @@ function RecipeConcentrateBottleCard({
                    value={saltMassInputs[row.salt.id] ?? recipeConcentrateNumber(row.massMg, 1)}
                    onChange={event => onSaltMassChange(row.salt.id, event.target.value, row.massMg)}
                    aria-label={`${row.salt.name} physical salt amount`}
-                   title="Edit this salt amount; bottle volume adjusts while stock strength stays fixed"
+                    title={`Equivalent: ${formatMilligramsAsGrams(Number(saltMassInputs[row.salt.id] ?? recipeConcentrateNumber(row.massMg, 1)))} · Edit this salt amount; bottle volume adjusts while stock strength stays fixed`}
                    className="recipe-concentrate-input mt-1 w-24 rounded-md border border-white/15 bg-slate-950/25 px-1.5 py-0.5 text-right text-[10px] font-semibold tabular-nums text-white outline-none focus:border-cyan-200/70"
                  />
                ) : (
-                 <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">{recipeConcentrateNumber(row.massMg, 1)} mg</div>
+                 <div className="mt-0.5 text-[9px] tabular-nums text-slate-500">
+                   <MilligramTooltip amountMg={row.massMg}>{recipeConcentrateNumber(row.massMg, 1)} mg</MilligramTooltip>
+                 </div>
                )}
               </div>
             </div>
@@ -12115,7 +12193,11 @@ function RecipeConcentrateBottleCard({
           <div className="font-semibold">
             {warnings.some(warning => warning.severity === 'error') ? 'Check strength' : 'Mixing note'}
           </div>
-          {warnings.map(warning => <p key={`${warning.severity}-${warning.message}`} className="mt-1">{warning.message}</p>)}
+          {warnings.map(warning => (
+            <p key={`${warning.severity}-${warning.message}`} className="mt-1">
+              <MilligramTooltipText text={warning.message} />
+            </p>
+          ))}
         </div>
       )}
     </article>
@@ -12520,6 +12602,9 @@ function DiySingleSaltConcentratePanel({
               value={desiredDoseBasis === 'caco3'
                 ? desiredPpmInput || recipeConcentrateNumber(defaultDesiredPpm, 3)
                 : desiredSaltMgInput || recipeConcentrateNumber(defaultDesiredSaltMg, 3)}
+              title={desiredDoseBasis === 'salt-mg'
+                ? formatMilligramsAsGrams(Number(desiredSaltMgInput || recipeConcentrateNumber(defaultDesiredSaltMg, 3)))
+                : undefined}
               onChange={event => {
                 if (desiredDoseBasis === 'caco3') setDesiredPpmInput(event.target.value);
                 else setDesiredSaltMgInput(event.target.value);
@@ -12527,7 +12612,14 @@ function DiySingleSaltConcentratePanel({
               className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
               aria-label={desiredDoseBasis === 'caco3' ? 'Desired CaCO3 ppm per drop' : 'Desired physical salt milligrams per drop'}
             />
-            <span className="text-sm text-slate-400">{desiredDoseBasis === 'caco3' ? 'ppm' : 'mg'}</span>
+            <span
+              className="text-sm text-slate-400"
+              title={desiredDoseBasis === 'salt-mg'
+                ? formatMilligramsAsGrams(Number(desiredSaltMgInput || recipeConcentrateNumber(defaultDesiredSaltMg, 3)))
+                : undefined}
+            >
+              {desiredDoseBasis === 'caco3' ? 'ppm' : 'mg'}
+            </span>
           </span>
         </label>
       </section>
@@ -12574,7 +12666,9 @@ function DiySingleSaltConcentratePanel({
                 {salt.name}
               </strong>
             </span>
-            <strong className="tabular-nums text-emerald-100">{recipeConcentrateMassLabel(saltMassMg / 1000)}</strong>
+            <strong className="tabular-nums text-emerald-100">
+              <MilligramTooltipText text={recipeConcentrateMassLabel(saltMassMg / 1000)} />
+            </strong>
           </div>
           <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-3">
             {desiredDoseBasis === 'salt-mg' ? (
@@ -13089,7 +13183,12 @@ function RecipeConcentrateBuilder({
                 </div>
               </div>
               <div className="rounded-full border border-cyan-300/15 bg-cyan-400/[0.06] px-2.5 py-1 text-[9px] font-semibold tabular-nums text-cyan-100/75">
-                {dropEquivalents.valid ? recipeConcentrateNumber(dropEquivalents.totalSaltMgPerDrop, 2) : '—'} mg physical salt / drop
+                <MilligramTooltip
+                  amountMg={dropEquivalents.valid ? dropEquivalents.totalSaltMgPerDrop : Number.NaN}
+                  suffix="/drop"
+                >
+                  {dropEquivalents.valid ? recipeConcentrateNumber(dropEquivalents.totalSaltMgPerDrop, 2) : '—'} mg physical salt / drop
+                </MilligramTooltip>
               </div>
             </div>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -13104,7 +13203,11 @@ function RecipeConcentrateBuilder({
                      >
                        {row.saltName}
                      </span>
-                    <span className="text-[10px] font-semibold tabular-nums text-cyan-200">{recipeConcentrateNumber(row.saltMgPerDrop, 2)} mg/drop</span>
+                    <span className="text-[10px] font-semibold tabular-nums text-cyan-200">
+                      <MilligramTooltip amountMg={row.saltMgPerDrop} suffix="/drop">
+                        {recipeConcentrateNumber(row.saltMgPerDrop, 2)} mg/drop
+                      </MilligramTooltip>
+                    </span>
                   </div>
                    <div className="mt-1 flex flex-wrap items-center gap-1 text-[9px] text-slate-500">
                      <span>{row.formLabel} ·</span>
@@ -13135,11 +13238,13 @@ function RecipeConcentrateBuilder({
             </summary>
             <div className="border-t border-amber-200/15 px-4 pb-3 pt-2 text-[10px] leading-relaxed text-amber-100/65">
               {limitingConstraint.kind === 'chemical'
-                ? <>Limiting constraint: <strong className="text-amber-100">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. {limitingConstraint.message}</>
-                : limitingConstraint.message}
+                ? <>Limiting constraint: <strong className="text-amber-100">{limitingConstraint.saltNames.join(', ') || 'modeled reaction'}</strong>. <MilligramTooltipText text={limitingConstraint.message} /></>
+                : <MilligramTooltipText text={limitingConstraint.message} />}
               {allInOneWarnings.length > 0 && (
                 <div className="mt-2 space-y-1">
-                  {allInOneWarnings.map(warning => <p key={`${warning.severity}-${warning.message}`}>{warning.message}</p>)}
+                  {allInOneWarnings.map(warning => (
+                    <p key={`${warning.severity}-${warning.message}`}><MilligramTooltipText text={warning.message} /></p>
+                  ))}
                 </div>
               )}
             </div>
@@ -13183,7 +13288,7 @@ function SummaryMetric({
   tone,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   detail: string;
   tone: 'emerald' | 'fuchsia' | 'sky' | 'slate';
 }) {
@@ -13208,11 +13313,13 @@ function CalibrationInput({
   value,
   onChange,
   ariaLabel,
+  tooltipAmountMg,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   ariaLabel: string;
+  tooltipAmountMg?: number;
 }) {
   return (
     <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
@@ -13221,6 +13328,7 @@ function CalibrationInput({
         min="0.01"
         step="0.01"
         value={value}
+        title={tooltipAmountMg === undefined ? undefined : formatMilligramsAsGrams(tooltipAmountMg)}
         onChange={event => onChange(event.target.value)}
         className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
         aria-label={ariaLabel}
@@ -15690,7 +15798,8 @@ function BrewerDropperCalibrationCard({
           </div>
           <div className="mt-2 flex flex-wrap items-baseline justify-between gap-2 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2">
             <span className="text-[11px] text-slate-400">
-              {finalDoseDrops || 0} drops × {mgPerDrop > 0 ? mgPerDrop.toFixed(2) : '—'} mg/drop
+              {finalDoseDrops || 0} drops ×{' '}
+              <MilligramTooltipText text={`${mgPerDrop > 0 ? mgPerDrop.toFixed(2) : '—'} mg/drop`} />
             </span>
             <strong className="text-base tabular-nums text-cyan-200">
               {resultingMgPerLiter > 0 ? `${resultingMgPerLiter.toFixed(2)} mg/L` : '—'}
@@ -15941,7 +16050,9 @@ function BrewerSimpleRecipeCard({
                 {prepMethod === 'dropper' ? `${salt.label} stock` : salt.label}
               </span>
               <span className={`shrink-0 font-mono text-sm font-semibold ${prepMethod === 'dropper' ? 'text-violet-200' : 'text-emerald-200'}`}>
-                {prepMethod === 'dropper' ? `${getUniversalDrops(salt.id)} drops` : getMassLabel(salt.id)}
+                {prepMethod === 'dropper'
+                  ? `${getUniversalDrops(salt.id)} drops`
+                  : <MilligramTooltipText text={getMassLabel(salt.id)} />}
               </span>
             </div>
           ))}
@@ -16151,7 +16262,7 @@ function BrewerSimpleRecipeCard({
                             {universalStockMassPerMlLabel(salt.label)}
                           </span>
                         </>
-                      ) : getMassLabel(salt.id)}
+                      ) : <MilligramTooltipText text={getMassLabel(salt.id)} />}
                     </span>
                   </button>
                 );
@@ -16695,7 +16806,13 @@ function ConcentrateRecipeStepsModal({
                           <div className="grid grid-cols-2 gap-2 text-right">
                             <div className="rounded-md border border-fuchsia-300/20 bg-fuchsia-400/[0.08] px-2 py-1">
                               <div className="text-[8px] font-semibold uppercase tracking-wider text-fuchsia-200/70">Salt to weigh</div>
-                              <div className="mt-0.5 font-mono text-xs font-bold tabular-nums text-fuchsia-100">{details.totalSaltMassG >= 1 ? `${details.totalSaltMassG.toFixed(2)} g` : `${(details.totalSaltMassG * 1000).toFixed(1)} mg`}</div>
+                              <div className="mt-0.5 font-mono text-xs font-bold tabular-nums text-fuchsia-100">
+                                <MilligramTooltipText
+                                  text={details.totalSaltMassG >= 1
+                                    ? `${details.totalSaltMassG.toFixed(2)} g`
+                                    : `${(details.totalSaltMassG * 1000).toFixed(1)} mg`}
+                                />
+                              </div>
                             </div>
                             <div className="rounded-md border border-sky-300/20 bg-sky-400/[0.08] px-2 py-1">
                               <div className="text-[8px] font-semibold uppercase tracking-wider text-sky-200/70">Fill to volume</div>
@@ -17360,7 +17477,7 @@ function BrewerRecipeStepsModal({
                             </div>
                               <div className="shrink-0 text-right">
                                 <span className={`inline-block rounded-md border px-2 py-1 font-mono text-base font-bold leading-none tabular-nums sm:text-lg ${saltValueStyle}`}>
-                                  {amountLabel(salt, stepSaltTargets)}
+                                  <MilligramTooltipText text={amountLabel(salt, stepSaltTargets)} />
                                 </span>
                                 {saltContributionPpm > 0 && (
                                   <div className="mt-1 text-[10px] font-medium tabular-nums text-cyan-200/80">
@@ -17383,12 +17500,19 @@ function BrewerRecipeStepsModal({
                               {orderedRecipeSalts.length + 1}. Eidon Silica supplement
                             </div>
                             <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-violet-200/70">
-                              SiO₂ · {EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop.toFixed(1)} mg/drop · add after the salts
+                               SiO₂ ·{' '}
+                               <MilligramTooltip amountMg={EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop} suffix="/drop">
+                                 {EIDON_SILICA_LABEL_BASIS.silicaMgPerDrop.toFixed(1)} mg/drop
+                               </MilligramTooltip>{' '}
+                               · add after the salts
                             </div>
                           </div>
                           <div className="shrink-0 text-right">
                             <span className="inline-block rounded-md border border-violet-300/35 bg-violet-400/10 px-2 py-1 font-mono text-base font-bold leading-none tabular-nums text-violet-100 sm:text-lg">
-                              {silicaDrops} {silicaDrops === 1 ? 'drop' : 'drops'} · {silicaDoseMg.toFixed(1)} mg
+                               {silicaDrops} {silicaDrops === 1 ? 'drop' : 'drops'} ·{' '}
+                               <MilligramTooltip amountMg={silicaDoseMg}>
+                                 {silicaDoseMg.toFixed(1)} mg
+                               </MilligramTooltip>
                             </span>
                             <div className="mt-1 text-[10px] font-medium tabular-nums text-violet-200/80">
                               {silicaConcentrationPpm.toFixed(2)} mg/L
@@ -18774,7 +18898,9 @@ function SplitStockCard({
           return (
             <div key={saltId} className="flex items-baseline justify-between gap-2">
               <span className="text-xs text-slate-300">{salt.name}{formLabel}</span>
-              <span className="text-xs font-mono text-emerald-300 shrink-0">{mg > 0 ? massLabel : '—'}</span>
+              <span className="text-xs font-mono text-emerald-300 shrink-0">
+                <MilligramTooltipText text={mg > 0 ? massLabel : '—'} />
+              </span>
             </div>
           );
         })}
@@ -18793,7 +18919,7 @@ function SplitStockCard({
               }`}
             >
               <AlertTriangle className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${w.severity === 'error' ? 'text-rose-400' : 'text-amber-400'}`} />
-              <span>{w.message}</span>
+              <span><MilligramTooltipText text={w.message} /></span>
             </div>
           ))}
         </div>
