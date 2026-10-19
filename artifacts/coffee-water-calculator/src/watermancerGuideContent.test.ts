@@ -5,6 +5,15 @@ import {
 } from './watermancerGuideContent';
 
 describe('Watermancer Guide copy', () => {
+  it('marks steps 6 and 7 as blank workspaces with no instructional details', () => {
+    const blankSteps = WATERMANCER_GUIDE_STEPS.filter(
+      step => 'blankWorkspace' in step && step.blankWorkspace,
+    );
+
+    expect(blankSteps.map(step => step.id)).toEqual(['read-dose-plan', 'make-and-taste']);
+    expect(blankSteps.every(step => step.details.length === 0)).toBe(true);
+  });
+
   it('distinguishes physical salt mass from finished-water ion readings', () => {
     const stepText = JSON.stringify(WATERMANCER_GUIDE_STEPS);
     const referenceText = JSON.stringify(WATERMANCER_GUIDE_REFERENCES);
@@ -34,13 +43,9 @@ describe('Watermancer Guide copy', () => {
 
     expect(stepText).toMatch(/supplies/i);
     expect(stepText).toMatch(/count a known number of water drops.*weigh the water/i);
-    expect(stepText).toMatch(/1\.00 mg.*per drop/i);
-    expect(stepText).toMatch(/balanced.*target/i);
+    expect(stepText).toMatch(/Each drop contains 1\.00 mg of its physical salt/i);
+    expect(stepText).toMatch(/complete target set stays charge balanced/i);
     expect(stepText).toMatch(/mineral.water/i);
-    expect(stepText).toMatch(/hydration form/i);
-    expect(stepText).toMatch(/required salt mass in mg.*actual salt mg per drop/i);
-    expect(stepText).toMatch(/1 L.*0.TDS.*1 L/i);
-
     expect(referenceText).toMatch(/calibration/i);
     expect(referenceText).toMatch(/hydration form/i);
     expect(referenceText).toMatch(/charge balance/i);

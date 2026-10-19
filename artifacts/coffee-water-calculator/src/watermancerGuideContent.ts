@@ -3,6 +3,7 @@ export interface WatermancerGuideEntry {
   readonly title: string;
   readonly summary: string;
   readonly details: readonly string[];
+  readonly blankWorkspace?: boolean;
 }
 
 export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
@@ -50,19 +51,15 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     id: 'read-dose-plan',
     title: 'Read the salt plan',
     summary: 'Use Watermancer’s calculated physical salt dose, including the source-water contribution.',
-    details: [
-      'Select the salts and hydration forms that match the prepared bottles. Watermancer calculates each salt dose for the selected final targets and base water.',
-      'If the stock actually delivers 1.00 mg of that salt per drop, a 7 mg salt dose means 7 drops. Otherwise: drops = required salt mass in mg ÷ actual salt mg per drop. Salt mg and finished-water ion ppm are different quantities.',
-    ],
+    details: [],
+    blankWorkspace: true,
   },
   {
     id: 'make-and-taste',
     title: 'Make and taste the 1 L batch',
     summary: 'Top up after adding the mineral-water base and salt drops.',
-    details: [
-      'Add the measured mineral-water base and calculated drops to a bottle with a verified 1 L fill line or brim. Top up with 0-TDS water to that final 1 L mark; the remaining top-up water does not need to be weighed.',
-      'Mix and review the final ion readings. When exploring taste, change one target or dose at a time and compare the results.',
-    ],
+    details: [],
+    blankWorkspace: true,
   },
 ];
 

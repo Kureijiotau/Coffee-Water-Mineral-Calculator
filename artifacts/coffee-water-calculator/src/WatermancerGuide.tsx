@@ -226,6 +226,7 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
   );
   const total = WATERMANCER_GUIDE_STEPS.length;
   const step = WATERMANCER_GUIDE_STEPS[stepIndex];
+  const isBlankWorkspace = Boolean(step.blankWorkspace);
   const useCalibration = (style: LotusDropperStyle, calibration: LotusDropperCalibration) => {
     const next = withDiyLotusCalibration(loadDiyConcentrateInputs(), style, calibration);
     saveDiyConcentrateInputs(next);
@@ -272,7 +273,14 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
             ))}
           </ol>
 
-          <article className="app-card-body min-w-0" aria-labelledby={`wg-step-${step.id}`} data-testid={`step-${step.id}`}>
+          <article
+            className={`app-card-body min-w-0 ${isBlankWorkspace ? 'flex min-h-80 flex-col' : ''}`}
+            aria-labelledby={isBlankWorkspace ? undefined : `wg-step-${step.id}`}
+            aria-label={isBlankWorkspace ? `Step ${stepIndex + 1}: ${step.title}` : undefined}
+            data-testid={`step-${step.id}`}
+          >
+            {!isBlankWorkspace && (
+              <>
             <div className="flex items-start gap-3">
               <span className="app-section-header__step mt-0.5 shrink-0" aria-hidden="true">{stepIndex + 1}</span>
               <div className="min-w-0">
@@ -376,8 +384,13 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
                 {wmButton}
               </div>
             )}
+              </>
+            )}
 
-            <nav className="mt-6 flex items-center justify-between gap-2 border-t border-slate-700/50 pt-4" aria-label="Step navigation">
+            <nav
+              className={`${isBlankWorkspace ? 'mt-auto' : 'mt-6'} flex items-center justify-between gap-2 border-t border-slate-700/50 pt-4`}
+              aria-label="Step navigation"
+            >
               <button type="button" onClick={() => setStepIndex(i => Math.max(0, i - 1))} disabled={stepIndex === 0}
                 data-testid="button-previous-step"
                 className={`${actionClass} border-slate-600/60 bg-slate-800/50 text-slate-200 hover:bg-slate-700/60 disabled:cursor-not-allowed disabled:opacity-40`}>
