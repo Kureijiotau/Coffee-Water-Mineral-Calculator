@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, FlaskConical, Pipette } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react';
 import straightTipPhoto from '@assets/4_1792294122444.jpg';
 import roundTipPhoto from '@assets/5_1792294122444.jpg';
 import saltPantryPhoto from '@assets/9_1792294122446.jpg';
@@ -26,11 +26,9 @@ import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPrepara
 import { MilligramTooltipText } from './MilligramTooltip';
 
 type WatermancerGuideProps = {
-  onOpenDiyConcentrate: () => void;
   onOpenWatermancer: () => void;
 };
 
-const DIY_STEP_IDS = new Set(['calibrate', 'prepare-stocks']);
 const WATERMANCER_STEP_IDS = new Set(['read-dose-plan', 'make-and-taste']);
 
 function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
@@ -217,7 +215,7 @@ export function WatermancerGuideCalibrationCards({
   );
 }
 
-export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermancer }: WatermancerGuideProps) {
+export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuideProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [savedCalibrations, setSavedCalibrations] = useState(() =>
     migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations,
@@ -237,12 +235,6 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
     }));
   };
 
-  const diyButton = (
-    <button type="button" onClick={onOpenDiyConcentrate} data-testid="button-open-diy-concentrate"
-      className={`${actionClass} border-emerald-400/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20`}>
-      <Pipette className="h-4 w-4" aria-hidden="true" />Open DIY Concentrate
-    </button>
-  );
   const wmButton = (
     <button type="button" onClick={onOpenWatermancer} data-testid="button-open-watermancer"
       className={`${actionClass} border-violet-400/40 bg-violet-500/10 text-violet-200 hover:bg-violet-500/20`}>
@@ -379,10 +371,9 @@ export default function WatermancerGuide({ onOpenDiyConcentrate, onOpenWatermanc
               </div>
             )}
 
-            {(DIY_STEP_IDS.has(step.id) || WATERMANCER_STEP_IDS.has(step.id)) && (
+            {WATERMANCER_STEP_IDS.has(step.id) && (
               <div className="mt-4 flex flex-wrap gap-2">
-                {DIY_STEP_IDS.has(step.id) && diyButton}
-                {WATERMANCER_STEP_IDS.has(step.id) && wmButton}
+                {wmButton}
               </div>
             )}
 

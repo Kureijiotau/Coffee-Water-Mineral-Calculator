@@ -6723,7 +6723,6 @@ function App() {
             >
               <Suspense fallback={<div role="status" className="p-6 text-center text-sm text-cyan-100/80">Loading Watermancer Guide…</div>}>
                 <WatermancerGuide
-                  onOpenDiyConcentrate={handleOpenConcentrates}
                   onOpenWatermancer={() => handleCalculatorModeChange('watermancer')}
                 />
               </Suspense>

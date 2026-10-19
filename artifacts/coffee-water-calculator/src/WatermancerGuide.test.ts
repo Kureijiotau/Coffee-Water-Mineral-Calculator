@@ -7,7 +7,6 @@ describe('Watermancer Guide step layout', () => {
   it('shows the current step title and summary before the ion comparison', () => {
     const html = renderToStaticMarkup(
       createElement(WatermancerGuide, {
-        onOpenDiyConcentrate: () => undefined,
         onOpenWatermancer: () => undefined,
       }),
     );
