@@ -49,19 +49,19 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   },
   {
     id: 'read-dose-plan',
-    title: 'Read the salt plan',
-    summary: 'Use Watermancer’s calculated physical salt dose, including the source-water contribution.',
+    title: 'Start with these ranges',
+    summary: 'My light-roast starting points—not rules for every palate.',
     details: [],
-    blankWorkspace: true,
   },
   {
     id: 'make-and-taste',
-    title: 'Make and taste the 1 L batch',
-    summary: 'Top up after adding the mineral-water base and salt drops.',
+    title: 'Try a 1 L example',
+    summary: 'Open a recipe to see its water, salt dose, and final ion profile.',
     details: [],
-    blankWorkspace: true,
   },
 ];
+
+export { WATERMANCER_GUIDE_RECIPES } from './watermancerGuideRecipes';
 
 export const WATERMANCER_GUIDE_REFERENCES: readonly WatermancerGuideEntry[] = [
   {

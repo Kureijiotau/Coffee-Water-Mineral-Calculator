@@ -116,3 +116,49 @@ test('opens the existing tools without changing the selected Watermancer target'
   await page.getByTestId('watermancer-profile-edit').click();
   await expect(calciumTarget).toHaveValue(calciumBefore);
 });
+
+test('shows personal starting ranges and expandable recipe examples in steps six and seven', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByTestId('tab-watermancer-guide').click();
+  await page.getByTestId('button-step-set-targets').click();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 5 of 7');
+
+  await page.getByTestId('button-next-step').click();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 6 of 7');
+  const startingFramework = page.getByTestId('guide-starting-framework');
+  await expect(startingFramework).toContainText('12.0–12.5');
+  await expect(startingFramework).toContainText('My softer tests');
+  await expect(startingFramework).toContainText('Strength scales all selected targets together');
+
+  await page.getByTestId('button-next-step').click();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 7 of 7');
+  const recipeCards = page.locator('[data-testid^="guide-recipe-card-"]');
+  await expect(recipeCards).toHaveCount(5);
+  expect(
+    await recipeCards.evaluateAll(cards =>
+      cards.every(card => !(card as HTMLDetailsElement).open),
+    ),
+  ).toBe(true);
+
+  const dailyDriver = recipeCards.nth(0);
+  await dailyDriver.locator('summary').click();
+  await expect(dailyDriver).toHaveAttribute('open', '');
+  await expect(dailyDriver.getByText('RO / distilled water')).toBeVisible();
+  await expect(dailyDriver.getByText('13 drops')).toBeVisible();
+
+  const bottledBlend = recipeCards.nth(4);
+  await bottledBlend.locator('summary').click();
+  await expect(bottledBlend.getByTestId('guide-recipe-balance-note-bottled-water-blend')).toContainText(
+    'above the usual starting range',
+  );
+  await expect(bottledBlend.getByTestId('guide-recipe-balance-note-bottled-water-blend')).toContainText(
+    'charge mismatch',
+  );
+
+  const pageWidths = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  expect(pageWidths.content).toBeLessThanOrEqual(pageWidths.viewport);
+});
