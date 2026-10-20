@@ -38,16 +38,14 @@ describe('Watermancer Guide step layout', () => {
     const markup = renderGuideSection('WatermancerGuideStartingFramework');
     const text = visibleText(markup);
 
-    expect(text).toContain('12.0–12.5 ppm');
-    expect(text).toContain('10 ppm');
-    expect(text).toContain('22–25 ppm');
-    expect(text).toContain('GH 22–25 ppm CaCO₃');
-    expect(text).toContain('KH ~10 ppm CaCO₃');
+    expect(text).toContain('11–12.5 ppm');
+    expect(text).toContain('KH 9.0–10.3 ppm CaCO₃');
+    expect(text).toContain('GH 22+ ppm CaCO₃');
     expect(text).toContain('0–2.1 ppm');
-    expect(text).toContain('4.5–5.5 ppm');
+    expect(text).toContain('4.5+ ppm');
     expect(text).toContain('14–15 ppm');
     expect(text).toContain('1.6–3.4 ppm');
-    expect(text).toContain('0.9–1.0 ppm');
+    expect(text).toContain('0–2 ppm');
     expect(text).toMatch(/one target at a time/i);
 
     const frameworkIonIds: IonId[] = [

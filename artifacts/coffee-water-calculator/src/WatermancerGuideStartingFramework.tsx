@@ -15,14 +15,14 @@ export function WatermancerGuideStartingFramework() {
     <div className="mt-4 space-y-3" data-testid="guide-starting-framework">
       <div className="grid gap-3 sm:grid-cols-2">
         <TargetCard title="Buffer">
-          <IonChip id="bicarbonate" value="12.0–12.5" />
-          <MetricChip kind="KH" value="~10" />
+          <IonChip id="bicarbonate" value="11–12.5" />
+          <MetricChip kind="KH" value="9.0–10.3" />
         </TargetCard>
 
         <TargetCard title="Hardness">
-          <MetricChip kind="GH" value="22–25" />
+          <MetricChip kind="GH" value="22+" />
           <IonChip id="calcium" value="0–2.1" />
-          <IonChip id="magnesium" value="4.5–5.5" />
+          <IonChip id="magnesium" value="4.5+" />
         </TargetCard>
 
         <TargetCard title="Chloride + sulfate">
@@ -36,7 +36,7 @@ export function WatermancerGuideStartingFramework() {
 
         <TargetCard title="Sodium + potassium">
           <IonChip id="sodium" value="1.6–3.4" />
-          <IonChip id="potassium" value="0.9–1.0" />
+          <IonChip id="potassium" value="0–2" />
         </TargetCard>
       </div>
 
