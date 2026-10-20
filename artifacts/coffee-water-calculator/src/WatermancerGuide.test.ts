@@ -34,7 +34,7 @@ describe('Watermancer Guide step layout', () => {
     expect(summaryPosition).toBeLessThan(comparisonPosition);
   });
 
-  it('shows the personal starting ranges and tasting notes with the established ion colors', () => {
+  it('shows the personal ranges, tasting guidance, and strength scaler with the established ion colors', () => {
     const markup = renderGuideSection('WatermancerGuideStartingFramework');
     const text = visibleText(markup);
 
@@ -46,7 +46,13 @@ describe('Watermancer Guide step layout', () => {
     expect(text).toContain('14–15 ppm');
     expect(text).toContain('1.6–3.4 ppm');
     expect(text).toContain('0–2 ppm');
-    expect(text).toMatch(/one target at a time/i);
+    expect(text).toContain('Use the Strength slider in Watermancer to scale up the recipe.');
+    expect(text).toContain('It scales every ion target, including bicarbonate (KH), not just GH.');
+    expect(text).toContain('In my experience, changes to KH can affect the brew more than changes to GH, so watch the KH reading as you scale.');
+    expect(text).toMatch(/Watermancer Strength control/i);
+    expect(text).toContain('100% baseline');
+    expect(text).toContain('200%');
+    expect(text).not.toMatch(/softer tests|one target at a time/i);
     expect(text).toContain('more chloride felt fuller and left a sticky sort of linger on the finish.');
     expect(text).toContain('Sulfate felt faster, cleaner, and crisper, but it hit the dryness wall very quickly.');
     expect(text).toContain('Your palate may respond differently. Taste, contrast, and take notes.');

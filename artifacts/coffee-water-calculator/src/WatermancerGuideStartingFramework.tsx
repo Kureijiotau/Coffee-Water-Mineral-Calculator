@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { IonChip, IonName, MetricChip, MetricName } from './WatermancerGuideIonTokens';
+import { WatermancerGuideStrengthScaler } from './WatermancerGuideStrengthScaler';
 
 function TargetCard({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -47,13 +48,19 @@ export function WatermancerGuideStartingFramework() {
           and crisper, but it hit the dryness wall very quickly. Your palate may respond differently.
           Taste, contrast, and take notes.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-slate-300">
-          In my softer tests, I lowered <MetricName kind="GH" /> and the{' '}
-          <IonName id="chloride">chloride</IonName>/<IonName id="sulfate">sulfate</IonName> targets,
-          while keeping <MetricName kind="KH" /> near 10. Strength scales all selected targets
-          together; adjust them manually if you want <MetricName kind="KH" /> to stay near 10. Change
-          one target at a time.
-        </p>
+        <div className="mt-3 grid items-center gap-3 md:grid-cols-[minmax(0,1fr)_minmax(18rem,0.9fr)]">
+          <p className="text-sm leading-relaxed text-slate-300">
+            Use the <span className="font-semibold text-cyan-100">Strength</span> slider in
+            Watermancer to scale up the recipe. It scales every ion target, including{' '}
+            <IonName id="bicarbonate">bicarbonate</IonName> (<MetricName kind="KH" />), not just{' '}
+            <MetricName kind="GH" />. In my experience, changes to <MetricName kind="KH" /> can
+            affect the brew more than changes to <MetricName kind="GH" />, so watch the{' '}
+            <MetricName kind="KH" /> reading as you scale.
+          </p>
+          <div className="w-full max-w-[24rem] justify-self-center md:max-w-none">
+            <WatermancerGuideStrengthScaler />
+          </div>
+        </div>
       </aside>
     </div>
   );
