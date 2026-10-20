@@ -4,7 +4,7 @@
 
 **Goal:** Replace Step 7’s tasting-recipe list with an accessible, responsive, screenshot-style walkthrough of the Watermancer workflow.
 
-**Architecture:** Add one focused workflow component and a reusable screenshot frame, then mount them in the existing `make-and-taste` guide step. Update the step copy and retire the guide-only recipe list if no other imports remain. The illustrations are static and do not alter Watermancer behavior.
+**Architecture:** Add a compact workflow component, a reusable screenshot frame, shared static display helpers, and focused scene components, then mount them in the existing `make-and-taste` guide step. Update the step copy and retire the guide-only recipe list if no other imports remain. The illustrations are static and do not alter Watermancer behavior.
 
 **Tech Stack:** React, TypeScript, Tailwind utility classes, Vitest, Vite. No new dependencies.
 
@@ -34,9 +34,15 @@
 **Files:**
 - Create: `artifacts/coffee-water-calculator/src/WatermancerGuideScreenshotFrame.tsx`
 - Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflow.tsx`
+- Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowPrimitives.tsx`
+- Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeSetupScenes.tsx`
+- Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowWaterScene.tsx`
+- Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowMatchingScene.tsx`
+- Create: `artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeCardScene.tsx`
 - Modify: `artifacts/coffee-water-calculator/src/WatermancerGuide.tsx`
 - Modify: `artifacts/coffee-water-calculator/src/watermancerGuideContent.ts`
 - Modify: `artifacts/coffee-water-calculator/src/WatermancerGuide.test.ts`
+- Modify: `artifacts/coffee-water-calculator/src/watermancerGuideContent.test.ts`
 - Delete only if unused: `artifacts/coffee-water-calculator/src/WatermancerGuideRecipeCards.tsx`
 - Delete only if unused: `artifacts/coffee-water-calculator/src/watermancerGuideRecipes.ts`
 
@@ -50,24 +56,26 @@
 - [ ] Assert that the Reset caption matches the scope observed in the live Watermancer reset handler and makes no claims about data it does not change.
 - [ ] Add assertions that old tasting recipe examples are absent, sample values are identified as examples, Community use and sharing are distinct, and each screenshot panel has accessible image semantics without live buttons or inputs.
 - [ ] Assert the workflow uses responsive, shrinkable layout classes so panels do not rely on fixed-width viewports.
+- [ ] Update the guide-content test to expect the new Step 7 title and summary; preserve its existing recipe-data integrity assertions.
 - [ ] Run the focused test and confirm it fails because the new workflow is not present.
 
-Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts`  
+Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts src/watermancerGuideContent.test.ts`  
 Expected: the new workflow assertions fail while existing guide tests still run.
 
-- [ ] Implement the shared screenshot frame and five grouped scenes using static React/SVG/HTML illustrations. Use verified app labels, clear captions, and accessible descriptions; keep sample values illustrative and panels responsive.
+- [ ] Implement the shared screenshot frame, shared static display helpers, and focused components for the five grouped scenes using React/SVG/HTML illustrations. Use verified app labels, clear captions, and accessible descriptions; keep sample values illustrative and panels responsive.
 - [ ] Update the `make-and-taste` title to **Build, match, and save a water recipe** and its summary to explain the journey from targets and volume through waters, salts, matching, and the saved card.
+- [ ] Update the matching guide-content assertion to the approved Step 7 title and summary.
 - [ ] Mount `WatermancerGuideWorkflow` in that step and preserve its existing **Open Watermancer** action.
 - [ ] Confirm no other imports remain before removing the guide-only tasting recipe component and data.
 - [ ] Run the focused test and confirm all guide workflow assertions pass.
-- [ ] Run the full web-app test suite, typecheck, production build, and `git diff --check`.
+- [ ] Run the full web-app test suite, workspace typecheck (which builds shared TypeScript references first), production build, and `git diff --check`.
 - [ ] Restart the existing web workflow once and inspect logs. Use rendered component tests for Step 7 because the available browser capture path cannot interact with guide navigation.
 - [ ] Commit only the verified guide implementation files.
 
 Run:
-- `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts`
+- `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts src/watermancerGuideContent.test.ts`
 - `pnpm --filter @workspace/coffee-water-calculator test`
-- `pnpm --filter @workspace/coffee-water-calculator typecheck`
+- `pnpm run typecheck` (from the workspace root)
 - `pnpm --filter @workspace/coffee-water-calculator build`
 - `git diff --check`
 
