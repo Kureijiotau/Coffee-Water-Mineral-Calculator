@@ -97,6 +97,7 @@ import {
   normalizeWatermancerStrengthPercent,
   scaleWatermancerTargets,
   unscaleWatermancerTargets,
+  watermancerTargetStrengthMultiplier,
 } from './watermancerTargetScaling';
 import {
   embedWaterRecipeJsonInPng,
@@ -3002,6 +3003,7 @@ function App() {
   const [watermancerStrengthPercent, setWatermancerStrengthPercent] = useState(
     DEFAULT_WATERMANCER_STRENGTH_PERCENT,
   );
+  const [watermancerScaleGhOnly, setWatermancerScaleGhOnly] = useState(false);
   const [watermancerImportedRecipeName, setWatermancerImportedRecipeName] = useState<string | null>(null);
   const [watermancerUsedSaltIds, setWatermancerUsedSaltIds] = useState<string[]>([]);
   const [showWatermancerMemeSalts, setShowWatermancerMemeSalts] = useState(false);
@@ -3574,8 +3576,12 @@ function App() {
     ) as Partial<Record<IonId, number>>;
   }, [allRecipesForWatermancer, profiles, saltOnlyIons, watermancerTargetOverride, watermancerTargetSource, wmProfiles]);
   const watermancerEffectiveIonTargets = useMemo(
-    () => scaleWatermancerTargets(watermancerIonTargets, watermancerStrengthPercent),
-    [watermancerIonTargets, watermancerStrengthPercent],
+    () => scaleWatermancerTargets(
+      watermancerIonTargets,
+      watermancerStrengthPercent,
+      watermancerScaleGhOnly,
+    ),
+    [watermancerIonTargets, watermancerStrengthPercent, watermancerScaleGhOnly],
   );
   const hasSelectedWatermancerProfile = watermancerTargetSource === 'safe-profile'
     || watermancerTargetSource.startsWith('profile:')
@@ -3701,6 +3707,7 @@ function App() {
   const watermancerPlan = useMemo<WatermancerPlan>(() => ({
     targetIons: watermancerEffectiveIonTargets,
     targetStrengthPercent: watermancerStrengthPercent,
+    targetStrengthMode: watermancerScaleGhOnly ? 'gh-only' : 'all-ions',
     selectedWaters: [...mineralWaters, ...additionWaters],
     selectedSalts: [...watermancerUsedSaltIds],
     fixedWaterVolumes: Object.fromEntries(
@@ -3761,6 +3768,7 @@ function App() {
     watermancerMatchingMode,
     watermancerEffectiveIonTargets,
     watermancerStrengthPercent,
+    watermancerScaleGhOnly,
     watermancerUsedSaltIds,
     watermancerBestMatchDeviationMode,
     watermancerFixedSaltDoses,
@@ -4866,6 +4874,7 @@ function App() {
     setSplitMls({ hardness: '500', alkalinity: '500', citrate: '500' });
     setMagnesiumPreference('original');
     setWatermancerStrengthPercent(DEFAULT_WATERMANCER_STRENGTH_PERCENT);
+    setWatermancerScaleGhOnly(false);
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerBestMatchDeviationMode(null);
@@ -4902,6 +4911,7 @@ function App() {
      setWatermancerTargetOverride(null);
      setWatermancerTargetSource('safe-profile');
     setWatermancerStrengthPercent(DEFAULT_WATERMANCER_STRENGTH_PERCENT);
+    setWatermancerScaleGhOnly(false);
     setWatermancerUsedSaltIds([]);
     setAutoCraftPreset('closest-match');
     setWatermancerSaltObjective('balanced');
@@ -5967,6 +5977,7 @@ function App() {
     watermancerTargetSource,
     watermancerTargetOverride: watermancerTargetOverride ? { ...watermancerTargetOverride } : null,
     watermancerStrengthPercent,
+    watermancerScaleGhOnly,
     watermancerUsedSaltIds: [...watermancerUsedSaltIds],
     autoCraftPreset,
     watermancerSaltObjective,
@@ -6132,6 +6143,7 @@ function App() {
     setWatermancerStrengthPercent(normalizeWatermancerStrengthPercent(
       snapshot.watermancerStrengthPercent ?? DEFAULT_WATERMANCER_STRENGTH_PERCENT,
     ));
+    setWatermancerScaleGhOnly(snapshot.watermancerScaleGhOnly ?? false);
     setWatermancerUsedSaltIds([...snapshot.watermancerUsedSaltIds]);
     setAutoCraftPreset(snapshot.autoCraftPreset as AutoCraftPreset);
     setWatermancerSaltObjective(snapshot.watermancerSaltObjective as AutoCraftObjective);
@@ -6341,6 +6353,7 @@ function App() {
     watermancerMatchingMode,
     watermancerSaltObjective,
     watermancerStrengthPercent,
+    watermancerScaleGhOnly,
     watermancerTargetOverride,
     watermancerTargetSource,
     watermancerUsedSaltIds,
@@ -6892,6 +6905,8 @@ function App() {
               targetIons={watermancerIonTargets}
                effectiveTargetIons={watermancerEffectiveIonTargets}
                strengthPercent={watermancerStrengthPercent}
+              scaleGhOnly={watermancerScaleGhOnly}
+              onScaleGhOnlyChange={setWatermancerScaleGhOnly}
               onStrengthPercentChange={value => setWatermancerStrengthPercent(
                 normalizeWatermancerStrengthPercent(value),
               )}
@@ -13347,6 +13362,8 @@ function WatermancerIonProfileCard({
   targetIons,
   effectiveTargetIons,
   strengthPercent,
+  scaleGhOnly,
+  onScaleGhOnlyChange,
   onStrengthPercentChange,
   profiles,
   activeProfileId,
@@ -13386,6 +13403,8 @@ function WatermancerIonProfileCard({
   targetIons: Partial<Record<IonId, number>>;
   effectiveTargetIons: Partial<Record<IonId, number>>;
   strengthPercent: number;
+  scaleGhOnly: boolean;
+  onScaleGhOnlyChange: (value: boolean) => void;
   onStrengthPercentChange: (value: number) => void;
   profiles: WaterProfile[];
   activeProfileId: string;
@@ -13583,7 +13602,7 @@ function WatermancerIonProfileCard({
   };
 
   const startEditing = () => {
-    const baseTargets = unscaleWatermancerTargets(currentFinalIons, strengthPercent);
+    const baseTargets = unscaleWatermancerTargets(currentFinalIons, strengthPercent, scaleGhOnly);
     setDraftTargets(
       Object.fromEntries(
         ACTIVE_ION_IDS.map(id => [id, String(baseTargets[id] ?? 0)]),
@@ -14113,14 +14132,20 @@ function WatermancerIonProfileCard({
               <button
                 type="button"
                 data-testid="watermancer-strength-toggle"
-                aria-label={`Target strength, ${strengthPercent} percent`}
+                aria-label={`${scaleGhOnly ? 'GH strength' : 'Target strength'}, ${strengthPercent} percent`}
                 aria-expanded={strengthPopoverOpen}
                 aria-controls="watermancer-strength-panel"
                 aria-haspopup="dialog"
                 onClick={() => setStrengthPopoverOpen(open => !open)}
-                  className="inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border border-cyan-300/20 bg-cyan-950/15 px-2 py-1.5 text-[10px] font-semibold text-cyan-100 transition hover:border-cyan-200/45 hover:bg-cyan-300/10 focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                className={`inline-flex min-h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-200/70 ${
+                  scaleGhOnly
+                    ? 'border-cyan-200/65 bg-cyan-300/15 text-cyan-50 shadow-[0_0_12px_rgba(103,232,249,0.18)] hover:bg-cyan-300/25'
+                    : 'border-cyan-300/20 bg-cyan-950/15 text-cyan-100 hover:border-cyan-200/45 hover:bg-cyan-300/10'
+                }`}
               >
-                <span className="hidden sm:inline">Strength</span>
+                <span className={scaleGhOnly ? '' : 'hidden sm:inline'}>
+                  {scaleGhOnly ? 'GH Strength' : 'Strength'}
+                </span>
                 <span className="tabular-nums">{strengthPercent}%</span>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${strengthPopoverOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
@@ -14128,33 +14153,56 @@ function WatermancerIonProfileCard({
                 <div
                   id="watermancer-strength-panel"
                   role="dialog"
-                  aria-label="Target strength"
+                  aria-label={scaleGhOnly ? 'GH strength' : 'Target strength'}
                   className="absolute right-0 top-full mt-2 w-[min(18rem,calc(100vw-2rem))] rounded-xl border border-cyan-300/25 bg-slate-900 p-3 shadow-2xl shadow-black/40"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <label htmlFor="watermancer-strength-slider" className="text-xs font-semibold text-cyan-100">
-                        Target strength
+                        {scaleGhOnly ? 'GH strength' : 'Target strength'}
                       </label>
                       <p className="mt-0.5 text-[10px] leading-relaxed text-slate-400">
-                        Scale every ion target proportionally; selected waters and salts stay available to the matcher.
+                        {scaleGhOnly
+                          ? 'Scale calcium and magnesium targets only; KH and all other ion targets stay fixed.'
+                          : 'Scale every ion target proportionally; selected waters and salts stay available to the matcher.'}
                       </p>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <output
-                        className="rounded-md border border-cyan-300/20 bg-slate-950/40 px-2 py-1 text-sm font-bold tabular-nums text-cyan-100"
-                        htmlFor="watermancer-strength-slider"
-                        data-testid="watermancer-strength-value"
-                      >
-                        {strengthPercent}%
-                      </output>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="flex items-center gap-2">
+                        <output
+                          className="rounded-md border border-cyan-300/20 bg-slate-950/40 px-2 py-1 text-sm font-bold tabular-nums text-cyan-100"
+                          htmlFor="watermancer-strength-slider"
+                          data-testid="watermancer-strength-value"
+                        >
+                          {strengthPercent}%
+                        </output>
+                        <button
+                          type="button"
+                          aria-label="Close target strength"
+                          onClick={() => setStrengthPopoverOpen(false)}
+                          className="rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                        >
+                          <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        aria-label="Close target strength"
-                        onClick={() => setStrengthPopoverOpen(false)}
-                        className="rounded-md p-1 text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-200/70"
+                        data-testid="watermancer-strength-gh-only-toggle"
+                        aria-pressed={scaleGhOnly}
+                        onClick={() => onScaleGhOnlyChange(!scaleGhOnly)}
+                        className={`inline-flex min-h-7 items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-semibold transition focus:outline-none focus:ring-2 focus:ring-cyan-200/70 ${
+                          scaleGhOnly
+                            ? 'border-cyan-200/80 bg-cyan-300/20 text-cyan-50 shadow-[0_0_12px_rgba(103,232,249,0.28)] ring-1 ring-cyan-200/30'
+                            : 'border-slate-600/80 bg-slate-800/80 text-slate-300 hover:border-cyan-300/40 hover:bg-slate-700'
+                        }`}
                       >
-                        <X className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span
+                          aria-hidden="true"
+                          className={`h-2 w-2 rounded-full transition ${
+                            scaleGhOnly ? 'bg-cyan-200 shadow-[0_0_8px_rgba(103,232,249,0.8)]' : 'bg-slate-500'
+                          }`}
+                        />
+                        Scale GH only
                       </button>
                     </div>
                   </div>
@@ -14167,8 +14215,8 @@ function WatermancerIonProfileCard({
                     step="5"
                     value={strengthPercent}
                     onChange={event => onStrengthPercentChange(Number(event.currentTarget.value))}
-                    aria-label="Watermancer target strength"
-                    aria-valuetext={`${strengthPercent}% of selected ion targets`}
+                    aria-label={scaleGhOnly ? 'Watermancer GH strength' : 'Watermancer target strength'}
+                    aria-valuetext={`${strengthPercent}% of ${scaleGhOnly ? 'calcium and magnesium' : 'selected ion'} targets`}
                     className="mt-2 block min-h-8 w-full cursor-pointer accent-cyan-300"
                   />
                   <div className="flex justify-between text-[9px] tabular-nums text-slate-500" aria-hidden="true">
@@ -14485,8 +14533,10 @@ function WatermancerIonProfileCard({
            const cardCanOpenEditor = !editing && !zeroProfileNamePromptOpen;
            const cardEditing = editing || editingIonId === id;
            const draftBaseTarget = cardEditing ? parseFloat(draftTargets[id] ?? '0') : 0;
-           const target = cardEditing
-             ? (Number.isFinite(draftBaseTarget) ? Math.max(draftBaseTarget, 0) : 0) * strengthPercent / 100
+          const targetUsesStrength = !scaleGhOnly || id === 'calcium' || id === 'magnesium';
+          const target = cardEditing
+             ? (Number.isFinite(draftBaseTarget) ? Math.max(draftBaseTarget, 0) : 0)
+               * watermancerTargetStrengthMultiplier(id, strengthPercent, scaleGhOnly)
              : (effectiveTargetIons[id] ?? 0);
           const gap = Math.max(target - ppm, 0);
           const aboveTarget = ppm > target + 0.05;
@@ -14522,7 +14572,7 @@ function WatermancerIonProfileCard({
                {cardEditing ? (
                 <div className="mt-1.5">
                    <label className="text-[10px] text-slate-500 block mb-0.5">
-                     {strengthPercent === 100 ? 'Ceiling' : 'Base ceiling (at 100%)'}
+                     {!targetUsesStrength || strengthPercent === 100 ? 'Ceiling' : 'Base ceiling (at 100%)'}
                    </label>
                   <StableNumberInput
                     value={draftTargets[id] ?? '0'}
@@ -14536,7 +14586,10 @@ function WatermancerIonProfileCard({
                 </div>
               ) : (
                 <>
-                  <div className={`text-xs ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'} mt-0.5`}>
+                  <div
+                    className={`text-xs ${aboveTarget ? 'text-amber-300' : 'text-emerald-300'} mt-0.5`}
+                    data-testid={`watermancer-ion-ceiling-${id}`}
+                  >
                     Ceiling: {target.toFixed(1)} ppm
                   </div>
                   <div className="mt-1 text-[10px] text-slate-500">

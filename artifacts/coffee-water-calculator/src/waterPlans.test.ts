@@ -42,6 +42,7 @@ const snapshot: WaterPlanSnapshot = {
   watermancerTargetSource: 'safe-profile',
   watermancerTargetOverride: { calcium: 40 },
   watermancerStrengthPercent: 135,
+  watermancerScaleGhOnly: true,
   watermancerUsedSaltIds: ['mgso4'],
   autoCraftPreset: 'closest-match',
   watermancerSaltObjective: 'balanced',
@@ -92,6 +93,7 @@ describe('water plan persistence', () => {
     expect(parsed?.snapshot.watermancerSilicaTargetEnabled).toBe(true);
     expect(parsed?.snapshot.watermancerSilicaTargetPpm).toBe('25');
     expect(parsed?.snapshot.watermancerStrengthPercent).toBe(135);
+    expect(parsed?.snapshot.watermancerScaleGhOnly).toBe(true);
   });
 
   it('round-trips an explicit Brewer mode in a version-1 plan', () => {
@@ -143,11 +145,13 @@ describe('water plan persistence', () => {
     const legacySnapshot = { ...snapshot };
     delete legacySnapshot.watermancerMatchingMode;
     delete legacySnapshot.watermancerStrengthPercent;
+    delete legacySnapshot.watermancerScaleGhOnly;
     const plan = createWaterPlan('Legacy', legacySnapshot, '2026-08-15T00:00:00.000Z');
 
     expect(isValidWaterPlan(plan)).toBe(true);
     expect((plan.snapshot.watermancerMatchingMode ?? 'target-values')).toBe('target-values');
     expect(plan.snapshot.watermancerStrengthPercent).toBeUndefined();
+    expect(plan.snapshot.watermancerScaleGhOnly).toBeUndefined();
   });
 
   it('rejects target-strength percentages outside the supported scale', () => {
@@ -155,6 +159,15 @@ describe('water plan persistence', () => {
       ...snapshot,
       watermancerStrengthPercent: 205,
     }, '2026-08-15T00:00:00.000Z');
+
+    expect(isValidWaterPlan(plan)).toBe(false);
+  });
+
+  it('rejects an invalid GH-only scaling preference', () => {
+    const plan = createWaterPlan('Invalid GH-only mode', {
+      ...snapshot,
+      watermancerScaleGhOnly: 'yes',
+    } as unknown as WaterPlanSnapshot);
 
     expect(isValidWaterPlan(plan)).toBe(false);
   });

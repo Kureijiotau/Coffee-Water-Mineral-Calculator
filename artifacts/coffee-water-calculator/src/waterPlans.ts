@@ -69,6 +69,8 @@ export type WaterPlanSnapshot = {
   watermancerTargetOverride: Record<string, number> | null;
   /** Optional for compatibility with version-1 sessions created before target-strength scaling. */
   watermancerStrengthPercent?: number;
+  /** Optional for compatibility with saved plans created before GH-only scaling. */
+  watermancerScaleGhOnly?: boolean;
   watermancerUsedSaltIds: string[];
   autoCraftPreset: string;
   watermancerSaltObjective: string;
@@ -174,6 +176,8 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
       || value.watermancerStrengthPercent < 0
       || value.watermancerStrengthPercent > 200
       || value.watermancerStrengthPercent % 5 !== 0)) return false;
+  if (value.watermancerScaleGhOnly !== undefined
+    && typeof value.watermancerScaleGhOnly !== 'boolean') return false;
   if (!['original', 'chlorides', 'sulfates'].includes(String(value.magnesiumPreference))) return false;
   if (!['mineral-first', 'bicarbonate-first', 'balanced-gh-kh', 'custom'].includes(String(value.autoFillPriorityPreset))) return false;
   if (!Number.isFinite(value.autoFillDeviationPpm)) return false;

@@ -27,6 +27,8 @@ export type WatermancerPlan = {
   targetIons: Partial<Record<IonId, number>>;
   /** User-selected scale applied to the source targets before matching. */
   targetStrengthPercent?: number;
+  /** Whether the strength scale applies only to calcium and magnesium. */
+  targetStrengthMode?: 'all-ions' | 'gh-only';
   selectedWaters: MineralWaterEntry[];
   /** Salt inventory the matcher may use; individual salts may receive zero dose. */
   selectedSalts: string[];
