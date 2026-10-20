@@ -15,42 +15,22 @@ describe('Watermancer target strength scaling', () => {
   });
 
   it('scales all present targets uniformly and preserves zero targets', () => {
-    expect(scaleWatermancerTargets({ calcium: 40, magnesium: 12, sodium: 0 }, 150)).toEqual({
-      calcium: 60,
-      magnesium: 18,
-      sodium: 0,
-    });
-  });
-
-  it('scales calcium and magnesium only when GH-only mode is enabled', () => {
     expect(scaleWatermancerTargets({
       calcium: 40,
       magnesium: 12,
-      sodium: 8,
+      sodium: 0,
       bicarbonate: 30,
       sulfate: 11,
       chloride: 15,
-    }, 150, true)).toEqual({
+      potassium: 4,
+    }, 150)).toEqual({
       calcium: 60,
       magnesium: 18,
-      sodium: 8,
-      bicarbonate: 30,
-      sulfate: 11,
-      chloride: 15,
-    });
-  });
-
-  it('unscales only calcium and magnesium when editing in GH-only mode', () => {
-    expect(unscaleWatermancerTargets({
-      calcium: 60,
-      magnesium: 18,
-      sodium: 8,
-      bicarbonate: 30,
-    }, 150, true)).toEqual({
-      calcium: 40,
-      magnesium: 12,
-      sodium: 8,
-      bicarbonate: 30,
+      sodium: 0,
+      bicarbonate: 45,
+      sulfate: 16.5,
+      chloride: 22.5,
+      potassium: 6,
     });
   });
 

@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createWaterPlan,
   isValidWaterPlan,
+  loadWaterPlans,
   parseWaterRecipeFile,
   parseWaterPlanFile,
   resolveWaterPlanCalculatorMode,
@@ -9,6 +10,10 @@ import {
   serializeWaterPlanFile,
   type WaterPlanSnapshot,
 } from './waterPlans';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 const snapshot: WaterPlanSnapshot = {
   version: 1,
@@ -42,7 +47,6 @@ const snapshot: WaterPlanSnapshot = {
   watermancerTargetSource: 'safe-profile',
   watermancerTargetOverride: { calcium: 40 },
   watermancerStrengthPercent: 135,
-  watermancerScaleGhOnly: true,
   watermancerUsedSaltIds: ['mgso4'],
   autoCraftPreset: 'closest-match',
   watermancerSaltObjective: 'balanced',
@@ -93,7 +97,6 @@ describe('water plan persistence', () => {
     expect(parsed?.snapshot.watermancerSilicaTargetEnabled).toBe(true);
     expect(parsed?.snapshot.watermancerSilicaTargetPpm).toBe('25');
     expect(parsed?.snapshot.watermancerStrengthPercent).toBe(135);
-    expect(parsed?.snapshot.watermancerScaleGhOnly).toBe(true);
   });
 
   it('round-trips an explicit Brewer mode in a version-1 plan', () => {
@@ -145,13 +148,11 @@ describe('water plan persistence', () => {
     const legacySnapshot = { ...snapshot };
     delete legacySnapshot.watermancerMatchingMode;
     delete legacySnapshot.watermancerStrengthPercent;
-    delete legacySnapshot.watermancerScaleGhOnly;
     const plan = createWaterPlan('Legacy', legacySnapshot, '2026-08-15T00:00:00.000Z');
 
     expect(isValidWaterPlan(plan)).toBe(true);
     expect((plan.snapshot.watermancerMatchingMode ?? 'target-values')).toBe('target-values');
     expect(plan.snapshot.watermancerStrengthPercent).toBeUndefined();
-    expect(plan.snapshot.watermancerScaleGhOnly).toBeUndefined();
   });
 
   it('rejects target-strength percentages outside the supported scale', () => {
@@ -163,13 +164,46 @@ describe('water plan persistence', () => {
     expect(isValidWaterPlan(plan)).toBe(false);
   });
 
-  it('rejects an invalid GH-only scaling preference', () => {
-    const plan = createWaterPlan('Invalid GH-only mode', {
+  it('resets imported legacy GH-only plans to neutral all-ion strength', () => {
+    const legacySnapshot = {
       ...snapshot,
-      watermancerScaleGhOnly: 'yes',
-    } as unknown as WaterPlanSnapshot);
+      watermancerStrengthPercent: 150,
+      watermancerScaleGhOnly: true,
+    };
+    const parsed = parseWaterPlanFile(JSON.stringify({
+      kind: 'coffee-water-plan',
+      version: 1,
+      id: 'legacy-gh-only',
+      name: 'Legacy GH-only',
+      createdAt: '2026-08-15T00:00:00.000Z',
+      updatedAt: '2026-08-15T00:00:00.000Z',
+      snapshot: legacySnapshot,
+    }));
 
-    expect(isValidWaterPlan(plan)).toBe(false);
+    expect(parsed?.snapshot.watermancerStrengthPercent).toBe(100);
+    expect(parsed?.snapshot).not.toHaveProperty('watermancerScaleGhOnly');
+  });
+
+  it('resets legacy GH-only plans restored from local storage', () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    const legacyPlan = {
+      ...createWaterPlan('Legacy GH-only', snapshot),
+      snapshot: {
+        ...snapshot,
+        watermancerStrengthPercent: 150,
+        watermancerScaleGhOnly: true,
+      },
+    };
+    storage.set('cwm.waterPlans', JSON.stringify([legacyPlan]));
+
+    const [restored] = loadWaterPlans();
+
+    expect(restored.snapshot.watermancerStrengthPercent).toBe(100);
+    expect(restored.snapshot).not.toHaveProperty('watermancerScaleGhOnly');
   });
 
   it('accepts legacy snapshots without a silica dose and rejects invalid counts', () => {

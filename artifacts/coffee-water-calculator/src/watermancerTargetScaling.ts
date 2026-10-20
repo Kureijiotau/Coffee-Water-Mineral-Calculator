@@ -16,24 +16,21 @@ export function normalizeWatermancerStrengthPercent(value: unknown): number {
 }
 
 export function watermancerTargetStrengthMultiplier(
-  ionId: string,
   strengthPercent: number,
-  scaleGhOnly = false,
 ): number {
-  if (scaleGhOnly && ionId !== 'calcium' && ionId !== 'magnesium') return 1;
   return normalizeWatermancerStrengthPercent(strengthPercent) / 100;
 }
 
 export function scaleWatermancerTargets<Ion extends string>(
   targets: Partial<Record<Ion, number>>,
   strengthPercent: number,
-  scaleGhOnly = false,
 ): Partial<Record<Ion, number>> {
   const scaled: Partial<Record<Ion, number>> = {};
+  const multiplier = watermancerTargetStrengthMultiplier(strengthPercent);
 
   for (const [ion, value] of Object.entries(targets) as [Ion, number][]) {
     if (Number.isFinite(value) && value >= 0) {
-      scaled[ion] = value * watermancerTargetStrengthMultiplier(ion, strengthPercent, scaleGhOnly);
+      scaled[ion] = value * multiplier;
     }
   }
 
@@ -43,13 +40,12 @@ export function scaleWatermancerTargets<Ion extends string>(
 export function unscaleWatermancerTargets<Ion extends string>(
   targets: Partial<Record<Ion, number>>,
   strengthPercent: number,
-  scaleGhOnly = false,
 ): Partial<Record<Ion, number>> {
   const unscaled: Partial<Record<Ion, number>> = {};
+  const multiplier = watermancerTargetStrengthMultiplier(strengthPercent);
 
   for (const [ion, value] of Object.entries(targets) as [Ion, number][]) {
     if (Number.isFinite(value) && value >= 0) {
-      const multiplier = watermancerTargetStrengthMultiplier(ion, strengthPercent, scaleGhOnly);
       unscaled[ion] = multiplier > 0 ? value / multiplier : value;
     }
   }

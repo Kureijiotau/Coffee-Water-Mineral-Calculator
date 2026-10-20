@@ -7,20 +7,17 @@ async function readTargetCeiling(page: import('@playwright/test').Page, ionId: s
   return Number(match[1]);
 }
 
-test('GH-only strength scales calcium and magnesium without scaling KH', async ({ page }) => {
+test('target strength scales all ions without offering GH-only mode', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
 
   const strengthButton = page.getByTestId('watermancer-strength-toggle');
   await expect(strengthButton).toBeVisible();
   await expect(strengthButton).toContainText('Strength');
+  await expect(strengthButton).not.toContainText('GH Strength');
   await strengthButton.click();
 
-  const ghOnlyToggle = page.getByTestId('watermancer-strength-gh-only-toggle');
-  await expect(ghOnlyToggle).toHaveAttribute('aria-pressed', 'false');
-  await ghOnlyToggle.click();
-  await expect(ghOnlyToggle).toHaveAttribute('aria-pressed', 'true');
-  await expect(strengthButton).toContainText('GH Strength');
+  await expect(page.getByTestId('watermancer-strength-gh-only-toggle')).toHaveCount(0);
 
   const calciumAtBaseline = await readTargetCeiling(page, 'calcium');
   const magnesiumAtBaseline = await readTargetCeiling(page, 'magnesium');
@@ -34,10 +31,5 @@ test('GH-only strength scales calcium and magnesium without scaling KH', async (
 
   expect(await readTargetCeiling(page, 'calcium')).toBeGreaterThan(calciumAtBaseline);
   expect(await readTargetCeiling(page, 'magnesium')).toBeGreaterThan(magnesiumAtBaseline);
-  expect(await readTargetCeiling(page, 'bicarbonate')).toBe(bicarbonateAtBaseline);
-
-  await ghOnlyToggle.click();
-  await expect(ghOnlyToggle).toHaveAttribute('aria-pressed', 'false');
-  await expect(strengthButton).toContainText('Strength');
   expect(await readTargetCeiling(page, 'bicarbonate')).toBeGreaterThan(bicarbonateAtBaseline);
 });

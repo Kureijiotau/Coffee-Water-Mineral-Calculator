@@ -1,6 +1,7 @@
 import type { CalculatorMode, NerdLevel } from './profiles';
 import type { SaltRecipeEntry } from './waterData';
 import type { WatermancerMatchingMode } from './watermancerPlan';
+import { DEFAULT_WATERMANCER_STRENGTH_PERCENT } from './watermancerTargetScaling';
 
 export type WaterPlanVolumeUnit = 'liters' | 'gallons';
 
@@ -69,8 +70,6 @@ export type WaterPlanSnapshot = {
   watermancerTargetOverride: Record<string, number> | null;
   /** Optional for compatibility with version-1 sessions created before target-strength scaling. */
   watermancerStrengthPercent?: number;
-  /** Optional for compatibility with saved plans created before GH-only scaling. */
-  watermancerScaleGhOnly?: boolean;
   watermancerUsedSaltIds: string[];
   autoCraftPreset: string;
   watermancerSaltObjective: string;
@@ -102,6 +101,22 @@ export type WaterPlan = {
   updatedAt: string;
   snapshot: WaterPlanSnapshot;
 };
+
+function normalizeWaterPlanSnapshot(snapshot: WaterPlanSnapshot): WaterPlanSnapshot {
+  const normalized = { ...snapshot } as WaterPlanSnapshot & { watermancerScaleGhOnly?: unknown };
+  if (normalized.watermancerScaleGhOnly === true) {
+    normalized.watermancerStrengthPercent = DEFAULT_WATERMANCER_STRENGTH_PERCENT;
+  }
+  delete normalized.watermancerScaleGhOnly;
+  return normalized;
+}
+
+function normalizeWaterPlan(plan: WaterPlan): WaterPlan {
+  return {
+    ...plan,
+    snapshot: normalizeWaterPlanSnapshot(plan.snapshot),
+  };
+}
 
 export const WATER_PLAN_FILE_KIND = 'coffee-water-plan';
 export const WATER_PLAN_VERSION = 1;
@@ -176,8 +191,6 @@ function isWaterPlanSnapshot(value: unknown): value is WaterPlanSnapshot {
       || value.watermancerStrengthPercent < 0
       || value.watermancerStrengthPercent > 200
       || value.watermancerStrengthPercent % 5 !== 0)) return false;
-  if (value.watermancerScaleGhOnly !== undefined
-    && typeof value.watermancerScaleGhOnly !== 'boolean') return false;
   if (!['original', 'chlorides', 'sulfates'].includes(String(value.magnesiumPreference))) return false;
   if (!['mineral-first', 'bicarbonate-first', 'balanced-gh-kh', 'custom'].includes(String(value.autoFillPriorityPreset))) return false;
   if (!Number.isFinite(value.autoFillDeviationPpm)) return false;
@@ -244,7 +257,7 @@ function readPlans(): WaterPlan[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isValidWaterPlan) : [];
+    return Array.isArray(parsed) ? parsed.filter(isValidWaterPlan).map(normalizeWaterPlan) : [];
   } catch {
     return [];
   }
@@ -256,7 +269,7 @@ export function loadWaterPlans(): WaterPlan[] {
 
 export function saveWaterPlans(plans: WaterPlan[]): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans.map(normalizeWaterPlan)));
   } catch {
     /* Ignore storage quota and privacy-mode failures. */
   }
@@ -272,7 +285,7 @@ export function createWaterPlan(name: string, snapshot: WaterPlanSnapshot, now =
     name: name.trim(),
     createdAt: now,
     updatedAt: now,
-    snapshot,
+    snapshot: normalizeWaterPlanSnapshot(snapshot),
   };
 }
 
@@ -280,7 +293,7 @@ export function serializeWaterPlanFile(plan: WaterPlan): string {
   return JSON.stringify({
     kind: WATER_PLAN_FILE_KIND,
     version: WATER_PLAN_VERSION,
-    ...plan,
+    ...normalizeWaterPlan(plan),
   }, null, 2);
 }
 
@@ -368,7 +381,7 @@ export function parseWaterPlanFile(text: string): WaterPlan | null {
       updatedAt: new Date().toISOString(),
       snapshot: parsed.snapshot,
     };
-    return isValidWaterPlan(candidate) ? candidate : null;
+    return isValidWaterPlan(candidate) ? normalizeWaterPlan(candidate) : null;
   } catch {
     return null;
   }

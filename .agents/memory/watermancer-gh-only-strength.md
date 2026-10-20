@@ -1,10 +1,10 @@
 ---
 name: Watermancer GH-only strength
-description: Preserve the behavior and balance boundary for GH-only target scaling.
+description: Keep GH-only strength paused until the user revisits its ion-balance behavior.
 ---
 
-When GH-only strength is active, scale Calcium and Magnesium targets together by the selected percentage. Keep KH/Bicarbonate, Sodium, Potassium, anions, and every other target unchanged. All-ion scaling remains the default. Do not silently alter counter-ion targets to force charge balance; let normal matching results expose the effect of the fixed targets.
+GH-only strength is paused. Keep all-ion target strength as the only available mode until the user returns with a proper way to integrate GH-only scaling.
 
-**Why:** The user wants GH to scale independently from KH, with predictable target values and no hidden edits to other ions.
+**Why:** The user asked to remove the GH-only option for now because changing Calcium and Magnesium alone can make the rest of the ion profile and charge balance difficult to reconcile.
 
-**How to apply:** Follow this behavior when changing Watermancer target strength, plan persistence, matching, or related explanatory copy.
+**How to apply:** Do not restore GH-only controls or scaling behavior unless the user revisits and approves a new design.

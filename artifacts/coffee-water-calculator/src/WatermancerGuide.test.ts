@@ -45,7 +45,7 @@ describe('Watermancer Guide step layout', () => {
     expect(text).toContain('4.5+ ppm');
     expect(text).toContain('14–15 ppm');
     expect(text).toContain('1.6–3.4 ppm');
-    expect(text).toContain('0–2 ppm');
+    expect(text).toContain('0–1.5 ppm');
     expect(text).toContain('Use the Strength slider in Watermancer to scale up the recipe.');
     expect(text).toContain('It scales every ion target, including bicarbonate (KH), not just GH.');
     expect(text).toContain('In my experience, changes to KH can affect the brew more than changes to GH, so watch the KH reading as you scale.');

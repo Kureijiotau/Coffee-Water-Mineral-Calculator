@@ -37,7 +37,7 @@ export function WatermancerGuideStartingFramework() {
 
         <TargetCard title="Sodium + potassium">
           <IonChip id="sodium" value="1.6–3.4" />
-          <IonChip id="potassium" value="0–2" />
+          <IonChip id="potassium" value="0–1.5" />
         </TargetCard>
       </div>
 
