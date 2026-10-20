@@ -42,8 +42,10 @@ export function WatermancerGuideStartingFramework() {
 
       <aside className="rounded-xl border border-slate-700/60 bg-slate-900/35 px-3 py-3">
         <p className="text-sm leading-relaxed text-slate-300">
-          In my tastings, more <IonName id="chloride">chloride</IonName> may feel fuller and juicier;
-          some <IonName id="sulfate">sulfate</IonName> may feel crisper. Your coffee may respond differently.
+          In my tastings, more <IonName id="chloride">chloride</IonName> felt fuller and left a sticky
+          sort of linger on the finish. <IonName id="sulfate">Sulfate</IonName> felt faster, cleaner,
+          and crisper, but it hit the dryness wall very quickly. Your palate may respond differently.
+          Taste, contrast, and take notes.
         </p>
         <p className="mt-2 text-sm leading-relaxed text-slate-300">
           In my softer tests, I lowered <MetricName kind="GH" /> and the{' '}

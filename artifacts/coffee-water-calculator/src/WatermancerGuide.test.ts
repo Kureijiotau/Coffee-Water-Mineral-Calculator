@@ -34,7 +34,7 @@ describe('Watermancer Guide step layout', () => {
     expect(summaryPosition).toBeLessThan(comparisonPosition);
   });
 
-  it('shows the personal starting ranges with the established ion colors', () => {
+  it('shows the personal starting ranges and tasting notes with the established ion colors', () => {
     const markup = renderGuideSection('WatermancerGuideStartingFramework');
     const text = visibleText(markup);
 
@@ -47,6 +47,9 @@ describe('Watermancer Guide step layout', () => {
     expect(text).toContain('1.6–3.4 ppm');
     expect(text).toContain('0–2 ppm');
     expect(text).toMatch(/one target at a time/i);
+    expect(text).toContain('more chloride felt fuller and left a sticky sort of linger on the finish.');
+    expect(text).toContain('Sulfate felt faster, cleaner, and crisper, but it hit the dryness wall very quickly.');
+    expect(text).toContain('Your palate may respond differently. Taste, contrast, and take notes.');
 
     const frameworkIonIds: IonId[] = [
       'sodium',
