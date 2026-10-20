@@ -38,6 +38,29 @@ describe('solveBoundedCoupledSaltTargets', () => {
     expect(result?.score).toBeLessThan(1e-5);
   });
 
+  it('finds an exact two-citrate-salt match without scanning the full inventory', () => {
+    const sourceTargets = { mgcit: 20, cacit: 25 };
+    const targetIons = computeIonTotals(sourceTargets, {}, 1);
+    let scoreEvaluations = 0;
+    const result = solveBoundedCoupledSaltTargets({
+      allowedSalts: SALTS,
+      fixedIonTotals: {},
+      targetIons,
+      ionWeights: Object.fromEntries(ACTIVE_ION_IDS.map(id => [id, 1])),
+      scoreCandidate: candidate => {
+        scoreEvaluations += 1;
+        return ionError(candidate, targetIons);
+      },
+    });
+
+    expect(result).not.toBeNull();
+    expect(result?.activeSaltIds).toEqual(['mgcit', 'cacit']);
+    expect(result?.saltTargets.mgcit).toBeCloseTo(sourceTargets.mgcit, 4);
+    expect(result?.saltTargets.cacit).toBeCloseTo(sourceTargets.cacit, 4);
+    expect(result?.score).toBeLessThan(1e-5);
+    expect(scoreEvaluations).toBeLessThan(100);
+  });
+
   it.each([
     ['mgoh2', 58.319],
     ['caco3', 100.086],

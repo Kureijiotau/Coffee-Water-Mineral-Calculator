@@ -2,6 +2,7 @@ import {
   ACTIVE_ION_IDS,
   computeGH,
   computeKH,
+  ION_CHEMISTRY,
   IONS,
   type IonId,
 } from './waterData';
@@ -44,6 +45,28 @@ export function computeWatermancerMetricValues(
     kh: computeKH(completeIonMap),
     tds: Object.values(completeIonMap).reduce((total, ppm) => total + ppm, 0),
   };
+}
+
+/**
+ * Estimate alkalinity as bicarbonate-equivalent mass. Citrate is treated as
+ * carrying its modeled full 3− charge; real alkalinity depends on pH/speciation.
+ */
+export function computeHco3EquivalentPpm(
+  ions: Partial<Record<IonId, number>>,
+): number {
+  const bicarbonatePpm = ions.bicarbonate ?? 0;
+  const citratePpm = ions.citrates ?? 0;
+  const safeBicarbonatePpm = Number.isFinite(bicarbonatePpm)
+    ? Math.max(bicarbonatePpm, 0)
+    : 0;
+  const safeCitratePpm = Number.isFinite(citratePpm)
+    ? Math.max(citratePpm, 0)
+    : 0;
+  const bicarbonateEquivalentPerCitratePpm = (
+    Math.abs(ION_CHEMISTRY.citrates.charge) * ION_CHEMISTRY.bicarbonate.molarMass
+  ) / ION_CHEMISTRY.citrates.molarMass;
+
+  return safeBicarbonatePpm + safeCitratePpm * bicarbonateEquivalentPerCitratePpm;
 }
 
 /**

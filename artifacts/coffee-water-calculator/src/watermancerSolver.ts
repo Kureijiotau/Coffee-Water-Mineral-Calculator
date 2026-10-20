@@ -362,6 +362,14 @@ export function autoCraftSaltTargets(
   const sourcePreferenceFor = (ionId: IonId): WatermancerIonSourcePreference | undefined => (
     overshootPolicy?.ionSourcePreferences?.[ionId]
   );
+  const sourcePreferenceNeedsSaltTotals = ACTIVE_ION_IDS.some(ionId => (
+    sourcePreferenceFor(ionId) === 'water-only'
+    || sourcePreferenceFor(ionId) === 'water-then-salt'
+  ));
+  const sourcePreferenceNeedsWaterTotals = ACTIVE_ION_IDS.some(ionId => (
+    sourcePreferenceFor(ionId) === 'salt-only'
+    || sourcePreferenceFor(ionId) === 'water-then-salt'
+  ));
   const softDeficitAllowanceFor = (ionId: IonId): number => {
     if (!controlledOvershootEnabled || !overshootPolicy?.softDeficitIons?.includes(ionId)) return 0;
     const value = Number(overshootPolicy.softDeficitLimits?.[ionId] ?? 0);
@@ -397,7 +405,10 @@ export function autoCraftSaltTargets(
         + excessBeyondPolicy * (4 + priorityWeight / normalizedOvershootOrder.length);
   };
   const sourcePreferencePenalty = (saltTargets: Record<string, number>): number => {
-    const saltIons = computeIonTotals(saltTargets, {}, 1);
+    if (!sourcePreferenceNeedsSaltTotals && !sourcePreferenceNeedsWaterTotals) return 0;
+    const saltIons: Partial<Record<IonId, number>> = sourcePreferenceNeedsSaltTotals
+      ? computeIonTotals(saltTargets, {}, 1)
+      : {};
     return ACTIVE_ION_IDS.reduce((total, ionId) => {
       const preference = sourcePreferenceFor(ionId);
       const saltContribution = Math.max(saltIons[ionId] ?? 0, 0);
@@ -462,12 +473,15 @@ export function autoCraftSaltTargets(
     }
     return value;
   };
-  const residualFor = (salt: typeof SALTS[number], candidate: number): number => {
-    const actualIons = { ...fixedIonTotals } as Record<IonId, number>;
+  const residualFor = (
+    salt: typeof SALTS[number],
+    candidate: number,
+    actualIonsWithoutSalt: Record<IonId, number>,
+  ): number => {
+    const actualIons = { ...actualIonsWithoutSalt };
     for (const ion of IONS) {
       const saltContribution = salt.ions.find(contribution => contribution.ionId === ion.id)?.fraction ?? 0;
-      const actual = ionValueWithoutSalt(salt, ion.id) + candidate * saltContribution;
-      actualIons[ion.id] = actual;
+      actualIons[ion.id] = actualIonsWithoutSalt[ion.id] + candidate * saltContribution;
     }
     return qualityScore(actualIons, { ...targets, [salt.id]: candidate });
   };
@@ -508,6 +522,9 @@ export function autoCraftSaltTargets(
     let largestChange = 0;
     for (const salt of allowedSalts) {
       const previous = targets[salt.id] ?? 0;
+      const actualIonsWithoutSalt = Object.fromEntries(
+        IONS.map(ion => [ion.id, ionValueWithoutSalt(salt, ion.id)]),
+      ) as Record<IonId, number>;
       const candidates = [0, minimumDosePpmFor(salt.id)];
       for (const contribution of salt.ions) {
         if (contribution.fraction <= 0) continue;
@@ -543,14 +560,20 @@ export function autoCraftSaltTargets(
           });
         }
       }
-      const next = candidates.reduce((best, candidate) => {
-        const bestScore = residualFor(salt, best);
-        const candidateScore = residualFor(salt, candidate);
-        return candidateScore < bestScore - 1e-8
-          || (Math.abs(candidateScore - bestScore) <= 1e-8 && candidate < best)
-          ? candidate
-          : best;
-      }, 0);
+      const uniqueCandidates = [...new Set(candidates)];
+      let next = 0;
+      let nextScore = residualFor(salt, next, actualIonsWithoutSalt);
+      for (const candidate of uniqueCandidates) {
+        if (candidate === 0) continue;
+        const candidateScore = residualFor(salt, candidate, actualIonsWithoutSalt);
+        if (
+          candidateScore < nextScore - 1e-8
+          || (Math.abs(candidateScore - nextScore) <= 1e-8 && candidate < next)
+        ) {
+          next = candidate;
+          nextScore = candidateScore;
+        }
+      }
        targets[salt.id] = Number(practicalSaltDose(salt.id, next).toFixed(6));
       largestChange = Math.max(largestChange, Math.abs(next - previous));
     }

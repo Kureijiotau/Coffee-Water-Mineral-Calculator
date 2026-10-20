@@ -19,6 +19,22 @@ type SolveCoupledSaltTargetsInput = {
 const SOLVER_EPSILON = 1e-8;
 const PIVOT_EPSILON = 1e-10;
 const SCORE_EPSILON = 1e-7;
+const activeSetMaskOrderCache = new Map<number, number[]>();
+
+function activeSetMasksInTieBreakOrder(saltCount: number): number[] {
+  const cached = activeSetMaskOrderCache.get(saltCount);
+  if (cached) return cached;
+
+  const maskCount = 1 << saltCount;
+  const bitCounts = new Uint8Array(maskCount);
+  for (let mask = 1; mask < maskCount; mask += 1) {
+    bitCounts[mask] = bitCounts[mask >>> 1] + (mask & 1);
+  }
+  const masks = Array.from({ length: maskCount }, (_, mask) => mask)
+    .sort((left, right) => bitCounts[left] - bitCounts[right] || left - right);
+  activeSetMaskOrderCache.set(saltCount, masks);
+  return masks;
+}
 
 function solveLinearSystem(matrix: number[][], vector: number[]): number[] | null {
   const size = vector.length;
@@ -93,8 +109,12 @@ export function solveBoundedCoupledSaltTargets({
     (targetIons[ion.id] ?? 0) - (fixedIonTotals[ion.id] ?? 0)
   ));
 
-  let best: CoupledSaltCandidate | null = null;
-  const consider = (saltTargets: Record<string, number>, mask: number): void => {
+  const bestRef: { value: CoupledSaltCandidate | null } = { value: null };
+  const consider = (
+    saltTargets: Record<string, number>,
+    mask: number,
+    activeSetSize: number,
+  ): boolean => {
     const normalized = Object.fromEntries(
       allowedSalts.map((salt, index) => {
         const raw = Number(saltTargets[salt.id] ?? 0);
@@ -104,13 +124,14 @@ export function solveBoundedCoupledSaltTargets({
       }),
     ) as Record<string, number>;
     const score = scoreCandidate(normalized);
-    if (!Number.isFinite(score)) return;
+    if (!Number.isFinite(score)) return false;
 
     const candidate: CoupledSaltCandidate = {
       saltTargets: normalized,
       activeSaltIds: activeIdsForTargets(normalized, allowedSalts),
       score,
     };
+    const best = bestRef.value;
     if (
       !best
       || score < best.score - SCORE_EPSILON
@@ -128,11 +149,18 @@ export function solveBoundedCoupledSaltTargets({
         )
       )
     ) {
-      best = candidate;
+      bestRef.value = candidate;
     }
+
+    // Watermancer's objective is non-negative; a full-support candidate
+    // inside SCORE_EPSILON is already at the comparison floor. Keep this
+    // separate from selection so zero-dose salts retain deterministic ties.
+    return score >= 0
+      && score <= SCORE_EPSILON
+      && candidate.activeSaltIds.length === activeSetSize;
   };
 
-  for (let mask = 0; mask < (1 << allowedSalts.length); mask += 1) {
+  for (const mask of activeSetMasksInTieBreakOrder(allowedSalts.length)) {
     const activeIndexes = allowedSalts
       .map((_, index) => index)
       .filter(index => (mask & (1 << index)) !== 0);
@@ -166,8 +194,17 @@ export function solveBoundedCoupledSaltTargets({
 
     // A solution below a practical dose competes against the omitted-salt
     // candidate through the shared score; it is not forced into the recipe.
-    consider(candidateTargets, mask);
+    const scoreFloorReached = consider(candidateTargets, mask, activeIndexes.length);
+    const best = bestRef.value;
+    if (
+      scoreFloorReached
+      && best
+      && best.score >= 0
+      && best.score <= SCORE_EPSILON
+    ) {
+      return best;
+    }
   }
 
-  return best;
+  return bestRef.value;
 }

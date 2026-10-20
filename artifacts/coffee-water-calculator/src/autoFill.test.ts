@@ -722,6 +722,36 @@ describe('Watermancer salt-to-ion helpers', () => {
     expect(sweep.winner).toBeDefined();
   });
 
+  it('matches positive Citrates targets with both citrate salts in the full inventory', () => {
+    const base = water('base', {});
+    const targetIons = computeIonTotals({ mgcit: 20, cacit: 25 }, {}, 1);
+    const sweep = findBestWatermancerMatch({
+      plan: {
+        targetIons,
+        selectedWaters: [base],
+        selectedSalts: SALTS.map(salt => salt.id),
+        fixedWaterVolumes: {},
+        fixedSaltDoses: {},
+        strategy: 'closest-match',
+        saltObjective: 'balanced',
+        ionPriority: ['citrates', 'magnesium', 'calcium'],
+        allowOvershoot: false,
+        allowedOvershootIons: [],
+        overshootLimits: {},
+        overshootOrder: ['citrates', 'magnesium', 'calcium'],
+      },
+      batchMl: 1000,
+      baseWaters: [base],
+      additionWaters: [],
+    });
+
+    expect(sweep.candidates).toHaveLength(48);
+    expect(sweep.winner?.result.status).toBe('matched');
+    expect(sweep.winner?.route.finalIons.citrates).toBeCloseTo(targetIons.citrates, 4);
+    expect(sweep.winner?.route.saltTargets.mgcit).toBeGreaterThan(0);
+    expect(sweep.winner?.route.saltTargets.cacit).toBeGreaterThan(0);
+  }, 15000);
+
   it('fills only base waters while preserving added-water volumes for every best-match candidate', () => {
     const base = water('base', { calcium: 20 });
     const added = water('added', { magnesium: 10 });

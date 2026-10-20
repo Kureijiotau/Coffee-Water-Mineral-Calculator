@@ -6,6 +6,7 @@ import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipD
 import { WatermancerCustomIonRatio } from './WatermancerCustomIonRatio';
 import type { WatermancerMetricValues } from './watermancerMetricValues';
 import type { CustomIonRatioPair, CustomIonRatioSide } from './watermancerCustomIonRatio';
+import { WatermancerBicarbonateEquivalent } from './WatermancerBicarbonateEquivalent';
 
 type RatioSummary = {
   id: 'gh-kh' | 'mg-ca' | 'cl-so4';
@@ -241,6 +242,9 @@ export function WatermancerCompactReadings({
           />
         </div>
       </div>
+      {!previewRatios && (
+        <WatermancerBicarbonateEquivalent ions={actualIons} compact />
+      )}
     </section>
   );
 }

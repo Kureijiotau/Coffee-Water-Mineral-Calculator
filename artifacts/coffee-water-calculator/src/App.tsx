@@ -77,6 +77,7 @@ import {
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
 import { WatermancerIonRelationshipDisplay } from './WatermancerIonRelationshipDisplay';
 import { WatermancerCustomIonRatio } from './WatermancerCustomIonRatio';
+import { WatermancerBicarbonateEquivalent } from './WatermancerBicarbonateEquivalent';
 import { WatermancerMetricSummary, type WatermancerMetricSource } from './WatermancerMetricSummary';
 import {
   computeWatermancerMetricValues,
@@ -8802,20 +8803,28 @@ function App() {
                      type="button"
                       onClick={handleFindBestWatermancerMatch}
                       disabled={watermancerActionRunning}
+                      aria-busy={watermancerBestMatchRunning}
                       className="watermancer-best-match-button group relative isolate flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl border px-4 py-2.5 text-sm font-semibold text-white transition hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-wait disabled:opacity-70"
                       title="Search your selected waters and salts for the best safe match."
                    >
-                       <img
-                         src={pepeImage}
-                         alt=""
-                         aria-hidden="true"
-                         className="h-8 w-8 object-contain"
-                       />
-                       <span aria-hidden="true" className="text-base leading-none">👉</span>
+                      <img
+                        src={pepeImage}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-8 w-8 object-contain"
+                      />
+                      {watermancerBestMatchRunning ? (
+                        <span
+                          aria-hidden="true"
+                          className="h-4 w-4 animate-spin rounded-full border-2 border-white/90 border-r-transparent"
+                        />
+                      ) : (
+                        <span aria-hidden="true" className="text-base leading-none">👉</span>
+                      )}
                      <span aria-live="polite">
-                        {watermancerActionRunning ? 'Searching your water and salt options…' : 'Find the best match'}
+                        {watermancerBestMatchRunning ? 'Searching all match settings…' : 'Find the best match'}
                      </span>
-                  </button>
+                    </button>
                    </div>
                 </div>
                 {watermancerBestMatchPreview && (
@@ -8979,7 +8988,15 @@ function App() {
                   </div>
                 )}
                 {watermancerBestMatchMessage && (
-                  <div className="mt-3 rounded-lg border border-amber-400/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] text-amber-100">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={`mt-3 rounded-lg border px-3 py-2 text-[10px] ${
+                      watermancerBestMatchMessage.includes('found and applied automatically.')
+                        ? 'border-emerald-400/25 bg-emerald-500/[0.08] text-emerald-100'
+                        : 'border-amber-400/25 bg-amber-500/[0.08] text-amber-100'
+                    }`}
+                  >
                     {watermancerBestMatchMessage}
                   </div>
                 )}
@@ -15159,6 +15176,7 @@ function WatermancerIonCoverageBars({
              matchingMode={matchingMode}
           />
         ))}
+         <WatermancerBicarbonateEquivalent ions={actualIons} />
         {matchingMode === 'ratios' && ratioEvaluation && (
           <div className="space-y-2 rounded-xl border border-indigo-300/20 bg-indigo-500/5 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">

@@ -1,10 +1,14 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { computeIonTotals, IONS, type IonId } from './waterData';
+import { computeIonTotals, ION_CHEMISTRY, IONS, type IonId } from './waterData';
 import {
+  computeHco3EquivalentPpm,
   computeWatermancerMetricValues,
   hasModeledWatermancerIons,
   resolveWatermancerRecipeAnalysis,
 } from './watermancerMetricValues';
+import { WatermancerBicarbonateEquivalent } from './WatermancerBicarbonateEquivalent';
 
 describe('computeWatermancerMetricValues', () => {
   it('returns GH, KH, and modeled TDS from the same complete ion map', () => {
@@ -42,6 +46,40 @@ describe('computeWatermancerMetricValues', () => {
       kh: 0,
       tds: 0,
     });
+  });
+
+  it('adds citrate charge contribution to actual bicarbonate as an HCO3 equivalent', () => {
+    expect(computeHco3EquivalentPpm({
+      bicarbonate: ION_CHEMISTRY.bicarbonate.molarMass,
+      citrates: ION_CHEMISTRY.citrates.molarMass,
+    })).toBeCloseTo(4 * ION_CHEMISTRY.bicarbonate.molarMass, 6);
+  });
+
+  it('uses only actual bicarbonate when citrate is absent', () => {
+    expect(computeHco3EquivalentPpm({ bicarbonate: 12.5 })).toBe(12.5);
+    expect(computeHco3EquivalentPpm({})).toBe(0);
+    expect(computeHco3EquivalentPpm({ bicarbonate: -1, citrates: -10 })).toBe(0);
+  });
+
+  it('renders the estimated bicarbonate equivalent only when citrate is present', () => {
+    const markup = renderToStaticMarkup(createElement(
+      WatermancerBicarbonateEquivalent,
+      {
+        ions: {
+          bicarbonate: ION_CHEMISTRY.bicarbonate.molarMass,
+          citrates: ION_CHEMISTRY.citrates.molarMass,
+        },
+      },
+    ));
+
+    expect(markup).toContain('HCO₃⁻ Equiv');
+    expect(markup).toContain('Citrates');
+    expect(markup).toContain('244.067 ppm');
+    expect(markup).toContain('depends on pH and speciation');
+    expect(renderToStaticMarkup(createElement(
+      WatermancerBicarbonateEquivalent,
+      { ions: { bicarbonate: 12.5 } },
+    ))).toBe('');
   });
 
   it('sums the same canonical ions used by Review match', () => {
