@@ -8,3 +8,9 @@ Use an explicit Chromium CDP endpoint for interactive checks, and make sure the 
 **Why:** Interactive auto-attachment can fail despite a healthy Chromium process, and the user's local browser may not be reachable from the isolated workspace at all. Separately, mismatched Playwright/browser protocols may launch successfully but fail while creating a context, and the Playwright 1.52 runner hung before reporting tests under Node 24.
 
 **How to apply:** For interactive work, start temporary no-sandbox Chromium inside the workspace with a disposable profile and set `BU_CDP_URL`; do not assume client-side remote-debugging settings create a connection into the workspace. If no such browser can be exposed, use user-provided post-refresh screenshots as evidence instead of claiming the signed-in UI was tested. For automation, prefer package-installed browser bundles in CI; when using Nix-wrapped browsers locally, match their Playwright generation and run under a supported Node release. If the Playwright bundle is absent, point `PLAYWRIGHT_CHROMIUM_EXECUTABLE` at the available system Chromium instead of installing a second browser. Blob-backed downloads triggered by an in-page anchor may still need a direct file/blob capture rather than waiting for Playwright's download event.
+
+For element crops with `captureBeyondViewport`, pass explicit clip `x`, `y`, `width`, `height`, and `scale`; use document coordinates for `x` and `y` by adding the page scroll offset to the element's viewport rectangle. Prefer a cropped JPEG over a full-page capture when making UI examples.
+
+**Why:** A viewport-relative clip can capture the wrong area after scrolling, and full-page screenshots can be too large or too small to inspect clearly.
+
+**How to apply:** Measure the target element's `getBoundingClientRect()`, add `scrollX` and `scrollY` to its origin, provide the resulting clip dimensions explicitly, then review the crop before reusing it.

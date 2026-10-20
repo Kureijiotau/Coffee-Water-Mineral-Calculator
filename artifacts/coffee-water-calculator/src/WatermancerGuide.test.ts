@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -87,78 +89,90 @@ describe('Watermancer Guide step layout', () => {
     expect(scenePositions).toEqual([...scenePositions].sort((a, b) => a - b));
 
     const requestedActions = [
-      'My saved profiles',
-      'Recipe · Example recipe',
+      'saved profile or a built-in recipe',
       'New',
       'Edit',
-      'Rename recipe',
       'Save as new',
-      'Overwrite selected',
+      'Cancel',
       'Download',
       'Import',
-      'Import water profile',
       'Reset',
-      'Reset workspace',
       'Set your target water',
-      'Final batch volume',
-      'Add water source',
+      'Set final batch volume',
+      'all eight ion targets',
+      'Add a new water source',
+      'My waters',
       'Browse waters',
       'Community waters',
-      'Search water or country…',
+      'Search by water or country',
       'Add to my waters',
       'Added',
       'Share',
       'Share with the community',
       'Use',
       'Not used',
-      'Hydration form',
-      'Matching mode',
-      'Target values',
-      'Ratios',
+      'hydration form',
+      'Guide the match',
+      'Water only',
+      'Water then salt',
+      'Salt only',
+      'Optimized',
       'Find the best match',
-      'Search your selected waters and salts for the best safe match.',
-      'Best match found and applied automatically.',
+      'best available partial match',
       'Save Recipe Image',
+      '.WATER.png',
     ];
     for (const action of requestedActions) {
       expect(text).toContain(action);
     }
 
     expect(text).toContain(
-      'This clears the active waters, salt choices, target inputs, and match results. Saved waters, profiles, and preferences will stay available.',
+      'Reset clears the active waters, salt choices, target inputs, and match results without deleting saved waters, profiles, or preferences.',
     );
     expect(markup).toContain('data-testid="watermancer-guide-screen-community-water"');
     expect(markup).toContain('data-testid="watermancer-guide-screen-share-water"');
-    expect(text).toContain('Example values are illustrative, not a recommendation.');
-    expect(text.match(/Example screen/g)).toHaveLength(10);
+    expect(text).toContain(
+      'These are screenshots of the actual Watermancer interface. Your saved profiles and values may differ.',
+    );
+    expect(text).not.toContain('Example screen');
+    expect(text).not.toContain('Recipe · Example recipe');
     expect(text).not.toContain('Five 1 L examples from my tastings.');
     expect(text).not.toContain('Balanced daily driver');
     expect(text).not.toContain('High-extraction punch');
 
-    const exampleScreens = markup.match(/<figure\b[^>]*>/g) ?? [];
-    expect(exampleScreens).toHaveLength(10);
-    expect(exampleScreens.every(screen =>
-      /role="img"/.test(screen) && /aria-label="[^"]+"/.test(screen),
+    const screenshotFigures = markup.match(/<figure\b[^>]*>[\s\S]*?<\/figure>/g) ?? [];
+    const screenshotImages = markup.match(/<img\b[^>]*>/g) ?? [];
+    expect(screenshotFigures).toHaveLength(10);
+    expect(screenshotImages).toHaveLength(10);
+    expect(screenshotFigures.every(figure =>
+      /<img\b[^>]*>/.test(figure) &&
+      /src="[^"]+\.jpg"/.test(figure) &&
+      /\balt="[^"]{10,}"/.test(figure) &&
+      /<figcaption\b/.test(figure),
     )).toBe(true);
+    expect(screenshotImages.every(image =>
+      /src="[^"]*\/watermancer-guide\/[^"]+\.jpg"/.test(image) &&
+      /alt="[^"]{10,}"/.test(image),
+    )).toBe(true);
+    expect(new Set(
+      screenshotImages.map(image => image.match(/\bsrc="([^"]+)"/)?.[1]),
+    ).size).toBe(10);
+    const screenshotBasePath = import.meta.env.BASE_URL;
+    for (const image of screenshotImages) {
+      const source = image.match(/\bsrc="([^"]+)"/)?.[1] ?? '';
+      const publicAssetPath = source.startsWith(screenshotBasePath)
+        ? source.slice(screenshotBasePath.length)
+        : '';
+      expect(publicAssetPath).not.toBe('');
+      expect(existsSync(join(process.cwd(), 'public', publicAssetPath))).toBe(true);
+    }
     expect(markup.match(/data-testid="watermancer-guide-screen-[^"]+"/g)).toHaveLength(10);
     expect(markup).not.toMatch(/<(?:button|input|select|textarea)\b/i);
     expect(markup).not.toMatch(/role="button"/i);
     expect(markup).toContain('grid-cols-1');
-    expect(markup).toContain('sm:grid-cols-2');
+    expect(markup).not.toContain('sm:grid-cols-2');
     expect(markup).toContain('min-w-0');
     expect(markup).not.toMatch(/\b(?:w|min-w)-\[\d+px\]/);
 
-    const workflowIonIds: IonId[] = [
-      'sodium',
-      'potassium',
-      'magnesium',
-      'calcium',
-      'chloride',
-      'sulfate',
-      'bicarbonate',
-    ];
-    for (const id of workflowIonIds) {
-      expect(text).toContain(ION_MAP[id].formula);
-    }
   });
 });
