@@ -21,7 +21,7 @@ import {
   type WatermancerGuideEntry,
 } from './watermancerGuideContent';
 import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
-import { WatermancerGuideRecipeCards } from './WatermancerGuideRecipeCards';
+import { WatermancerGuideWorkflow } from './WatermancerGuideWorkflow';
 import { WatermancerGuideStartingFramework } from './WatermancerGuideStartingFramework';
 import WatermancerGuideStep5Intro from './WatermancerGuideStep5Intro';
 import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
@@ -314,7 +314,7 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
             <EntryDetails entry={step} />
 
             {step.id === 'read-dose-plan' && <WatermancerGuideStartingFramework />}
-            {step.id === 'make-and-taste' && <WatermancerGuideRecipeCards />}
+            {step.id === 'make-and-taste' && <WatermancerGuideWorkflow />}
 
             {step.id === 'prepare-stocks' && (
               <WatermancerGuideStockPreparation
@@ -414,6 +414,6 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
 }
 
 export {
-  WatermancerGuideRecipeCards,
+  WatermancerGuideWorkflow,
   WatermancerGuideStartingFramework,
 };

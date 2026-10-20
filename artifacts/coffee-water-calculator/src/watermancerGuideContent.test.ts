@@ -27,8 +27,8 @@ describe('Watermancer Guide copy', () => {
       summary: 'My light-roast starting points—not rules for every palate.',
     });
     expect(step7).toMatchObject({
-      title: 'Try a 1 L example',
-      summary: 'Open a recipe to see its water, salt dose, and final ion profile.',
+      title: 'Build, match, and save a water recipe',
+      summary: 'Choose a recipe, set ion targets and batch volume, add mineral waters and salts, run a match, then review and save the finished recipe card.',
     });
     expect(step6?.blankWorkspace).not.toBe(true);
     expect(step7?.blankWorkspace).not.toBe(true);

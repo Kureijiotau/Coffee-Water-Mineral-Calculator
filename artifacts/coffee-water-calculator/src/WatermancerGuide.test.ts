@@ -71,27 +71,84 @@ describe('Watermancer Guide step layout', () => {
     }
   });
 
-  it('shows five collapsed one-liter recipe cards and flags the unbalanced label profile', () => {
-    const markup = renderGuideSection('WatermancerGuideRecipeCards');
+  it('replaces the tasting recipes with the full Watermancer workflow', () => {
+    const markup = renderGuideSection('WatermancerGuideWorkflow');
     const text = visibleText(markup);
 
-    expect(markup.match(/<details\b/g)).toHaveLength(5);
-    expect(markup).not.toMatch(/<details\b[^>]*\bopen\b/);
-    expect(text).toContain('Balanced daily driver');
-    expect(text).toContain('zero sulfate');
-    expect(text).toMatch(/zero calcium/i);
-    expect(text).toContain('High-extraction punch');
-    expect(text).toContain('Berain');
-    expect(text).toContain('San Pellegrino');
-    expect(text).toContain('13 mg');
-    expect(text).toContain('13 drops');
-    expect(text).toContain('+0.042 meq/L');
-    expect(text).toContain('±0.0041 meq/L');
-    expect(text).toMatch(/above the usual starting range/i);
-    expect(text).toContain('0–7 ppm');
-    expect(text).toMatch(/not a charge-balanced target set/i);
+    const sceneHeadings = [
+      '1. Choose and manage a recipe',
+      '2. Set the plan',
+      '3. Add waters',
+      '4. Choose salts and match',
+      '5. Review and save',
+    ];
+    const scenePositions = sceneHeadings.map(heading => text.indexOf(heading));
+    expect(scenePositions.every(position => position >= 0)).toBe(true);
+    expect(scenePositions).toEqual([...scenePositions].sort((a, b) => a - b));
 
-    const recipeIonIds: IonId[] = [
+    const requestedActions = [
+      'My saved profiles',
+      'Recipe · Example recipe',
+      'New',
+      'Edit',
+      'Rename recipe',
+      'Save as new',
+      'Overwrite selected',
+      'Download',
+      'Import',
+      'Import water profile',
+      'Reset',
+      'Reset workspace',
+      'Set your target water',
+      'Final batch volume',
+      'Add water source',
+      'Browse waters',
+      'Community waters',
+      'Search water or country…',
+      'Add to my waters',
+      'Added',
+      'Share',
+      'Share with the community',
+      'Use',
+      'Not used',
+      'Hydration form',
+      'Matching mode',
+      'Target values',
+      'Ratios',
+      'Find the best match',
+      'Search your selected waters and salts for the best safe match.',
+      'Best match found and applied automatically.',
+      'Save Recipe Image',
+    ];
+    for (const action of requestedActions) {
+      expect(text).toContain(action);
+    }
+
+    expect(text).toContain(
+      'This clears the active waters, salt choices, target inputs, and match results. Saved waters, profiles, and preferences will stay available.',
+    );
+    expect(markup).toContain('data-testid="watermancer-guide-screen-community-water"');
+    expect(markup).toContain('data-testid="watermancer-guide-screen-share-water"');
+    expect(text).toContain('Example values are illustrative, not a recommendation.');
+    expect(text.match(/Example screen/g)).toHaveLength(10);
+    expect(text).not.toContain('Five 1 L examples from my tastings.');
+    expect(text).not.toContain('Balanced daily driver');
+    expect(text).not.toContain('High-extraction punch');
+
+    const exampleScreens = markup.match(/<figure\b[^>]*>/g) ?? [];
+    expect(exampleScreens).toHaveLength(10);
+    expect(exampleScreens.every(screen =>
+      /role="img"/.test(screen) && /aria-label="[^"]+"/.test(screen),
+    )).toBe(true);
+    expect(markup.match(/data-testid="watermancer-guide-screen-[^"]+"/g)).toHaveLength(10);
+    expect(markup).not.toMatch(/<(?:button|input|select|textarea)\b/i);
+    expect(markup).not.toMatch(/role="button"/i);
+    expect(markup).toContain('grid-cols-1');
+    expect(markup).toContain('sm:grid-cols-2');
+    expect(markup).toContain('min-w-0');
+    expect(markup).not.toMatch(/\b(?:w|min-w)-\[\d+px\]/);
+
+    const workflowIonIds: IonId[] = [
       'sodium',
       'potassium',
       'magnesium',
@@ -100,8 +157,8 @@ describe('Watermancer Guide step layout', () => {
       'sulfate',
       'bicarbonate',
     ];
-    for (const id of recipeIonIds) {
-      expect(markup).toContain(ION_MAP[id].color.foreground);
+    for (const id of workflowIonIds) {
+      expect(text).toContain(ION_MAP[id].formula);
     }
   });
 });

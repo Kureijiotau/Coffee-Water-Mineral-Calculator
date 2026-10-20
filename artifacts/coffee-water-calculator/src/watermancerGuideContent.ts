@@ -55,8 +55,8 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   },
   {
     id: 'make-and-taste',
-    title: 'Try a 1 L example',
-    summary: 'Open a recipe to see its water, salt dose, and final ion profile.',
+    title: 'Build, match, and save a water recipe',
+    summary: 'Choose a recipe, set ion targets and batch volume, add mineral waters and salts, run a match, then review and save the finished recipe card.',
     details: [],
   },
 ];
