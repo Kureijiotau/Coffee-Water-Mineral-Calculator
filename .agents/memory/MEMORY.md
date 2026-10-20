@@ -91,6 +91,7 @@
 - [Playwright runner startup](playwright-runner-startup.md) — direct Playwright commands can time out before producing a report even when the app workflow is healthy
 - [React-free Watermancer solver](watermancer-react-free-solver.md) — keep route computation isolated from App.tsx so development and production can share the worker path
 - [GitHub push authentication](github-push-auth.md) — GitHub OAuth API writes work without fixing local Git credentials; `.github` workflow paths may be blocked by the proxy
+- [Stale linked worktree metadata](stale-linked-worktree-metadata.md) — check the `.git` pointer and status; never force-remove a prunable worktree.
 - [Legacy payload migrations](legacy-payload-migrations.md) — identify historical recipe repairs by explicit payload kind/version registry, not display-name fingerprints
 - [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
 - [Saved-list sorting](profile-picker-order.md) — keep profile/recipe pickers consistent and provide name sorting for Water Tasting history
