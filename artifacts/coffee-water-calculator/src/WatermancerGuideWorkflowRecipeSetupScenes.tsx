@@ -12,7 +12,7 @@ export function WatermancerGuideWorkflowRecipeSetupScenes(): ReactElement {
       >
         <WatermancerGuideScreenshotFrame
           title="Select a recipe"
-          description="In Set your target water, choose a saved profile or a built-in recipe to load its ion targets."
+          description="In Set your target water, select the saved Guide recipe profile to load its ion targets, or choose another saved profile or a built-in recipe."
           testId="watermancer-guide-screen-recipe-picker"
           screenshotFileName="recipe-picker.jpg"
           imageAlt="Watermancer target profile picker open above the ion cards, showing saved recipes and built-in water profiles."

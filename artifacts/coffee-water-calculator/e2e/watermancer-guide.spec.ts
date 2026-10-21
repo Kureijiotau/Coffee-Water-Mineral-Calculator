@@ -135,7 +135,21 @@ test('keeps Step 6 ranges and provides visible, expandable Step 7 screenshots', 
 
   await page.getByTestId('button-next-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 7 of 7');
-  await expect(page.getByTestId('watermancer-guide-workflow')).toBeVisible();
+  const workflow = page.getByTestId('watermancer-guide-workflow');
+  await expect(workflow).toBeVisible();
+  await expect(workflow).not.toContainText(/kimoi/i);
+  const guideRecipe = page.getByTestId('watermancer-guide-recipe');
+  await expect(guideRecipe).toBeVisible();
+  await expect(guideRecipe).toContainText('Guide recipe');
+  await expect(guideRecipe).toContainText('1 L batch');
+  await expect(guideRecipe).toContainText('RO / distilled water');
+  await expect(guideRecipe).toContainText('966 mL');
+  await expect(guideRecipe).toContainText('Evian');
+  await expect(guideRecipe).toContainText('34 mL');
+  await expect(guideRecipe).toContainText('14 mg');
+  await expect(guideRecipe).toContainText('20 mg');
+  await expect(guideRecipe).toContainText('4 mg');
+  await expect(guideRecipe).toContainText('2 mg');
 
   const screenshotPreviews = page.locator(
     '[data-testid^="watermancer-guide-screen-"][data-testid$="-preview"]',

@@ -100,21 +100,21 @@ git commit -m "Make Watermancer guide screenshots expandable"
 - Continue using the five existing `WorkflowScene` groups and ten screenshot frames.
 - Use `IonName` or `IonChip` from `WatermancerGuideIonTokens.tsx` for ion formulas; do not introduce new ion colors.
 
-- [ ] **Step 1: Write failing content and hierarchy assertions**
+- [x] **Step 1: Write failing content and hierarchy assertions**
 
 Add tests that Step 7 names **Guide recipe**, shows the exact 1 L amounts and salt forms, contains no `Kimoi` text, retains all five scene headings and requested actions, renders the `ION_MAP` foreground colors for the ion formulas, and keeps the Step 6 range guide intact.
 
-- [ ] **Step 2: Run the focused test and confirm the new assertions fail**
+- [x] **Step 2: Run the focused test and confirm the new assertions fail**
 
 Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts`
 
 Expected: FAIL because the current guide does not include the supplied recipe details or Guide recipe label.
 
-- [ ] **Step 3: Update scene hierarchy and copy**
+- [x] **Step 3: Update scene hierarchy and copy**
 
 Set scene headings to `text-lg sm:text-xl` and scene summaries to `text-sm leading-6 text-slate-200`. Add a text-first Guide recipe summary in `WatermancerGuideWorkflow.tsx` with the exact batch, water, and salt amounts. Put each screenshot title and explanation before or beside its visible preview. Highlight ion names/formulas through the existing `ION_MAP` color components. Preserve all existing feature explanations, reset semantics, and Step 6 content.
 
-- [ ] **Step 4: Run the focused test and confirm it passes**
+- [x] **Step 4: Run the focused test and confirm it passes**
 
 Run:
 
@@ -125,10 +125,10 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v chromium)" pnpm --filter @workspace
 
 Expected: PASS with the exact Guide recipe copy, no Kimoi text, preserved workflow actions, and the existing ion colors.
 
-- [ ] **Step 5: Commit the text-first guide**
+- [x] **Step 5: Commit the text-first guide**
 
 ```bash
-git add artifacts/coffee-water-calculator/src/WatermancerGuideWorkflow.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowPrimitives.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeSetupScenes.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowWaterScene.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowMatchingScene.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeCardScene.tsx artifacts/coffee-water-calculator/src/WatermancerGuide.test.ts artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts
+git add artifacts/coffee-water-calculator/src/WatermancerGuideWorkflow.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowPrimitives.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeSetupScenes.tsx artifacts/coffee-water-calculator/src/WatermancerGuideWorkflowRecipeCardScene.tsx artifacts/coffee-water-calculator/src/WatermancerGuide.test.ts artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts docs/superpowers/plans/2026-10-21-watermancer-guide-text-first.md
 git commit -m "Emphasize the Watermancer guide recipe instructions"
 ```
 

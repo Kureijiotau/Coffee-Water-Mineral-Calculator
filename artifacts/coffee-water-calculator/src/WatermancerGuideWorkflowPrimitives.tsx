@@ -18,10 +18,10 @@ export function WorkflowScene({
           {String(number).padStart(2, '0')}
         </span>
         <div className="min-w-0">
-          <h3 className="text-sm font-semibold text-slate-100 sm:text-base">
+          <h3 className="text-lg font-semibold text-slate-100 sm:text-xl">
             {number}. {title}
           </h3>
-          <p className="mt-1 break-words text-xs leading-relaxed text-slate-400">{summary}</p>
+          <p className="mt-1 break-words text-sm leading-6 text-slate-200">{summary}</p>
         </div>
       </div>
       <div className="grid min-w-0 grid-cols-1 gap-4">{children}</div>

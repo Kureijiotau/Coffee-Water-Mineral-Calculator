@@ -73,7 +73,7 @@ describe('Watermancer Guide step layout', () => {
     }
   });
 
-  it('replaces the tasting recipes with the full Watermancer workflow', () => {
+  it('shows the Guide recipe and full Watermancer workflow', () => {
     const markup = renderGuideSection('WatermancerGuideWorkflow');
     const text = visibleText(markup);
 
@@ -87,6 +87,52 @@ describe('Watermancer Guide step layout', () => {
     const scenePositions = sceneHeadings.map(heading => text.indexOf(heading));
     expect(scenePositions.every(position => position >= 0)).toBe(true);
     expect(scenePositions).toEqual([...scenePositions].sort((a, b) => a - b));
+
+    const guideRecipe = markup.match(
+      /<section\b[^>]*data-testid="watermancer-guide-recipe"[^>]*>[\s\S]*?<\/section>/,
+    )?.[0] ?? '';
+    const guideRecipeText = visibleText(guideRecipe);
+    expect(guideRecipe).not.toBe('');
+    expect(guideRecipeText).toContain('Guide recipe');
+    expect(guideRecipeText).toContain('1 L batch');
+    expect(guideRecipeText).toContain('RO / distilled water');
+    expect(guideRecipeText).toContain('966 mL');
+    expect(guideRecipeText).toContain('Evian');
+    expect(guideRecipeText).toContain('34 mL');
+    expect(guideRecipeText).toContain('14 mg');
+    expect(guideRecipeText).toContain('Magnesium sulfate heptahydrate');
+    expect(guideRecipeText).toContain('MgSO₄·7H₂O');
+    expect(guideRecipeText).toContain('20 mg');
+    expect(guideRecipeText).toContain('Magnesium chloride hexahydrate');
+    expect(guideRecipeText).toContain('MgCl₂·6H₂O');
+    expect(guideRecipeText).toContain('4 mg');
+    expect(guideRecipeText).toContain('Sodium chloride');
+    expect(guideRecipeText).toContain('NaCl');
+    expect(guideRecipeText).toContain('2 mg');
+    expect(guideRecipeText).toContain('Potassium chloride');
+    expect(guideRecipeText).toContain('KCl');
+    expect(text.toLowerCase()).not.toContain('kimoi');
+
+    const guideRecipeIons: Array<{ id: IonId; label: string }> = [
+      { id: 'magnesium', label: 'Mg²⁺' },
+      { id: 'sulfate', label: 'SO₄²⁻' },
+      { id: 'chloride', label: 'Cl⁻' },
+      { id: 'sodium', label: 'Na⁺' },
+      { id: 'potassium', label: 'K⁺' },
+    ];
+    for (const ion of guideRecipeIons) {
+      expect(guideRecipeText).toContain(ion.label);
+      expect(guideRecipe).toContain(`style="color:${ION_MAP[ion.id].color.foreground}"`);
+    }
+
+    const headingTags = markup.match(/<h3\b[^>]*>/g) ?? [];
+    expect(headingTags).toHaveLength(5);
+    expect(headingTags.every(tag => tag.includes('text-lg') && tag.includes('sm:text-xl'))).toBe(true);
+    const summaryTags = markup.match(/<p class="mt-1 break-words[^"]*">/g) ?? [];
+    expect(summaryTags).toHaveLength(5);
+    expect(summaryTags.every(tag =>
+      tag.includes('text-sm') && tag.includes('leading-6') && tag.includes('text-slate-200'),
+    )).toBe(true);
 
     const requestedActions = [
       'saved profile or a built-in recipe',
