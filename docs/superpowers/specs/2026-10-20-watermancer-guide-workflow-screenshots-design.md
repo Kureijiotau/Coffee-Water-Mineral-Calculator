@@ -1,58 +1,74 @@
-# Watermancer Guide Step 7: Workflow Screenshots
+# Watermancer Guide Step 7: Text-First Live Screenshots
 
-**Date:** 2026-10-20  
-**Status:** Awaiting user review
+**Date:** 2026-10-21
+**Status:** Awaiting user review of revised design
 
 ## Goal
 
-Replace Step 7’s five collapsible tasting-recipe examples with a visual walkthrough of the Watermancer workflow, from choosing a recipe through saving a finished recipe card. The guide should show an example for every requested feature without changing the underlying Watermancer behavior.
+Keep Step 7’s five grouped workflow scenes, but make the instructions the main content and the screenshots compact, visible previews. Remove the incorrect Kimoi example and use the owner-provided, verified one-liter recipe throughout the recipe-selection and finished-card examples.
+
+## Guide recipe data
+
+Name the sample **Guide recipe**. Preserve the provided quantities exactly:
+
+- Final batch: 1 L
+- RO / distilled water: 966 mL
+- Evian: 34 mL
+- Magnesium sulfate heptahydrate (MgSO₄·7H₂O): 14 mg
+- Magnesium chloride hexahydrate (MgCl₂·6H₂O): 20 mg
+- Sodium chloride (NaCl): 4 mg
+- Potassium chloride (KCl): 2 mg
+
+Use the existing shared Evian profile for the 34 mL contribution: Na 6.5, Ca 80, SO₄ 14, Mg 26, K 1, and HCO₃ 360 mg/L. Let the live Watermancer calculation produce the final readings; do not hand-author a target/result or substitute another recipe. Do not change or remove Kimoi from the actual catalog—this exclusion applies to Step 7 only.
 
 ## Approved direction
 
-Use a scrollable sequence of grouped workflow scenes. The examples will be static, screenshot-style UI illustrations authored in the guide, using the real Watermancer labels and visual language. They will not be interactive controls or images of user data.
+Use authentic screenshots captured from the running Watermancer UI, not hand-built mockups. Retake and visually audit all Step 7 captures so none shows Kimoi; keep the selected profile and final recipe card consistently named **Guide recipe**.
 
-The user prefers screenshots captured from the live app but approved mockups if accurate capture is difficult. The available preview screenshot tool cannot interact with the app, the Browser Use CLI is unavailable, and Playwright cannot launch because browser system dependencies are missing. Use static illustrations as the reliable fallback.
+Prioritize instructional text:
 
-Match the existing Strength scaler illustration’s crisp, compact treatment and Watermancer’s dark slate, cyan, and ion-color palette. Keep the small UI labels legible, use short instructional captions and focused callouts, and stack examples on narrow screens. Provide accessible text descriptions for each illustrative screen. Do not add dependencies or modify the Strength scaler.
+- Increase scene headings and instructions to clear, high-contrast body text; present the action and explanation before its screenshot.
+- Keep every screenshot visible as a small preview, with a maximum width around 360 px. Do not hide previews behind accordions or “show screenshot” controls.
+- On wider screens, place the text beside its preview. On narrow screens, stack the text first and the preview below it.
+- Clicking a preview opens the original screenshot at a larger, viewport-fitted size in the app’s existing accessible dialog.
+- Color ion names and formulas with the existing `ION_MAP` colors. Keep other text in the established Watermancer palette.
 
 ## Walkthrough sequence
 
 1. **Choose and manage a recipe**
-   - Show selecting an existing recipe.
-   - Show creating a new recipe and editing one.
-   - Show downloading and importing a recipe.
-   - Show the reset action and accurately explain what it resets.
+   - Show **Guide recipe** selected.
+   - Explain creating, editing, downloading, importing, and resetting; describe reset’s actual scope.
 2. **Set the plan**
-   - Show editing ion targets.
-   - Show setting batch volume.
+   - Show ion targets and the final 1 L batch volume.
 3. **Add waters**
-   - Show entering a new mineral-water source.
-   - Show finding and adding a Community water to the plan.
-   - Show sharing a personal water with the Community.
+   - Explain adding a new water source, finding and adding a Community water, and sharing a personal water.
 4. **Choose salts and match**
-   - Show enabling and disabling salts, including a selected hydration form and dose.
-   - Explain that matching uses the chosen water sources and enabled salts to approach the selected target profile. Show the matching controls and a representative result.
+   - Show the selected salts and hydration forms from the Guide recipe.
+   - Explain how source choices and enabled salts affect matching; show the real controls and accurately label the result.
 5. **Review and save**
-   - Show a finished recipe card with example batch volume, water sources, salt doses, and final ion readings.
-   - Show how to save the card.
+   - Show the live-generated Guide recipe card with the exact water and salt quantities and calculated final readings.
+   - Explain saving the card.
 
-Use several focused screenshot panels within each scene where needed so that every requested action is visible and readable; do not compress the full workflow into one tiny collage. Mark illustrative values as examples. Use the actual app’s control names and action semantics rather than inventing new buttons or implying that the static illustrations are live controls.
+Keep the established Watermancer control names and action meanings. The guide explains the interface; screenshot previews do not execute app actions.
 
-## Scope and implementation shape
+## Interaction and accessibility
 
-- Change the `make-and-taste` guide step title and summary to describe building, matching, and saving a Watermancer recipe.
-- Replace the guide-only tasting-recipe accordion content with a focused workflow illustration component.
-- Keep the existing guide navigation and its **Open Watermancer** action.
-- Do not modify recipe storage, matching logic, community-water behavior, salt behavior, exports, or recipe-card generation.
-- Retire guide-only recipe-card data and code only if they become unused after the replacement.
+- Make each preview a keyboard-operable button with a descriptive accessible name and image alt text.
+- The larger-image dialog must have an accessible title, a visible close control, Escape-key dismissal, focus management, and a contained image that fits the viewport.
+- Retain a usable text-first layout at mobile widths without horizontal overflow.
+
+## Scope
+
+- Update Step 7 wording, screenshot presentation, dialog behavior, and the screenshot assets.
+- Keep the five workflow groups and all previously requested actions.
+- Do not change recipe storage, matching logic, the shared water catalog, salt behavior, exports, recipe-card generation, or the other guide steps.
 
 ## Acceptance criteria
 
-- Every requested feature has a visible illustrative example in Step 7.
-- The example order follows the workflow from recipe selection to saved result.
-- Community-water use and sharing are both shown.
-- Salt selection and the matching process are explained without claiming the illustrations execute real actions.
-- The result card includes representative final readings and a save action.
-- The old five tasting-recipe accordion examples no longer appear in Step 7.
-- Panels remain readable on desktop and mobile and expose accessible descriptions.
-- Tests verify the Step 7 title, workflow sections, requested actions, and absence of the old recipe list. The full web-app tests, typecheck, and build pass.
+- Step 7 shows no Kimoi reference in its text or screenshot assets, and its example uses the exact Guide recipe quantities above.
+- Screenshots are real captures of the running app; the profile and final card are consistent and use the name **Guide recipe**.
+- Instructions are more prominent than the screenshots; all screenshots remain visible as compact previews and open full-size when activated.
+- Ion references use their existing colors without introducing a new palette.
+- The five workflow scenes still explain recipe actions, targets, batch volume, new and Community waters, sharing, salts, matching, and saving the finished card.
+- Automated tests cover the recipe copy, screenshot assets, preview buttons, and dialog behavior. Manually inspect the screenshot assets and verify desktop/mobile layout.
+- The full web-app test suite, typecheck, and production build pass.
