@@ -47,40 +47,40 @@
 - Render a visible `type="button"` preview with an accessible name derived from its title and a `data-testid` ending in `-preview`.
 - Use the existing `Dialog`, `DialogTrigger`, `DialogContent`, `DialogTitle`, and `DialogDescription` exports. The dialog image must reuse the same full screenshot URL as the preview.
 
-- [ ] **Step 1: Write the failing preview tests**
+- [x] **Step 1: Write the failing preview tests**
 
 Update the outdated Step 7 accordion assertions in `e2e/watermancer-guide.spec.ts`. Assert that all ten screenshot previews are visible, each is at most 360 px wide, and a preview button opens a dialog containing the same full-size image. Verify the close button and Escape dismiss the dialog and restore focus. Update `WatermancerGuide.test.ts` to assert each figure has its caption before the button-wrapped thumbnail, meaningful alt text, and the expected preview test ID.
 
-- [ ] **Step 2: Run the focused test and confirm it fails for the current non-clickable images**
+- [x] **Step 2: Run the focused test and confirm it fails for the current non-clickable images**
 
 Run:
 
 ```bash
 pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts
-pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide.spec.ts --project=chromium
+PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v chromium)" pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts e2e/watermancer-guide.spec.ts --project=chromium --grep "Step 7 screenshots"
 ```
 
 Expected: FAIL because the current figures render plain images rather than preview buttons and cannot open a dialog.
 
-- [ ] **Step 3: Implement the compact preview and full-size dialog**
+- [x] **Step 3: Implement the compact preview and full-size dialog**
 
 Update `WatermancerGuideScreenshotFrame.tsx` to place title and description before the image, put the caption and preview in a two-column layout above the mobile breakpoint, and constrain the visible preview to `max-w-[360px]`. Open the full-size image in a viewport-fitted dialog with a title, description, visible close control, and contained image.
 
-- [ ] **Step 4: Run the focused test and confirm it passes**
+- [x] **Step 4: Run the focused test and confirm it passes**
 
 Run:
 
 ```bash
 pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts
-pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide.spec.ts --project=chromium
+PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v chromium)" pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts e2e/watermancer-guide.spec.ts --project=chromium --grep "Step 7 screenshots"
 ```
 
 Expected: PASS with ten accessible preview triggers and verified dialog open/close behavior.
 
-- [ ] **Step 5: Commit the preview interaction**
+- [x] **Step 5: Commit the preview interaction**
 
 ```bash
-git add artifacts/coffee-water-calculator/src/WatermancerGuideScreenshotFrame.tsx artifacts/coffee-water-calculator/src/WatermancerGuide.test.ts artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts
+git add artifacts/coffee-water-calculator/src/WatermancerGuideScreenshotFrame.tsx artifacts/coffee-water-calculator/src/WatermancerGuide.test.ts artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts docs/superpowers/plans/2026-10-21-watermancer-guide-text-first.md
 git commit -m "Make Watermancer guide screenshots expandable"
 ```
 
@@ -120,7 +120,7 @@ Run:
 
 ```bash
 pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/WatermancerGuide.test.ts
-pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide.spec.ts --project=chromium
+PLAYWRIGHT_CHROMIUM_EXECUTABLE="$(command -v chromium)" pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts e2e/watermancer-guide.spec.ts --project=chromium --grep "Step 7 screenshots"
 ```
 
 Expected: PASS with the exact Guide recipe copy, no Kimoi text, preserved workflow actions, and the existing ion colors.
@@ -168,11 +168,11 @@ Run:
 
 ```bash
 pnpm --filter @workspace/coffee-water-calculator run test
-pnpm --filter @workspace/coffee-water-calculator run typecheck
+pnpm run typecheck
 pnpm --filter @workspace/coffee-water-calculator run build
 ```
 
-Expected: all tests pass, typecheck succeeds, and the production build includes all ten screenshot files.
+Expected: all tests pass, the workspace root typecheck builds referenced libraries and succeeds across artifacts, and the production build includes all ten screenshot files.
 
 - [ ] **Step 5: Verify the preview and dialog at desktop and mobile sizes**
 

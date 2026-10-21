@@ -144,12 +144,23 @@ describe('Watermancer Guide step layout', () => {
     const screenshotImages = markup.match(/<img\b[^>]*>/g) ?? [];
     expect(screenshotFigures).toHaveLength(10);
     expect(screenshotImages).toHaveLength(10);
-    expect(screenshotFigures.every(figure =>
-      /<img\b[^>]*>/.test(figure) &&
-      /src="[^"]+\.jpg"/.test(figure) &&
-      /\balt="[^"]{10,}"/.test(figure) &&
-      /<figcaption\b/.test(figure),
-    )).toBe(true);
+    expect(screenshotFigures.every(figure => {
+      const captionPosition = figure.indexOf('<figcaption');
+      const buttonPosition = figure.indexOf('<button');
+      const previewButton = figure.match(
+        /<button\b[^>]*data-testid="watermancer-guide-screen-[^"]+-preview"[^>]*>[\s\S]*?<\/button>/,
+      )?.[0] ?? '';
+
+      return (
+        captionPosition >= 0 &&
+        buttonPosition > captionPosition &&
+        previewButton.length > 0 &&
+        /type="button"/.test(previewButton) &&
+        /aria-label="[^"]+"/.test(previewButton) &&
+        /<img\b[^>]*\balt="[^"]{10,}"/.test(previewButton) &&
+        /src="[^"]+\.jpg"/.test(previewButton)
+      );
+    })).toBe(true);
     expect(screenshotImages.every(image =>
       /src="[^"]*\/watermancer-guide\/[^"]+\.jpg"/.test(image) &&
       /alt="[^"]{10,}"/.test(image),
@@ -166,13 +177,10 @@ describe('Watermancer Guide step layout', () => {
       expect(publicAssetPath).not.toBe('');
       expect(existsSync(join(process.cwd(), 'public', publicAssetPath))).toBe(true);
     }
-    expect(markup.match(/data-testid="watermancer-guide-screen-[^"]+"/g)).toHaveLength(10);
-    expect(markup).not.toMatch(/<(?:button|input|select|textarea)\b/i);
-    expect(markup).not.toMatch(/role="button"/i);
+    expect(markup.match(/data-testid="watermancer-guide-screen-[^"]+-preview"/g)).toHaveLength(10);
+    expect(markup).not.toMatch(/<(?:input|select|textarea)\b/i);
     expect(markup).toContain('grid-cols-1');
-    expect(markup).not.toContain('sm:grid-cols-2');
     expect(markup).toContain('min-w-0');
-    expect(markup).not.toMatch(/\b(?:w|min-w)-\[\d+px\]/);
 
   });
 });

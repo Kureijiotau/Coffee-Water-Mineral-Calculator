@@ -117,8 +117,8 @@ test('opens the existing tools without changing the selected Watermancer target'
   await expect(calciumTarget).toHaveValue(calciumBefore);
 });
 
-test('shows personal starting ranges and expandable recipe examples in steps six and seven', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('keeps Step 6 ranges and provides visible, expandable Step 7 screenshots', async ({ page }) => {
+  await page.setViewportSize({ width: 402, height: 874 });
   await page.goto('/');
   await page.getByTestId('tab-watermancer-guide').click();
   await page.getByTestId('button-step-set-targets').click();
@@ -127,34 +127,47 @@ test('shows personal starting ranges and expandable recipe examples in steps six
   await page.getByTestId('button-next-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 6 of 7');
   const startingFramework = page.getByTestId('guide-starting-framework');
-  await expect(startingFramework).toContainText('12.0–12.5');
-  await expect(startingFramework).toContainText('My softer tests');
-  await expect(startingFramework).toContainText('Strength scales all selected targets together');
+  await expect(startingFramework).toContainText('11–12.5 ppm');
+  await expect(startingFramework).toContainText('In my tastings');
+  await expect(startingFramework).toContainText(
+    'It scales every ion target, including bicarbonate (KH), not just GH.',
+  );
 
   await page.getByTestId('button-next-step').click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 7 of 7');
-  const recipeCards = page.locator('[data-testid^="guide-recipe-card-"]');
-  await expect(recipeCards).toHaveCount(5);
-  expect(
-    await recipeCards.evaluateAll(cards =>
-      cards.every(card => !(card as HTMLDetailsElement).open),
-    ),
-  ).toBe(true);
+  await expect(page.getByTestId('watermancer-guide-workflow')).toBeVisible();
 
-  const dailyDriver = recipeCards.nth(0);
-  await dailyDriver.locator('summary').click();
-  await expect(dailyDriver).toHaveAttribute('open', '');
-  await expect(dailyDriver.getByText('RO / distilled water')).toBeVisible();
-  await expect(dailyDriver.getByText('13 drops')).toBeVisible();
+  const screenshotPreviews = page.locator(
+    '[data-testid^="watermancer-guide-screen-"][data-testid$="-preview"]',
+  );
+  await expect(screenshotPreviews).toHaveCount(10);
+  for (let index = 0; index < 10; index += 1) {
+    const preview = screenshotPreviews.nth(index);
+    await expect(preview).toBeVisible();
+    const bounds = await preview.boundingBox();
+    expect(bounds?.width).toBeLessThanOrEqual(360);
+  }
 
-  const bottledBlend = recipeCards.nth(4);
-  await bottledBlend.locator('summary').click();
-  await expect(bottledBlend.getByTestId('guide-recipe-balance-note-bottled-water-blend')).toContainText(
-    'above the usual starting range',
-  );
-  await expect(bottledBlend.getByTestId('guide-recipe-balance-note-bottled-water-blend')).toContainText(
-    'charge mismatch',
-  );
+  const recipePreview = page.getByTestId('watermancer-guide-screen-recipe-picker-preview');
+  await expect(recipePreview).toHaveAccessibleName('View larger screenshot: Select a recipe');
+  const previewSource = await recipePreview.getByRole('img').getAttribute('src');
+  await recipePreview.click();
+
+  const screenshotDialog = page.getByRole('dialog');
+  await expect(screenshotDialog).toBeVisible();
+  await expect(screenshotDialog.getByRole('heading', { name: 'Select a recipe' })).toBeVisible();
+  await expect(screenshotDialog.getByRole('img')).toHaveAttribute('src', previewSource ?? '');
+
+  await page.keyboard.press('Escape');
+  await expect(screenshotDialog).toHaveCount(0);
+  await expect(recipePreview).toBeFocused();
+
+  await recipePreview.focus();
+  await page.keyboard.press('Enter');
+  await expect(screenshotDialog).toBeVisible();
+  await screenshotDialog.getByRole('button', { name: 'Close' }).click();
+  await expect(screenshotDialog).toHaveCount(0);
+  await expect(recipePreview).toBeFocused();
 
   const pageWidths = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
