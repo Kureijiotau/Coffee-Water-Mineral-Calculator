@@ -5,6 +5,7 @@ import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
 import watermancerMarkImage from '@assets/image_1787373159788.png';
 import watermancerHeaderImage from '@assets/watermancer-header-256.webp';
+import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
 import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
@@ -6493,10 +6494,15 @@ function App() {
               role="tab"
               aria-selected={appTab === 'guide'}
               onClick={() => setAppTab('guide')}
-              className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-md border border-white/20 bg-black/15 px-3 py-2 text-xs font-semibold transition sm:min-h-0 sm:py-1.5 ${appTab === 'guide' ? 'border-white/30 bg-white/10 text-white' : 'text-white/70 hover:border-white/40 hover:bg-white/10 hover:text-white'}`}
+              className={`inline-flex min-h-10 min-w-0 items-center justify-center gap-1.5 whitespace-normal rounded-md border border-white/20 bg-black/15 px-2 py-2 text-center text-xs font-semibold leading-tight transition sm:min-h-0 sm:whitespace-nowrap sm:px-3 sm:py-1.5 ${appTab === 'guide' ? 'border-teal-300/40 bg-teal-300/10 text-teal-100 shadow-sm shadow-teal-950/20' : 'text-white/70 hover:border-teal-300/40 hover:bg-teal-300/5 hover:text-teal-100'}`}
             >
-              <ListChecks className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" />
-              Guide
+              <img
+                src={robertAsamiLogo}
+                alt=""
+                aria-hidden="true"
+                className="h-4 w-4 shrink-0 object-cover object-left"
+              />
+              <span className="min-w-0">R. Asami Guide</span>
             </button>
             {WATERMANCER_GUIDE_PREVIEW_ONLY && (
               <button
@@ -9015,7 +9021,9 @@ function App() {
             setRecipeStepsPromptDismissed(true);
             setShowBrewerSteps('dry');
           }}
-          className={`fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur transition hover:-translate-y-0.5 active:translate-y-0 ${
+          className={`fixed right-4 z-40 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur transition hover:-translate-y-0.5 active:translate-y-0 ${
+            showWatermancer ? 'bottom-32' : 'bottom-4'
+          } ${
              showRecipeMode && hasSaltRecipeTargets && !recipeStepsPromptDismissed
               ? 'max-w-[calc(100vw-2rem)] border-emerald-200/70 bg-emerald-400 text-slate-950 shadow-emerald-950/60 ring-2 ring-emerald-200/25 ring-offset-2 ring-offset-slate-950 hover:bg-emerald-300'
                : showRecipeMode

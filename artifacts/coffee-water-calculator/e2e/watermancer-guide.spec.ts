@@ -1,11 +1,42 @@
 import { expect, test } from '@playwright/test';
 
+test('brands the Week 1 Guide tab with Robert Asami’s glyph', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  const guideTab = page.getByRole('tab', { name: 'R. Asami Guide', exact: true });
+  await expect(guideTab).toBeVisible();
+  await expect(guideTab).toHaveAttribute('aria-selected', 'false');
+
+  const guideGlyph = guideTab.locator('img');
+  await expect(guideGlyph).toHaveCount(1);
+  await expect(guideGlyph).toHaveAttribute('src', /robert-asami-logo-transparent\.png/);
+  await expect(guideGlyph).toHaveAttribute('alt', '');
+  await expect(guideGlyph).toHaveAttribute('aria-hidden', 'true');
+
+  await guideTab.click();
+  await expect(guideTab).toHaveAttribute('aria-selected', 'true');
+
+  const pageWidths = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  expect(pageWidths.content).toBeLessThanOrEqual(pageWidths.viewport);
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const desktopWidths = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  expect(desktopWidths.content).toBeLessThanOrEqual(desktopWidths.viewport);
+});
+
 test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
 
   const watermancerGuideTab = page.getByTestId('tab-watermancer-guide');
-  const weekOneGuideTab = page.getByRole('tab', { name: 'Guide', exact: true });
+  const weekOneGuideTab = page.getByRole('tab', { name: 'R. Asami Guide', exact: true });
 
   await expect(watermancerGuideTab).toBeVisible();
   await expect(watermancerGuideTab).toHaveAttribute('aria-controls', 'watermancer-guide-panel');
@@ -32,6 +63,7 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   await expect(zoomToggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const zoomImage = page.getByTestId('counterion-example-chloride-sodium');
+  await zoomToggle.scrollIntoViewIfNeeded();
   const toggleBounds = await zoomToggle.boundingBox();
   if (!toggleBounds) throw new Error('Zoom control should have a visible bounding box');
   await page.mouse.move(toggleBounds.x + toggleBounds.width * 0.2, toggleBounds.y + toggleBounds.height * 0.3);
@@ -98,6 +130,10 @@ test('opens the existing tools without changing the selected Watermancer target'
   const watermancerGuideTab = page.getByTestId('tab-watermancer-guide');
   await watermancerGuideTab.click();
   await expect(page.getByTestId('watermancer-guide')).toBeVisible();
+  await page.getByTestId('button-step-set-targets').click();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 5 of 7');
+  await page.getByTestId('button-next-step').click();
+  await expect(page.getByTestId('text-current-step')).toHaveText('Step 6 of 7');
   await page.getByTestId('button-open-watermancer').last().click();
   await expect(page.getByTestId('mode-watermancer')).toHaveAttribute('aria-pressed', 'true');
   await expect(targetPicker).toContainText(profileBefore);
@@ -106,7 +142,7 @@ test('opens the existing tools without changing the selected Watermancer target'
 
   await watermancerGuideTab.click();
   await expect(page.getByTestId('text-current-step')).toHaveText('Step 1 of 7');
-  await page.getByTestId('button-open-diy-concentrate').last().click();
+  await page.getByTestId('tab-concentrates').click();
   await expect(page.getByTestId('tab-concentrates')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('concentrate-workspace-diy')).toHaveAttribute('aria-selected', 'true');
 
@@ -188,4 +224,54 @@ test('keeps Step 6 ranges and provides visible, expandable Step 7 screenshots', 
     content: document.documentElement.scrollWidth,
   }));
   expect(pageWidths.content).toBeLessThanOrEqual(pageWidths.viewport);
+
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  await expect(workflow).toBeVisible();
+  for (let index = 0; index < 10; index += 1) {
+    const preview = screenshotPreviews.nth(index);
+    await expect(preview).toBeVisible();
+    const bounds = await preview.boundingBox();
+    expect(bounds?.width).toBeLessThanOrEqual(360);
+  }
+  const desktopPageWidths = await page.evaluate(() => ({
+    viewport: document.documentElement.clientWidth,
+    content: document.documentElement.scrollWidth,
+  }));
+  expect(desktopPageWidths.content).toBeLessThanOrEqual(desktopPageWidths.viewport);
+
+  await recipePreview.scrollIntoViewIfNeeded();
+  const desktopPreviewBounds = await recipePreview.boundingBox();
+  if (!desktopPreviewBounds) throw new Error('Desktop screenshot preview should have a bounding box');
+  await recipePreview.click();
+  await expect(screenshotDialog).toBeVisible();
+  const enlargedImageBounds = await screenshotDialog.getByRole('img').boundingBox();
+  expect(enlargedImageBounds?.width).toBeGreaterThan(desktopPreviewBounds.width);
+  const desktopDialogBounds = await screenshotDialog.boundingBox();
+  expect(desktopDialogBounds?.x).toBeGreaterThanOrEqual(0);
+  expect((desktopDialogBounds?.x ?? 0) + (desktopDialogBounds?.width ?? 0)).toBeLessThanOrEqual(1280);
+  expect(desktopDialogBounds?.height).toBeLessThanOrEqual(1000);
+  await screenshotDialog.getByRole('button', { name: 'Close' }).click();
+  await expect(screenshotDialog).toHaveCount(0);
+  await expect(recipePreview).toBeFocused();
+});
+
+test('keeps the Watermancer recipe action clickable above the pinned readings dock', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await page.getByTestId('mode-watermancer').click();
+
+  const readingsDock = page.getByRole('region', { name: 'Current ion readings' });
+  const recipeAction = page.getByRole('button', { name: 'Open recipe steps' });
+  await expect(readingsDock).toHaveCSS('position', 'fixed');
+  await expect(recipeAction).toBeVisible();
+
+  const recipeActionOwnsItsCenterHitTarget = await recipeAction.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const centerHit = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+    return Boolean(centerHit && element.contains(centerHit));
+  });
+  expect(recipeActionOwnsItsCenterHitTarget).toBe(true);
 });

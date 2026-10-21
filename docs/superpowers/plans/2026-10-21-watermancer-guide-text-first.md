@@ -21,6 +21,8 @@
 - Keep every screenshot visible as a small preview, with a maximum width around 360 px; do not hide previews.
 - Clicking a preview opens the original screenshot at a larger, viewport-fitted size in the existing accessible dialog.
 - Color ion names and formulas with the existing `ION_MAP` colors.
+- Label Robert Asami’s guide tab **R. Asami Guide** and show his glyph.
+- Keep the Watermancer recipe-step action clear of the pinned readings dock.
 - Do not change recipe storage, matching logic, the shared water catalog, salt behavior, exports, recipe-card generation, or other guide steps.
 - Do not add dependencies or publish/share any example water during screenshot capture.
 
@@ -150,19 +152,19 @@ git commit -m "Emphasize the Watermancer guide recipe instructions"
 - Keep the existing ten image filenames and the `BASE_URL`-based screenshot paths.
 - Use the live Watermancer interface and a disposable browser profile; do not modify shared catalog data or publish a Community water.
 
-- [ ] **Step 1: Prepare the live Watermancer example**
+- [x] **Step 1: Prepare the live Watermancer example**
 
 In the running app, use a disposable browser profile to select/create **Guide recipe**, set a 1 L batch, use 966 mL RO/distilled water and 34 mL Evian, and enter 14 mg MgSO₄·7H₂O, 20 mg MgCl₂·6H₂O, 4 mg NaCl, and 2 mg KCl. Confirm the Evian source uses the existing profile values—Na 6.5, Ca 80, SO₄ 14, Mg 26, K 1, HCO₃ 360 mg/L—without editing the shared catalog. Read final ions from the live result.
 
-- [ ] **Step 2: Capture the workflow screens from the real app**
+- [x] **Step 2: Capture the workflow screens from the real app**
 
-Recapture all ten screenshot assets so the recipe selection and final card consistently show **Guide recipe** and the provided quantities. Keep the other requested feature examples focused on their live controls. Do not capture a visible Kimoi item or submit a share action.
+Capture all ten screenshot assets from the real app so the recipe selection and final card consistently show **Guide recipe** and the provided quantities. A close-up may be cropped from a verified live capture when that gives the control more useful context. Keep the other requested feature examples focused on their live controls. Do not capture a visible Kimoi item or submit a share action.
 
-- [ ] **Step 3: Visually audit every asset**
+- [x] **Step 3: Visually audit every asset**
 
 Create a temporary contact sheet outside the repository and inspect it plus the full-size recipe-picker and recipe-card captures. Expected: all screenshots are authentic, no screenshot contains Kimoi, and the final card shows the exact water and salt quantities with app-calculated final readings.
 
-- [ ] **Step 4: Run the complete package checks**
+- [x] **Step 4: Run the complete package checks**
 
 Run:
 
@@ -174,13 +176,24 @@ pnpm --filter @workspace/coffee-water-calculator run build
 
 Expected: all tests pass, the workspace root typecheck builds referenced libraries and succeeds across artifacts, and the production build includes all ten screenshot files.
 
-- [ ] **Step 5: Verify the preview and dialog at desktop and mobile sizes**
+- [x] **Step 5: Verify the preview and dialog at desktop and mobile sizes**
 
 Open Step 7 at 1280 × 1000 and 402 × 874. Confirm each small preview stays visible, no horizontal overflow appears, activating a preview shows its full-size screenshot, and both the close button and Escape dismiss the dialog with focus restored.
 
-- [ ] **Step 6: Commit the verified screenshot assets**
+- [x] **Step 6: Commit the verified screenshot assets**
 
 ```bash
 git add artifacts/coffee-water-calculator/public/watermancer-guide
 git commit -m "Refresh Watermancer guide screenshots with Guide recipe"
 ```
+
+### Scope addendum: R. Asami Guide tab and recipe action reachability
+
+**Files:**
+- Modify: `artifacts/coffee-water-calculator/src/App.tsx`
+- Modify: `artifacts/coffee-water-calculator/e2e/watermancer-guide.spec.ts`
+
+- [x] Replace the generic Guide tab label and icon with **R. Asami Guide** and Robert Asami’s glyph.
+- [x] Keep the tab responsive at mobile and desktop widths without horizontal overflow.
+- [x] Keep the Watermancer recipe-step action above the pinned readings dock and verify its center hit target.
+- [x] Update guide browser navigation checks to use the current steps and Concentrates tab.
