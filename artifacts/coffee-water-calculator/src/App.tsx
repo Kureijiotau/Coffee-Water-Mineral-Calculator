@@ -9022,7 +9022,11 @@ function App() {
             setShowBrewerSteps('dry');
           }}
           className={`fixed right-4 z-40 flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur transition hover:-translate-y-0.5 active:translate-y-0 ${
-            showWatermancer ? 'bottom-32' : 'bottom-4'
+            showWatermancer && watermancerFollowEnabled && watermancerResultDock === 'center'
+              ? 'bottom-[calc(42vh_+_2rem)] sm:bottom-[calc(min(56vh,34rem)_+_2rem)] min-[1400px]:bottom-32'
+              : showWatermancer
+                ? 'bottom-32'
+                : 'bottom-4'
           } ${
              showRecipeMode && hasSaltRecipeTargets && !recipeStepsPromptDismissed
               ? 'max-w-[calc(100vw-2rem)] border-emerald-200/70 bg-emerald-400 text-slate-950 shadow-emerald-950/60 ring-2 ring-emerald-200/25 ring-offset-2 ring-offset-slate-950 hover:bg-emerald-300'

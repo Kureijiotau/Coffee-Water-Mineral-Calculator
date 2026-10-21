@@ -11,7 +11,7 @@ export function WatermancerGuideWorkflowWaterScene(): ReactElement {
     >
       <WatermancerGuideScreenshotFrame
         title="Add a new water source"
-          description="Enter the source name, volume, and mineral readings from its label, then choose Save to add it to My waters."
+        description="Enter the source name, volume, and mineral readings from its label. Scroll to the bottom of the editor and choose Save to add it to My waters."
         testId="watermancer-guide-screen-add-water"
         screenshotFileName="add-water-source.jpg"
         imageAlt="Watermancer Add water source form for entering a name, volume, and mineral label readings."
@@ -25,10 +25,10 @@ export function WatermancerGuideWorkflowWaterScene(): ReactElement {
       />
       <WatermancerGuideScreenshotFrame
         title="Share with the community"
-          description="Choose Share in the water source editor. A browser confirmation appears before publishing; confirm only when you intend to share it publicly."
+        description="Complete the mineral-water profile, then scroll to the editor’s Save and Share actions. Choose Share and review the confirmation; publish only when you’re ready to make it public. This screenshot shows the editable profile before sharing."
         testId="watermancer-guide-screen-share-water"
         screenshotFileName="share-water.jpg"
-          imageAlt="Watermancer mineral-water editor showing the actual Share button beside Save."
+        imageAlt="Watermancer mineral-water editor before sharing, with a profile name, volume, and ion fields."
       />
     </WorkflowScene>
   );

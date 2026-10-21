@@ -255,8 +255,7 @@ test('keeps Step 6 ranges and provides visible, expandable Step 7 screenshots', 
   await expect(recipePreview).toBeFocused();
 });
 
-test('keeps the Watermancer recipe action clickable above the pinned readings dock', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
+test('keeps the Watermancer recipe action clear of the pinned readings dock across screen sizes', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('mode-watermancer').click();
 
@@ -265,13 +264,36 @@ test('keeps the Watermancer recipe action clickable above the pinned readings do
   await expect(readingsDock).toHaveCSS('position', 'fixed');
   await expect(recipeAction).toBeVisible();
 
-  const recipeActionOwnsItsCenterHitTarget = await recipeAction.evaluate(element => {
-    const rect = element.getBoundingClientRect();
-    const centerHit = document.elementFromPoint(
-      rect.left + rect.width / 2,
-      rect.top + rect.height / 2,
-    );
-    return Boolean(centerHit && element.contains(centerHit));
-  });
-  expect(recipeActionOwnsItsCenterHitTarget).toBe(true);
+  for (const viewport of [
+    { label: 'desktop', width: 1440, height: 1000 },
+    { label: 'narrow desktop', width: 1280, height: 900 },
+    { label: 'tablet', width: 1024, height: 768 },
+    { label: 'mobile', width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const layout = await page.evaluate(() => {
+      const action = document.querySelector<HTMLElement>('[aria-label="Open recipe steps"]');
+      const dock = document.querySelector<HTMLElement>('[aria-label="Current ion readings"]');
+      if (!action || !dock) return null;
+
+      const actionRect = action.getBoundingClientRect();
+      const dockRect = dock.getBoundingClientRect();
+      const centerHit = document.elementFromPoint(
+        actionRect.left + actionRect.width / 2,
+        actionRect.top + actionRect.height / 2,
+      );
+      return {
+        overlapsDock:
+          actionRect.left < dockRect.right &&
+          actionRect.right > dockRect.left &&
+          actionRect.top < dockRect.bottom &&
+          actionRect.bottom > dockRect.top,
+        centerHitIsAction: Boolean(centerHit && action.contains(centerHit)),
+      };
+    });
+
+    expect(layout, `${viewport.label} should have both the action and pinned dock`).not.toBeNull();
+    expect(layout?.overlapsDock, `${viewport.label} action should not overlap the dock`).toBe(false);
+    expect(layout?.centerHitIsAction, `${viewport.label} action should own its center hit target`).toBe(true);
+  }
 });

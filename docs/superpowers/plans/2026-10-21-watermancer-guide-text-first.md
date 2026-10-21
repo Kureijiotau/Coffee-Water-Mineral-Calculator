@@ -195,5 +195,7 @@ git commit -m "Refresh Watermancer guide screenshots with Guide recipe"
 
 - [x] Replace the generic Guide tab label and icon with **R. Asami Guide** and Robert Asami’s glyph.
 - [x] Keep the tab responsive at mobile and desktop widths without horizontal overflow.
-- [x] Keep the Watermancer recipe-step action above the pinned readings dock and verify its center hit target.
+- [x] Position the Watermancer recipe-step action above the pinned center dock on narrow and tablet widths while preserving its desktop placement.
+- [x] Add browser assertions for dock overlap and center hit target at desktop, narrow desktop, tablet, and mobile widths.
+- [ ] Run the expanded browser assertion. Playwright timed out before reaching a test, and the local browser tool could not start Chromium.
 - [x] Update guide browser navigation checks to use the current steps and Concentrates tab.
