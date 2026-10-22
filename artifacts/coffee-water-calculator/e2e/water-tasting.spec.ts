@@ -54,7 +54,11 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(page.getByRole('button', { name: 'Watermancer', exact: true })).toBeVisible();
   await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
 
+  const analysis = page.getByTestId('panel-tasting-profile-analysis');
+  await expect(analysis).toHaveCount(0);
   await page.getByTestId('select-tasting-profile').selectOption('safe-profile');
+  await expect(analysis).toContainText("Aiki's (Light Roast Pourover) safe profile");
+  await expect(analysis).toContainText('Mineral analysis');
   await page.getByTestId('input-tasting-name').fill('Sunday morning cup');
 
   const fragranceAroma = page.getByTestId('input-affective-fragranceAroma');
@@ -88,7 +92,6 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(page.getByTestId('cue-affective-mouthfeel')).toHaveText('Soft, delicate texture');
   await expect(page.getByTestId('cue-affective-overall')).toHaveText('Strongly expressed');
   await expect(page.getByTestId('cue-affective-overall')).toHaveCSS('font-weight', '700');
-  await expect(page.getByTestId('panel-tasting-profile-analysis')).toHaveCount(0);
   await page.getByTestId('input-water-tasting-notes').fill('Bright citrus aroma and a clean finish.');
   await page.getByTestId('button-save-tasting').click();
 
@@ -217,6 +220,7 @@ test('keeps a deleted profile name available when editing its tasting', async ({
   await expect(page.getByTestId('select-tasting-profile')).toHaveValue('saved:removed-water');
   await expect(page.getByTestId('select-tasting-profile').locator('option:checked'))
     .toHaveText('Deleted favorite water (no longer available)');
+  await expect(page.getByTestId('panel-tasting-profile-analysis')).toHaveCount(0);
   await page.getByTestId('button-save-tasting').click();
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
   await expect(page.getByTestId('profile-tasting-legacy-tasting')).toHaveText('Deleted favorite water');
@@ -314,6 +318,7 @@ test('shows the existing mineral analysis card for each profile source', async (
   await expect(select.locator('optgroup[label="Watermancer"] option[value="salt-table"]')).toHaveCount(1);
 
   const analysis = page.getByTestId('panel-tasting-profile-analysis');
+  await expect(analysis).toHaveCount(0);
   await select.selectOption('safe-profile');
   await expect(analysis).toContainText("Aiki's (Light Roast Pourover) safe profile");
   await expect(analysis).toContainText('Mineral analysis');

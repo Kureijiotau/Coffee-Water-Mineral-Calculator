@@ -89,7 +89,7 @@ function formatSpectrumValue(value: number): string {
   return '0';
 }
 
-export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTastingTabProps) {
+export function WaterTastingTab({ profileOptions, renderProfileAnalysis, onOpenWatermancer }: WaterTastingTabProps) {
   const [initialLoad] = useState(loadWaterTastingCollection);
   const expectedCollectionRef = useRef<WaterTastingCollection | null>(
     initialLoad.ok ? initialLoad.collection : null,
@@ -103,6 +103,8 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
   const formStart = useRef<HTMLDivElement>(null);
   const form = useForm<WaterTastingEditorValues>({ defaultValues: emptyDraft() });
   const mode = form.watch('mode');
+  const profileSourceId = form.watch('profileSourceId');
+  const selectedProfile = profileOptions.find(option => option.sourceId === profileSourceId);
   const editingRecord = records.find(record => record.id === editingId);
   const displayedRecords = historySort === 'name' ? sortWaterTastingsByName(records) : records;
   useEffect(() => {
@@ -354,6 +356,11 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
                     <FormMessage />
                   </FormItem>
                 )} />
+                {selectedProfile && (
+                  <div className="mt-4" data-testid="panel-tasting-profile-analysis">
+                    {renderProfileAnalysis(selectedProfile.sourceId)}
+                  </div>
+                )}
                 {editingRecord && profileOptions.some(option => option.sourceId === editingRecord.profileSourceId && option.name !== editingRecord.profileNameSnapshot) && (
                   <p className="mt-2 text-xs text-slate-400" data-testid="text-profile-snapshot">Originally saved as “{editingRecord.profileNameSnapshot}”. That name stays with this note.</p>
                 )}
