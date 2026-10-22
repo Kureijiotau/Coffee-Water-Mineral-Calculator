@@ -47,8 +47,10 @@ test('lets users tune the final blend with a salt dose and hydration form', asyn
     'row-mixer-salt-nacl',
     'row-mixer-salt-kcl',
     'row-mixer-salt-mgso4',
+    'row-mixer-salt-caso4',
     'row-mixer-salt-nahco3',
     'row-mixer-salt-khco3',
+    'row-mixer-salt-mgmalate',
     'row-mixer-salt-mgcit',
     'row-mixer-salt-cacit',
   ]);
@@ -93,6 +95,7 @@ test('confirms saved Mixer recipe deletion and clears an active deleted source',
 
   const recipeCard = page.getByTestId(/card-mixer-saved-recipe-/);
   await expect(recipeCard).toContainText('Delete me blend');
+  await page.getByTestId('select-mixer-source-mode-a').selectOption('saved-recipe');
   const savedSourcePicker = page.getByTestId('select-mixer-saved-source-a');
   await savedSourcePicker.selectOption({ label: 'Delete me blend · Mixer recipe' });
   await expect(page.getByTestId('text-mixer-source-name-a')).toHaveText('Delete me blend');

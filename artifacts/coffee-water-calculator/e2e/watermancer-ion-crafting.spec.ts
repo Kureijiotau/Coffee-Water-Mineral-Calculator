@@ -5,7 +5,7 @@ test('crafts a balanced magnesium-and-sulfate target without changing chloride',
   await page.goto('/');
   await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
 
-  await expect(page.getByText('1. Set your target water', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /^set your target water$/i })).toBeVisible();
   await expect(page.getByTestId('watermancer-charge-balance-checker')).toHaveCount(0);
   const craftingToggle = page.getByTestId('watermancer-ion-crafting-toggle');
   await expect(craftingToggle).toBeVisible();

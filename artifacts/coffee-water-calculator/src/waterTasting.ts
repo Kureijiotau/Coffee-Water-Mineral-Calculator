@@ -542,6 +542,12 @@ function normalizeCoffee(coffee: WaterTastingCoffeeDetails): WaterTastingCoffeeD
   );
 }
 
+function omitUndefinedScores<T extends object>(scores: T): T {
+  return Object.fromEntries(
+    Object.entries(scores).filter(([, score]) => score !== undefined),
+  ) as T;
+}
+
 function createRecordId(): string {
   const uuid = globalThis.crypto?.randomUUID?.();
   return `water-tasting-${uuid ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`}`;
@@ -588,13 +594,13 @@ export function createWaterTastingRecord(
     return {
       ...base,
       scoringVersion: 2,
-      descriptive: { ...draft.descriptive },
-      affective: { ...draft.affective },
+      descriptive: omitUndefinedScores(draft.descriptive),
+      affective: omitUndefinedScores(draft.affective),
     };
   }
   return {
     ...base,
-    ratings: { ...draft.ratings },
+    ratings: omitUndefinedScores(draft.ratings),
     ...(draft.spectrum ? { spectrum: { ...draft.spectrum } } : {}),
   };
 }
@@ -633,14 +639,14 @@ export function updateWaterTastingRecord(
     return {
       ...common,
       scoringVersion: 2,
-      descriptive: { ...draft.descriptive },
-      affective: { ...draft.affective },
+      descriptive: omitUndefinedScores(draft.descriptive),
+      affective: omitUndefinedScores(draft.affective),
     };
   }
   if (draft.scoringVersion === undefined && record.scoringVersion === undefined) {
     return {
       ...common,
-      ratings: { ...draft.ratings },
+      ratings: omitUndefinedScores(draft.ratings),
       ...(draft.spectrum ? { spectrum: { ...draft.spectrum } } : {}),
     };
   }

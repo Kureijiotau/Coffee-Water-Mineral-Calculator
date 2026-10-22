@@ -11,7 +11,7 @@ test('keeps both concentrate workspaces under Concentrates and defaults to DIY',
     'Concentrates',
     'Mixer',
     'Water grading',
-    'Guide',
+    'R. Asami Guide',
     'Watermancer Guide',
   ]);
 

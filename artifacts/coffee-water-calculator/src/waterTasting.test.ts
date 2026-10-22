@@ -398,6 +398,40 @@ describe('Water Tasting record lifecycle', () => {
     expect(updated.updatedAt).not.toBe(original.updatedAt);
   });
 
+  it('omits undefined values for optional legacy and CVA scores', () => {
+    const storage = makeStorage();
+    const legacy = createWaterTastingRecord(makeDraft({
+      ratings: { clarity: 5, finish: undefined },
+    }), new Date('2026-09-28T09:00:00.000Z'), 'partial-legacy');
+    const cva = createWaterTastingRecord(makeCvaDraft({
+      descriptive: { fragrance: 7, aroma: undefined },
+      affective: { overall: 8, mouthfeel: undefined },
+    }), new Date('2026-09-28T09:00:00.000Z'), 'partial-cva');
+
+    expect(legacy.ratings).toEqual({ clarity: 5 });
+    expect(cva.descriptive).toEqual({ fragrance: 7 });
+    expect(cva.affective).toEqual({ overall: 8 });
+    expect(saveWaterTastings([legacy, cva], [], storage)).toEqual({ ok: true });
+
+    const updatedLegacy = updateWaterTastingRecord(
+      legacy,
+      makeDraft({ ratings: { clarity: undefined, balance: 4 } }),
+      new Date('2026-09-29T09:00:00.000Z'),
+    );
+    const updatedCva = updateWaterTastingRecord(
+      cva,
+      makeCvaDraft({
+        descriptive: { fragrance: undefined, flavor: 6 },
+        affective: { overall: undefined, acidity: 5 },
+      }),
+      new Date('2026-09-29T09:00:00.000Z'),
+    );
+
+    expect(updatedLegacy.ratings).toEqual({ balance: 4 });
+    expect(updatedCva.descriptive).toEqual({ flavor: 6 });
+    expect(updatedCva.affective).toEqual({ acidity: 5 });
+  });
+
   it('sorts history newest first and keeps equal-date items stable', () => {
     const older = makeRecord('older', '2026-09-26T09:00:00.000Z');
     const sameDateA = makeRecord('same-a', '2026-09-27T09:00:00.000Z');

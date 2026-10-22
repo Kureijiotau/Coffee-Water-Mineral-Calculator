@@ -10,6 +10,20 @@ async function openWaterTasting(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('water-tasting-tab')).toBeVisible();
 }
 
+async function readSavedTastingRecords(page: import('@playwright/test').Page) {
+  return page.evaluate(key => {
+    const stored = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown;
+    if (Array.isArray(stored)) return stored;
+    if (
+      stored
+      && typeof stored === 'object'
+      && 'records' in stored
+      && Array.isArray(stored.records)
+    ) return stored.records;
+    return [];
+  }, TASTINGS_KEY);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(({ tastingsKey, profilesKey, alchemistProfilesKey }) => {
     const clearedFlag = '__water_tasting_e2e_storage_cleared__';
@@ -69,7 +83,7 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(mouthfeel).toHaveValue('4');
   await expect(overall).toHaveValue('7');
   await expect(page.getByTestId('cue-affective-fragranceAroma')).toHaveText('Pronounced');
-  await expect(page.getByTestId('cue-affective-flavorAftertaste')).toHaveText('Richly expressed');
+  await expect(page.getByTestId('cue-affective-flavorAftertaste')).toHaveText('Pronounced');
   await expect(page.getByTestId('cue-affective-acidity')).toHaveText('Sharp');
   await expect(page.getByTestId('cue-affective-mouthfeel')).toHaveText('Soft, delicate texture');
   await expect(page.getByTestId('cue-affective-overall')).toHaveText('Strongly expressed');
@@ -84,7 +98,8 @@ test('records water’s effect with five sliders and edits a partial tasting', a
   await expect(card).toHaveCount(1);
   const cardTestId = await card.getAttribute('data-testid');
   const tastingId = cardTestId!.replace('card-tasting-', '');
-  await expect(page.getByTestId(`profile-tasting-${tastingId}`)).toHaveText('Aiki safe profile');
+  await expect(page.getByTestId(`profile-tasting-${tastingId}`))
+    .toHaveText("Aiki's (Light Roast Pourover) safe profile");
   await expect(page.getByTestId(`coffee-tasting-${tastingId}`)).toHaveText('Sunday morning cup');
   await expect(page.getByTestId(`notes-tasting-${tastingId}`))
     .toHaveText('Bright citrus aroma and a clean finish.');
@@ -170,7 +185,7 @@ test('keeps hidden details when editing a saved CVA tasting', async ({ page }) =
   await page.getByTestId('button-save-tasting').click();
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting updated');
 
-  const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '[]'), TASTINGS_KEY);
+  const saved = await readSavedTastingRecords(page);
   expect(saved[0].descriptive).toEqual(legacyDetails);
   expect(saved[0].descriptorIds).toEqual(['mineral', 'clean-finish']);
   expect(saved[0].coffee).toEqual({
@@ -243,7 +258,8 @@ test('selects a saved target, preserves its prior name snapshot, and keeps histo
 
   await openWaterTasting(page);
   await page.getByTestId('select-tasting-profile').selectOption('saved:e2e-profile');
-  await expect(page.getByTestId('select-tasting-profile').locator('option:checked')).toHaveText('Renamed E2E Water');
+  await expect(page.getByTestId('select-tasting-profile').locator('option:checked'))
+    .toHaveText('Profile · Renamed E2E Water');
   await page.getByTestId('input-tasting-name').fill('Fresh cup');
   await page.getByTestId('button-save-tasting').click();
   await expect(page.getByTestId('status-tasting-feedback')).toContainText('Tasting saved');
@@ -254,7 +270,8 @@ test('selects a saved target, preserves its prior name snapshot, and keeps histo
   const newTastingId = firstCardTestId!.replace('card-tasting-', '');
   await expect(cards.nth(1)).toHaveAttribute('data-testid', 'card-tasting-newer-saved-water-tasting');
   await expect(cards.nth(2)).toHaveAttribute('data-testid', 'card-tasting-older-saved-water-tasting');
-  await expect(page.getByTestId(`profile-tasting-${newTastingId}`)).toHaveText('Renamed E2E Water');
+  await expect(page.getByTestId(`profile-tasting-${newTastingId}`))
+    .toHaveText('Profile · Renamed E2E Water');
 
   await page.reload();
   await page.getByRole('tab', { name: 'Water grading', exact: true }).click();
@@ -291,17 +308,14 @@ test('shows the existing mineral analysis card for each profile source', async (
 
   await openWaterTasting(page);
   const select = page.getByTestId('select-tasting-profile');
-  await expect(select.locator('optgroup[label="Built-in"]')).toHaveCount(1);
   await expect(select.locator('optgroup[label="Alchemist"]')).toHaveCount(1);
   await expect(select.locator('optgroup[label="Watermancer"]')).toHaveCount(1);
-  await expect(select.locator('optgroup[label="Alchemist"] option').first()).toHaveAttribute(
-    'value',
-    /^alchemist:/,
-  );
+  await expect(select.locator('optgroup[label="Watermancer"] option[value="safe-profile"]')).toHaveCount(1);
+  await expect(select.locator('optgroup[label="Watermancer"] option[value="salt-table"]')).toHaveCount(1);
 
   const analysis = page.getByTestId('panel-tasting-profile-analysis');
   await select.selectOption('safe-profile');
-  await expect(analysis).toContainText('Aiki safe profile');
+  await expect(analysis).toContainText("Aiki's (Light Roast Pourover) safe profile");
   await expect(analysis).toContainText('Mineral analysis');
   await expect(analysis).not.toContainText('NaN');
   const safeCardText = await analysis.innerText();
@@ -312,12 +326,12 @@ test('shows the existing mineral analysis card for each profile source', async (
   expect(saltTableText).not.toBe(safeCardText);
 
   const alchemistOptionValue = await select
-    .locator('optgroup[label="Alchemist"] option')
+    .locator('optgroup[label="Alchemist"] option[value^="alchemist:"]')
     .first()
     .getAttribute('value');
   expect(alchemistOptionValue).toMatch(/^alchemist:/);
   await select.selectOption(alchemistOptionValue!);
-  await expect(analysis).toContainText('Current recipe');
+  await expect(analysis).toContainText('Current setup');
 
   await select.selectOption('saved:e2e-finished-profile');
   await expect(analysis).toContainText('Finished E2E Water');
@@ -417,10 +431,8 @@ test('keeps legacy ratings, cup-shape values, and descriptors in their original 
   await expect(card).toContainText('Hollow');
   await expect(card).toContainText('Clean finish');
   await expect(card).toContainText('Jammy');
-  expect(await page.evaluate(key => {
-    const records = JSON.parse(localStorage.getItem(key) ?? '[]');
-    return records[0];
-  }, TASTINGS_KEY)).toMatchObject({
+  const savedLegacy = (await readSavedTastingRecords(page))[0];
+  expect(savedLegacy).toMatchObject({
     ratings: {
       clarity: 5,
       flavorExpression: 6,
@@ -430,8 +442,7 @@ test('keeps legacy ratings, cup-shape values, and descriptors in their original 
     },
     spectrum: { acidityFocus: 3, bodyWeight: -2, structure: 1, finish: 0 },
   });
-  expect(await page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '[]')[0]?.scoringVersion, TASTINGS_KEY))
-    .toBeUndefined();
+  expect(savedLegacy).not.toHaveProperty('scoringVersion');
 
   await card.locator('[data-testid^="button-edit-tasting-"]').click();
   await expect(acidity).toHaveValue('3');

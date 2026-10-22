@@ -76,7 +76,7 @@ for (const viewport of [
     await page.goto('/');
     await page.getByRole('button', { name: 'Watermancer', exact: true }).click();
 
-    await expect(page.getByText('1. Set your target water', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^set your target water$/i })).toBeVisible();
     await expectSavedOrder(page, existingOptionsNewestFirst);
 
     const pickerBeforeSave = await openSavedPicker(page);
@@ -220,7 +220,7 @@ test('overwrites only the selected profile targets and keeps that profile select
     .getByRole('option', { name: 'Profile · Beta water' }).click();
   await expect(targetPicker).toContainText('Profile · Beta water');
 
-  await page.getByRole('button', { name: 'Edit Calcium target' }).click();
+  await page.getByTestId('watermancer-profile-edit').click();
   const calciumTarget = page.getByTestId('watermancer-ion-target-calcium');
   await expect(calciumTarget).toBeVisible();
   await calciumTarget.fill('37.5');
@@ -268,15 +268,14 @@ test('renames the selected profile when overwriting its target edits', async ({ 
   await page.getByTestId('watermancer-profile-overwrite').click();
 
   await expect(targetPicker).toContainText('Profile · Beta water renamed');
-  const savedProfile = await page.evaluate(profilesKey => {
+  await expect.poll(async () => page.evaluate(profilesKey => {
     const profiles = JSON.parse(localStorage.getItem(profilesKey) ?? '[]') as Array<{
       id: string;
       name: string;
       targets: Record<string, number>;
     }>;
     return profiles.find(profile => profile.id === 'watermancer-1000000000000-beta') ?? null;
-  }, SAVED_PROFILES_KEY);
-  expect(savedProfile).toMatchObject({
+  }, SAVED_PROFILES_KEY)).toMatchObject({
     id: 'watermancer-1000000000000-beta',
     name: 'Beta water renamed',
     targets: {

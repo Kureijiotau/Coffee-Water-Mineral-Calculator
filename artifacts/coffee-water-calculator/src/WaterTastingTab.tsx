@@ -52,6 +52,18 @@ function emptyDraft(profileSourceId = ''): WaterTastingEditorValues {
   };
 }
 
+function mergeOptionalScoreValues<T extends object>(
+  previous: T | undefined,
+  current: T | undefined,
+): T {
+  const merged: Record<string, unknown> = { ...(previous ?? {}) };
+  for (const [key, value] of Object.entries(current ?? {})) {
+    if (value === undefined) delete merged[key];
+    else merged[key] = value;
+  }
+  return merged as T;
+}
+
 function storageMessage(error: WaterTastingStorageError): string {
   switch (error) {
     case 'invalid-data':
@@ -180,6 +192,9 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
     const preserveCvaDescriptors = editingRecord
       && isCvaWaterTastingRecord(editingRecord)
       && values.mode === 'cva';
+    const priorCva = editingRecord && isCvaWaterTastingRecord(editingRecord)
+      ? editingRecord
+      : undefined;
     const draftBase = {
       profileSourceId: option.sourceId,
       profileNameSnapshot: snapshot,
@@ -194,14 +209,10 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       const draft: WaterTastingCvaDraft = {
         ...draftBase,
         scoringVersion: 2,
-        descriptive: {
-          ...(editingRecord && isCvaWaterTastingRecord(editingRecord) ? editingRecord.descriptive : {}),
-          ...(values.descriptive ?? {}),
-        },
-        affective: {
-          ...(editingRecord && isCvaWaterTastingRecord(editingRecord) ? editingRecord.affective : {}),
-          ...(values.affective ?? {}),
-        },
+        descriptive: priorCva
+          ? { ...priorCva.descriptive }
+          : values.descriptive ?? {},
+        affective: mergeOptionalScoreValues(priorCva?.affective, values.affective),
       };
       if (editingRecord && isCvaWaterTastingRecord(editingRecord)) {
         nextRecord = updateWaterTastingRecord(editingRecord, draft);
@@ -221,7 +232,7 @@ export function WaterTastingTab({ profileOptions, onOpenWatermancer }: WaterTast
       }
       const draft: WaterTastingLegacyDraft = {
         ...draftBase,
-        ratings: values.ratings ?? {},
+        ratings: mergeOptionalScoreValues(priorLegacy?.ratings, values.ratings),
         spectrum: values.legacySpectrumCaptured
           ? { ...values.spectrum }
           : priorLegacy?.spectrum,

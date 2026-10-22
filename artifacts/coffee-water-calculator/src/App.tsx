@@ -69,10 +69,12 @@ import {
   sameProfileCollection,
 } from './profileSync';
 import {
+  ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
   DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
   getAccountSyncStorageKey,
   loadDiyConcentrateInputs,
   saveDiyConcentrateInputs,
+  withDiyLotusCalibration,
   type DiyConcentrateStoredInputs,
 } from './accountSyncStorage';
 import { WatermancerCompactReadings } from './WatermancerCompactReadings';
@@ -3123,8 +3125,10 @@ function App() {
       }
     };
   window.addEventListener('storage', handleProfileStorage);
+  window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
   return () => {
     window.removeEventListener('storage', handleProfileStorage);
+    window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, handleProfileStorage);
   };
   }, []);
   const [activeRecipeId, setActiveRecipeId] = useState<string>('custom');
@@ -12267,6 +12271,9 @@ function DiySingleSaltConcentratePanel({
   );
   const [calibrationDropsInput, setCalibrationDropsInput] = useState(storedInputs.calibrationDropsInput ?? '');
   const [calibrationWeightInput, setCalibrationWeightInput] = useState(storedInputs.calibrationWeightInput ?? '');
+  const [editableSharedCalibrations, setEditableSharedCalibrations] = useState(
+    () => sharedCalibrations ?? {},
+  );
   const [desiredPpmInput, setDesiredPpmInput] = useState(storedInputs.desiredPpmInput ?? '');
   const [desiredSaltMgInput, setDesiredSaltMgInput] = useState(storedInputs.desiredSaltMgInput ?? '');
   const [desiredDoseBasis, setDesiredDoseBasis] = useState<'caco3' | 'salt-mg'>(
@@ -12275,11 +12282,16 @@ function DiySingleSaltConcentratePanel({
   const preparationCardRef = useRef<HTMLElement | null>(null);
   const [preparationJpgStatus, setPreparationJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  useEffect(() => {
+    setEditableSharedCalibrations(sharedCalibrations ?? {});
+  }, [sharedCalibrations]);
+
   const stockWeightG = Math.max(0, Number(stockWeightInput) || 0);
   const finalLiters = volumeToLiters(finalVolumeInput, volumeUnit);
+  const selectedSharedCalibration = editableSharedCalibrations[dropperStyle];
   const calibrationResolution = resolveDiyDropperCalibration(
     dropperStyle,
-    sharedCalibrations,
+    editableSharedCalibrations,
     { dropsInput: calibrationDropsInput, weightInput: calibrationWeightInput, style: dropperStyle },
     straightDropsPerMl,
   );
@@ -12335,8 +12347,6 @@ function DiySingleSaltConcentratePanel({
     ? saltMassMg * dropWeightG / stockWeightG
     : 0;
   const weightPerDrop = hasCalibration ? calibrationWeightG / calibrationDrops : 0;
-  const calibrationInputsReadOnly = calibrationResolution.source === 'guide'
-    || calibrationResolution.source === 'awaiting-guide';
 
   useEffect(() => {
     saveDiyConcentrateInputs({
@@ -12424,6 +12434,26 @@ function DiySingleSaltConcentratePanel({
     setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
     onToggleVolumeUnit();
   };
+  const updateSharedCalibration = (
+    field: 'dropsInput' | 'weightInput',
+    value: string,
+  ) => {
+    const current = editableSharedCalibrations[dropperStyle] ?? {
+      dropsInput: calibrationDropsInput,
+      weightInput: calibrationWeightInput,
+      style: dropperStyle,
+    };
+    const next = { ...current, [field]: value, style: dropperStyle };
+    setEditableSharedCalibrations(previous => ({
+      ...previous,
+      [dropperStyle]: next,
+    }));
+    setCalibrationDropsInput(next.dropsInput);
+    setCalibrationWeightInput(next.weightInput);
+    saveDiyConcentrateInputs(
+      withDiyLotusCalibration(loadDiyConcentrateInputs(), dropperStyle, next),
+    );
+  };
   const handleSavePreparationJpg = async () => {
     const source = preparationCardRef.current;
     if (!source || preparationJpgStatus === 'saving') return;
@@ -12494,15 +12524,15 @@ function DiySingleSaltConcentratePanel({
               {calibrationResolution.source === 'guide'
                 ? 'Calibration in use'
                 : calibrationResolution.source === 'awaiting-guide'
-                  ? 'Select a tip calibration in the Guide'
+                  ? 'Enter this tip calibration'
                   : 'Measure this before dosing'}
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-300">
               {calibrationResolution.source === 'guide'
-                ? `Using the saved ${dropperStyle} tip calibration from the Watermancer Guide.`
+                ? `Using the saved ${dropperStyle} tip calibration shared with the Watermancer Guide and DIY Lotus Drops.`
                 : calibrationResolution.source === 'awaiting-guide'
-                  ? `No ${dropperStyle} tip calibration is saved yet; the estimate is used until you set it in the Guide.`
-                  : 'Drop size varies by bottle and tip. These measurements calculate the contribution of every drop.'}
+                  ? `No ${dropperStyle} tip calibration is saved yet. Enter both measurements here to use your measured rate.`
+                  : 'Drop size varies by bottle and tip. Measurements entered here are shared with the Guide and DIY Lotus Drops.'}
             </p>
           </div>
         </div>
@@ -12537,13 +12567,11 @@ function DiySingleSaltConcentratePanel({
             <StableNumberInput
               min="1"
               step="1"
-              value={calibrationResolution.source === 'guide'
-                ? calibrationResolution.calibration?.dropsInput ?? ''
-                : calibrationResolution.source === 'awaiting-guide' ? '' : calibrationDropsInput}
-              onChange={event => setCalibrationDropsInput(event.target.value)}
-              readOnly={calibrationInputsReadOnly}
-              placeholder={calibrationResolution.source === 'awaiting-guide' ? 'Set in Guide' : 'e.g. 100'}
-              className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none read-only:text-sky-100"
+              value={selectedSharedCalibration?.dropsInput
+                ?? (calibrationResolution.source === 'awaiting-guide' ? '' : calibrationDropsInput)}
+              onChange={event => updateSharedCalibration('dropsInput', event.target.value)}
+              placeholder="e.g. 100"
+              className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
               aria-label="Measured number of drops"
             />
           </label>
@@ -12553,13 +12581,11 @@ function DiySingleSaltConcentratePanel({
               <StableNumberInput
                 min="0.01"
                 step="0.01"
-                value={calibrationResolution.source === 'guide'
-                  ? calibrationResolution.calibration?.weightInput ?? ''
-                  : calibrationResolution.source === 'awaiting-guide' ? '' : calibrationWeightInput}
-                onChange={event => setCalibrationWeightInput(event.target.value)}
-                readOnly={calibrationInputsReadOnly}
-                placeholder={calibrationResolution.source === 'awaiting-guide' ? 'Set in Guide' : 'e.g. 5'}
-                className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none read-only:text-sky-100"
+                value={selectedSharedCalibration?.weightInput
+                  ?? (calibrationResolution.source === 'awaiting-guide' ? '' : calibrationWeightInput)}
+                onChange={event => updateSharedCalibration('weightInput', event.target.value)}
+                placeholder="e.g. 5"
+                className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
                 aria-label="Measured drop weight in grams"
               />
               <span className="text-sm text-slate-400">g</span>
@@ -12570,19 +12596,19 @@ function DiySingleSaltConcentratePanel({
           <SummaryMetric
             label={calibrationResolution.source === 'guide' ? 'Water mass per drop' : 'Weight per drop'}
             value={hasCalibration ? `${weightPerDrop.toFixed(4)} g` : 'Not measured'}
-            detail={calibrationResolution.source === 'guide' ? 'from Guide' : hasCalibration ? 'calibrated' : 'assumed'}
+            detail={calibrationResolution.source === 'guide' ? 'shared' : hasCalibration ? 'calibrated' : 'assumed'}
             tone="sky"
           />
-          <SummaryMetric label="Drops per mL" value={activeDropsPerMl.toFixed(1)} detail={calibrationResolution.source === 'guide' ? 'from Guide' : calibrationResolution.source === 'manual' ? 'measured' : 'assumed'} tone="sky" />
+          <SummaryMetric label="Drops per mL" value={activeDropsPerMl.toFixed(1)} detail={calibrationResolution.source === 'guide' ? 'shared' : calibrationResolution.source === 'manual' ? 'measured' : 'assumed'} tone="sky" />
           <SummaryMetric
             label="Calibration status"
             value={calibrationResolution.source === 'guide'
-              ? 'Guide value'
+              ? 'Shared value'
               : calibrationResolution.source === 'manual' ? 'Active' : 'Assumption'}
             detail={calibrationResolution.source === 'guide'
-              ? 'shared with Lotus Drops'
+              ? 'Guide + Lotus Drops'
               : calibrationResolution.source === 'awaiting-guide'
-                ? 'set this tip in Guide'
+                ? 'complete the measurement'
                 : calibrationResolution.source === 'manual' ? 'used in dose' : 'measure for accuracy'}
             tone={hasCalibration ? 'emerald' : 'slate'}
           />
@@ -13613,7 +13639,7 @@ function WatermancerIonProfileCard({
   };
 
   const startEditing = () => {
-    const baseTargets = unscaleWatermancerTargets(currentFinalIons, strengthPercent);
+    const baseTargets = unscaleWatermancerTargets(targetIons, strengthPercent);
     setDraftTargets(
       Object.fromEntries(
         ACTIVE_ION_IDS.map(id => [id, String(baseTargets[id] ?? 0)]),
