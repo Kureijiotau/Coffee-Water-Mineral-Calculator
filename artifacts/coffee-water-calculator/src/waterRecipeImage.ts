@@ -364,7 +364,7 @@ export type RecipeShareCardIon = {
   name: string;
   formula: string;
   value: number;
-  category: 'Cations' | 'Anions' | 'Other modeled ions';
+  category: 'Cations' | 'Anions' | 'Other modeled ions' | 'Supplemental ions';
 };
 
 export type RecipeShareCardProfileTarget = {
@@ -765,7 +765,12 @@ function renderAnalysisSection(model: RecipeShareCardModel, x: number, y: number
   svg += `<line x1="${innerX}" y1="${cursor}" x2="${innerX + innerWidth}" y2="${cursor}" stroke="#0d6170" stroke-opacity="0.3"/>`;
   cursor += 24;
 
-  const categories: Array<RecipeShareCardIon['category']> = ['Cations', 'Anions', 'Other modeled ions'];
+  const categories: Array<RecipeShareCardIon['category']> = [
+    'Cations',
+    'Anions',
+    'Other modeled ions',
+    'Supplemental ions',
+  ];
   for (const category of categories) {
     const ions = model.analysis.ions.filter(ion => ion.category === category);
     if (ions.length === 0) continue;

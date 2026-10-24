@@ -16398,15 +16398,22 @@ function MineralAnalysisIonRow({
   value,
   isTargetPreview = false,
 }: {
-  id: IonId;
+  id: IonId | 'lactate';
   value: number;
   isTargetPreview?: boolean;
 }) {
-  const ion = ION_MAP[id];
+  const isSupplementalLactate = id === 'lactate';
+  const ion = isSupplementalLactate ? SUPPLEMENTAL_ION_MAP.lactate : ION_MAP[id];
+  const style = isSupplementalLactate
+    ? {
+      '--ion-light-fg': '#0d6170',
+      '--ion-border': 'rgba(13, 97, 112, 0.15)',
+    } as CSSProperties
+    : ionVisualStyle(id);
   return (
     <div
       className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[#0d6170]/15 py-2.5 last:border-b-0"
-      style={{ ...ionVisualStyle(id), borderBottomColor: 'var(--ion-border)' }}
+      style={{ ...style, borderBottomColor: 'var(--ion-border)' }}
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-baseline gap-2">
@@ -16430,6 +16437,7 @@ function MineralAnalysisIonRow({
 function MineralAnalysisLabel({
   recipeName,
   ionReadings,
+  lactatePpm,
   tds,
   gh,
   kh,
@@ -16437,6 +16445,7 @@ function MineralAnalysisLabel({
 }: {
   recipeName: string;
   ionReadings: Record<IonId, number>;
+  lactatePpm?: number;
   tds: number;
   gh: number;
   kh: number;
@@ -16524,6 +16533,13 @@ function MineralAnalysisLabel({
             {additionalIonIds.map(id => (
               <MineralAnalysisIonRow key={id} id={id} value={ionReadings[id] ?? 0} isTargetPreview={isTargetPreview} />
             ))}
+          </div>
+        )}
+
+        {lactatePpm !== undefined && Number.isFinite(lactatePpm) && lactatePpm > 0.05 && (
+          <div className="border-b border-[#0d6170]/35 py-3">
+            <div className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#47737a]">Supplemental ions</div>
+            <MineralAnalysisIonRow id="lactate" value={lactatePpm} isTargetPreview={isTargetPreview} />
           </div>
         )}
 
@@ -17111,6 +17127,10 @@ function BrewerRecipeStepsModal({
   // user actually selected. Fall back to the suggested dose for salts supplied
   // by the current water or matching route.
   const stepSaltTargets = mergeRecipeStepTargets(saltTargets, suggestedSaltTargets);
+  const recipeCardLactatePpm = computeSupplementalIonTotals(stepSaltTargets).lactate;
+  const visibleRecipeCardLactatePpm = Number.isFinite(recipeCardLactatePpm) && recipeCardLactatePpm > 0.05
+    ? recipeCardLactatePpm
+    : undefined;
   const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
   const silicaDrops = nerdLevel === 'watermancer' ? Math.max(0, Math.floor(watermancerSilicaDrops)) : 0;
@@ -17251,6 +17271,15 @@ function BrewerRecipeStepsModal({
             value: recipeCardAnalysis.ions[id] ?? 0,
             category: 'Other modeled ions' as const,
           })),
+        ...(visibleRecipeCardLactatePpm !== undefined
+          ? [{
+            id: 'lactate',
+            name: SUPPLEMENTAL_ION_MAP.lactate.name,
+            formula: SUPPLEMENTAL_ION_MAP.lactate.formula,
+            value: visibleRecipeCardLactatePpm,
+            category: 'Supplemental ions' as const,
+          }]
+          : []),
       ],
       tds: recipeCardAnalysis.metrics.tds,
       gh: recipeCardAnalysis.metrics.gh,
@@ -17619,6 +17648,7 @@ function BrewerRecipeStepsModal({
              <MineralAnalysisLabel
                recipeName={recipeName}
                ionReadings={recipeCardAnalysis.ions}
+                lactatePpm={visibleRecipeCardLactatePpm}
                tds={recipeCardAnalysis.metrics.tds}
                gh={recipeCardAnalysis.metrics.gh}
                kh={recipeCardAnalysis.metrics.kh}

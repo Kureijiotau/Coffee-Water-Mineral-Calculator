@@ -9,6 +9,7 @@ import {
   extractWaterRecipeJsonFromQrText,
   rasterizeRecipeShareCard,
   wrapRecipeShareCardText,
+  type RecipeShareCardIon,
 } from './waterRecipeImage';
 import { parseRecipeFile, serializeRecipeFile } from './recipes';
 import {
@@ -226,6 +227,45 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).toContain('stroke="#4b6970" stroke-width="0.7" stroke-opacity="0.85" paint-order="stroke fill"');
     expect(long.svg).not.toContain('recipe-ion-text-shadow');
     expect(long.svg).not.toContain('…');
+  });
+
+  it('renders Citrates and Lactate only when those ions are present', () => {
+    const citrateIon: RecipeShareCardIon = {
+      id: 'citrates',
+      name: 'Citrates',
+      formula: 'C₆H₅O₇³⁻',
+      value: 3.4,
+      category: 'Other modeled ions',
+    };
+    const lactateIon = {
+      id: 'lactate',
+      name: 'Lactate',
+      formula: 'C₃H₅O₃⁻',
+      value: 0.8,
+      category: 'Supplemental ions',
+    } satisfies RecipeShareCardIon;
+    const card = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      analysis: {
+        ...shareCardFixture.analysis,
+        ions: [...shareCardFixture.analysis.ions, citrateIon, lactateIon],
+      },
+    });
+    const withoutSupplementalIons = buildRecipeShareCardSvg(shareCardFixture);
+
+    expect(card.svg).toContain('OTHER MODELED IONS');
+    expect(card.svg).toContain('Citrates');
+    expect(card.svg).toContain('3.4');
+    expect(card.svg).toContain('SUPPLEMENTAL IONS');
+    expect(card.svg).toContain('Lactate');
+    expect(card.svg).toContain('0.8');
+    expect(card.svg).toContain('mg/L');
+    const svgHeight = Number(card.svg.match(/<svg[^>]*height="(\d+)"/)?.[1]);
+    const lactateLabelY = Number(card.svg.match(/<text x="[^"]+" y="(\d+)"[^>]*>Lactate<\/text>/)?.[1]);
+    expect(svgHeight).toBeGreaterThan(lactateLabelY);
+    expect(card.svg.indexOf('APPROX. TDS')).toBeGreaterThan(card.svg.indexOf('Lactate'));
+    expect(withoutSupplementalIons.svg).not.toContain('Citrates');
+    expect(withoutSupplementalIons.svg).not.toContain('Lactate');
   });
 
   it('colors guide-card ion names and hardness metrics with their matching ion palette', () => {
