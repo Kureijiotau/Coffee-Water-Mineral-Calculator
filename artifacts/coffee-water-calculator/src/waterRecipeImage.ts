@@ -1,5 +1,11 @@
 import jsQR from 'jsqr';
 import QRCode from 'qrcode';
+import {
+  ACTIVE_ION_IDS,
+  ION_MAP,
+  SUPPLEMENTAL_ION_MAP,
+  type IonId,
+} from './waterData';
 
 const PNG_SIGNATURE = new Uint8Array([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
@@ -366,6 +372,59 @@ export type RecipeShareCardIon = {
   value: number;
   category: 'Cations' | 'Anions' | 'Other modeled ions' | 'Supplemental ions';
 };
+
+export const RECIPE_CARD_CATION_ION_IDS = [
+  'calcium', 'magnesium', 'sodium', 'potassium',
+] as const satisfies readonly IonId[];
+
+export const RECIPE_CARD_ANION_ION_IDS = [
+  'bicarbonate', 'chloride', 'sulfate',
+] as const satisfies readonly IonId[];
+
+export type RecipeCardAdditionalIonRow = Omit<RecipeShareCardIon, 'id' | 'category'> & {
+  id: IonId | 'lactate';
+  category: 'Other modeled ions' | 'Supplemental ions';
+};
+
+const RECIPE_CARD_FIXED_ION_IDS = new Set<IonId>([
+  ...RECIPE_CARD_CATION_ION_IDS,
+  ...RECIPE_CARD_ANION_ION_IDS,
+]);
+
+export function buildRecipeCardAdditionalIonRows(
+  ionReadings: Record<IonId, number>,
+  lactatePpm: number,
+): RecipeCardAdditionalIonRow[] {
+  const otherModeledRows = ACTIVE_ION_IDS
+    .filter(id => !RECIPE_CARD_FIXED_ION_IDS.has(id))
+    .flatMap(id => {
+      const value = ionReadings[id] ?? 0;
+      if (!Number.isFinite(value) || value <= 0.05) return [];
+
+      const ion = ION_MAP[id];
+      return [{
+        id,
+        name: ion.name,
+        formula: ion.formula,
+        value,
+        category: 'Other modeled ions' as const,
+      }];
+    });
+
+  const supplementalRows: RecipeCardAdditionalIonRow[] = (
+    Number.isFinite(lactatePpm) && lactatePpm > 0.05
+      ? [{
+        id: 'lactate',
+        name: SUPPLEMENTAL_ION_MAP.lactate.name,
+        formula: SUPPLEMENTAL_ION_MAP.lactate.formula,
+        value: lactatePpm,
+        category: 'Supplemental ions',
+      }]
+      : []
+  );
+
+  return [...otherModeledRows, ...supplementalRows];
+}
 
 export type RecipeShareCardProfileTarget = {
   id: string;

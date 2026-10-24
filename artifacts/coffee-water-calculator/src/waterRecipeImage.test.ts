@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildRecipeCardAdditionalIonRows,
   buildRecipeShareCardSvg,
   createRecipeShareCardModel,
   createWaterRecipeQrDataUrl,
@@ -9,7 +10,6 @@ import {
   extractWaterRecipeJsonFromQrText,
   rasterizeRecipeShareCard,
   wrapRecipeShareCardText,
-  type RecipeShareCardIon,
 } from './waterRecipeImage';
 import { parseRecipeFile, serializeRecipeFile } from './recipes';
 import {
@@ -21,6 +21,8 @@ import {
   TWO_WATER_RECIPE_CARD_QR_TEXT,
   TWO_WATER_RECIPE_CARD_SHARE_TOKEN,
 } from './testFixtures/twoWaterRecipeCard';
+import { computeSupplementalIonTotals } from './waterData';
+import { completeIonTotals } from './watermancerSolver';
 
 const ONE_PIXEL_PNG = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='),
@@ -229,36 +231,56 @@ describe('Watermancer recipe share card', () => {
     expect(long.svg).not.toContain('…');
   });
 
-  it('renders Citrates and Lactate only when those ions are present', () => {
-    const citrateIon: RecipeShareCardIon = {
-      id: 'citrates',
-      name: 'Citrates',
-      formula: 'C₆H₅O₇³⁻',
-      value: 3.4,
-      category: 'Other modeled ions',
-    };
-    const lactateIon = {
-      id: 'lactate',
-      name: 'Lactate',
-      formula: 'C₃H₅O₃⁻',
-      value: 0.8,
-      category: 'Supplemental ions',
-    } satisfies RecipeShareCardIon;
+  it('includes Citrates and Lactate rows for actual recipe inputs', () => {
+    const lactatePpm = computeSupplementalIonTotals({ calact: 10 }).lactate;
+    expect(lactatePpm).toBeGreaterThan(0.05);
+
+    const recipeCardIonRows = buildRecipeCardAdditionalIonRows(
+      completeIonTotals({ citrates: 3.4 }),
+      lactatePpm,
+    );
+    expect(recipeCardIonRows).toEqual([
+      {
+        id: 'citrates',
+        name: 'Citrates',
+        formula: 'C₆H₅O₇³⁻',
+        value: 3.4,
+        category: 'Other modeled ions',
+      },
+      {
+        id: 'lactate',
+        name: 'Lactate',
+        formula: 'C₃H₅O₃⁻',
+        value: lactatePpm,
+        category: 'Supplemental ions',
+      },
+    ]);
+
     const card = buildRecipeShareCardSvg({
       ...shareCardFixture,
       analysis: {
         ...shareCardFixture.analysis,
-        ions: [...shareCardFixture.analysis.ions, citrateIon, lactateIon],
+        ions: [...shareCardFixture.analysis.ions, ...recipeCardIonRows],
       },
     });
-    const withoutSupplementalIons = buildRecipeShareCardSvg(shareCardFixture);
+    const noRecipeIons = buildRecipeCardAdditionalIonRows(
+      completeIonTotals({ citrates: 0 }),
+      computeSupplementalIonTotals({ calact: 0 }).lactate,
+    );
+    const withoutSupplementalIons = buildRecipeShareCardSvg({
+      ...shareCardFixture,
+      analysis: {
+        ...shareCardFixture.analysis,
+        ions: [...shareCardFixture.analysis.ions, ...noRecipeIons],
+      },
+    });
 
     expect(card.svg).toContain('OTHER MODELED IONS');
     expect(card.svg).toContain('Citrates');
     expect(card.svg).toContain('3.4');
     expect(card.svg).toContain('SUPPLEMENTAL IONS');
     expect(card.svg).toContain('Lactate');
-    expect(card.svg).toContain('0.8');
+    expect(card.svg).toContain(lactatePpm.toFixed(1));
     expect(card.svg).toContain('mg/L');
     const svgHeight = Number(card.svg.match(/<svg[^>]*height="(\d+)"/)?.[1]);
     const lactateLabelY = Number(card.svg.match(/<text x="[^"]+" y="(\d+)"[^>]*>Lactate<\/text>/)?.[1]);
@@ -266,6 +288,31 @@ describe('Watermancer recipe share card', () => {
     expect(card.svg.indexOf('APPROX. TDS')).toBeGreaterThan(card.svg.indexOf('Lactate'));
     expect(withoutSupplementalIons.svg).not.toContain('Citrates');
     expect(withoutSupplementalIons.svg).not.toContain('Lactate');
+  });
+
+  it('omits zero and non-finite Lactate, and zero Citrates', () => {
+    const noCitrates = completeIonTotals({ citrates: 0 });
+
+    for (const lactatePpm of [
+      0,
+      0.05,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      Number.NEGATIVE_INFINITY,
+    ]) {
+      expect(buildRecipeCardAdditionalIonRows(noCitrates, lactatePpm)).toEqual([]);
+    }
+
+    const positiveLactatePpm = computeSupplementalIonTotals({ calact: 10 }).lactate;
+    expect(buildRecipeCardAdditionalIonRows(noCitrates, positiveLactatePpm)).toEqual([
+      {
+        id: 'lactate',
+        name: 'Lactate',
+        formula: 'C₃H₅O₃⁻',
+        value: positiveLactatePpm,
+        category: 'Supplemental ions',
+      },
+    ]);
   });
 
   it('colors guide-card ion names and hardness metrics with their matching ion palette', () => {
