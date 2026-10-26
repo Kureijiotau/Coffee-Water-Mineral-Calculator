@@ -132,4 +132,34 @@ describe('Watermancer Guide copy', () => {
     expect(allText).not.toMatch(/SodaStream|Magnesium Hydroxide|Calcium Carbonate/i);
     expect(allText).toMatch(/conductivity|TDS/i);
   });
+
+  it('recommends common hydrated forms and matching them in Watermancer', () => {
+    const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
+    const copy = suppliesStep?.details.join(' ') ?? '';
+
+    expect(copy).toMatch(/most hydrated/i);
+    expect(copy).toMatch(/anhydrous/i);
+    expect(copy).toMatch(/easier to dissolve/i);
+    expect(copy).toMatch(/same form.*Watermancer|Watermancer.*same form/i);
+  });
+
+  it('makes natural salts optional and reassures readers that food-grade basics are enough', () => {
+    const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
+    const copy = suppliesStep?.details.join(' ') ?? '';
+
+    expect(copy).toMatch(/some people/i);
+    expect(copy).toMatch(/optional/i);
+    expect(copy).toMatch(/trace minerals/i);
+    expect(copy).toMatch(/Zechstein/i);
+    expect(copy).toMatch(/nigari/i);
+    expect(copy).toMatch(/Saltverk/i);
+    expect(copy).toMatch(/Vera Salt/i);
+    expect(copy).toMatch(/magnesium sulfate heptahydrate/i);
+    expect(copy).toMatch(/calcium chloride dihydrate/i);
+    expect(copy).toMatch(/potassium chloride/i);
+    expect(copy).toMatch(/Arm & Hammer/i);
+    expect(copy).toMatch(/baking soda/i);
+    expect(copy).toMatch(/food.grade/i);
+    expect(copy).toMatch(/no need|don't need|do not need/i);
+  });
 });

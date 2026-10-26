@@ -24,3 +24,9 @@ The nine user-supplied pantry photos are intended as guide assets, introduced in
 **Why:** The user wants to use these photos in the Watermancer Guide and review the guided path one step at a time.
 
 **How to apply:** Pair each selected photo with the instruction it demonstrates, keeping the current step focused.
+
+Step 2 should reduce confusion about which salts to buy without making specialty sourcing feel necessary. Recommend the most hydrated common form when a salt has hydration options, frame natural/mineral-derived salts as optional flavor choices, and reassure users that food-grade basics are enough.
+
+**Why:** The user said many people are confused about salt choices and does not want the guide to put them off with expensive or unusual products.
+
+**How to apply:** Keep named natural-salt examples optional, tell users to match the product label’s hydration form in Watermancer, and include familiar food-grade options such as ordinary baking soda.

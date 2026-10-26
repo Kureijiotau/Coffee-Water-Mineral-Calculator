@@ -19,6 +19,10 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     summary: 'Keep each physical salt in its own labeled dropper bottle.',
     details: [
       'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
+      'When a salt has multiple forms, prefer the most hydrated common food-grade form over anhydrous; it is usually easier to dissolve, weigh, and handle. Check the label, then choose that same form in Watermancer.',
+      'For flavor, some people prefer natural or mineral-derived salts to very pure salts because trace minerals can add subtle notes. This is optional and taste is personal. Examples include Zechstein magnesium chloride flakes or nigari, and natural sodium chloride such as Saltverk or Vera Salt. Choose a food-grade product and match its labeled composition and hydration form.',
+      'For other common recipe salts, look for food-grade magnesium sulfate heptahydrate, calcium chloride dihydrate sold for cheesemaking or pickling, and food-grade potassium chloride or potassium bicarbonate.',
+      'Food grade is enough; you do not need laboratory-grade or expensive specialty salts. Ordinary baking soda, including Arm & Hammer, is perfectly fine.',
     ],
   },
   {
