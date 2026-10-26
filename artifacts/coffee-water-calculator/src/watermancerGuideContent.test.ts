@@ -17,6 +17,42 @@ type GuideRecipe = {
   ghKhRatio: number;
 };
 
+type TestGuideSegment =
+  | { kind: 'text' | 'emphasis'; text: string }
+  | { kind: 'product'; productId: string };
+
+type TestGuideDetail = string | { segments: readonly TestGuideSegment[] };
+
+const PRODUCT_LABELS: Record<string, string> = {
+  nigari: 'nigari',
+  saltverk: 'Saltverk',
+  'vera-salt': 'Vera Salt',
+  'arm-and-hammer': 'Arm & Hammer',
+};
+
+function getTestDetails(details: readonly unknown[] | undefined): readonly TestGuideDetail[] {
+  return (details ?? []) as readonly TestGuideDetail[];
+}
+
+function flattenGuideDetails(details: readonly unknown[] | undefined): string {
+  return getTestDetails(details)
+    .map(detail => (
+      typeof detail === 'string'
+        ? detail
+        : detail.segments.map(segment => (
+          segment.kind === 'product'
+            ? PRODUCT_LABELS[segment.productId] ?? segment.productId
+            : segment.text
+        )).join('')
+    ))
+    .join(' ');
+}
+
+function getInlineSegments(details: readonly unknown[] | undefined): TestGuideSegment[] {
+  return getTestDetails(details)
+    .flatMap(detail => (typeof detail === 'string' ? [] : [...detail.segments]));
+}
+
 describe('Watermancer Guide copy', () => {
   it('gives steps 6 and 7 concise content instead of blank workspaces', () => {
     const step6 = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'read-dose-plan');
@@ -135,7 +171,7 @@ describe('Watermancer Guide copy', () => {
 
   it('recommends common hydrated forms and matching them in Watermancer', () => {
     const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
-    const copy = suppliesStep?.details.join(' ') ?? '';
+    const copy = flattenGuideDetails(suppliesStep?.details);
 
     expect(copy).toMatch(/most hydrated/i);
     expect(copy).toMatch(/anhydrous/i);
@@ -145,7 +181,7 @@ describe('Watermancer Guide copy', () => {
 
   it('makes natural salts optional and reassures readers that food-grade basics are enough', () => {
     const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
-    const copy = suppliesStep?.details.join(' ') ?? '';
+    const copy = flattenGuideDetails(suppliesStep?.details);
 
     expect(copy).toMatch(/some people/i);
     expect(copy).toMatch(/optional/i);
@@ -161,5 +197,31 @@ describe('Watermancer Guide copy', () => {
     expect(copy).toMatch(/baking soda/i);
     expect(copy).toMatch(/food.grade/i);
     expect(copy).toMatch(/no need|don't need|do not need/i);
+  });
+
+  it('emphasizes the key buying guidance and previews only the selected product examples', () => {
+    const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
+    const segments = getInlineSegments(suppliesStep?.details);
+    const emphasizedPhrases = segments
+      .filter((segment): segment is Extract<TestGuideSegment, { kind: 'emphasis' }> => segment.kind === 'emphasis')
+      .map(segment => segment.text);
+    const productIds = segments
+      .filter((segment): segment is Extract<TestGuideSegment, { kind: 'product' }> => segment.kind === 'product')
+      .map(segment => segment.productId);
+
+    expect(emphasizedPhrases).toEqual(expect.arrayContaining([
+      'most hydrated common food-grade form',
+      'This is optional and taste is personal.',
+      'Zechstein magnesium chloride flakes',
+      'food-grade product',
+      'Food grade is enough',
+    ]));
+    expect(productIds).toEqual(['nigari', 'saltverk', 'vera-salt', 'arm-and-hammer']);
+
+    const genericSaltDetail = suppliesStep?.details.find(
+      detail => typeof detail === 'string' && /magnesium sulfate heptahydrate/i.test(detail),
+    );
+    expect(typeof genericSaltDetail).toBe('string');
+    expect(getInlineSegments([genericSaltDetail])).toEqual([]);
   });
 });

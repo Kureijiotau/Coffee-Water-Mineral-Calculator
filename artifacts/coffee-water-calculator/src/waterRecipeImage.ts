@@ -23,6 +23,7 @@ const RECIPE_ION_COLORS: Record<string, string> = {
   sulfate: '#818cf8',
   bicarbonate: '#5eead4',
   carbonate: '#a3e635',
+  silica: '#c4b5fd',
 };
 
 function recipeIonColor(id: string): string {
@@ -709,19 +710,23 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
     const noteLines = step.note ? wrapRecipeShareCardText(step.note, 57) : [];
     const rowHeight = Math.max(74, 20 + nameLines.length * 21 + metaLines.length * 17 + noteLines.length * 17);
     const isLast = Boolean(step.note);
-    svg += roundedRect(innerX, cursor, innerWidth, rowHeight, isLast ? '#513245' : index % 2 === 0 ? '#20334d' : '#213047', isLast ? '#df8797' : '#3e5c7b');
+    const isSilica = step.formula === 'SiO₂';
+    const silicaAccent = recipeIonColor('silica');
+    const rowFill = isLast ? '#513245' : isSilica ? '#251e38' : index % 2 === 0 ? '#20334d' : '#213047';
+    const rowStroke = isLast ? '#df8797' : isSilica ? '#7c6da8' : '#3e5c7b';
+    svg += roundedRect(innerX, cursor, innerWidth, rowHeight, rowFill, rowStroke);
     svg += nameLines.map((line, lineIndex) => svgText(
       innerX + 16,
       cursor + 26 + lineIndex * 21,
       line,
-      { fill: isLast ? '#fff0f2' : '#e7f2ff', size: 17, weight: 700 },
+      { fill: isLast ? '#fff0f2' : isSilica ? '#ede8ff' : '#e7f2ff', size: 17, weight: 700 },
     )).join('');
     const metaY = cursor + 26 + nameLines.length * 21;
     svg += metaLines.map((line, lineIndex) => svgText(
       innerX + 16,
       metaY + lineIndex * 17,
       line,
-      { fill: '#9eb9c9', size: 12, weight: 600 },
+      { fill: isSilica ? silicaAccent : '#9eb9c9', size: 12, weight: 600 },
     )).join('');
     if (noteLines.length > 0) {
       const noteY = metaY + metaLines.length * 17 + 16;
@@ -733,7 +738,7 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
       )).join('');
     }
     svg += svgText(innerX + innerWidth - 16, cursor + 31, step.amount, {
-      fill: isLast ? '#fff2b5' : '#b8e6ff',
+      fill: isLast ? '#fff2b5' : isSilica ? silicaAccent : '#b8e6ff',
       size: 20,
       weight: 700,
       family: 'ui-monospace, SFMono-Regular, Consolas, monospace',
@@ -741,7 +746,7 @@ function renderSaltSection(model: RecipeShareCardModel, x: number, y: number, wi
     });
     if (step.contributionPpm > 0) {
       svg += svgText(innerX + innerWidth - 16, cursor + rowHeight - 15, `${step.contributionPpm.toFixed(1)} ${step.contributionLabel ?? 'ppm total'}`, {
-        fill: '#8ed9e6',
+        fill: isSilica ? silicaAccent : '#8ed9e6',
         size: 11,
         weight: 600,
         family: 'ui-monospace, SFMono-Regular, Consolas, monospace',

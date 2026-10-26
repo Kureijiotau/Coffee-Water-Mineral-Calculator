@@ -1,8 +1,19 @@
+import type { GuideSaltProductId } from './watermancerGuideSaltProducts';
+
+export type WatermancerGuideInlineSegment =
+  | { readonly kind: 'text'; readonly text: string }
+  | { readonly kind: 'emphasis'; readonly text: string }
+  | { readonly kind: 'product'; readonly productId: GuideSaltProductId };
+
+export type WatermancerGuideDetail =
+  | string
+  | { readonly segments: readonly WatermancerGuideInlineSegment[] };
+
 export interface WatermancerGuideEntry {
   readonly id: string;
   readonly title: string;
   readonly summary: string;
-  readonly details: readonly string[];
+  readonly details: readonly WatermancerGuideDetail[];
   readonly blankWorkspace?: boolean;
 }
 
@@ -19,10 +30,48 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     summary: 'Keep each physical salt in its own labeled dropper bottle.',
     details: [
       'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
-      'When a salt has multiple forms, prefer the most hydrated common food-grade form over anhydrous; it is usually easier to dissolve, weigh, and handle. Check the label, then choose that same form in Watermancer.',
-      'For flavor, some people prefer natural or mineral-derived salts to very pure salts because trace minerals can add subtle notes. This is optional and taste is personal. Examples include Zechstein magnesium chloride flakes or nigari, and natural sodium chloride such as Saltverk or Vera Salt. Choose a food-grade product and match its labeled composition and hydration form.',
+      {
+        segments: [
+          { kind: 'text', text: 'When a salt has multiple forms, prefer the ' },
+          { kind: 'emphasis', text: 'most hydrated common food-grade form' },
+          {
+            kind: 'text',
+            text: ' over anhydrous; it is usually easier to dissolve, weigh, and handle. Check the label, then choose that same form in Watermancer.',
+          },
+        ],
+      },
+      {
+        segments: [
+          {
+            kind: 'text',
+            text: 'For flavor, some people prefer natural or mineral-derived salts to very pure salts because trace minerals can add subtle notes. ',
+          },
+          { kind: 'emphasis', text: 'This is optional and taste is personal.' },
+          { kind: 'text', text: ' Examples include ' },
+          { kind: 'emphasis', text: 'Zechstein magnesium chloride flakes' },
+          { kind: 'text', text: ' or ' },
+          { kind: 'product', productId: 'nigari' },
+          { kind: 'text', text: ', and natural sodium chloride such as ' },
+          { kind: 'product', productId: 'saltverk' },
+          { kind: 'text', text: ' or ' },
+          { kind: 'product', productId: 'vera-salt' },
+          { kind: 'text', text: '. Choose a ' },
+          { kind: 'emphasis', text: 'food-grade product' },
+          { kind: 'text', text: ' and match its labeled composition and hydration form.' },
+        ],
+      },
       'For other common recipe salts, look for food-grade magnesium sulfate heptahydrate, calcium chloride dihydrate sold for cheesemaking or pickling, and food-grade potassium chloride or potassium bicarbonate.',
-      'Food grade is enough; you do not need laboratory-grade or expensive specialty salts. Ordinary baking soda, including Arm & Hammer, is perfectly fine.',
+      {
+        segments: [
+          { kind: 'emphasis', text: 'Food grade is enough' },
+          {
+            kind: 'text',
+            text: '; you do not need laboratory-grade or expensive specialty salts. Ordinary baking soda, including ',
+          },
+          { kind: 'product', productId: 'arm-and-hammer' },
+          { kind: 'text', text: ', is perfectly fine.' },
+        ],
+      },
     ],
   },
   {

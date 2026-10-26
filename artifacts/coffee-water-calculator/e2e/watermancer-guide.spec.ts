@@ -1,4 +1,39 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+const saltProductPhotos = [
+  {
+    label: 'Nigari',
+    imageUrl: 'https://foodsofnations.com/cdn/shop/products/daf7f988103e9107f33a5013b0c92784.jpg?v=1653932166&width=1946',
+    imageAlt: 'Food of Nations magnesium chloride and nigari flakes',
+    sourceUrl: 'https://foodsofnations.com/products/nigari-flakes',
+  },
+  {
+    label: 'Saltverk',
+    imageUrl: 'https://saltverk.com/cdn/shop/files/Saltverk_FlakySalt.png?v=1781557939&width=1946',
+    imageAlt: 'Jar of Saltverk Flaky Sea Salt',
+    sourceUrl: 'https://saltverk.com/products/saltverk-pure-flaky-sea-salt',
+  },
+  {
+    label: 'Vera Salt',
+    imageUrl: 'https://verasalt.co/cdn/shop/files/Fine_Front_-_V2.png?v=1774573085&width=1946',
+    imageAlt: 'Vera Salt fine spring salt package',
+    sourceUrl: 'https://verasalt.co/products/fine-pure-natural-spring-salt-300g-microplastic-free',
+  },
+  {
+    label: 'Arm & Hammer',
+    imageUrl: 'https://www.armandhammer.com/-/media/aah/feature/product/bakingsoda/baking-soda-new/baking-soda-8-oz.jpg',
+    imageAlt: 'Arm & Hammer Baking Soda Box',
+    sourceUrl: 'https://www.armandhammer.com/en/baking-soda/baking-soda-products/pure-baking-soda/baking-soda-box-8-oz',
+  },
+] as const;
+
+async function openWatermancerSuppliesStep(page: Page) {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.getByTestId('tab-watermancer-guide').click();
+  await page.getByTestId('button-next-step').click();
+  await expect(page.getByTestId('step-supplies')).toBeVisible();
+}
 
 test('brands the Week 1 Guide tab with Robert Asami’s glyph', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -296,4 +331,78 @@ test('keeps the Watermancer recipe action clear of the pinned readings dock acro
     expect(layout?.overlapsDock, `${viewport.label} action should not overlap the dock`).toBe(false);
     expect(layout?.centerHitIsAction, `${viewport.label} action should own its center hit target`).toBe(true);
   }
+});
+
+test('shows source-linked product previews for the named Step 2 examples', async ({ page }) => {
+  await openWatermancerSuppliesStep(page);
+
+  for (const product of saltProductPhotos) {
+    const trigger = page.getByRole('button', { name: product.label, exact: true });
+    const preview = page.getByRole('group', { name: `${product.label} product preview` });
+    await expect(trigger).toBeVisible();
+    await trigger.hover();
+    await expect(preview).toBeVisible();
+
+    const image = preview.getByRole('img');
+    await expect(image).toHaveAttribute('src', product.imageUrl);
+    await expect(image).toHaveAttribute('alt', product.imageAlt);
+    await expect(image).toHaveAttribute('loading', 'lazy');
+    await expect(image).toHaveAttribute('referrerpolicy', 'no-referrer');
+    await expect(preview.getByRole('link', { name: 'View product source' }))
+      .toHaveAttribute('href', product.sourceUrl);
+
+    const isPortalledOutsideStep = await preview.evaluate(
+      element => !element.closest('[data-testid="step-supplies"]'),
+    );
+    expect(isPortalledOutsideStep).toBe(true);
+    await page.mouse.move(0, 0);
+    await expect(preview).toHaveCount(0);
+  }
+});
+
+test('opens and dismisses product previews with the keyboard', async ({ page }) => {
+  await openWatermancerSuppliesStep(page);
+  await page.mouse.move(0, 0);
+
+  const trigger = page.getByRole('button', { name: 'Saltverk', exact: true });
+  const preview = page.getByRole('group', { name: 'Saltverk product preview' });
+  await trigger.focus();
+  await expect(preview).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(preview).toHaveCount(0);
+});
+
+test('opens a product preview when tapped on a touch screen', async ({ browser, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Touch emulation is covered in Chromium.');
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  try {
+    const page = await context.newPage();
+    await openWatermancerSuppliesStep(page);
+    const trigger = page.getByRole('button', { name: 'Vera Salt', exact: true });
+    const preview = page.getByRole('group', { name: 'Vera Salt product preview' });
+    await trigger.tap();
+    await expect(preview).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test('keeps the product source available when a preview image fails to load', async ({ page }) => {
+  await page.route('**/daf7f988103e9107f33a5013b0c92784.jpg**', route => route.abort());
+  await openWatermancerSuppliesStep(page);
+
+  const trigger = page.getByRole('button', { name: 'Nigari', exact: true });
+  const preview = page.getByRole('group', { name: 'Nigari product preview' });
+  await trigger.hover();
+  await expect(preview).toBeVisible();
+  await expect(preview.getByText('Product photo unavailable')).toBeVisible();
+  await expect(preview.getByRole('link', { name: 'View product source' })).toHaveAttribute(
+    'href',
+    'https://foodsofnations.com/products/nigari-flakes',
+  );
 });

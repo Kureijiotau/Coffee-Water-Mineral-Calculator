@@ -18,7 +18,9 @@ import {
 } from './lotusConcentrate';
 import {
   WATERMANCER_GUIDE_STEPS,
+  type WatermancerGuideDetail,
   type WatermancerGuideEntry,
+  type WatermancerGuideInlineSegment,
 } from './watermancerGuideContent';
 import WatermancerGuideCounterionComparison from './WatermancerGuideCounterionComparison';
 import { WatermancerGuideWorkflow } from './WatermancerGuideWorkflow';
@@ -26,12 +28,39 @@ import { WatermancerGuideStartingFramework } from './WatermancerGuideStartingFra
 import WatermancerGuideStep5Intro from './WatermancerGuideStep5Intro';
 import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
 import { MilligramTooltipText } from './MilligramTooltip';
+import { WatermancerGuideSaltProductPreview } from './WatermancerGuideSaltProductPreview';
 
 type WatermancerGuideProps = {
   onOpenWatermancer: () => void;
 };
 
 const WATERMANCER_STEP_IDS = new Set(['read-dose-plan', 'make-and-taste']);
+
+function renderGuideInlineSegment(segment: WatermancerGuideInlineSegment, key: string) {
+  if (segment.kind === 'text') {
+    return <MilligramTooltipText key={key} text={segment.text} />;
+  }
+
+  if (segment.kind === 'emphasis') {
+    return (
+      <strong key={key} className="font-semibold text-cyan-100">
+        {segment.text}
+      </strong>
+    );
+  }
+
+  return <WatermancerGuideSaltProductPreview key={key} productId={segment.productId} />;
+}
+
+function renderGuideDetail(detail: WatermancerGuideDetail, keyPrefix: string) {
+  if (typeof detail === 'string') {
+    return <MilligramTooltipText text={detail} />;
+  }
+
+  return detail.segments.map((segment, segmentIndex) => (
+    renderGuideInlineSegment(segment, `${keyPrefix}-${segmentIndex}`)
+  ));
+}
 
 function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
   if (entry.details.length === 0) return null;
@@ -41,7 +70,7 @@ function EntryDetails({ entry }: { entry: WatermancerGuideEntry }) {
       {entry.details.map((detail, index) => (
         <li key={index} className="flex gap-2.5 text-sm leading-relaxed text-slate-300 break-words">
           <span aria-hidden="true" className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/70" />
-          <span className="min-w-0"><MilligramTooltipText text={detail} /></span>
+          <span className="min-w-0">{renderGuideDetail(detail, `${entry.id}-${index}`)}</span>
         </li>
       ))}
     </ul>

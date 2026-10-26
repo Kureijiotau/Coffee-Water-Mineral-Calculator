@@ -345,6 +345,8 @@ describe('Watermancer recipe share card', () => {
     expect(card.svg).toContain('3 drops · 37.5 mg');
     expect(card.svg).toContain('18.8 mg/L');
     expect(card.svg).toContain('SiO₂');
+    expect(card.svg).toContain('stroke="#7c6da8"');
+    expect(card.svg).toContain('fill="#c4b5fd"');
   });
 
   it('labels target-profile analysis as a preview rather than a finished mix', () => {
