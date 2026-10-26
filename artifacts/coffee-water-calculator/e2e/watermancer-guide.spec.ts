@@ -372,6 +372,38 @@ test('opens and dismisses product previews with the keyboard', async ({ page }) 
   await expect(preview).toHaveCount(0);
 });
 
+test('lets keyboard users tab to and activate a product source link', async ({ page }) => {
+  await page.context().route('https://saltverk.com/**', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><title>Saltverk source</title>',
+    });
+  });
+  await openWatermancerSuppliesStep(page);
+  await page.mouse.move(0, 0);
+
+  const trigger = page.getByRole('button', { name: 'Saltverk', exact: true });
+  const preview = page.getByRole('group', { name: 'Saltverk product preview' });
+  await trigger.focus();
+  await expect(preview).toBeVisible();
+  await page.keyboard.press('Tab');
+
+  const sourceLink = page.getByRole('link', { name: 'Open source for Saltverk' });
+  await expect(sourceLink).toBeFocused();
+  await expect(sourceLink).toBeVisible();
+  await expect(sourceLink).toHaveAttribute(
+    'href',
+    'https://saltverk.com/products/saltverk-pure-flaky-sea-salt',
+  );
+  await expect(preview).toHaveCount(0);
+
+  const popupPromise = page.waitForEvent('popup');
+  await sourceLink.press('Enter');
+  const popup = await popupPromise;
+  await expect(popup).toHaveURL('https://saltverk.com/products/saltverk-pure-flaky-sea-salt');
+});
+
 test('opens a product preview when tapped on a touch screen', async ({ browser, browserName }) => {
   test.skip(browserName !== 'chromium', 'Touch emulation is covered in Chromium.');
   const context = await browser.newContext({

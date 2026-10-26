@@ -13,11 +13,29 @@ Step 1 should show that equal Mg, Ca, bicarbonate, GH, and KH can still yield di
 
 **How to apply:** Teach the existing single-salt concentrate workflow, match the Watermancer hydration form to the physical stock, and equate milligrams to drops only when the measured stock actually delivers 1 mg per drop. Keep optional references out of the guided view unless the user asks to restore them. Do not change other concentrate or builder strength defaults.
 
-For Step 4, mirror the DIY Stock Builder's mass estimate with the saved tip calibration. Treat bottle capacity minus 5 mL as the approximate usable mix mass (1 mL ≈ 1 g); estimate salt mass from the 1 mg/drop target and subtract it from total mix mass to get water mass. The same tip calibration and bottle capacity should give the same physical salt mass across salts, even though their ion contributions differ. The calculation reserves 5 mL; tell users to leave 5–10 mL of headroom and use a bottle 5 mL larger to leave 10 mL.
+For Step 4, the input is the target working fill volume, not bottle capacity. Treat that volume as the approximate total mix mass (1 mL ≈ 1 g), calculate salt and water for the entered fill, and recommend a bottle 5–10 mL larger for shaking room. A 50 mL fill in a 59 mL bottle leaves about 9 mL of headroom.
 
-**Why:** The user explicitly chose the existing DIY concentrate logic and asked for shaking space to dissolve the stock.
+**Why:** The user asked to replace the 59 mL bottle-capacity example with a 50 mL working fill so users do not prepare too much stock and lose shaking space.
 
-**How to apply:** State the 1 mL ≈ 1 g approximation, show the reserved headroom alongside the amount, and do not imply different salts need different mass for the same calibrated 1 mg/drop stock.
+**How to apply:** Use the entered working fill volume directly in the mass calculation; explain bottle capacity/headroom separately. Keep the 1 mL ≈ 1 g approximation, and do not imply different salts need different mass for the same calibrated 1 mg/drop stock.
+
+During drop calibration and dispensing, the guide should tell users to hold the dropper vertically. The user requested a note that a 45° tilt can change drop weight by up to 15–20%; the tilted pipette photos are tip-shape references, not examples of dispensing posture.
+
+**Why:** The user pointed out that the Step 3 photos show angled pipettes and asked readers not to hold them that way.
+
+**How to apply:** Keep the vertical instruction and angle note adjacent to calibration; label the tilted photos as tip-shape references only.
+
+When the stock-preparation photo list transfers weighed salt from parchment, include rinsing clinging crystals into the bottle with a splash of the measured water.
+
+**Why:** The user asked to add this wash-in step beside photo-list item 3.
+
+**How to apply:** Put the reminder next to the parchment photo and transfer step, before adding the remaining water.
+
+Zechstein magnesium chloride remains text-only in the guide until a food-use source is confirmed.
+
+**Why:** The user selected to keep it text-only until a food-use source is confirmed, while noting their personal view.
+
+**How to apply:** Do not add a personal-use product photo to the food-grade buying examples without food-use verification.
 
 The nine user-supplied pantry photos are intended as guide assets, introduced in relevant steps incrementally rather than all at once.
 

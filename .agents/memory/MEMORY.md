@@ -106,6 +106,6 @@
 - [Citrate ratio eligibility](citrate-ratio-eligibility.md) — offer Citrates in the custom Watermancer ratio only when its current final reading is positive
 - [Citrate alkalinity estimate](citrate-alkalinity-estimate.md) — show citrate as estimated HCO₃⁻ equivalent without changing KH or solver targets
 - [Calculation confidence](calculation-confidence.md) — tighten numerical outputs so the owner and users can trust results without second-guessing.
-- [Watermancer 1 mg/drop guide](watermancer-one-mg-drop-guide.md) — mirror the DIY mass model, reserve 5 mL headroom, and keep SodaStream salts out of the guide
+- [Watermancer 1 mg/drop guide](watermancer-one-mg-drop-guide.md) — calculate for the working fill volume, advise 5–10 mL of bottle headroom, and keep SodaStream salts out
 - [SodaStream bicarbonate salt model](watermancer-carbonated-salt-model.md) — model Mg(OH)₂ and CaCO₃ powder doses as full CO₂-reacted bicarbonate ions in final water.
 - [Watermancer GH-only strength](watermancer-gh-only-strength.md) — keep GH-only scaling paused until the user revisits its ion-balance behavior

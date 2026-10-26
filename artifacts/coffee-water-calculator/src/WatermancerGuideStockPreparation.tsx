@@ -6,18 +6,15 @@ import {
   type LotusDropperCalibration,
   type LotusDropperStyle,
 } from './lotusConcentrate';
-import {
-  calculateOneMgPerDropStockPlan,
-  WATERMANCER_GUIDE_STOCK_HEADROOM_ML,
-} from './watermancerGuideStock';
+import { calculateOneMgPerDropStockPlan } from './watermancerGuideStock';
 import { MilligramTooltipText } from './MilligramTooltip';
 
 type WatermancerGuideStockPreparationProps = {
   calibrations: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
   dropperStyle: LotusDropperStyle;
   onDropperStyleChange: (style: LotusDropperStyle) => void;
-  bottleVolumeInput: string;
-  onBottleVolumeInputChange: (value: string) => void;
+  workingFillVolumeInput: string;
+  onWorkingFillVolumeInputChange: (value: string) => void;
   onOpenCalibration: () => void;
 };
 
@@ -67,8 +64,8 @@ export function WatermancerGuideStockPreparation({
   calibrations,
   dropperStyle,
   onDropperStyleChange,
-  bottleVolumeInput,
-  onBottleVolumeInputChange,
+  workingFillVolumeInput,
+  onWorkingFillVolumeInputChange,
   onOpenCalibration,
 }: WatermancerGuideStockPreparationProps) {
   const savedCalibration = calibrations[dropperStyle];
@@ -81,11 +78,11 @@ export function WatermancerGuideStockPreparation({
   const waterDropMassG = measuredDropsPerMl !== null && savedCalibration
     ? Number(savedCalibration.weightInput) / Number(savedCalibration.dropsInput)
     : 1 / estimatedDropsPerMl;
-  const volumeMl = Number(bottleVolumeInput);
-  const plan = bottleVolumeInput.trim() !== '' && Number.isFinite(volumeMl)
+  const volumeMl = Number(workingFillVolumeInput);
+  const plan = workingFillVolumeInput.trim() !== '' && Number.isFinite(volumeMl)
     ? calculateOneMgPerDropStockPlan(volumeMl, waterDropMassG)
     : null;
-  const invalidVolume = bottleVolumeInput.trim() !== '' && plan === null;
+  const invalidVolume = workingFillVolumeInput.trim() !== '' && plan === null;
 
   return (
     <section
@@ -97,27 +94,27 @@ export function WatermancerGuideStockPreparation({
         Calculate one stock
       </h4>
       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-        Same tip calibration and bottle size means the same salt mass for every salt.
+        Same tip calibration and working fill volume means the same salt mass for every salt.
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="min-w-0 rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Dropper bottle volume
+            Working fill volume
           </span>
           <span className="mt-1 flex items-center gap-2">
             <input
               type="number"
-              min={WATERMANCER_GUIDE_STOCK_HEADROOM_ML + 1}
+              min="1"
               step="1"
               inputMode="decimal"
-              value={bottleVolumeInput}
-              onChange={event => onBottleVolumeInputChange(event.target.value)}
-              placeholder="e.g. 59"
-              aria-label="Dropper bottle volume in milliliters"
+              value={workingFillVolumeInput}
+              onChange={event => onWorkingFillVolumeInputChange(event.target.value)}
+              placeholder="e.g. 50"
+              aria-label="Working fill volume in milliliters"
               aria-invalid={invalidVolume}
               className="w-full min-w-0 bg-transparent text-xl font-semibold tabular-nums text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
-              data-testid="input-guide-dropper-volume"
+              data-testid="input-guide-working-fill-volume"
             />
             <span className="text-sm text-slate-400">mL</span>
           </span>
@@ -198,7 +195,7 @@ export function WatermancerGuideStockPreparation({
           <Result
             label="Total mix"
             value={`${plan.totalMixMassG.toFixed(3)} g`}
-            note={`≈ ${plan.stockVolumeMl.toFixed(1)} mL stock · ${plan.headroomMl} mL headroom`}
+            note={`≈ ${plan.stockVolumeMl.toFixed(1)} mL stock · minimum bottle capacity ${plan.minimumBottleVolumeMl.toFixed(1)} mL`}
             tone="emerald"
           />
         </div>
@@ -213,13 +210,13 @@ export function WatermancerGuideStockPreparation({
           data-testid="guide-stock-plan-empty"
         >
           {invalidVolume
-            ? `Use a bottle larger than ${WATERMANCER_GUIDE_STOCK_HEADROOM_ML} mL to leave mixing headroom.`
-            : 'Enter the bottle volume to calculate the amounts.'}
+            ? 'Increase the working fill volume so the salt amount still leaves water in the mix.'
+            : 'Enter the working fill volume to calculate the amounts.'}
         </p>
       )}
 
       <p className="mt-3 rounded-lg border border-cyan-300/15 bg-cyan-400/[0.04] px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-        Leave 5–10 mL of headroom so you can shake and dissolve the salt. These amounts leave 5 mL free; use a bottle 5 mL larger to leave 10 mL.
+        Leave 5–10 mL of headroom for shaking and dissolving; use a bottle 5–10 mL larger than the working fill. For example, a 50 mL fill in a 59 mL bottle leaves about 9 mL of headroom.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -235,7 +232,7 @@ export function WatermancerGuideStockPreparation({
             className="aspect-[4/3] w-full object-cover"
           />
           <figcaption className="border-t border-slate-700/50 px-3 py-2 text-center text-xs text-slate-300">
-            Parchment makes the salt easy to transfer.
+            Parchment makes the salt easy to transfer; rinse any clinging crystals into the bottle.
           </figcaption>
         </figure>
 
@@ -250,7 +247,12 @@ export function WatermancerGuideStockPreparation({
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-emerald-200">3.</span>
-            <span>Transfer the salt to its bottle, then add the water amount shown.</span>
+            <span>
+              Transfer the salt to its bottle, then add the water amount shown.
+              <span className="mt-1 block rounded-md border border-cyan-300/15 bg-cyan-400/[0.04] px-2 py-1.5 text-[11px] text-cyan-100/80">
+                Tip: Use a splash of your measured water to rinse any clinging crystals off the parchment into the bottle.
+              </span>
+            </span>
           </li>
           <li className="flex gap-2">
             <span className="font-bold text-emerald-200">4.</span>

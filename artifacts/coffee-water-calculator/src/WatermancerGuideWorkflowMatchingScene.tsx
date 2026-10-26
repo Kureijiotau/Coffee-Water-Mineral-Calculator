@@ -20,8 +20,8 @@ export function WatermancerGuideWorkflowMatchingScene(): ReactElement {
         title="Find the best match"
         description="Open Guide the match to set each ion's source to Water only, Water then salt, Salt only, or Optimized. Then choose Find the best match and review the result status and final mixture. This example returns a best available partial match."
         testId="watermancer-guide-screen-matching"
-        screenshotFileName="best-match.jpg"
-        imageAlt="Watermancer Precision Auto-match panel with per-ion source controls, Find the best match, and the best-available partial-match status."
+        screenshotFileName="best-match.png"
+        imageAlt="Watermancer Precision Auto-Match panel with a Find the best match button, a partial-match status, Primary match plan, 0 mL water volume, and four selected salts."
       />
     </WorkflowScene>
   );

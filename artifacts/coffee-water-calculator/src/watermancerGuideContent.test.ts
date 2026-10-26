@@ -224,4 +224,21 @@ describe('Watermancer Guide copy', () => {
     expect(typeof genericSaltDetail).toBe('string');
     expect(getInlineSegments([genericSaltDetail])).toEqual([]);
   });
+
+  it('teaches vertical dropper handling and clarifies that the tip photos are not dispensing-angle examples', () => {
+    const calibrationStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'calibrate');
+    const copy = `${calibrationStep?.summary ?? ''} ${flattenGuideDetails(calibrationStep?.details)}`;
+
+    expect(copy).toContain('holding the dropper vertically');
+    expect(copy).toContain('45°');
+    expect(copy).toContain('15–20%');
+    expect(copy).toMatch(/photos show tip shapes only.*not the dispensing angle/i);
+  });
+
+  it('describes stock strength from the working fill volume rather than bottle size', () => {
+    const preparationStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'prepare-stocks');
+
+    expect(preparationStep?.summary).toContain('working fill volume');
+    expect(preparationStep?.summary).not.toContain('bottle size');
+  });
 });

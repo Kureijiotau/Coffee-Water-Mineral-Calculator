@@ -204,16 +204,21 @@ describe('Watermancer Guide step layout', () => {
         /type="button"/.test(previewButton) &&
         /aria-label="[^"]+"/.test(previewButton) &&
         /<img\b[^>]*\balt="[^"]{10,}"/.test(previewButton) &&
-        /src="[^"]+\.jpg"/.test(previewButton)
+        /src="[^"]+\.(?:jpg|png)"/.test(previewButton)
       );
     })).toBe(true);
     expect(screenshotImages.every(image =>
-      /src="[^"]*\/watermancer-guide\/[^"]+\.jpg"/.test(image) &&
+      /src="[^"]*\/watermancer-guide\/[^"]+\.(?:jpg|png)"/.test(image) &&
       /alt="[^"]{10,}"/.test(image),
     )).toBe(true);
     expect(new Set(
       screenshotImages.map(image => image.match(/\bsrc="([^"]+)"/)?.[1]),
     ).size).toBe(10);
+    const matchingScreenshot = screenshotFigures.find(figure =>
+      figure.includes('data-testid="watermancer-guide-screen-matching-preview"'),
+    ) ?? '';
+    expect(matchingScreenshot).toContain('/watermancer-guide/best-match.png');
+    expect(matchingScreenshot).toMatch(/alt="[^"]*0 mL[^"]*"/);
     const screenshotBasePath = import.meta.env.BASE_URL;
     for (const image of screenshotImages) {
       const source = image.match(/\bsrc="([^"]+)"/)?.[1] ?? '';

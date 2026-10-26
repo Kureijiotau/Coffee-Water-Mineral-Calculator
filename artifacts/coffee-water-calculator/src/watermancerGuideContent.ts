@@ -77,16 +77,17 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
   {
     id: 'calibrate',
     title: 'Calibrate each dropper',
-    summary: 'Measure straight and round tips separately instead of assuming they release the same amount.',
+    summary: 'Measure straight and round tips separately, holding the dropper vertically while dispensing.',
     details: [
-      'Count a known number of water drops from each tip style into a tared vessel, then weigh the water.',
+      'Count a known number of water drops from each tip style into a tared vessel while holding the dropper vertically, then weigh the water.',
+      'Tilting a pipette to 45° increases the surface area the drop clings to and can change drop weight by up to 15–20%. The photos show tip shapes only, not the dispensing angle.',
       'Enter each result below and press Use. The saved calibration is shared by DIY Stock Builder and DIY Lotus Drops.',
     ],
   },
   {
     id: 'prepare-stocks',
     title: 'Prepare 1 mg per drop stocks',
-    summary: 'For a fixed tip calibration, bottle size—not salt type—sets the salt mass.',
+    summary: 'For a fixed tip calibration, working fill volume—not salt type—sets the salt mass.',
     details: [
       'Each drop contains 1.00 mg of its physical salt; the salt type changes which ions those drops contribute.',
     ],

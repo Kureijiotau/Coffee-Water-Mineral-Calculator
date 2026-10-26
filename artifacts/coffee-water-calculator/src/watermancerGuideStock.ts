@@ -1,8 +1,8 @@
 export const WATERMANCER_GUIDE_STOCK_HEADROOM_ML = 5;
 
 export type OneMgPerDropStockPlan = {
-  bottleVolumeMl: number;
-  headroomMl: number;
+  workingFillVolumeMl: number;
+  minimumBottleVolumeMl: number;
   stockVolumeMl: number;
   totalMixMassG: number;
   estimatedDropCount: number;
@@ -13,24 +13,24 @@ export type OneMgPerDropStockPlan = {
 
 /**
  * Mirrors the DIY concentrate mass calculation for a fixed 1 mg salt-per-drop
- * stock. Bottle capacity in mL is treated as the approximate total mix mass in
- * grams, and the measured water-drop mass estimates how many drops that mass
- * will dispense.
+ * stock. The requested working fill volume in mL is treated as the approximate
+ * total mix mass in grams. A bottle with at least 5 mL more capacity is
+ * recommended for shaking room; headroom is not deducted from the fill volume.
  */
 export function calculateOneMgPerDropStockPlan(
-  bottleVolumeMl: number,
+  workingFillVolumeMl: number,
   waterDropMassG: number,
 ): OneMgPerDropStockPlan | null {
   if (
-    !Number.isFinite(bottleVolumeMl)
-    || bottleVolumeMl <= WATERMANCER_GUIDE_STOCK_HEADROOM_ML
+    !Number.isFinite(workingFillVolumeMl)
+    || workingFillVolumeMl <= 0
     || !Number.isFinite(waterDropMassG)
     || waterDropMassG <= 0
   ) {
     return null;
   }
 
-  const stockVolumeMl = bottleVolumeMl - WATERMANCER_GUIDE_STOCK_HEADROOM_ML;
+  const stockVolumeMl = workingFillVolumeMl;
   const totalMixMassG = stockVolumeMl;
   const estimatedDropCount = totalMixMassG / waterDropMassG;
   const saltMassMg = estimatedDropCount;
@@ -48,8 +48,8 @@ export function calculateOneMgPerDropStockPlan(
   }
 
   return {
-    bottleVolumeMl,
-    headroomMl: WATERMANCER_GUIDE_STOCK_HEADROOM_ML,
+    workingFillVolumeMl,
+    minimumBottleVolumeMl: workingFillVolumeMl + WATERMANCER_GUIDE_STOCK_HEADROOM_ML,
     stockVolumeMl,
     totalMixMassG,
     estimatedDropCount,

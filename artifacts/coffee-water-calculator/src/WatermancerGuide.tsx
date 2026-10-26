@@ -175,6 +175,9 @@ export function WatermancerGuideCalibrationCards({
                   data-testid={`guide-calibration-photo-${card.style}`}
                   className="aspect-square w-full object-contain"
                 />
+                <figcaption className="border-t border-slate-700/50 px-2 py-2 text-center text-[10px] leading-relaxed text-slate-400">
+                  Tip shape only—not a dispensing-angle example. Hold the dropper vertically.
+                </figcaption>
               </figure>
               <section className={`mt-3 rounded-xl border p-3 ${card.panel}`}>
                 <h4 className={`text-sm font-semibold ${card.value}`}>{card.title} calibration</h4>
@@ -251,7 +254,7 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
   const [savedCalibrations, setSavedCalibrations] = useState(() =>
     migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations,
   );
-  const [stockBottleVolumeInput, setStockBottleVolumeInput] = useState('');
+  const [workingFillVolumeInput, setWorkingFillVolumeInput] = useState('');
   const [stockDropperStyle, setStockDropperStyle] = useState<LotusDropperStyle>(() =>
     savedCalibrations.straight ? 'straight' : savedCalibrations.round ? 'round' : 'straight',
   );
@@ -350,8 +353,8 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
                 calibrations={savedCalibrations}
                 dropperStyle={stockDropperStyle}
                 onDropperStyleChange={setStockDropperStyle}
-                bottleVolumeInput={stockBottleVolumeInput}
-                onBottleVolumeInputChange={setStockBottleVolumeInput}
+                workingFillVolumeInput={workingFillVolumeInput}
+                onWorkingFillVolumeInputChange={setWorkingFillVolumeInput}
                 onOpenCalibration={() => setStepIndex(
                   Math.max(0, WATERMANCER_GUIDE_STEPS.findIndex(entry => entry.id === 'calibrate')),
                 )}
