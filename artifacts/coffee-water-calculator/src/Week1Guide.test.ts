@@ -23,15 +23,15 @@ describe('Robert Asami published Week 1 recipes', () => {
     expect(DAYS[6].learningNote).toBe(officialNextSteps);
   });
 
-  it('keeps Watermancer tasting prompts neutral and specific to the coffee in the cup', () => {
+  it('asks users to record cup changes tied to each recipe ion change', () => {
     expect(DAYS.map(day => day.prompt)).toEqual([
-      'With this coffee and brew method, what stands out in the cup?',
-      'Compared with Day 1, what differences do you notice in this cup, if any?',
-      'Compared with Day 2, what differences do you notice in this cup, if any?',
-      'Compared with Day 3, what differences do you notice in this cup, if any?',
-      'If you try the optional swap, what differences do you notice compared with the original?',
-      'What differences do you notice in this cup? Which would you want to check in a repeat brew?',
-      'Across this sequence, which recipe suits this coffee and brew method best? What would you want to test with another coffee?',
+      'For this baseline with magnesium sulfate and bicarbonate, what do you notice in the cup?',
+      'Compared with Day 1, what changes do you notice with calcium chloride replacing magnesium sulfate and GH dropping from 60 to 40?',
+      'Compared with Day 2, what changes do you notice as magnesium sulfate is added, calcium chloride decreases, and GH rises from 40 to 60?',
+      'Compared with Day 3, what changes do you notice as GH shifts from magnesium sulfate toward calcium chloride?',
+      'If you try the MgCl₂ swap for MgSO₄, what changes do you notice in this cup?',
+      'Compared with Day 5, what changes do you notice after adding MgCl₂ and NaCl, lowering GH, and splitting KH between NaHCO₃ and KHCO₃?',
+      'Compared with Day 6, what changes do you notice as GH/KH fall to 30/10, MgCl₂ is removed, and NaCl rises from 15 to 20 ppm?',
     ]);
   });
 

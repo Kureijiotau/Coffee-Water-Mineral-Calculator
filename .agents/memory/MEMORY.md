@@ -74,7 +74,7 @@
 - [Gemini artifact dependency installation](gemini-artifact-dependency-install.md) — use a package-scoped install when a new artifact dependency must not land at the workspace root
 - [Watermancer active-set minimum doses](watermancer-active-set-minimum-dose.md) — practical dose floors must compete with omitting a salt
 - [Watermancer match diagnostics](watermancer-match-diagnostics.md) — solver-side diagnostics explain target deviation, policy room, fixed doses, and optional salts
-- [Coffee-water amounts and balance](coffee-water-amounts-boundary.md) — treat ion thresholds and ratios as context-dependent guidance, not universal solver rules
+- [Ion comparisons and taste guidance](coffee-water-amounts-boundary.md) — tie tasting prompts to actual recipe ion changes while treating sensory effects as context-dependent
 - [Optimized practical coverage](optimized-practical-coverage.md) — rank percentile coverage first, GH/KH second, then use a ±0.65 ppm practical margin
 - [Ion guidance profile toggle](ion-guidance-profile-toggle.md) — keep Aiki and Watermancer Sensory ranges selectable without changing chemistry behavior
 - [Windows Rollup dependency](windows-rollup-optional-dependency.md) — frozen pnpm installs need the Windows Rollup binary explicitly locked for cross-platform CI
