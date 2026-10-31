@@ -3,6 +3,26 @@ import { computeGH, computeIonTotals, computeKH, SALTS } from './waterData';
 import { DAYS, equivalentSaltTarget } from './Week1Guide';
 
 describe('Robert Asami published Week 1 recipes', () => {
+  const officialCopy = [
+    "Intended to be closest to getting you started with materials you may already have at home. It should NOT be considered an end point. This recipe is based off of Holy Water but with more common household minerals. If you go out of order and jump straight to the end, you've done this wrong and haven't learned anything.",
+    'The second recipe from the introductory blog post. This recipe is intended to create contrast with the Day 1 recipe. It should NOT be considered an end point. It is intended for lighter washed coffees, but is flexible to work with most light roasts. There is a lot of calcium to dissolve, you will likely need to stir it up quite well overnight.',
+    'This recipe starts to touch on blending minerals. Consider how you like this water vs. the day 2 recipe; this recipe gauges how you feel about magnesium.',
+    "Compared to the Day 3 recipe, we've flipped the primary GH mineral and are leaning heavier towards calcium. At this point, consider which way you lean - preferring calcium or magnesium.",
+    "Now we're playing with alternative minerals. For example, we used epsom salt as the Mg source; you could swap it for magnesium chloride flakes. Note that this requires different calculations, and this specific example introduces more chlorides (when used with CaCl2).",
+    "We're adding more complexity, and starting to introduce minerals that don't quite fit the GH/KH paradigm so far.",
+    "If you skipped the first 6 days and expect this to be the best recipe, that is not the goal of this sequence. Now we're going for a different effect.",
+  ];
+  const officialNextSteps = "After going through the above recipes, you may have some opinions such as: \"I liked epsom salt more than CaCl2\", \"I can/can't see myself regularly working with recipes using many mineral sources\", \"I had a clear favorite recipe for my beans + grinder.\" Some things to try from here: Take your favorite recipe and iterate on it. Raise or lower buffer (KH) - we mostly stuck to 15KH, but you could go as low as 5. Try varying mineral sources - you may find a certain brand/source of sea salt tastes different. Find a \"base\" recipe for different bean types - for example, if you like your naturals to express juicy and fruity, you may seek a base water for that style, compared to a bright and floral base water for washed coffees.";
+
+  it('uses the official day headings, method labels, and source wording verbatim', () => {
+    DAYS.forEach((day, index) => {
+      expect(day.title).toBe(`Day ${index + 1} pourover recipe`);
+      expect(day.subtitle).toBe('Pourover/Filter');
+      expect(day.description).toBe(officialCopy[index]);
+    });
+    expect(DAYS[6].learningNote).toBe(officialNextSteps);
+  });
+
   const publishedMasses = [
     { mgso4: 148, nahco3: 25 },
     { cacl2: 44, nahco3: 25 },

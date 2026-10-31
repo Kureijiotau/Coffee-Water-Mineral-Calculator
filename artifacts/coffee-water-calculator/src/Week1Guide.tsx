@@ -143,6 +143,9 @@ const styles = `
   .week1-learning h4 { max-width: 270px; margin: 0 0 13px; color: var(--week1-text); font: 400 22px/1.18 Georgia, "Times New Roman", serif; letter-spacing: 0; }
   .week1-learning p { margin: 0; color: var(--week1-muted); font-size: 12px; line-height: 1.65; }
   .week1-learning strong { color: var(--week1-text); font-weight: 600; }
+  .week1-app-prompt { margin-top: 19px; padding-top: 16px; border-top: 1px solid var(--week1-line); }
+  .week1-app-prompt .week1-eyebrow { margin-bottom: 9px; }
+  .week1-app-prompt .week1-prompt-answer { margin-top: 14px; padding-top: 12px; }
   .week1-prompt-answer { display: flex; gap: 9px; align-items: start; margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--week1-line); color: var(--week1-muted); font-size: 11px; line-height: 1.5; }
   .week1-prompt-answer svg { flex: 0 0 auto; margin-top: 1px; color: var(--week1-indigo); width: 14px; height: 14px; }
   .week1-note { padding: 20px 22px; }
@@ -248,91 +251,91 @@ const DAY5_NAHCO3_TARGET = equivalentSaltTarget(
 export const DAYS: Week1Day[] = [
   {
     day: 1,
-    label: 'FOUNDATION',
-    title: 'The household-mineral starting point',
-    subtitle: 'Start here',
-    description: 'The common-mineral baseline. Keep the coffee, recipe, and temperature steady so you can learn what a composed cup tastes like before changing the hardness mineral.',
+    label: 'DAY 1',
+    title: 'Day 1 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: "Intended to be closest to getting you started with materials you may already have at home. It should NOT be considered an end point. This recipe is based off of Holy Water but with more common household minerals. If you go out of order and jump straight to the end, you've done this wrong and haven't learned anything.",
     prompt: 'What does “balanced” taste like to you?',
-    note: 'Robert’s Day 1 recipe gives you a clear baseline: enough magnesium to shape extraction, with gentle alkalinity to keep the cup composed.',
-    learningNote: 'Tomorrow, the coffee stays the same. Only the mineral balance moves, so your palate has something honest to compare.',
+    note: 'The published masses are for 1 L. The dose shown here is scaled to the selected batch volume and salt hydration form.',
+    learningNote: 'The calculator displays GH and KH as ppm CaCO₃; salt amounts remain physical mass.',
     formIdx: { mgso4: 1, nahco3: 0 },
     targets: massTargets({ mgso4: 148, nahco3: 25 }, { mgso4: 1, nahco3: 0 }),
     displayTargets: { mgso4: '60 GH', nahco3: '15 KH' },
   },
   {
     day: 2,
-    label: 'BALANCE',
-    title: 'Taste the shift',
-    subtitle: 'Taste the shift',
-    description: 'Create contrast with a calcium-led water. Notice how the same coffee changes when the hardness mineral moves from magnesium to calcium.',
+    label: 'DAY 2',
+    title: 'Day 2 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: 'The second recipe from the introductory blog post. This recipe is intended to create contrast with the Day 1 recipe. It should NOT be considered an end point. It is intended for lighter washed coffees, but is flexible to work with most light roasts. There is a lot of calcium to dissolve, you will likely need to stir it up quite well overnight.',
     prompt: 'Does the cup feel more focused or more muted?',
-    note: 'Day 2 changes both the hardness source and its level: 40 GH from calcium instead of Day 1’s 60 GH from magnesium, with the same nominal 15 KH. It is not an equal-hardness comparison.',
-    learningNote: 'Robert suggests this contrast for lighter washed coffees, while noting flexibility across light roasts. Follow his instruction to dissolve the calcium chloride thoroughly, stirring and allowing overnight preparation if needed.',
+    note: 'This recipe lists 40 GH, compared with Day 1’s 60 GH; both recipes list 15 KH.',
+    learningNote: 'The listed calcium chloride mass is modeled using the anhydrous salt form.',
     formIdx: { cacl2: 0, nahco3: 0 },
     targets: massTargets({ cacl2: 44, nahco3: 25 }, { cacl2: 0, nahco3: 0 }),
     displayTargets: { cacl2: '40 GH', nahco3: '15 KH' },
   },
   {
     day: 3,
-    label: 'ACIDITY',
-    title: 'Find the blend',
-    subtitle: 'Find the edge',
-    description: 'Blend magnesium and calcium at a nominal 60 GH / 15 KH. Compare with Day 2 to explore magnesium, remembering that total hardness also rises from 40 to 60 GH.',
+    label: 'DAY 3',
+    title: 'Day 3 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: 'This recipe starts to touch on blending minerals. Consider how you like this water vs. the day 2 recipe; this recipe gauges how you feel about magnesium.',
     prompt: 'Where does the blend land between vivid and round?',
-    note: 'Day 3 touches on blending minerals. Use it to gauge how you feel about magnesium after tasting the calcium-led Day 2 water.',
-    learningNote: 'The two hardness minerals can create different extraction and texture cues even when the headline hardness looks similar.',
+    note: 'The source lists 40 GH from Epsom salt and 20 GH from calcium chloride, for 60 GH total.',
+    learningNote: 'Compared with Day 2, this recipe changes the GH level as well as the hardness sources.',
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
     targets: massTargets({ mgso4: 100, cacl2: 22, nahco3: 25 }, { mgso4: 1, cacl2: 0, nahco3: 0 }),
     displayTargets: { mgso4: '40 GH', cacl2: '20 GH', nahco3: '15 KH' },
   },
   {
     day: 4,
-    label: 'BODY',
-    title: 'Flip the emphasis',
-    subtitle: 'Feel the weight',
-    description: 'Keep the blended approach, but lean heavier toward calcium. Notice whether the cup gains focus, weight, or a different kind of roundness.',
+    label: 'DAY 4',
+    title: 'Day 4 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: "Compared to the Day 3 recipe, we've flipped the primary GH mineral and are leaning heavier towards calcium. At this point, consider which way you lean - preferring calcium or magnesium.",
     prompt: 'Which hardness source feels more natural in the finish?',
-    note: 'Compared with Day 3, Day 4 flips the primary GH mineral and leans heavier toward calcium.',
-    learningNote: 'At this point, you are not searching for a universal winner. You are learning which direction your coffee and palate prefer.',
+    note: 'The listed hardness contributions are 20 GH from Epsom salt and 40 GH from calcium chloride.',
+    learningNote: 'The calculator preserves the source salt masses and scales them to the selected batch volume.',
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
     targets: massTargets({ mgso4: 50, cacl2: 44, nahco3: 25 }, { mgso4: 1, cacl2: 0, nahco3: 0 }),
     displayTargets: { mgso4: '20 GH', cacl2: '40 GH', nahco3: '15 KH' },
   },
   {
     day: 5,
-    label: 'CLARITY',
-    title: 'Try a mineral swap',
-    subtitle: 'Read the finish',
-    description: 'Start with Robert’s published Epsom salt, calcium chloride, and potassium bicarbonate recipe. His suggested magnesium-chloride substitution introduces more chloride. The optional sodium-buffer swap is a Watermancer addition.',
+    label: 'DAY 5',
+    title: 'Day 5 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: "Now we're playing with alternative minerals. For example, we used epsom salt as the Mg source; you could swap it for magnesium chloride flakes. Note that this requires different calculations, and this specific example introduces more chlorides (when used with CaCl2).",
     prompt: 'Does the alternate mineral source change the cup’s shape?',
-    note: 'The published recipe splits hardness equally between magnesium and calcium and uses potassium bicarbonate for the buffer. Compare it before trying either optional substitution.',
-    learningNote: 'Watermancer computes equivalent magnesium or bicarbonate contributions for the swaps; those calculated substitutions are not additional published recipes. Swapping Epsom for magnesium chloride removes sulfate and adds chloride. Swapping the buffer to sodium bicarbonate replaces potassium with sodium.',
+    note: 'The published Day 5 recipe uses potassium bicarbonate. The sodium-bicarbonate option is a Watermancer addition.',
+    learningNote: 'Watermancer calculates equivalent GH or KH for optional salt swaps. These controls are app additions, not extra recipes from the source.',
     formIdx: { mgso4: 1, cacl2: 0, khco3: 0 },
     targets: DAY5_ORIGINAL_TARGETS,
     displayTargets: { mgso4: '30 GH', cacl2: '30 GH', khco3: '15 KH' },
   },
   {
     day: 6,
-    label: 'CONTROL',
-    title: 'Add complexity',
-    subtitle: 'Make a call',
-    description: 'Introduce more mineral types and a small sodium chloride contribution. The goal is not complexity for its own sake; it is to identify which effects are worth keeping.',
+    label: 'DAY 6',
+    title: 'Day 6 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: "We're adding more complexity, and starting to introduce minerals that don't quite fit the GH/KH paradigm so far.",
     prompt: 'Which new mineral effect is actually useful?',
-    note: 'Day 6 moves beyond the GH/KH shorthand. Taste slowly and write down what each added mineral seems to change.',
-    learningNote: 'This is intentionally a tiny-dose recipe. It is often easier to prepare as a concentrate or larger batch than to weigh directly for one liter.',
+    note: 'The source lists the six mineral contributions separately, including 15 ppm sodium chloride.',
+    learningNote: 'The source notes that these are very small doses; the app shows the calculated quantities for the selected batch.',
     formIdx: { mgcl2: 1, mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
     targets: massTargets({ mgcl2: 30, mgso4: 37, cacl2: 17, nahco3: 17, khco3: 10, nacl: 15 }, { mgcl2: 1, mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 }),
     displayTargets: { mgcl2: '15 GH', mgso4: '15 GH', cacl2: '15 GH', nahco3: '10 KH', khco3: '5 KH', nacl: '15 mg/L NaCl' },
   },
   {
     day: 7,
-    label: 'REVIEW',
-    title: 'Find your water map',
-    subtitle: 'Your water map',
-    description: 'Lower the overall GH and keep the recipe complex. Use the final comparison to identify the balance you enjoy—and the amount of work you are willing to repeat.',
+    label: 'DAY 7',
+    title: 'Day 7 pourover recipe',
+    subtitle: 'Pourover/Filter',
+    description: "If you skipped the first 6 days and expect this to be the best recipe, that is not the goal of this sequence. Now we're going for a different effect.",
     prompt: 'What would you keep for your next brew?',
-    note: 'Day 7 is not a shortcut to the “best” recipe. It is a final contrast that helps you work backward toward water you understand and can reproduce.',
-    learningNote: 'From here, choose a favorite and iterate: adjust GH, KH, hardness balance, mineral source, or preparation effort one variable at a time.',
+    note: 'The published Day 7 recipe is 30 GH / 10 KH, with 20 ppm sodium chloride.',
+    learningNote: "After going through the above recipes, you may have some opinions such as: \"I liked epsom salt more than CaCl2\", \"I can/can't see myself regularly working with recipes using many mineral sources\", \"I had a clear favorite recipe for my beans + grinder.\" Some things to try from here: Take your favorite recipe and iterate on it. Raise or lower buffer (KH) - we mostly stuck to 15KH, but you could go as low as 5. Try varying mineral sources - you may find a certain brand/source of sea salt tastes different. Find a \"base\" recipe for different bean types - for example, if you like your naturals to express juicy and fruity, you may seek a base water for that style, compared to a bright and floral base water for washed coffees.",
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
     targets: massTargets({ mgso4: 37, cacl2: 17, nahco3: 8, khco3: 10, nacl: 20 }, { mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 }),
     displayTargets: { mgso4: '15 GH', cacl2: '15 GH', nahco3: '5 KH', khco3: '5 KH', nacl: '20 mg/L NaCl' },
@@ -454,8 +457,8 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
 
           <section className="week1-header" aria-labelledby="week1-title">
             <div>
-              <h2 id="week1-title">Build your water intuition.</h2>
-              <p>Follow Robert Asami’s seven-day filter-water sequence in order—not as a ranking of increasingly better recipes. Published salt masses are preserved; computed readings may differ slightly from his rounded GH/KH labels. Tasting prompts and optional swap controls are Watermancer additions.</p>
+              <h2 id="week1-title">Rasami’s week 1 filter recipes</h2>
+              <p>If you take “famous” recipes, it might taste good, but you likely miss building the fundamentals. This is a set of recipes to start you out through that journey.</p>
             </div>
             <div className="week1-lesson-badge"><span className="week1-lesson-mark" aria-hidden="true" /> Robert Asami · 7 day path</div>
           </section>
@@ -560,18 +563,21 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                 >
                   <CircleHelp />
                 </a>
-                <div className="week1-eyebrow">TODAY&apos;S TASTING PROMPT</div>
-                <h4 id="week1-prompt-title">{currentDay.prompt}</h4>
+                <div className="week1-eyebrow">ROBERT ASAMI&apos;S ORIGINAL GUIDE</div>
                 <p>{currentDay.description}</p>
-                <div className="week1-prompt-answer"><LockKeyhole /> Keep the coffee and brew method steady. Write down the first three words that arrive.</div>
+                <div className="week1-app-prompt">
+                  <div className="week1-eyebrow">WATERMANCER TASTING PROMPT</div>
+                  <h4 id="week1-prompt-title">{currentDay.prompt}</h4>
+                  <div className="week1-prompt-answer"><LockKeyhole /> Keep the coffee and brew method steady. Write down the first three words that arrive.</div>
+                </div>
               </section>
 
               <section className="week1-card week1-note" aria-labelledby="week1-why-title">
-                <div className="week1-note-head" id="week1-why-title"><FlaskConical /> Why this experiment?</div>
+                <div className="week1-note-head" id="week1-why-title"><FlaskConical /> Watermancer notes</div>
                 <p>{currentDay.note}</p>
                 <details className="week1-details">
                   <summary className="week1-summary-row">
-                    <span>Show the learning note</span>
+                    <span>{activeDay === 7 ? 'Robert Asami · Next steps' : 'Show calculation details'}</span>
                     <ChevronDown />
                   </summary>
                   <div className="week1-detail-copy">{currentDay.learningNote}</div>
