@@ -24,6 +24,7 @@ type TestGuideSegment =
 type TestGuideDetail = string | { segments: readonly TestGuideSegment[] };
 
 const PRODUCT_LABELS: Record<string, string> = {
+  zechstein: 'Zechstein magnesium chloride flakes',
   nigari: 'nigari',
   saltverk: 'Saltverk',
   'vera-salt': 'Vera Salt',
@@ -212,17 +213,26 @@ describe('Watermancer Guide copy', () => {
     expect(emphasizedPhrases).toEqual(expect.arrayContaining([
       'most hydrated common food-grade form',
       'This is optional and taste is personal.',
-      'Zechstein magnesium chloride flakes',
-      'food-grade product',
+      'unscented, additive-free product',
       'Food grade is enough',
     ]));
-    expect(productIds).toEqual(['nigari', 'saltverk', 'vera-salt', 'arm-and-hammer']);
+    expect(productIds).toEqual(['zechstein', 'nigari', 'saltverk', 'vera-salt', 'arm-and-hammer']);
 
     const genericSaltDetail = suppliesStep?.details.find(
       detail => typeof detail === 'string' && /magnesium sulfate heptahydrate/i.test(detail),
     );
     expect(typeof genericSaltDetail).toBe('string');
     expect(getInlineSegments([genericSaltDetail])).toEqual([]);
+  });
+
+  it('describes Zechstein products as unscented and additive-free without assuming ingestion suitability', () => {
+    const suppliesStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'supplies');
+    const detail = suppliesStep?.details.find(entry => /Zechstein/i.test(flattenGuideDetails([entry])));
+    const copy = flattenGuideDetails(detail ? [detail] : []);
+
+    expect(copy).toContain('unscented, additive-free product');
+    expect(copy).not.toMatch(/food.grade/i);
+    expect(copy).toMatch(/confirm with the supplier.*suitable for consumption/i);
   });
 
   it('teaches vertical dropper handling and clarifies that the tip photos are not dispensing-angle examples', () => {

@@ -1,4 +1,15 @@
+const nowMagnesiumFlakesImage = `${import.meta.env.BASE_URL}watermancer-guide/now-magnesium-flakes.png`;
+
 export const WATERMANCER_GUIDE_SALT_PRODUCTS = {
+  zechstein: {
+    id: 'zechstein',
+    label: 'Zechstein magnesium chloride flakes',
+    imageUrl: nowMagnesiumFlakesImage,
+    sourceUrl: nowMagnesiumFlakesImage,
+    sourceLabel: 'Uploaded photo',
+    alt: 'NOW Solutions magnesium flakes package from the ancient Zechstein seabed',
+    note: 'Packaging reference only. Confirm with the supplier that this product is suitable for consumption.',
+  },
   nigari: {
     id: 'nigari',
     label: 'Nigari',

@@ -98,6 +98,11 @@ export function WatermancerGuideSaltProductPreview({
                 <ExternalLink size={12} aria-hidden="true" />
               </a>
             </div>
+            {'note' in product && (
+              <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                {product.note}
+              </p>
+            )}
           </HoverCardContent>
         </HoverCardPortal>
       </HoverCard>
