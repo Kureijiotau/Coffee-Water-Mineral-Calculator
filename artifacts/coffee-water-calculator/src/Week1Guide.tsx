@@ -14,7 +14,8 @@ import {
   Target,
 } from 'lucide-react';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
-import { computeGH, computeIonTotals, computeKH, SALTS } from './waterData';
+import { computeGH, computeIonTotals, computeKH, getSaltColorTokens, ION_MAP, SALTS } from './waterData';
+import { Week1SaltLabel } from './Week1SaltLabel';
 
 export type Week1Recipe = {
   id: string;
@@ -230,8 +231,8 @@ export function equivalentSaltTarget(
 }
 
 const DAY5_ORIGINAL_TARGETS = massTargets(
-  { mgso4: 74, cacl2: 33, nahco3: 25 },
-  { mgso4: 1, cacl2: 0, nahco3: 0 },
+  { mgso4: 74, cacl2: 33, khco3: 30 },
+  { mgso4: 1, cacl2: 0, khco3: 0 },
 );
 
 const DAY5_MGCL2_TARGET = equivalentSaltTarget(
@@ -240,18 +241,18 @@ const DAY5_MGCL2_TARGET = equivalentSaltTarget(
   'magnesium',
   DAY5_ORIGINAL_TARGETS.mgso4,
 );
-const DAY5_KHCO3_TARGET = equivalentSaltTarget(
-  'nahco3',
+const DAY5_NAHCO3_TARGET = equivalentSaltTarget(
   'khco3',
+  'nahco3',
   'bicarbonate',
-  DAY5_ORIGINAL_TARGETS.nahco3,
+  DAY5_ORIGINAL_TARGETS.khco3,
 );
 
-const DAYS: Week1Day[] = [
+export const DAYS: Week1Day[] = [
   {
     day: 1,
     label: 'FOUNDATION',
-    title: 'The neutral starting point',
+    title: 'The household-mineral starting point',
     subtitle: 'Start here',
     description: 'The common-mineral baseline. Keep the coffee, recipe, and temperature steady so you can learn what a composed cup tastes like before changing the hardness mineral.',
     prompt: 'What does “balanced” taste like to you?',
@@ -268,8 +269,8 @@ const DAYS: Week1Day[] = [
     subtitle: 'Taste the shift',
     description: 'Create contrast with a calcium-led water. Notice how the same coffee changes when the hardness mineral moves from magnesium to calcium.',
     prompt: 'Does the cup feel more focused or more muted?',
-    note: 'Day 2 is deliberately close to Day 1 in GH and KH. The lesson is the source of hardness, not a larger mineral load.',
-    learningNote: 'Compare this cup directly with Day 1. Look for changes in texture, sweetness, and how the finish leaves your palate.',
+    note: 'Day 2 changes both the hardness source and its level: 40 GH from calcium instead of Day 1’s 60 GH from magnesium, with the same nominal 15 KH. It is not an equal-hardness comparison.',
+    learningNote: 'Robert suggests this contrast for lighter washed coffees, while noting flexibility across light roasts. Follow his instruction to dissolve the calcium chloride thoroughly, stirring and allowing overnight preparation if needed.',
     formIdx: { cacl2: 0, nahco3: 0 },
     targets: massTargets({ cacl2: 44, nahco3: 25 }, { cacl2: 0, nahco3: 0 }),
     displayTargets: { cacl2: '40 GH', nahco3: '15 KH' },
@@ -279,7 +280,7 @@ const DAYS: Week1Day[] = [
     label: 'ACIDITY',
     title: 'Find the blend',
     subtitle: 'Find the edge',
-    description: 'Blend magnesium and calcium. This is the first step toward noticing which hardness direction you prefer without changing the overall GH/KH destination.',
+    description: 'Blend magnesium and calcium at a nominal 60 GH / 15 KH. Compare with Day 2 to explore magnesium, remembering that total hardness also rises from 40 to 60 GH.',
     prompt: 'Where does the blend land between vivid and round?',
     note: 'Day 3 touches on blending minerals. Use it to gauge how you feel about magnesium after tasting the calcium-led Day 2 water.',
     learningNote: 'The two hardness minerals can create different extraction and texture cues even when the headline hardness looks similar.',
@@ -305,13 +306,13 @@ const DAYS: Week1Day[] = [
     label: 'CLARITY',
     title: 'Try a mineral swap',
     subtitle: 'Read the finish',
-    description: 'Start with the original mineral sources, then use the swap to compare magnesium chloride and potassium bicarbonate without changing the recipe’s GH or KH contribution.',
+    description: 'Start with Robert’s published Epsom salt, calcium chloride, and potassium bicarbonate recipe. His suggested magnesium-chloride substitution introduces more chloride. The optional sodium-buffer swap is a Watermancer addition.',
     prompt: 'Does the alternate mineral source change the cup’s shape?',
-    note: 'Day 5 keeps the hardness split and buffer strength steady while changing both mineral sources. Compare the original and swapped cups side by side.',
-    learningNote: 'The swap uses equivalent magnesium and bicarbonate contributions. Magnesium chloride adds chloride, while potassium bicarbonate replaces sodium with potassium, so taste the cup for texture and finish changes.',
-    formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
+    note: 'The published recipe splits hardness equally between magnesium and calcium and uses potassium bicarbonate for the buffer. Compare it before trying either optional substitution.',
+    learningNote: 'Watermancer computes equivalent magnesium or bicarbonate contributions for the swaps; those calculated substitutions are not additional published recipes. Swapping Epsom for magnesium chloride removes sulfate and adds chloride. Swapping the buffer to sodium bicarbonate replaces potassium with sodium.',
+    formIdx: { mgso4: 1, cacl2: 0, khco3: 0 },
     targets: DAY5_ORIGINAL_TARGETS,
-    displayTargets: { mgso4: '30 GH', cacl2: '30 GH', nahco3: '15 KH' },
+    displayTargets: { mgso4: '30 GH', cacl2: '30 GH', khco3: '15 KH' },
   },
   {
     day: 6,
@@ -324,7 +325,7 @@ const DAYS: Week1Day[] = [
     learningNote: 'This is intentionally a tiny-dose recipe. It is often easier to prepare as a concentrate or larger batch than to weigh directly for one liter.',
     formIdx: { mgcl2: 1, mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
     targets: massTargets({ mgcl2: 30, mgso4: 37, cacl2: 17, nahco3: 17, khco3: 10, nacl: 15 }, { mgcl2: 1, mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 }),
-    displayTargets: { mgcl2: '15 Mg', mgso4: '15 SO₄', cacl2: '15 Ca', nahco3: '10 HCO₃', khco3: '5 HCO₃', nacl: '15 NaCl' },
+    displayTargets: { mgcl2: '15 GH', mgso4: '15 GH', cacl2: '15 GH', nahco3: '10 KH', khco3: '5 KH', nacl: '15 mg/L NaCl' },
   },
   {
     day: 7,
@@ -337,7 +338,7 @@ const DAYS: Week1Day[] = [
     learningNote: 'From here, choose a favorite and iterate: adjust GH, KH, hardness balance, mineral source, or preparation effort one variable at a time.',
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
     targets: massTargets({ mgso4: 37, cacl2: 17, nahco3: 8, khco3: 10, nacl: 20 }, { mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 }),
-    displayTargets: { mgso4: '15 GH', cacl2: '15 GH', nahco3: '5 KH', khco3: '5 KH', nacl: '20 NaCl' },
+    displayTargets: { mgso4: '15 GH', cacl2: '15 GH', nahco3: '5 KH', khco3: '5 KH', nacl: '20 mg/L NaCl' },
   },
 ];
 
@@ -367,8 +368,8 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
       targets.mgcl2 = DAY5_MGCL2_TARGET;
     }
     if (day5BufferSwapped) {
-      delete targets.nahco3;
-      targets.khco3 = DAY5_KHCO3_TARGET;
+      delete targets.khco3;
+      targets.nahco3 = DAY5_NAHCO3_TARGET;
     }
     return targets;
   }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
@@ -380,8 +381,8 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
       formIdx.mgcl2 = 1;
     }
     if (day5BufferSwapped) {
-      delete formIdx.nahco3;
-      formIdx.khco3 = 0;
+      delete formIdx.khco3;
+      formIdx.nahco3 = 0;
     }
     return formIdx;
   }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
@@ -393,8 +394,8 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
       displayTargets.mgcl2 = '30 GH';
     }
     if (day5BufferSwapped) {
-      delete displayTargets.nahco3;
-      displayTargets.khco3 = '15 KH';
+      delete displayTargets.khco3;
+      displayTargets.nahco3 = '15 KH';
     }
     return displayTargets;
   }, [activeDay, currentDay, day5BufferSwapped, day5MagnesiumSwapped]);
@@ -450,14 +451,14 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
             </div>
             <div className="week1-top-note">
               <strong>OPTIONAL LESSON</strong><br />
-              Learn by changing one variable
+              Learn through ordered comparisons
             </div>
           </header>
 
           <section className="week1-header" aria-labelledby="week1-title">
             <div>
               <h2 id="week1-title">Build your water intuition.</h2>
-              <p>Seven small experiments to make mineral choices feel less like a formula and more like a taste you can recognize.</p>
+              <p>Follow Robert Asami’s seven-day filter-water sequence in order—not as a ranking of increasingly better recipes. Published salt masses are preserved; computed readings may differ slightly from his rounded GH/KH labels. Tasting prompts and optional swap controls are Watermancer additions.</p>
             </div>
             <div className="week1-lesson-badge"><span className="week1-lesson-mark" aria-hidden="true" /> Robert Asami · 7 day path</div>
           </section>
@@ -491,11 +492,11 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
               <div className="week1-mineral-summary">
                 <div className="week1-summary">
                   <span className="week1-summary-label">General hardness</span>
-                  <span className="week1-summary-value">{gh.toFixed(0)} <small>GH</small></span>
+                  <span className="week1-summary-value" style={{ color: ION_MAP.magnesium.color.foreground }}>{gh.toFixed(0)} <small>GH</small></span>
                 </div>
                 <div className="week1-summary">
                   <span className="week1-summary-label">Carbonate hardness</span>
-                  <span className="week1-summary-value">{kh.toFixed(0)} <small>KH</small></span>
+                  <span className="week1-summary-value" style={{ color: ION_MAP.bicarbonate.color.foreground }}>{kh.toFixed(0)} <small>KH</small></span>
                 </div>
               </div>
 
@@ -510,8 +511,8 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                   return (
                     <div className="week1-ingredient" role="row" key={salt.id}>
                       <div className="week1-ingredient-name" role="cell">
-                        <span className="week1-ingredient-icon">{index % 2 === 0 ? <Droplets /> : <Beaker />}</span>
-                         <span className="min-w-0"><strong>{display.label}</strong><span>{display.note}</span></span>
+                        <span className="week1-ingredient-icon" style={{ color: getSaltColorTokens(salt).primary, borderColor: getSaltColorTokens(salt).border, background: getSaltColorTokens(salt).primarySoft }}>{index % 2 === 0 ? <Droplets /> : <Beaker />}</span>
+                         <span className="min-w-0"><Week1SaltLabel saltId={salt.id} /><span>{salt.id === 'mgso4' ? 'Epsom salt' : display.note}</span></span>
                          {activeDay === 5 && (salt.id === 'mgso4' || salt.id === 'mgcl2') && (
                            <button
                              className={`week1-swap-button ${day5MagnesiumSwapped ? 'active' : ''}`}
@@ -534,10 +535,10 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                                setDay5BufferSwapped(previous => !previous);
                                setAppliedDay(null);
                              }}
-                             aria-label={day5BufferSwapped ? 'Use sodium bicarbonate instead' : 'Swap sodium bicarbonate for potassium bicarbonate'}
+                             aria-label={day5BufferSwapped ? 'Restore published potassium bicarbonate' : 'Optional Watermancer swap: potassium bicarbonate for sodium bicarbonate'}
                            >
                              <ArrowLeftRight />
-                             <span>{day5BufferSwapped ? 'Use sodium' : 'Swap to KHCO₃'}</span>
+                             <span>{day5BufferSwapped ? 'Restore KHCO₃' : 'Try NaHCO₃ (app option)'}</span>
                            </button>
                          )}
                       </div>
@@ -547,7 +548,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                   );
                 })}
               </div>
-              <div className="week1-table-foot"><Info /> Weigh the listed hydrated forms, then dissolve completely before brewing.</div>
+              <div className="week1-table-foot"><Info /> Use distilled or RO water. GH/KH labels are ppm as CaCO₃, not elemental-ion ppm. Weigh the displayed hydration forms and dissolve completely. Calcium chloride uses the anhydrous basis implied by the published masses.</div>
             </section>
 
             <aside className="week1-side">
