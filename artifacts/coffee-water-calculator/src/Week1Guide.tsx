@@ -10,7 +10,6 @@ import {
   Droplets,
   FlaskConical,
   Info,
-  LockKeyhole,
   Target,
 } from 'lucide-react';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
@@ -140,19 +139,19 @@ const styles = `
   .week1-prompt-mark:hover { color: #fff; background: rgba(190,211,224,.2); transform: translateY(-1px); }
   .week1-prompt-mark:focus-visible { outline: 2px solid var(--week1-cyan); outline-offset: 3px; }
   .week1-prompt-mark svg { width: 17px; height: 17px; }
-  .week1-learning h4 { max-width: 270px; margin: 0 0 13px; color: var(--week1-text); font: 400 22px/1.18 Georgia, "Times New Roman", serif; letter-spacing: 0; }
+  .week1-learning h4 { max-width: 270px; margin: 0 0 13px; color: var(--week1-muted); font: 400 14px/1.45 Georgia, "Times New Roman", serif; letter-spacing: 0; }
   .week1-learning p { margin: 0; color: var(--week1-muted); font-size: 12px; line-height: 1.65; }
+  .week1-learning .week1-source-copy { color: var(--week1-text); font: 500 21px/1.42 Georgia, "Times New Roman", serif; letter-spacing: 0; }
   .week1-learning strong { color: var(--week1-text); font-weight: 600; }
   .week1-app-prompt { margin-top: 19px; padding-top: 16px; border-top: 1px solid var(--week1-line); }
   .week1-app-prompt .week1-eyebrow { margin-bottom: 9px; }
-  .week1-app-prompt .week1-prompt-answer { margin-top: 14px; padding-top: 12px; }
+  .week1-app-prompt .week1-prompt-answer { margin-top: 8px; padding-top: 0; border-top: 0; }
   .week1-prompt-answer { display: flex; gap: 9px; align-items: start; margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--week1-line); color: var(--week1-muted); font-size: 11px; line-height: 1.5; }
   .week1-prompt-answer svg { flex: 0 0 auto; margin-top: 1px; color: var(--week1-indigo); width: 14px; height: 14px; }
-  .week1-note { padding: 20px 22px; }
-  .week1-note-head { display: flex; align-items: center; gap: 9px; margin-bottom: 11px; color: var(--week1-muted); font: 10px/1 "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
-  .week1-note-head svg { color: var(--week1-cyan); width: 14px; height: 14px; }
-  .week1-note p { margin: 0; color: var(--week1-muted); font-size: 12px; line-height: 1.58; }
-  .week1-note p em { color: var(--week1-cyan-soft); font-style: normal; }
+  .week1-watermancer-note { margin-top: 17px; padding-top: 13px; border-top: 1px solid var(--week1-line); }
+  .week1-watermancer-note p { margin: 6px 0 0; color: var(--week1-muted); font-size: 11px; line-height: 1.55; }
+  .week1-watermancer-note .week1-details { margin-top: 7px; border-top: 0; }
+  .week1-watermancer-note .week1-summary-row { padding-top: 6px; }
   .week1-details { margin-top: 13px; border-top: 1px solid var(--week1-line); }
   .week1-details summary { list-style: none; }
   .week1-details summary::-webkit-details-marker { display: none; }
@@ -185,7 +184,7 @@ const styles = `
     .week1-rail { overflow-x: auto; grid-template-columns: repeat(7, minmax(104px, 1fr)); margin-right: -15px; padding-right: 15px; border-right: 0; border-radius: 14px 0 0 14px; }
     .week1-content { grid-template-columns: 1fr; }
     .week1-recipe { padding: 20px 17px; }
-    .week1-learning, .week1-note { padding: 21px 19px; }
+    .week1-learning { padding: 21px 19px; }
   }
   @media (max-width: 430px) {
     .week1-card-heading { display: block; }
@@ -564,24 +563,23 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                   <CircleHelp />
                 </a>
                 <div className="week1-eyebrow">ROBERT ASAMI&apos;S ORIGINAL GUIDE</div>
-                <p>{currentDay.description}</p>
+                <p className="week1-source-copy">{currentDay.description}</p>
                 <div className="week1-app-prompt">
                   <div className="week1-eyebrow">WATERMANCER TASTING PROMPT</div>
                   <h4 id="week1-prompt-title">{currentDay.prompt}</h4>
-                  <div className="week1-prompt-answer"><LockKeyhole /> Note any change in the finish, juiciness, acidity, or body. There’s no expected direction; record what you notice with this coffee and brew method.</div>
+                  <div className="week1-prompt-answer"><Info /> Note any change in the finish, juiciness, acidity, or body. There’s no expected direction; record what you notice with this coffee and brew method.</div>
                 </div>
-              </section>
-
-              <section className="week1-card week1-note" aria-labelledby="week1-why-title">
-                <div className="week1-note-head" id="week1-why-title"><FlaskConical /> Watermancer notes</div>
-                <p>{currentDay.note}</p>
-                <details className="week1-details">
-                  <summary className="week1-summary-row">
-                    <span>{activeDay === 7 ? 'Robert Asami · Next steps' : 'Show calculation details'}</span>
-                    <ChevronDown />
-                  </summary>
-                  <div className="week1-detail-copy">{currentDay.learningNote}</div>
-                </details>
+                <div className="week1-watermancer-note" aria-labelledby="week1-why-title">
+                  <div className="week1-eyebrow" id="week1-why-title">WATERMANCER NOTE</div>
+                  <p>{currentDay.note}</p>
+                  <details className="week1-details">
+                    <summary className="week1-summary-row">
+                      <span>{activeDay === 7 ? 'Robert Asami · Next steps' : 'Show calculation details'}</span>
+                      <ChevronDown />
+                    </summary>
+                    <div className="week1-detail-copy">{currentDay.learningNote}</div>
+                  </details>
+                </div>
               </section>
             </aside>
           </div>

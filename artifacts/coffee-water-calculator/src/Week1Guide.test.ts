@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { computeGH, computeIonTotals, computeKH, SALTS } from './waterData';
-import { DAYS, equivalentSaltTarget } from './Week1Guide';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import Week1Guide, { DAYS, equivalentSaltTarget } from './Week1Guide';
 
 describe('Robert Asami published Week 1 recipes', () => {
   const officialCopy = [
@@ -33,6 +35,16 @@ describe('Robert Asami published Week 1 recipes', () => {
       'Compared with Day 5, what changes do you notice after adding MgCl₂ and NaCl, lowering GH, and splitting KH between NaHCO₃ and KHCO₃?',
       'Compared with Day 6, what changes do you notice as GH/KH fall to 30/10, MgCl₂ is removed, and NaCl rises from 15 to 20 ppm?',
     ]);
+  });
+
+  it('keeps the source quote, tasting prompt, and app notes in one block', () => {
+    const html = renderToStaticMarkup(createElement(Week1Guide, { onApplyRecipe: () => {} }));
+    expect(html.match(/class="week1-card week1-learning"/g)).toHaveLength(1);
+    expect(html).not.toContain('week1-card week1-note');
+    expect(html).toContain('ROBERT ASAMI&#x27;S ORIGINAL GUIDE');
+    expect(html).toContain('WATERMANCER TASTING PROMPT');
+    expect(html).toContain('WATERMANCER NOTE');
+    expect(html).toContain(DAYS[0].note);
   });
 
   const publishedMasses = [
