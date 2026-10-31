@@ -232,7 +232,8 @@ describe('Watermancer Guide copy', () => {
 
     expect(copy).toContain('unscented, additive-free product');
     expect(copy).not.toMatch(/food.grade/i);
-    expect(copy).toMatch(/confirm with the supplier.*suitable for consumption/i);
+    expect(copy).toContain('Use common sense—unscented and additive-free doesn’t automatically mean suitable for drinking water.');
+    expect(copy).not.toMatch(/confirm with the supplier/i);
   });
 
   it('teaches vertical dropper handling and clarifies that the tip photos are not dispensing-angle examples', () => {

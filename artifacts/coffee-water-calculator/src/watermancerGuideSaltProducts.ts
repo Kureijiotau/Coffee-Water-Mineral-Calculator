@@ -8,7 +8,7 @@ export const WATERMANCER_GUIDE_SALT_PRODUCTS = {
     sourceUrl: nowMagnesiumFlakesImage,
     sourceLabel: 'Uploaded photo',
     alt: 'NOW Solutions magnesium flakes package from the ancient Zechstein seabed',
-    note: 'Packaging reference only. Confirm with the supplier that this product is suitable for consumption.',
+    note: 'Packaging reference only. Use common sense—unscented and additive-free doesn’t automatically mean suitable for drinking water.',
   },
   nigari: {
     id: 'nigari',

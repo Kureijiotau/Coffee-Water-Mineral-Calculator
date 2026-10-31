@@ -57,7 +57,7 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
           { kind: 'product', productId: 'vera-salt' },
           { kind: 'text', text: '. Choose an ' },
           { kind: 'emphasis', text: 'unscented, additive-free product' },
-          { kind: 'text', text: ' and match its labeled composition and hydration form. Confirm with the supplier that it is suitable for consumption.' },
+          { kind: 'text', text: ' and match its labeled composition and hydration form. Use common sense—unscented and additive-free doesn’t automatically mean suitable for drinking water.' },
         ],
       },
       'For other common recipe salts, look for food-grade magnesium sulfate heptahydrate, calcium chloride dihydrate sold for cheesemaking or pickling, and food-grade potassium chloride or potassium bicarbonate.',

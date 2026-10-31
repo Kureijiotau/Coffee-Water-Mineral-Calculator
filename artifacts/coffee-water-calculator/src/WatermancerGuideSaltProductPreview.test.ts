@@ -14,7 +14,8 @@ describe('Watermancer Guide salt product preview', () => {
     expect(existsSync(join(process.cwd(), 'public/watermancer-guide/now-magnesium-flakes.png'))).toBe(true);
     expect(product.alt).toContain('NOW Solutions');
     expect(product.note).toMatch(/packaging reference only/i);
-    expect(product.note).toMatch(/confirm.*suitable for consumption/i);
+    expect(product.note).toContain('Use common sense—unscented and additive-free doesn’t automatically mean suitable for drinking water.');
+    expect(product.note).not.toMatch(/confirm with the supplier/i);
     const html = renderToStaticMarkup(createElement(WatermancerGuideSaltProductPreview, {
       productId: product.id,
     }));
