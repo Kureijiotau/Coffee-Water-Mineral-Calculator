@@ -255,7 +255,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 1 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: "Intended to be closest to getting you started with materials you may already have at home. It should NOT be considered an end point. This recipe is based off of Holy Water but with more common household minerals. If you go out of order and jump straight to the end, you've done this wrong and haven't learned anything.",
-    prompt: 'What does “balanced” taste like to you?',
+    prompt: 'With this coffee and brew method, what stands out in the cup?',
     note: 'The published masses are for 1 L. The dose shown here is scaled to the selected batch volume and salt hydration form.',
     learningNote: 'The calculator displays GH and KH as ppm CaCO₃; salt amounts remain physical mass.',
     formIdx: { mgso4: 1, nahco3: 0 },
@@ -268,7 +268,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 2 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: 'The second recipe from the introductory blog post. This recipe is intended to create contrast with the Day 1 recipe. It should NOT be considered an end point. It is intended for lighter washed coffees, but is flexible to work with most light roasts. There is a lot of calcium to dissolve, you will likely need to stir it up quite well overnight.',
-    prompt: 'Does the cup feel more focused or more muted?',
+    prompt: 'Compared with Day 1, what differences do you notice in this cup, if any?',
     note: 'This recipe lists 40 GH, compared with Day 1’s 60 GH; both recipes list 15 KH.',
     learningNote: 'The listed calcium chloride mass is modeled using the anhydrous salt form.',
     formIdx: { cacl2: 0, nahco3: 0 },
@@ -281,7 +281,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 3 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: 'This recipe starts to touch on blending minerals. Consider how you like this water vs. the day 2 recipe; this recipe gauges how you feel about magnesium.',
-    prompt: 'Where does the blend land between vivid and round?',
+    prompt: 'Compared with Day 2, what differences do you notice in this cup, if any?',
     note: 'The source lists 40 GH from Epsom salt and 20 GH from calcium chloride, for 60 GH total.',
     learningNote: 'Compared with Day 2, this recipe changes the GH level as well as the hardness sources.',
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
@@ -294,7 +294,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 4 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: "Compared to the Day 3 recipe, we've flipped the primary GH mineral and are leaning heavier towards calcium. At this point, consider which way you lean - preferring calcium or magnesium.",
-    prompt: 'Which hardness source feels more natural in the finish?',
+    prompt: 'Compared with Day 3, what differences do you notice in this cup, if any?',
     note: 'The listed hardness contributions are 20 GH from Epsom salt and 40 GH from calcium chloride.',
     learningNote: 'The calculator preserves the source salt masses and scales them to the selected batch volume.',
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0 },
@@ -307,7 +307,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 5 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: "Now we're playing with alternative minerals. For example, we used epsom salt as the Mg source; you could swap it for magnesium chloride flakes. Note that this requires different calculations, and this specific example introduces more chlorides (when used with CaCl2).",
-    prompt: 'Does the alternate mineral source change the cup’s shape?',
+    prompt: 'If you try the optional swap, what differences do you notice compared with the original?',
     note: 'The published Day 5 recipe uses potassium bicarbonate. The sodium-bicarbonate option is a Watermancer addition.',
     learningNote: 'Watermancer calculates equivalent GH or KH for optional salt swaps. These controls are app additions, not extra recipes from the source.',
     formIdx: { mgso4: 1, cacl2: 0, khco3: 0 },
@@ -320,7 +320,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 6 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: "We're adding more complexity, and starting to introduce minerals that don't quite fit the GH/KH paradigm so far.",
-    prompt: 'Which new mineral effect is actually useful?',
+    prompt: 'What differences do you notice in this cup? Which would you want to check in a repeat brew?',
     note: 'The source lists the six mineral contributions separately, including 15 ppm sodium chloride.',
     learningNote: 'The source notes that these are very small doses; the app shows the calculated quantities for the selected batch.',
     formIdx: { mgcl2: 1, mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
@@ -333,7 +333,7 @@ export const DAYS: Week1Day[] = [
     title: 'Day 7 pourover recipe',
     subtitle: 'Pourover/Filter',
     description: "If you skipped the first 6 days and expect this to be the best recipe, that is not the goal of this sequence. Now we're going for a different effect.",
-    prompt: 'What would you keep for your next brew?',
+    prompt: 'Across this sequence, which recipe suits this coffee and brew method best? What would you want to test with another coffee?',
     note: 'The published Day 7 recipe is 30 GH / 10 KH, with 20 ppm sodium chloride.',
     learningNote: "After going through the above recipes, you may have some opinions such as: \"I liked epsom salt more than CaCl2\", \"I can/can't see myself regularly working with recipes using many mineral sources\", \"I had a clear favorite recipe for my beans + grinder.\" Some things to try from here: Take your favorite recipe and iterate on it. Raise or lower buffer (KH) - we mostly stuck to 15KH, but you could go as low as 5. Try varying mineral sources - you may find a certain brand/source of sea salt tastes different. Find a \"base\" recipe for different bean types - for example, if you like your naturals to express juicy and fruity, you may seek a base water for that style, compared to a bright and floral base water for washed coffees.",
     formIdx: { mgso4: 1, cacl2: 0, nahco3: 0, khco3: 0, nacl: 0 },
@@ -568,7 +568,7 @@ export default function Week1Guide({ onApplyRecipe }: Week1GuideProps) {
                 <div className="week1-app-prompt">
                   <div className="week1-eyebrow">WATERMANCER TASTING PROMPT</div>
                   <h4 id="week1-prompt-title">{currentDay.prompt}</h4>
-                  <div className="week1-prompt-answer"><LockKeyhole /> Keep the coffee and brew method steady. Write down the first three words that arrive.</div>
+                  <div className="week1-prompt-answer"><LockKeyhole /> Note the coffee and brew method. Treat observations as specific to this cup; don’t assume one ion has the same taste effect in every water or coffee.</div>
                 </div>
               </section>
 

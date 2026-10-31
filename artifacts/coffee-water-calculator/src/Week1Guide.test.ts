@@ -23,6 +23,18 @@ describe('Robert Asami published Week 1 recipes', () => {
     expect(DAYS[6].learningNote).toBe(officialNextSteps);
   });
 
+  it('keeps Watermancer tasting prompts neutral and specific to the coffee in the cup', () => {
+    expect(DAYS.map(day => day.prompt)).toEqual([
+      'With this coffee and brew method, what stands out in the cup?',
+      'Compared with Day 1, what differences do you notice in this cup, if any?',
+      'Compared with Day 2, what differences do you notice in this cup, if any?',
+      'Compared with Day 3, what differences do you notice in this cup, if any?',
+      'If you try the optional swap, what differences do you notice compared with the original?',
+      'What differences do you notice in this cup? Which would you want to check in a repeat brew?',
+      'Across this sequence, which recipe suits this coffee and brew method best? What would you want to test with another coffee?',
+    ]);
+  });
+
   const publishedMasses = [
     { mgso4: 148, nahco3: 25 },
     { cacl2: 44, nahco3: 25 },
