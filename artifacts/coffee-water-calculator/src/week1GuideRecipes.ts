@@ -56,13 +56,13 @@ const DAY5_ORIGINAL_TARGETS = massTargets(
   { mgso4: 1, cacl2: 0, khco3: 0 },
 );
 
-const DAY5_MGCL2_TARGET = equivalentSaltTarget(
+export const DAY5_MGCL2_TARGET = equivalentSaltTarget(
   'mgso4',
   'mgcl2',
   'magnesium',
   DAY5_ORIGINAL_TARGETS.mgso4,
 );
-const DAY5_NAHCO3_TARGET = equivalentSaltTarget(
+export const DAY5_NAHCO3_TARGET = equivalentSaltTarget(
   'khco3',
   'nahco3',
   'bicarbonate',
@@ -182,3 +182,11 @@ export const ROBERT_ASAMI_WEEK1_SALT_RECIPES: SaltRecipe[] = DAYS.map(day => ({
   notes: day.description,
   conversion: 'exact',
 }));
+
+export const ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP = {
+  label: 'Robert Asami · Week 1',
+  options: ROBERT_ASAMI_WEEK1_SALT_RECIPES.map(recipe => ({
+    value: `recipe:${recipe.id}`,
+    label: recipe.name,
+  })),
+};

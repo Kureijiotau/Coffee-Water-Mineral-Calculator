@@ -24,7 +24,7 @@ test('lists all seven Week 1 recipes for Brewer and Alchemist without changing o
   await page.getByTestId('mode-brewer').click();
   let group = await openRecipeGroup(page, weekOneGroupName);
   await expect(group.getByRole('option')).toHaveCount(7);
-  await expect(group.getByRole('option').allTextContents()).resolves.toEqual(publishedDayNames);
+  expect(await group.getByRole('option').allTextContents()).toEqual(publishedDayNames);
   await group.getByRole('option', { name: publishedDayNames[0], exact: true }).click();
   const recipePicker = page.getByRole('button', { name: 'Select mineral recipe' });
   await expect(recipePicker).toContainText(publishedDayNames[0]);
@@ -55,7 +55,7 @@ test('uses the calculated Week 1 ion profile as a Watermancer target source', as
 
   const group = await openRecipeGroup(page, weekOneGroupName);
   await expect(group.getByRole('option')).toHaveCount(7);
-  await expect(group.getByRole('option').allTextContents()).resolves.toEqual(publishedDayNames);
+  expect(await group.getByRole('option').allTextContents()).toEqual(publishedDayNames);
   await group.getByRole('option', { name: publishedDayNames[5], exact: true }).click();
 
   await page.getByTestId('watermancer-profile-edit').click();
@@ -71,6 +71,6 @@ test('uses the calculated Week 1 ion profile as a Watermancer target source', as
   ] as const) {
     const field = page.getByTestId(`watermancer-ion-target-${ionId}`);
     await expect(field).toBeVisible();
-    expect(Number(await field.inputValue())).toBeCloseTo(expectedIons[ionId], 5);
+    expect(Number(await field.inputValue())).toBeCloseTo(Number(expectedIons[ionId]), 5);
   }
 });

@@ -14,7 +14,12 @@ import {
 } from 'lucide-react';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import { computeGH, computeIonTotals, computeKH, getSaltColorTokens, ION_MAP, SALTS } from './waterData';
-import { DAYS, type Week1Recipe } from './week1GuideRecipes';
+import {
+  DAYS,
+  DAY5_MGCL2_TARGET,
+  DAY5_NAHCO3_TARGET,
+  type Week1Recipe,
+} from './week1GuideRecipes';
 import { Week1SaltLabel } from './Week1SaltLabel';
 
 export { DAYS, equivalentSaltTarget } from './week1GuideRecipes';

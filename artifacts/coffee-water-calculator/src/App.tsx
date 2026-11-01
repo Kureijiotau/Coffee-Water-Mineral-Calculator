@@ -22,6 +22,10 @@ import {
 } from '@/recipes';
 import { loadLocalWaters, saveLocalWaters, newLocalWaterId, type LocalWater, type WaterMetadata } from '@/localWaters';
 import type { Week1Recipe } from './Week1Guide';
+import {
+  ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP,
+  ROBERT_ASAMI_WEEK1_SALT_RECIPES,
+} from './week1GuideRecipes';
 import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMethodSelector';
 import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
@@ -273,6 +277,8 @@ import {
 } from './watermancerSilica';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
+const BUILT_IN_SALT_RECIPES = [...RECIPES, ...ROBERT_ASAMI_WEEK1_SALT_RECIPES];
+
 const WatermancerGuide = lazy(() => import('./WatermancerGuide'));
 const WaterMixer = lazy(() => import('./WaterMixer'));
 const WaterTastingTab = lazy(() => import('./WaterTastingTab').then(module => ({
@@ -3538,7 +3544,7 @@ function App() {
     return { source: waterPlanToMixerSource(parsed.plan, mixerCatalogWaters) };
   }, [mixerCatalogWaters]);
   const allRecipesForWatermancer = useMemo(
-    () => [...RECIPES, ...savedRecipes],
+    () => [...BUILT_IN_SALT_RECIPES, ...savedRecipes],
     [savedRecipes],
   );
   const watermancerIonTargets = useMemo<Partial<Record<IonId, number>>>(() => {
@@ -4975,7 +4981,7 @@ function App() {
     : 0;
   const concDoseMlPerBatch = concDoseMlPerLiter * L;
 
-  const allRecipes = [...RECIPES, ...savedRecipes];
+  const allRecipes = [...BUILT_IN_SALT_RECIPES, ...savedRecipes];
   const activeRecipe = allRecipes.find(r => r.id === activeRecipeId);
   const isSavedRecipeActive = savedRecipes.some(r => r.id === activeRecipeId);
   const selectedExternalRecipe: ExternalRecipe | undefined = ROBERT_ASAMI_RECIPES.find(
@@ -5009,6 +5015,11 @@ function App() {
         value: `recipe:${recipe.id}`,
         label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
       })),
+    },
+    {
+      label: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.label,
+      accent: 'amber',
+      options: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.options,
     },
     {
       label: 'Watering Hole · Filter',
@@ -13869,6 +13880,11 @@ function WatermancerIonProfileCard({
         value: `recipe:${recipe.id}`,
         label: `${recipe.id === 'kimoi' ? '⭐ ' : ''}${recipe.name}`,
       })),
+    },
+    {
+      label: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.label,
+      accent: 'amber',
+      options: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.options,
     },
     {
       label: 'Empirical Water Profiles',
