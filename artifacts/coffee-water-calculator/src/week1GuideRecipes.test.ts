@@ -22,9 +22,8 @@ describe('Robert Asami Week 1 shared recipe catalog', () => {
     });
   });
 
-  it('derives Day 1 and Day 6 ions from the source recipe targets', () => {
-    for (const dayIndex of [0, 5]) {
-      const day = DAYS[dayIndex];
+  it('derives zero-TDS ion targets from each day recipe', () => {
+    DAYS.forEach((day, dayIndex) => {
       const recipe = ROBERT_ASAMI_WEEK1_SALT_RECIPES[dayIndex];
       const recipeTargets = Object.fromEntries(
         Object.entries(recipe.salts).map(([saltId, entry]) => [saltId, Number(entry.target)]),
@@ -33,7 +32,7 @@ describe('Robert Asami Week 1 shared recipe catalog', () => {
       expect(computeIonTotals(recipeTargets, {}, 1)).toEqual(
         computeIonTotals(day.targets, {}, 1),
       );
-    }
+    });
   });
 
   it('keeps Day 5 cataloged as the published recipe without optional swaps', () => {
