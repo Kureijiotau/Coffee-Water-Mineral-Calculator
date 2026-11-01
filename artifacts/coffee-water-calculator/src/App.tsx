@@ -3440,6 +3440,7 @@ function App() {
     applyBrewerFlavor(flavor);
   }, [applyBrewerFlavor]);
   const handleApplyWeek1Recipe = (recipe: Week1Recipe) => {
+    handleCalculatorModeChange('brewer');
     setBrewerRecipeOverride(recipe);
     setActiveRecipeId('custom');
     setExternalRecipeId('custom');
