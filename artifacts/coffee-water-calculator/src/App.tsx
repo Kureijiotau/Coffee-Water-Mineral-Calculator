@@ -16100,9 +16100,6 @@ function BrewerSimpleRecipeCard({
             />
             <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
           </div>
-          <span className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">
-            Live result
-          </span>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {recipeSalts.map(salt => (
