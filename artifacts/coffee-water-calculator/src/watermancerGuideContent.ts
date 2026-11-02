@@ -81,21 +81,22 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     details: [
       'Count a known number of water drops from each tip style into a tared vessel while holding the dropper vertically, then weigh the water.',
       'Tilting a pipette to 45° increases the surface area the drop clings to and can change drop weight by up to 15–20%. The photos show tip shapes only, not the dispensing angle.',
-      'Enter each result below and press Use. The saved calibration is shared by DIY Stock Builder and DIY Lotus Drops.',
+      'Enter each result below and press Use. This water-only calibration supplies a planning estimate shared by DIY Stock Builder and DIY Lotus Drops; verify dosing with actual finished-stock drops.',
     ],
   },
   {
     id: 'prepare-stocks',
     title: 'Prepare 1 mg per drop stocks',
-    summary: 'For a fixed tip calibration, working fill volume—not salt type—sets the salt mass.',
+    summary: 'Choose the target finished-stock weight in grams. Water-drop calibration gives a planning estimate; verify each finished stock.',
     details: [
-      'Each drop contains 1.00 mg of its physical salt; the salt type changes which ions those drops contribute.',
+      'Aim for approximately 1 mg of physical salt per drop, then verify the actual prepared stock by weighing counted drops. Different salts can change finished-stock drop mass.',
+      'Tare the bottle once, add 20–30% of the calculated water weight, transfer the salt, shake/mix, then add the remaining water to total stock weight without retaring.',
     ],
   },
   {
     id: 'set-targets',
     title: 'Set up the Watermancer recipe',
-    summary: 'With all your 1 mg/drop solutions ready, you can now make very precise water recipes using Watermancer.',
+    summary: 'With your finished stocks verified, use their measured mg per drop to prepare the Watermancer recipe.',
     details: [
       'Choose or create the desired final-ion profile and set the final batch volume to 1 L.',
       'Select the actual mineral-water source and amount for the recipe. Use Craft ions when adjusting a pair so the complete target set stays charge balanced.',
@@ -123,8 +124,8 @@ export const WATERMANCER_GUIDE_REFERENCES: readonly WatermancerGuideEntry[] = [
     title: 'Drop calibration',
     summary: 'Measure the dropper that will dispense each prepared stock.',
     details: [
-      'Count and weigh a known number of water drops for each physical dropper, then enter both measurements in DIY Concentrate.',
-      'A dropper’s actual drops per milliliter can differ from a nominal estimate. Use the prepared stock’s displayed mg per drop as the dose-conversion value.',
+      'Count and weigh a known number of actual finished-stock drops for each physical dropper, holding it vertically, then enter both measurements in DIY Concentrate.',
+      'Grams per stock drop = measured finished-stock weight ÷ counted drops. Water-drop calibration is only a planning estimate; use the verified stock’s displayed mg per drop as the dose-conversion value.',
     ],
   },
   {

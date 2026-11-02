@@ -254,7 +254,7 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
   const [savedCalibrations, setSavedCalibrations] = useState(() =>
     migrateLotusCalibrationInputs(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {}).calibrations,
   );
-  const [workingFillVolumeInput, setWorkingFillVolumeInput] = useState('');
+  const [targetStockMassInput, setTargetStockMassInput] = useState('');
   const [stockDropperStyle, setStockDropperStyle] = useState<LotusDropperStyle>(() =>
     savedCalibrations.straight ? 'straight' : savedCalibrations.round ? 'round' : 'straight',
   );
@@ -353,8 +353,8 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
                 calibrations={savedCalibrations}
                 dropperStyle={stockDropperStyle}
                 onDropperStyleChange={setStockDropperStyle}
-                workingFillVolumeInput={workingFillVolumeInput}
-                onWorkingFillVolumeInputChange={setWorkingFillVolumeInput}
+                targetStockMassInput={targetStockMassInput}
+                onTargetStockMassInputChange={setTargetStockMassInput}
                 onOpenCalibration={() => setStepIndex(
                   Math.max(0, WATERMANCER_GUIDE_STEPS.findIndex(entry => entry.id === 'calibrate')),
                 )}

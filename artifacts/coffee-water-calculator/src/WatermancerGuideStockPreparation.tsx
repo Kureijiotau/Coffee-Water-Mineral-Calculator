@@ -1,4 +1,6 @@
 import parchmentPaperPhoto from '@assets/1_1792294122443.jpg';
+import { useState } from 'react';
+import { ConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
 import {
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   lotusDropsPerMl,
@@ -13,8 +15,8 @@ type WatermancerGuideStockPreparationProps = {
   calibrations: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
   dropperStyle: LotusDropperStyle;
   onDropperStyleChange: (style: LotusDropperStyle) => void;
-  workingFillVolumeInput: string;
-  onWorkingFillVolumeInputChange: (value: string) => void;
+  targetStockMassInput: string;
+  onTargetStockMassInputChange: (value: string) => void;
   onOpenCalibration: () => void;
 };
 
@@ -64,8 +66,8 @@ export function WatermancerGuideStockPreparation({
   calibrations,
   dropperStyle,
   onDropperStyleChange,
-  workingFillVolumeInput,
-  onWorkingFillVolumeInputChange,
+  targetStockMassInput,
+  onTargetStockMassInputChange,
   onOpenCalibration,
 }: WatermancerGuideStockPreparationProps) {
   const savedCalibration = calibrations[dropperStyle];
@@ -78,11 +80,15 @@ export function WatermancerGuideStockPreparation({
   const waterDropMassG = measuredDropsPerMl !== null && savedCalibration
     ? Number(savedCalibration.weightInput) / Number(savedCalibration.dropsInput)
     : 1 / estimatedDropsPerMl;
-  const volumeMl = Number(workingFillVolumeInput);
-  const plan = workingFillVolumeInput.trim() !== '' && Number.isFinite(volumeMl)
-    ? calculateOneMgPerDropStockPlan(volumeMl, waterDropMassG)
+  const [stockDrops, setStockDrops] = useState('');
+  const [stockMass, setStockMass] = useState('');
+  const [verification, setVerification] = useState<{ key: string; gramsPerDrop: number } | null>(null);
+  const totalStockMassG = Number(targetStockMassInput);
+  const verificationKey = `${totalStockMassG}:${dropperStyle}:${waterDropMassG}`;
+  const plan = targetStockMassInput.trim() !== '' && Number.isFinite(totalStockMassG)
+    ? calculateOneMgPerDropStockPlan(totalStockMassG, { basis: 'water-estimate', drops: 1, massG: waterDropMassG, compositionKey: '', tipKey: dropperStyle })
     : null;
-  const invalidVolume = workingFillVolumeInput.trim() !== '' && plan === null;
+  const invalidVolume = targetStockMassInput.trim() !== '' && plan === null;
 
   return (
     <section
@@ -94,13 +100,13 @@ export function WatermancerGuideStockPreparation({
         Calculate one stock
       </h4>
       <p className="mt-1 text-xs leading-relaxed text-slate-300">
-        Same tip calibration and working fill volume means the same salt mass for every salt.
+        Water-calibrated planning estimate: target finished-stock weight and tip estimate set the salt mass. Verify each salt with drops of its actual finished stock.
       </p>
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="min-w-0 rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-            Working fill volume
+            Target stock weight
           </span>
           <span className="mt-1 flex items-center gap-2">
             <input
@@ -108,15 +114,15 @@ export function WatermancerGuideStockPreparation({
               min="1"
               step="1"
               inputMode="decimal"
-              value={workingFillVolumeInput}
-              onChange={event => onWorkingFillVolumeInputChange(event.target.value)}
+              value={targetStockMassInput}
+              onChange={event => onTargetStockMassInputChange(event.target.value)}
               placeholder="e.g. 50"
-              aria-label="Working fill volume in milliliters"
+              aria-label="Target stock weight in grams"
               aria-invalid={invalidVolume}
               className="w-full min-w-0 bg-transparent text-xl font-semibold tabular-nums text-slate-100 outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
-              data-testid="input-guide-working-fill-volume"
+              data-testid="input-guide-target-stock-mass"
             />
-            <span className="text-sm text-slate-400">mL</span>
+            <span className="text-sm text-slate-400">g</span>
           </span>
         </label>
 
@@ -145,7 +151,7 @@ export function WatermancerGuideStockPreparation({
                 >
                   <span className="block">{option.label}</span>
                   <span className="mt-0.5 block text-[10px] font-medium opacity-80">
-                    {optionRate.toFixed(1)} drops/mL
+                    {(1 / optionRate).toFixed(5)} g/water drop
                   </span>
                 </button>
               );
@@ -164,7 +170,7 @@ export function WatermancerGuideStockPreparation({
         aria-live="polite"
       >
         <span>
-          {dropsPerMl.toFixed(1)} drops/mL · {measuredDropsPerMl === null ? 'estimate' : 'Step 3 calibration'}
+          {waterDropMassG.toFixed(5)} g/water drop · {measuredDropsPerMl === null ? 'source estimate' : 'Step 3 water calibration'} — finished-stock drops are still estimated
         </span>
         {measuredDropsPerMl === null && (
           <button
@@ -183,7 +189,7 @@ export function WatermancerGuideStockPreparation({
           <Result
             label="Salt to weigh"
             value={`${plan.saltMassG.toFixed(3)} g`}
-            note={`${plan.saltMassMg.toFixed(1)} mg · 1 mg per drop`}
+            note={`${plan.saltMassMg.toFixed(1)} mg · target ≈ 1 mg per drop; verify`}
             tone="amber"
           />
           <Result
@@ -194,8 +200,8 @@ export function WatermancerGuideStockPreparation({
           />
           <Result
             label="Total mix"
-            value={`${plan.totalMixMassG.toFixed(3)} g`}
-            note={`≈ ${plan.stockVolumeMl.toFixed(1)} mL stock · minimum bottle capacity ${plan.minimumBottleVolumeMl.toFixed(1)} mL`}
+            value={`${plan.totalStockMassG.toFixed(3)} g`}
+            note="Salt + water, excluding the bottle"
             tone="emerald"
           />
         </div>
@@ -210,13 +216,13 @@ export function WatermancerGuideStockPreparation({
           data-testid="guide-stock-plan-empty"
         >
           {invalidVolume
-            ? 'Increase the working fill volume so the salt amount still leaves water in the mix.'
-            : 'Enter the working fill volume to calculate the amounts.'}
+            ? 'Enter a positive stock weight and valid drop estimate that leaves water in the mix.'
+            : 'Enter the target stock weight to calculate the amounts.'}
         </p>
       )}
 
       <p className="mt-3 rounded-lg border border-cyan-300/15 bg-cyan-400/[0.04] px-3 py-2 text-xs leading-relaxed text-cyan-100/80">
-        Leave 5–10 mL of headroom for shaking and dissolving; use a bottle 5–10 mL larger than the working fill. For example, a 50 mL fill in a 59 mL bottle leaves about 9 mL of headroom.
+        Leave 5–10 mL of physical headroom for shaking and dissolving. Use a larger bottle if needed; finished stock weight does not tell you its occupied volume.
       </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
@@ -236,34 +242,24 @@ export function WatermancerGuideStockPreparation({
           </figcaption>
         </figure>
 
-        <ol className="space-y-2 self-center text-xs leading-relaxed text-slate-300" data-testid="guide-stock-mixing-order">
-          <li className="flex gap-2">
-            <span className="font-bold text-emerald-200">1.</span>
-            <span>Place parchment on the scale and tare it.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-bold text-emerald-200">2.</span>
-            <span>Weigh the salt amount shown.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-bold text-emerald-200">3.</span>
-            <span>
-              Transfer the salt to its bottle, then add the water amount shown.
-              <span className="mt-1 block rounded-md border border-cyan-300/15 bg-cyan-400/[0.04] px-2 py-1.5 text-[11px] text-cyan-100/80">
-                Tip: Use a splash of your measured water to rinse any clinging crystals off the parchment into the bottle.
-              </span>
-            </span>
-          </li>
-          <li className="flex gap-2">
-            <span className="font-bold text-emerald-200">4.</span>
-            <span>Keep 5–10 mL of headroom, close, and shake until dissolved.</span>
-          </li>
-        </ol>
+        <div className="self-center" data-testid="guide-stock-mixing-order">
+          {plan ? <ConcentratePreparationSteps totalStockMassG={plan.totalStockMassG} waterMassG={plan.waterMassG} saltLabel={`${plan.saltMassG.toFixed(3)} g of the selected salt, weighed on tared parchment`} />
+            : <p className="text-xs text-slate-400">Tare the bottle; add 20–30% of the calculated water weight, transfer salt, mix, then add the remaining water to total stock weight. Do not tare again.</p>}
+        </div>
       </div>
 
       <p className="mt-3 text-[10px] leading-relaxed text-slate-500">
-        Uses the same concentrate estimate: 1 mL ≈ 1 g of total mix.
+        {WATER_MASS_NOTE}
       </p>
+      {plan && <details className="mt-3 rounded-lg border border-slate-700/60 p-3 text-xs">
+        <summary className="cursor-pointer text-emerald-100">Verify actual finished-stock drops</summary>
+        <p className="mt-2 text-slate-400">For each prepared salt stock, weigh counted drops in a tared cup, holding the dropper vertically. This checks the existing formulation; it does not silently change it.</p>
+        <label className="mt-2 block">Counted finished-stock drops<input aria-label="Guide counted finished-stock drops" className="ml-2 rounded bg-slate-950 p-2" value={stockDrops} onChange={e => setStockDrops(e.target.value)} /></label>
+        <label className="mt-2 block">Measured stock weight (g)<input aria-label="Guide measured finished-stock weight" className="ml-2 rounded bg-slate-950 p-2" value={stockMass} onChange={e => setStockMass(e.target.value)} /></label>
+        <button className="mt-3 rounded border border-emerald-400/30 px-3 py-2" disabled={![Number(stockDrops), Number(stockMass)].every(v => Number.isFinite(v) && v > 0)}
+          onClick={() => setVerification({ key: verificationKey, gramsPerDrop: Number(stockMass) / Number(stockDrops) })}>Check this stock</button>
+        {verification?.key === verificationKey && <p className="mt-2 text-emerald-100">Measured: {(plan.saltMassMg / plan.totalStockMassG * verification.gramsPerDrop).toFixed(3)} mg physical salt per drop. Repeat for each salt stock.</p>}
+      </details>}
     </section>
   );
 }

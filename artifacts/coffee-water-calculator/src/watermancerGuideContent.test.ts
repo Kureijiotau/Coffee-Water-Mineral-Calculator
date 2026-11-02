@@ -147,7 +147,7 @@ describe('Watermancer Guide copy', () => {
       'Gather the salts, separate droppers, and a scale suitable for small masses (0.001g is preferred).',
     );
     expect(WATERMANCER_GUIDE_STEPS[4]?.summary).toBe(
-      'With all your 1 mg/drop solutions ready, you can now make very precise water recipes using Watermancer.',
+      'With your finished stocks verified, use their measured mg per drop to prepare the Watermancer recipe.',
     );
     expect(WATERMANCER_GUIDE_STEPS[1]?.details).not.toContain(
       'Label each bottle with the salt and the physical hydration form you weighed.',
@@ -155,7 +155,7 @@ describe('Watermancer Guide copy', () => {
 
     expect(stepText).toMatch(/supplies/i);
     expect(stepText).toMatch(/count a known number of water drops.*weigh the water/i);
-    expect(stepText).toMatch(/Each drop contains 1\.00 mg of its physical salt/i);
+    expect(stepText).toMatch(/approximately 1 mg of physical salt per drop/i);
     expect(stepText).toMatch(/complete target set stays charge balanced/i);
     expect(stepText).toMatch(/mineral.water/i);
     expect(referenceText).toMatch(/calibration/i);
@@ -249,7 +249,7 @@ describe('Watermancer Guide copy', () => {
   it('describes stock strength from the working fill volume rather than bottle size', () => {
     const preparationStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'prepare-stocks');
 
-    expect(preparationStep?.summary).toContain('working fill volume');
+    expect(preparationStep?.summary).toContain('finished-stock weight in grams');
     expect(preparationStep?.summary).not.toContain('bottle size');
   });
 });

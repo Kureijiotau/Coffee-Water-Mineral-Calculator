@@ -1,54 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 import { calculateOneMgPerDropStockPlan } from './watermancerGuideStock';
-
-describe('Watermancer Guide one-milligram stock preparation', () => {
-  it('uses calibrated water-drop mass to calculate salt and water for the requested working fill volume', () => {
-    const plan = calculateOneMgPerDropStockPlan(50, 0.05);
-
-    expect(plan).toMatchObject({
-      workingFillVolumeMl: 50,
-      minimumBottleVolumeMl: 55,
-      stockVolumeMl: 50,
-      totalMixMassG: 50,
-      estimatedDropCount: 1000,
-      saltMassMg: 1000,
-      saltMassG: 1,
-      waterMassG: 49,
-    });
-  });
-
-  it('changes the amount for a different calibrated drop size, not for the salt type', () => {
-    const plan = calculateOneMgPerDropStockPlan(50, 5 / 60);
-
-    expect(plan).toMatchObject({
-      workingFillVolumeMl: 50,
-      minimumBottleVolumeMl: 55,
-      stockVolumeMl: 50,
-      totalMixMassG: 50,
-      estimatedDropCount: 600,
-      saltMassMg: 600,
-      saltMassG: 0.6,
-      waterMassG: 49.4,
-    });
-  });
-
-  it.each([
-    [-1, 0.05],
-    [0, 0.05],
-    [30, 0],
-    [Number.NaN, 0.05],
-    [30, Number.NaN],
-    [1, 0.0005],
-  ])('returns no plan for unusable volume/drop mass (%s, %s)', (volumeMl, dropMassG) => {
-    expect(calculateOneMgPerDropStockPlan(volumeMl, dropMassG)).toBeNull();
-  });
-
-  it('accepts a 5 mL working fill; headroom is supplied by the larger bottle, not deducted from the input', () => {
-    expect(calculateOneMgPerDropStockPlan(5, 0.05)).toMatchObject({
-      workingFillVolumeMl: 5,
-      minimumBottleVolumeMl: 10,
-      stockVolumeMl: 5,
-      totalMixMassG: 5,
-    });
-  });
+const waterEstimate = { basis: 'water-estimate' as const, massG: 5, drops: 100, compositionKey: '', tipKey: 'straight' };
+it('uses target finished mass, with explicit estimate provenance and partial water', () => {
+  const plan = calculateOneMgPerDropStockPlan(50, waterEstimate);
+  expect(plan).toMatchObject({ totalStockMassG: 50, saltMassG: 1, waterMassG: 49,
+    initialWaterMinG: 9.8, initialWaterMaxG: 14.7, calibrationBasis: 'water-estimate' });
+  expect(plan).not.toHaveProperty('stockVolumeMl');
+  expect(plan).not.toHaveProperty('minimumBottleVolumeMl');
+});
+it.each([0, -1, NaN, Infinity])('rejects invalid target %s', value => expect(calculateOneMgPerDropStockPlan(value, waterEstimate)).toBeNull());
+it('rejects drop targets which leave no water', () => {
+  expect(calculateOneMgPerDropStockPlan(50, { ...waterEstimate, massG: 0.0001 })).toBeNull();
 });
