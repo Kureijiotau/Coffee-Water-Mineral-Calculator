@@ -50,6 +50,45 @@ export const getAccountSyncDataResponseWatermancerProfilesItemDetailsMax = 4000;
 
 export const getAccountSyncDataResponseWatermancerProfilesMax = 300;
 
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax = 200;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin = 0;
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax = 100;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax = 200;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax = 40;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax = 10000;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax = 100;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsMax = 40;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax = 100;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax = 100;
+
 export const getAccountSyncDataResponseDiyConcentrateInputsOneStockWeightInputMax = 100;
 
 export const getAccountSyncDataResponseDiyConcentrateInputsOneStockVolumeInputMax = 100;
@@ -189,6 +228,41 @@ export const GetAccountSyncDataResponse = zod.object({
   "details": zod.string().max(getAccountSyncDataResponseWatermancerProfilesItemDetailsMax).optional()
 })).max(getAccountSyncDataResponseWatermancerProfilesMax),
   "diyConcentrateInputs": zod.union([zod.object({
+  "massStockPlan": zod.object({
+  "version": zod.literal(2),
+  "basis": zod.enum(['mass']),
+  "strategy": zod.enum(['individual', 'gh-kh', 'all-in-one']),
+  "finalLiters": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin),
+  "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
+  "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
+  "selectedSaltId": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "percentWw": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
+  "recipe": zod.record(zod.string(), zod.object({
+  "target": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
+  "formIdx": zod.number().min(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin)
+})).optional(),
+  "groups": zod.array(zod.object({
+  "id": zod.string().min(1).max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax),
+  "totalStockMassG": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin),
+  "strength": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
+  "batchScale": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
+  "desiredSaltMassMg": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "saltIds": zod.array(zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
+  "calibration": zod.union([zod.object({
+  "basis": zod.enum(['stock', 'water-estimate']),
+  "drops": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin),
+  "massG": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin),
+  "compositionKey": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax),
+  "tipKey": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax)
+}),zod.null()])
+})).min(1).max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsMax),
+  "legacyVolumePlan": zod.record(zod.string(), zod.unknown()).optional()
+}).optional(),
+  "lotusCalibrationInputs": zod.record(zod.string(), zod.object({
+  "dropsInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax),
+  "weightInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax),
+  "style": zod.enum(['round', 'straight']).optional()
+})).optional(),
   "stockWeightInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneStockWeightInputMax).optional(),
   "stockVolumeInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneStockVolumeInputMax).optional(),
   "finalVolumeInput": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneFinalVolumeInputMax).optional(),
@@ -296,6 +370,45 @@ export const saveAccountSyncDataBodyWatermancerProfilesItemSourceUrlMax = 2000;
 export const saveAccountSyncDataBodyWatermancerProfilesItemDetailsMax = 4000;
 
 export const saveAccountSyncDataBodyWatermancerProfilesMax = 300;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax = 200;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin = 0;
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax = 100;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax = 200;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax = 40;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax = 10000;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax = 100;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsMax = 40;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax = 100;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax = 100;
 
 export const saveAccountSyncDataBodyDiyConcentrateInputsOneStockWeightInputMax = 100;
 
@@ -435,6 +548,41 @@ export const SaveAccountSyncDataBody = zod.object({
   "details": zod.string().max(saveAccountSyncDataBodyWatermancerProfilesItemDetailsMax).optional()
 })).max(saveAccountSyncDataBodyWatermancerProfilesMax),
   "diyConcentrateInputs": zod.union([zod.object({
+  "massStockPlan": zod.object({
+  "version": zod.literal(2),
+  "basis": zod.enum(['mass']),
+  "strategy": zod.enum(['individual', 'gh-kh', 'all-in-one']),
+  "finalLiters": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin),
+  "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
+  "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
+  "selectedSaltId": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "percentWw": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
+  "recipe": zod.record(zod.string(), zod.object({
+  "target": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
+  "formIdx": zod.number().min(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin)
+})).optional(),
+  "groups": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax),
+  "totalStockMassG": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin),
+  "strength": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
+  "batchScale": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
+  "desiredSaltMassMg": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "saltIds": zod.array(zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
+  "calibration": zod.union([zod.object({
+  "basis": zod.enum(['stock', 'water-estimate']),
+  "drops": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin),
+  "massG": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin),
+  "compositionKey": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax),
+  "tipKey": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax)
+}),zod.null()])
+})).min(1).max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsMax),
+  "legacyVolumePlan": zod.record(zod.string(), zod.unknown()).optional()
+}).optional(),
+  "lotusCalibrationInputs": zod.record(zod.string(), zod.object({
+  "dropsInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax),
+  "weightInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax),
+  "style": zod.enum(['round', 'straight']).optional()
+})).optional(),
   "stockWeightInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneStockWeightInputMax).optional(),
   "stockVolumeInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneStockVolumeInputMax).optional(),
   "finalVolumeInput": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneFinalVolumeInputMax).optional(),
@@ -538,6 +686,45 @@ export const saveAccountSyncDataResponseWatermancerProfilesItemSourceUrlMax = 20
 export const saveAccountSyncDataResponseWatermancerProfilesItemDetailsMax = 4000;
 
 export const saveAccountSyncDataResponseWatermancerProfilesMax = 300;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax = 200;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin = 0;
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax = 100;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax = 200;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax = 40;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax = 10000;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax = 100;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsMax = 40;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax = 100;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax = 100;
 
 export const saveAccountSyncDataResponseDiyConcentrateInputsOneStockWeightInputMax = 100;
 
@@ -678,6 +865,41 @@ export const SaveAccountSyncDataResponse = zod.object({
   "details": zod.string().max(saveAccountSyncDataResponseWatermancerProfilesItemDetailsMax).optional()
 })).max(saveAccountSyncDataResponseWatermancerProfilesMax),
   "diyConcentrateInputs": zod.union([zod.object({
+  "massStockPlan": zod.object({
+  "version": zod.literal(2),
+  "basis": zod.enum(['mass']),
+  "strategy": zod.enum(['individual', 'gh-kh', 'all-in-one']),
+  "finalLiters": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanFinalLitersExclusiveMin),
+  "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
+  "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
+  "selectedSaltId": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "percentWw": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
+  "recipe": zod.record(zod.string(), zod.object({
+  "target": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
+  "formIdx": zod.number().min(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeFormIdxMin)
+})).optional(),
+  "groups": zod.array(zod.object({
+  "id": zod.string().min(1).max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemIdMax),
+  "totalStockMassG": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemTotalStockMassGExclusiveMin),
+  "strength": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
+  "batchScale": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
+  "desiredSaltMassMg": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "saltIds": zod.array(zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
+  "calibration": zod.union([zod.object({
+  "basis": zod.enum(['stock', 'water-estimate']),
+  "drops": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneDropsExclusiveMin),
+  "massG": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneMassGExclusiveMin),
+  "compositionKey": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneCompositionKeyMax),
+  "tipKey": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCalibrationOneTipKeyMax)
+}),zod.null()])
+})).min(1).max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsMax),
+  "legacyVolumePlan": zod.record(zod.string(), zod.unknown()).optional()
+}).optional(),
+  "lotusCalibrationInputs": zod.record(zod.string(), zod.object({
+  "dropsInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsDropsInputMax),
+  "weightInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneLotusCalibrationInputsWeightInputMax),
+  "style": zod.enum(['round', 'straight']).optional()
+})).optional(),
   "stockWeightInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneStockWeightInputMax).optional(),
   "stockVolumeInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneStockVolumeInputMax).optional(),
   "finalVolumeInput": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneFinalVolumeInputMax).optional(),

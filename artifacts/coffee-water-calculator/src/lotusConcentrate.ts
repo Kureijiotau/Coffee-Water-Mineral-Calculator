@@ -361,6 +361,24 @@ export function lotusStockPlan(
   };
 }
 
+/**
+ * Homemade stock, in total finished grams. Source ratios are salt/water,
+ * so converting to total mass requires r/(1+r), not treating total as water.
+ * Commercial recipe references above deliberately remain unchanged.
+ */
+export function lotusMassStockPlan(dropper: LotusDropperDefinition, totalStockMassG: number) {
+  if (!Number.isFinite(totalStockMassG) || totalStockMassG <= 0)
+    return { valid: false as const, reason: 'Enter a positive finished stock weight.' };
+  const reference = lotusStockPlan(dropper, 'straight', 100);
+  const ratio = reference.saltMassG / 100;
+  const saltMassG = totalStockMassG * ratio / (1 + ratio);
+  const waterMassG = totalStockMassG - saltMassG;
+  const salt = SALTS.find(s => s.id === dropper.saltId)!;
+  return { valid: true as const, saltMassG, waterMassG, totalStockMassG,
+    saltMgPerStockG: saltMassG * 1000 / totalStockMassG,
+    anhydrousEquivalentMassMg: saltMassG * 1000 * salt.anhydrousMass / reference.hydrationMolarMass };
+}
+
 export function lotusCalibratedStockPlan(
   dropper: typeof LOTUS_DROPPER_DEFINITIONS[number],
   style: LotusDropperStyle,

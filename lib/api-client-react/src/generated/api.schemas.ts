@@ -54,6 +54,22 @@ export interface WatermancerProfile {
   [key: string]: unknown;
  }
 
+export type DiyConcentrateInputsLotusCalibrationInputsStyle = typeof DiyConcentrateInputsLotusCalibrationInputsStyle[keyof typeof DiyConcentrateInputsLotusCalibrationInputsStyle];
+
+
+export const DiyConcentrateInputsLotusCalibrationInputsStyle = {
+  round: 'round',
+  straight: 'straight',
+} as const;
+
+export type DiyConcentrateInputsLotusCalibrationInputs = {[key: string]: {
+  /** @maxLength 100 */
+  dropsInput: string;
+  /** @maxLength 100 */
+  weightInput: string;
+  style?: DiyConcentrateInputsLotusCalibrationInputsStyle;
+}};
+
 export type DiyConcentrateInputsDesiredDoseBasis = typeof DiyConcentrateInputsDesiredDoseBasis[keyof typeof DiyConcentrateInputsDesiredDoseBasis];
 
 
@@ -62,7 +78,124 @@ export const DiyConcentrateInputsDesiredDoseBasis = {
   'salt-mg': 'salt-mg',
 } as const;
 
+export type MassStockPlanVersion = typeof MassStockPlanVersion[keyof typeof MassStockPlanVersion];
+
+
+export const MassStockPlanVersion = {
+  NUMBER_2: 2,
+} as const;
+
+export type MassStockPlanBasis = typeof MassStockPlanBasis[keyof typeof MassStockPlanBasis];
+
+
+export const MassStockPlanBasis = {
+  mass: 'mass',
+} as const;
+
+export type MassStockPlanStrategy = typeof MassStockPlanStrategy[keyof typeof MassStockPlanStrategy];
+
+
+export const MassStockPlanStrategy = {
+  individual: 'individual',
+  'gh-kh': 'gh-kh',
+  'all-in-one': 'all-in-one',
+} as const;
+
+export type MassStockPlanWorkspaceMode = typeof MassStockPlanWorkspaceMode[keyof typeof MassStockPlanWorkspaceMode];
+
+
+export const MassStockPlanWorkspaceMode = {
+  recipe: 'recipe',
+  diy: 'diy',
+} as const;
+
+export type MassStockPlanToolMode = typeof MassStockPlanToolMode[keyof typeof MassStockPlanToolMode];
+
+
+export const MassStockPlanToolMode = {
+  recipe: 'recipe',
+  percent: 'percent',
+  lotus: 'lotus',
+} as const;
+
+export type StockDropMassCalibrationBasis = typeof StockDropMassCalibrationBasis[keyof typeof StockDropMassCalibrationBasis];
+
+
+export const StockDropMassCalibrationBasis = {
+  stock: 'stock',
+  'water-estimate': 'water-estimate',
+} as const;
+
+export interface StockDropMassCalibration {
+  basis: StockDropMassCalibrationBasis;
+  /** @exclusiveMinimum 0 */
+  drops: number;
+  /** @exclusiveMinimum 0 */
+  massG: number;
+  /** @maxLength 10000 */
+  compositionKey: string;
+  /** @maxLength 100 */
+  tipKey: string;
+}
+
+export interface MassStockGroup {
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  id: string;
+  /** @exclusiveMinimum 0 */
+  totalStockMassG: number;
+  /** @exclusiveMinimum 0 */
+  strength: number;
+  /** @exclusiveMinimum 0 */
+  batchScale?: number;
+  /** @exclusiveMinimum 0 */
+  desiredSaltMassMg?: number;
+  /**
+     * @maxItems 40
+     * @items.maxLength 200
+     */
+  saltIds: string[];
+  calibration: StockDropMassCalibration | null;
+}
+
+export type MassStockPlanRecipe = {[key: string]: {
+  /** @exclusiveMinimum 0 */
+  target: number;
+  /** @minimum 0 */
+  formIdx: number;
+}};
+
+export type MassStockPlanLegacyVolumePlan = { [key: string]: unknown };
+
+export interface MassStockPlan {
+  version: MassStockPlanVersion;
+  basis: MassStockPlanBasis;
+  strategy: MassStockPlanStrategy;
+  /** @exclusiveMinimum 0 */
+  finalLiters: number;
+  workspaceMode?: MassStockPlanWorkspaceMode;
+  toolMode?: MassStockPlanToolMode;
+  /** @maxLength 200 */
+  selectedSaltId?: string;
+  /**
+     * @exclusiveMinimum 0
+     * @exclusiveMaximum 100
+     */
+  percentWw?: number;
+  recipe?: MassStockPlanRecipe;
+  /**
+     * @minItems 1
+     * @maxItems 40
+     */
+  groups: MassStockGroup[];
+  legacyVolumePlan?: MassStockPlanLegacyVolumePlan;
+}
+
 export interface DiyConcentrateInputs {
+  massStockPlan?: MassStockPlan;
+  lotusCalibrationInputs?: DiyConcentrateInputsLotusCalibrationInputs;
   /** @maxLength 100 */
   stockWeightInput?: string;
   /** @maxLength 100 */

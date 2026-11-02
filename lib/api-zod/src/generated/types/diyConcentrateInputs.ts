@@ -6,8 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { DiyConcentrateInputsDesiredDoseBasis } from './diyConcentrateInputsDesiredDoseBasis';
+import type { DiyConcentrateInputsLotusCalibrationInputs } from './diyConcentrateInputsLotusCalibrationInputs';
+import type { MassStockPlan } from './massStockPlan';
 
 export interface DiyConcentrateInputs {
+  massStockPlan?: MassStockPlan;
+  lotusCalibrationInputs?: DiyConcentrateInputsLotusCalibrationInputs;
   /** @maxLength 100 */
   stockWeightInput?: string;
   /** @maxLength 100 */

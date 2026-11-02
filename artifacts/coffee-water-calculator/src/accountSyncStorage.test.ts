@@ -8,6 +8,16 @@ import {
 
 describe('DIY concentrate input storage', () => {
   const values = new Map<string, string>();
+  it('retains a mass plan without overwriting historical input units', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    const massStockPlan = { version: 2 as const, basis: 'mass' as const, strategy: 'individual' as const, finalLiters: 1,
+      groups: [{ id: 'mgso4', totalStockMassG: 100, strength: 20, saltIds: ['mgso4'], calibration: null }] };
+    saveDiyConcentrateInputs({ stockVolumeInput: '59', massStockPlan }, false);
+    expect(loadDiyConcentrateInputs()).toEqual({ stockVolumeInput: '59', massStockPlan });
+  });
 
   afterEach(() => {
     values.clear();

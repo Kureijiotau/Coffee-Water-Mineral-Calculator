@@ -1,5 +1,6 @@
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DependencyList, type ReactNode, type SVGProps } from 'react';
 import { createPortal } from 'react-dom';
+import { MassConcentrateWorkspace } from './MassConcentrateWorkspace';
 import pepeImage from '@assets/ez_1785735003821.png';
 import roundedDropperImage from '@assets/rounded_1786763676557.jpg';
 import straightDropperImage from '@assets/straight_1786763676557.jpg';
@@ -6708,7 +6709,8 @@ function App() {
               DIY Concentrate
             </button>
           </div>
-          <ConcentrateWorkspace
+          <MassConcentrateWorkspace
+            key={`${concentrateWorkspaceTab}:${concentrateRecipeHandoff?.name ?? ''}`}
             workspaceMode={concentrateWorkspaceTab === 'diy' ? 'diy' : 'recipe'}
             volumeUnit={volumeUnit}
             onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
@@ -6718,7 +6720,7 @@ function App() {
             diySaltTargets={dosingSaltTargets}
             diySaltForms={concentrateDiySaltForms}
             diyFinalLiters={L > 0 ? L : 1}
-            restoredRecipePlan={concentrateSnapshot.recipeConcentratePlan as ConcentratePlanSnapshot | null}
+            initialSnapshot={concentrateSnapshot}
             restoreSnapshot={pendingConcentrateRestore}
             onRestoreSnapshotConsumed={() => setPendingConcentrateRestore(null)}
             onSnapshotChange={setConcentrateSnapshot}

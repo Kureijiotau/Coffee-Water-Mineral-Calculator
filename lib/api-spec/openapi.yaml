@@ -143,6 +143,18 @@ components:
     DiyConcentrateInputs:
       type: object
       properties:
+        massStockPlan:
+          $ref: "#/components/schemas/MassStockPlan"
+        lotusCalibrationInputs:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              dropsInput: { type: string, maxLength: 100 }
+              weightInput: { type: string, maxLength: 100 }
+              style: { type: string, enum: [round, straight] }
+            required: [dropsInput, weightInput]
+            additionalProperties: false
         stockWeightInput:
           type: string
           maxLength: 100
@@ -167,6 +179,65 @@ components:
         desiredDoseBasis:
           type: string
           enum: [caco3, salt-mg]
+      additionalProperties: false
+    StockDropMassCalibration:
+      type: object
+      properties:
+        basis: { type: string, enum: [stock, water-estimate] }
+        drops: { type: number, exclusiveMinimum: 0 }
+        massG: { type: number, exclusiveMinimum: 0 }
+        compositionKey: { type: string, maxLength: 10000 }
+        tipKey: { type: string, maxLength: 100 }
+      required: [basis, drops, massG, compositionKey, tipKey]
+      additionalProperties: false
+    MassStockGroup:
+      type: object
+      properties:
+        id: { type: string, minLength: 1, maxLength: 200 }
+        totalStockMassG: { type: number, exclusiveMinimum: 0 }
+        strength: { type: number, exclusiveMinimum: 0 }
+        batchScale: { type: number, exclusiveMinimum: 0 }
+        desiredSaltMassMg: { type: number, exclusiveMinimum: 0 }
+        saltIds:
+          type: array
+          maxItems: 40
+          items: { type: string, maxLength: 200 }
+        calibration:
+          oneOf:
+            - $ref: "#/components/schemas/StockDropMassCalibration"
+            - type: "null"
+      required: [id, totalStockMassG, strength, saltIds, calibration]
+      additionalProperties: false
+    MassStockPlan:
+      type: object
+      properties:
+        version: { type: integer, enum: [2] }
+        basis: { type: string, enum: [mass] }
+        strategy: { type: string, enum: [individual, gh-kh, all-in-one] }
+        finalLiters: { type: number, exclusiveMinimum: 0 }
+        workspaceMode: { type: string, enum: [recipe, diy] }
+        toolMode: { type: string, enum: [recipe, percent, lotus] }
+        selectedSaltId: { type: string, maxLength: 200 }
+        percentWw: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100 }
+        recipe:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              target: { type: number, exclusiveMinimum: 0 }
+              formIdx: { type: integer, minimum: 0 }
+            required: [target, formIdx]
+            additionalProperties: false
+        groups:
+          type: array
+          minItems: 1
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/MassStockGroup"
+        legacyVolumePlan:
+          type: object
+          additionalProperties: true
+      required: [version, basis, strategy, finalLiters, groups]
       additionalProperties: false
     WaterTastingCoffeeDetails:
       type: object

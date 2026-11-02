@@ -1,3 +1,16 @@
+import { lotusMassStockPlan } from './lotusConcentrate';
+import { LOTUS_DROPPER_DEFINITIONS as MASS_DROPPERS, lotusStockPlan as legacyLotusPlan } from './lotusConcentrate';
+it('builds homemade stocks from total mass without redefining commercial references', () => {
+  const definition = MASS_DROPPERS[0];
+  const source = legacyLotusPlan(definition, 'straight', 100);
+  const ratio = source.saltMassG / 100;
+  const plan = lotusMassStockPlan(definition, 100);
+  expect(plan.valid).toBe(true);
+  if (!plan.valid) return;
+  expect(plan.saltMassG).toBeCloseTo(100 * ratio / (1 + ratio), 10);
+  expect(plan.saltMassG + plan.waterMassG).toBeCloseTo(100, 10);
+  expect(legacyLotusPlan(definition, 'straight', 100)).toEqual(source);
+});
 import { describe, expect, it } from 'vitest';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
