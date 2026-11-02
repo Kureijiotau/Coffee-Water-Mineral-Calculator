@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.getByLabel('Stock tool', { exact: true }).selectOption('percent');
+  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
   await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
   await page.getByLabel('Stock strength percent w/w').fill('5');
   const card = page.getByTestId('mass-stock-card');
@@ -19,7 +19,7 @@ test('prepares 100 g of 5% stock, verifies drops, invalidates changed compositio
   await expect(card).toContainText('Measured finished-stock calibration');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
-  await expect(page.getByLabel('Stock tool', { exact: true })).toHaveValue('percent');
+  await expect(page.getByRole('tab', { name: 'Single-salt weight percentage' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Measured finished-stock calibration');
   await page.getByLabel('Stock strength percent w/w').fill('6');
   await expect(page.getByTestId('mass-stock-card')).toContainText('The stock composition or tip changed');
@@ -56,7 +56,7 @@ test('keeps original volume inputs and requires an explicit weight rebuild', asy
 test('exports the same mass preparation sequence, without a stock-volume assumption', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.getByLabel('Stock tool', { exact: true }).selectOption('percent');
+  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
   await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
   await page.getByLabel('Stock strength percent w/w').fill('5');
   await page.evaluate(() => {
