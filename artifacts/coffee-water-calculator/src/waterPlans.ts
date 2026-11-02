@@ -20,6 +20,9 @@ export type WaterPlanWaterEntry = {
 };
 
 export type WaterPlanConcentrateSnapshot = {
+  /** Nested stock schema; version-1 plans remain readable without reinterpretation. */
+  basis?: 'mass';
+  stockFormatVersion?: 2;
   mode: 'builder' | 'lotus';
   saltId: string;
   formIdx: number;

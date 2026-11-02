@@ -2,6 +2,7 @@ import type { WaterProfile } from "@/waterData";
 import type { WatermancerProfile } from "./watermancerProfiles";
 import type { WaterTastingCollection } from "./waterTasting";
 import type { LotusDropperCalibration, LotusDropperStyle } from "./lotusConcentrate";
+import { readConcentrateStockRecord, type MassConcentratePlanSnapshot } from "./concentrateStockStorage";
 
 export const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = "coffee-water-diy-concentrate-inputs";
 export const ACCOUNT_SYNC_LOCAL_CHANGE_EVENT = "cwm:account-sync-local-change";
@@ -9,6 +10,7 @@ export const ACCOUNT_SYNC_REMOTE_CHANGE_EVENT = "cwm:account-sync-remote-change"
 export const ACCOUNT_SYNC_BASELINE_KEY = "cwm.accountSync.baseline";
 
 export type DiyConcentrateStoredInputs = {
+  massStockPlan?: MassConcentratePlanSnapshot;
   stockWeightInput?: string;
   stockVolumeInput?: string;
   finalVolumeInput?: string;
@@ -84,6 +86,8 @@ export function loadDiyConcentrateInputsRecord(): DiyConcentrateStoredInputs | n
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const source = parsed as Record<string, unknown>;
     const stored: DiyConcentrateStoredInputs = {};
+    const massPlan = readConcentrateStockRecord(source.massStockPlan);
+    if (massPlan.kind === 'mass') stored.massStockPlan = massPlan.plan;
     const stringKeys = [
       "stockWeightInput",
       "stockVolumeInput",
