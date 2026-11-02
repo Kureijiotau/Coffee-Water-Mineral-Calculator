@@ -6784,27 +6784,6 @@ function App() {
                   onApplyRecipe={handleApplyWeek1Recipe}
                 />
               </Suspense>
-              <div className="border-t border-emerald-200/10 bg-slate-950/20">
-                <BrewerSimpleRecipeCard
-                  prepMethod={prepMethod}
-                  onPrepMethodChange={setPrepMethod}
-                  recipeHandoffToken={brewerRecipeHandoffToken}
-                  guideRecipe={brewerRecipeOverride}
-                  saltTargets={brewerActiveSaltTargets}
-                  recipeRows={rows}
-                  liters={L}
-                  volumeInput={liters}
-                  volumeUnit={volumeUnit}
-                  onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
-                  onVolumeChange={value => setLiters(value)}
-                  concentrateOn={concentrateOn}
-                  concentrateLiters={concL}
-                  concentrateStrength={concentrateStrength}
-                  dropsPerMl={brewerDropsPerMl}
-                  onCalibrate={setBrewerDropsPerMl}
-                  onOpenSteps={method => setShowBrewerSteps(method)}
-                />
-              </div>
               <div className="border-t border-emerald-200/10 bg-slate-950/30 px-4 py-5 sm:px-6" data-guide-export-ignore>
                 <button
                   type="button"

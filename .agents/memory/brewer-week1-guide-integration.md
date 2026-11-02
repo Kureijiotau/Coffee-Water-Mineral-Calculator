@@ -37,4 +37,4 @@ The seven-day crash course lives on a dedicated Guide workspace page rather than
 
 **Why:** The user wants recipe amounts immediately available in Brewer while keeping optional Day 5 swaps out of the published default catalog.
 
-**How to apply:** Switch to Calculator/Brewer first, then apply the guide override and salt rows. Keep the full preparation card beneath the Guide content, and keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.
+**How to apply:** Keep the Guide focused on lesson content. Switch to Calculator/Brewer before applying the guide override and salt rows; do not embed Brewer preparation controls beneath the Guide. Keep Guide as navigation-only session state; saved calculator sessions should restore Calculator or Concentrate, not the Guide page.

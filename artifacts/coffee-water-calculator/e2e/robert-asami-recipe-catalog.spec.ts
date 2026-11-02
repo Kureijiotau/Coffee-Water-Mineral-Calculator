@@ -27,6 +27,15 @@ async function applyGuideRecipe(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('mode-brewer')).toHaveAttribute('aria-pressed', 'true');
 }
 
+test('keeps mineral-preparation controls out of the Guide page', async ({ page }) => {
+  await openGuideDay(page, 1);
+
+  await expect(page.getByText('Choose how you’ll measure minerals', { exact: true }))
+    .toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Use this recipe', exact: true }))
+    .toBeVisible();
+});
+
 test('lists all seven Week 1 recipes for Brewer and Alchemist without changing other recipes', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('cwc-saved-recipes', JSON.stringify([{
