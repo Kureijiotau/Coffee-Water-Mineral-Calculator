@@ -1,10 +1,10 @@
 ---
-name: Recipe concentrate bottle volume
-description: Recipe concentrate bottles scale salt mass by strength, dose and safety by bottle size.
+name: Recipe concentrate stock mass
+description: Recipe equivalents and total stock weight are separate; historical mL stocks must not become grams.
 ---
 
-For recipe concentrates, ×1 always contains the base recipe salt amounts for one liter of final water, regardless of bottle volume. A ×N bottle contains N times those amounts; selected bottle volume changes the per-mL/drop concentration and the dose, not the total salt mass.
+For new recipe concentrates, ×1 contains the base recipe salt amounts for one liter of finished water, regardless of target stock weight. ×N contains N times those amounts. Total stock weight changes mg per stock gram and the gram dose, not the recipe's salt totals. Historical volume-based stocks retain their original units until explicitly rebuilt.
 
-**Why:** A 100 mL ×1 bottle must still contain the full base recipe and dose 100 mL per liter; scaling salt mass by bottle liters produced a tenfold under-dose.
+**Why:** The owner requires w/w preparation and dosing everywhere, while preserving the established one-liter recipe-equivalent meaning of ×N; changing both denominators can cause a large dosing error.
 
-**How to apply:** Compute hydrated salt mass from the one-liter recipe target and strength. Compute dose as `bottleVolumeMl / strength` per liter, and pass the same bottle volume into per-mL, per-drop, inverse pinned-strength, solubility, precipitation, and whole-drop ceiling calculations. If the exact dose is fractional, display that exact drop count alongside the matching volume; never round drops while leaving volume exact.
+**How to apply:** Compute physical salt from canonical targets, hydration, and actual recipe equivalents. Dose total stock grams divided by actual equivalents per liter. Use counted finished-stock mass for measured drops; disclose water-based estimates. A separate-salt mass anchor scales preparation size and actual equivalents together, retaining potency and the reference control.

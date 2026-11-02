@@ -71,6 +71,10 @@ export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroup
 
 export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
 
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin = 0;
+
+export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin = 0;
+
 export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
 
 export const getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax = 40;
@@ -236,6 +240,7 @@ export const GetAccountSyncDataResponse = zod.object({
   "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
   "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
   "selectedSaltId": zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "dropperStyle": zod.enum(['straight', 'round']).optional(),
   "percentWw": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
   "recipe": zod.record(zod.string(), zod.object({
   "target": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
@@ -247,6 +252,8 @@ export const GetAccountSyncDataResponse = zod.object({
   "strength": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
   "batchScale": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
   "desiredSaltMassMg": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "physicalSaltPpmPerDrop": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin).optional(),
+  "caCo3PpmPerDrop": zod.number().gt(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin).optional(),
   "saltIds": zod.array(zod.string().max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(getAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
   "calibration": zod.union([zod.object({
   "basis": zod.enum(['stock', 'water-estimate']),
@@ -391,6 +398,10 @@ export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsIt
 export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin = 0;
 
 export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin = 0;
+
+export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin = 0;
 
 export const saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
 
@@ -556,6 +567,7 @@ export const SaveAccountSyncDataBody = zod.object({
   "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
   "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
   "selectedSaltId": zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "dropperStyle": zod.enum(['straight', 'round']).optional(),
   "percentWw": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
   "recipe": zod.record(zod.string(), zod.object({
   "target": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
@@ -567,6 +579,8 @@ export const SaveAccountSyncDataBody = zod.object({
   "strength": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
   "batchScale": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
   "desiredSaltMassMg": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "physicalSaltPpmPerDrop": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin).optional(),
+  "caCo3PpmPerDrop": zod.number().gt(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin).optional(),
   "saltIds": zod.array(zod.string().max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(saveAccountSyncDataBodyDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
   "calibration": zod.union([zod.object({
   "basis": zod.enum(['stock', 'water-estimate']),
@@ -707,6 +721,10 @@ export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGrou
 export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin = 0;
 
 export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin = 0;
+
+export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin = 0;
 
 export const saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax = 200;
 
@@ -873,6 +891,7 @@ export const SaveAccountSyncDataResponse = zod.object({
   "workspaceMode": zod.enum(['recipe', 'diy']).optional(),
   "toolMode": zod.enum(['recipe', 'percent', 'lotus']).optional(),
   "selectedSaltId": zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanSelectedSaltIdMax).optional(),
+  "dropperStyle": zod.enum(['straight', 'round']).optional(),
   "percentWw": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMin).lt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanPercentWwExclusiveMax).optional(),
   "recipe": zod.record(zod.string(), zod.object({
   "target": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanRecipeTargetExclusiveMin),
@@ -884,6 +903,8 @@ export const SaveAccountSyncDataResponse = zod.object({
   "strength": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemStrengthExclusiveMin),
   "batchScale": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemBatchScaleExclusiveMin).optional(),
   "desiredSaltMassMg": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemDesiredSaltMassMgExclusiveMin).optional(),
+  "physicalSaltPpmPerDrop": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemPhysicalSaltPpmPerDropExclusiveMin).optional(),
+  "caCo3PpmPerDrop": zod.number().gt(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemCaCo3PpmPerDropExclusiveMin).optional(),
   "saltIds": zod.array(zod.string().max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsItemMax)).max(saveAccountSyncDataResponseDiyConcentrateInputsOneMassStockPlanGroupsItemSaltIdsMax),
   "calibration": zod.union([zod.object({
   "basis": zod.enum(['stock', 'water-estimate']),

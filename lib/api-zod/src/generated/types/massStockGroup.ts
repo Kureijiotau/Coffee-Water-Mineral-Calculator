@@ -21,6 +21,10 @@ export interface MassStockGroup {
   batchScale?: number;
   /** @exclusiveMinimum 0 */
   desiredSaltMassMg?: number;
+  /** @exclusiveMinimum 0 */
+  physicalSaltPpmPerDrop?: number;
+  /** @exclusiveMinimum 0 */
+  caCo3PpmPerDrop?: number;
   /**
      * @maxItems 40
      * @items.maxLength 200

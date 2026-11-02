@@ -136,13 +136,49 @@ export function loadDiyConcentrateInputs(): DiyConcentrateStoredInputs {
   return loadDiyConcentrateInputsRecord() ?? {};
 }
 
+/** Keep absence distinct from a rejected record so the UI cannot overwrite it. */
+export function loadDiyConcentrateStockState() {
+  const raw = readAccountSyncStorageValue(DIY_CONCENTRATE_INPUTS_STORAGE_KEY);
+  if (raw === null) return null;
+  try {
+    const source = JSON.parse(raw);
+    if (!source || typeof source !== 'object' || Array.isArray(source))
+      return { kind: 'invalid' as const, reason: 'Invalid saved DIY concentrate record.' };
+    if (!Object.prototype.hasOwnProperty.call(source, 'massStockPlan')) return null;
+    return readConcentrateStockRecord(source.massStockPlan);
+  } catch {
+    return { kind: 'invalid' as const, reason: 'Saved DIY concentrate data is not readable JSON.' };
+  }
+}
+
+export function archiveDiyConcentrateInputsForRecovery(): boolean {
+  const raw = readAccountSyncStorageValue(DIY_CONCENTRATE_INPUTS_STORAGE_KEY);
+  if (raw === null) return true;
+  const recoveryKey = `${DIY_CONCENTRATE_INPUTS_STORAGE_KEY}:recovery`;
+  writeAccountSyncStorageValue(recoveryKey, raw);
+  return readAccountSyncStorageValue(recoveryKey) === raw;
+}
+
 export function saveDiyConcentrateInputs(
   inputs: DiyConcentrateStoredInputs,
   notifyLocalChange = true,
 ): void {
+  let serialized: object = inputs;
+  // Other DIY edits (e.g. water-tip calibration) must not erase rejected data.
+  if (inputs.massStockPlan === undefined && loadDiyConcentrateStockState()?.kind === 'invalid') {
+    const raw = readAccountSyncStorageValue(DIY_CONCENTRATE_INPUTS_STORAGE_KEY);
+    try {
+      const source = JSON.parse(raw ?? 'null');
+      if (source && Object.prototype.hasOwnProperty.call(source, 'massStockPlan'))
+        serialized = { ...inputs, massStockPlan: source.massStockPlan };
+      else if (!archiveDiyConcentrateInputsForRecovery()) return;
+    } catch {
+      if (!archiveDiyConcentrateInputsForRecovery()) return;
+    }
+  }
   writeAccountSyncStorageValue(
     DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
-    JSON.stringify(inputs),
+    JSON.stringify(serialized),
     notifyLocalChange,
   );
 }

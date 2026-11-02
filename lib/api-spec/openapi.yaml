@@ -198,6 +198,8 @@ components:
         strength: { type: number, exclusiveMinimum: 0 }
         batchScale: { type: number, exclusiveMinimum: 0 }
         desiredSaltMassMg: { type: number, exclusiveMinimum: 0 }
+        physicalSaltPpmPerDrop: { type: number, exclusiveMinimum: 0 }
+        caCo3PpmPerDrop: { type: number, exclusiveMinimum: 0 }
         saltIds:
           type: array
           maxItems: 40
@@ -218,6 +220,7 @@ components:
         workspaceMode: { type: string, enum: [recipe, diy] }
         toolMode: { type: string, enum: [recipe, percent, lotus] }
         selectedSaltId: { type: string, maxLength: 200 }
+        dropperStyle: { type: string, enum: [straight, round] }
         percentWw: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 100 }
         recipe:
           type: object

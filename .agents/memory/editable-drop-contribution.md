@@ -4,13 +4,14 @@ description: The all-in-one concentrate can pin physical salt ppm per drop and s
 ---
 
 The all-in-one recipe's physical salt ppm per drop is an optional user control.
-When pinned, preserve the recipe's salt proportions and bottle volume while
-solving stock strength from the current final-water volume and active dropper
-rate. Direct stock-strength edits clear the pin, and above-ceiling targets stay
+When pinned, preserve the recipe's salt proportions and target stock weight while
+solving planned strength from final-water liters and the water-tip drop-mass estimate.
+Finished-stock measurements verify the prepared composition, not a newly reformulated stock.
+Direct stock-strength edits clear the pin, and above-ceiling targets stay
 exact with the existing safety warning rather than being silently clamped.
 
 **Why:** Users need a stable per-drop dosing unit when batch volume or dropper
-calibration changes, without changing the physical bottle recipe or hiding an
+calibration changes, without changing the recipe proportions or hiding an
 unsafe concentration.
 
 **How to apply:** Keep the pin separate from the calculated readout, persist it

@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import { readConcentrateStockRecord } from './concentrateStockStorage';
 it('round trips mass groups and preserves calibration provenance', () => {
-  const plan = { version: 2, basis: 'mass', strategy: 'individual', finalLiters: 1, groups: [
-    { id: 'mgso4', totalStockMassG: 100, strength: 20, saltIds: ['mgso4'], calibration: null },
+  const plan = { version: 2, basis: 'mass', strategy: 'individual', finalLiters: 1, dropperStyle: 'round', groups: [
+    { id: 'mgso4', totalStockMassG: 100, strength: 20, physicalSaltPpmPerDrop: 1, saltIds: ['mgso4'], calibration: null },
   ] };
   expect(readConcentrateStockRecord(JSON.parse(JSON.stringify(plan)))).toEqual({ kind: 'mass', plan });
 });

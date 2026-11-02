@@ -13,8 +13,8 @@
 - [Builder research boundary](builder-research-boundary.md) — evolve builder UX from research without replacing the established chemistry engine
 - [Ion tooltip research boundary](ion-tooltip-research-boundary.md) — use Gemini research to refine explanatory copy only; never turn sensory guidance into solver or target rules
 - [Builder dropper strength](builder-dropper-strength.md) — use conservative 500× stocks so small bottles make fewer batches instead of stronger solutions
-- [Editable drop contribution](editable-drop-contribution.md) — pin physical salt ppm per drop while solving stock strength around fixed bottle volume
-- [Recipe concentrate bottle volume](recipe-concentrate-bottle-volume.md) — strength scales salt mass; bottle volume scales per-mL concentration and final-water dose
+- [Editable drop contribution](editable-drop-contribution.md) — pin planned physical salt ppm per drop around target stock weight; verify actual finished-stock drops
+- [Recipe concentrate stock mass](recipe-concentrate-bottle-volume.md) — preserve one-liter recipe equivalents; stock weight controls mg/g and gram doses
 - [Conservative concentrate strength](conservative-aio-strength.md) — apply recipe-specific precipitation-aware recommendations to AIO and each separated stock
 - [Builder dosing methods](builder-dosing-methods.md) — keep dry-salt and dropper workflows as presentation choices over the shared chemistry engine
 - [API health route](api-health-route.md) — use `/api/healthz` for API checks; `/api/health` is not a valid route
@@ -96,7 +96,7 @@
 - [Large JSX patch boundaries](large-jsx-patch-boundaries.md) — use unique nearby context when editing App.tsx because repeated fragments make broad replacements unsafe
 - [Saved-list sorting](profile-picker-order.md) — keep profile/recipe pickers consistent and provide name sorting for Water Tasting history
 - [Water recipe share import](water-recipe-share-import.md) — versioned links carry waters and salts; use QR before PNG metadata
-- [Salt-mass bottle-volume anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve strength and scale that bottle after a physical-mass edit
+- [Salt-mass stock-weight anchor](salt-mass-bottle-volume-anchor.md) — Separate salts only: preserve potency and the reference strength while scaling preparation size
 - [Recipe-card recovery QR](recipe-card-recovery-qr.md) — keep recovery QR app-facing and visually quiet; label only user-facing share actions
 - [Mixer source picker](mixer-picker-cleanup.md) — preserve source records, group recipes by origin, and remove only exact Watermancer duplicates from Built-in
 - [DIY spreadsheet concentrate basis](diy-spreadsheet-concentrate.md) — DIY ppm/drop means CaCO₃ equivalent; hydration changes physical mass, not solved strength

@@ -11,7 +11,7 @@ export const accountSyncDataTable = pgTable("account_sync_data", {
     .notNull()
     .$type<Array<Record<string, unknown>>>(),
   diyConcentrateInputs: jsonb("diy_concentrate_inputs")
-    .$type<Record<string, string> | null>(),
+    .$type<Record<string, unknown> | null>(),
   waterTastings: jsonb("water_tastings")
     .notNull()
     .$type<Array<Record<string, unknown>>>()

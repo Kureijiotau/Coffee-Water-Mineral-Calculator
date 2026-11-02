@@ -118,6 +118,14 @@ export const MassStockPlanToolMode = {
   lotus: 'lotus',
 } as const;
 
+export type MassStockPlanDropperStyle = typeof MassStockPlanDropperStyle[keyof typeof MassStockPlanDropperStyle];
+
+
+export const MassStockPlanDropperStyle = {
+  straight: 'straight',
+  round: 'round',
+} as const;
+
 export type StockDropMassCalibrationBasis = typeof StockDropMassCalibrationBasis[keyof typeof StockDropMassCalibrationBasis];
 
 
@@ -152,6 +160,10 @@ export interface MassStockGroup {
   batchScale?: number;
   /** @exclusiveMinimum 0 */
   desiredSaltMassMg?: number;
+  /** @exclusiveMinimum 0 */
+  physicalSaltPpmPerDrop?: number;
+  /** @exclusiveMinimum 0 */
+  caCo3PpmPerDrop?: number;
   /**
      * @maxItems 40
      * @items.maxLength 200
@@ -179,6 +191,7 @@ export interface MassStockPlan {
   toolMode?: MassStockPlanToolMode;
   /** @maxLength 200 */
   selectedSaltId?: string;
+  dropperStyle?: MassStockPlanDropperStyle;
   /**
      * @exclusiveMinimum 0
      * @exclusiveMaximum 100

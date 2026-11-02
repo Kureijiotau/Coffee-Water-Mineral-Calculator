@@ -2,12 +2,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
   loadDiyConcentrateInputs,
+  loadDiyConcentrateStockState,
   saveDiyConcentrateInputs,
   setAccountSyncScope,
 } from './accountSyncStorage';
 
 describe('DIY concentrate input storage', () => {
   const values = new Map<string, string>();
+  it('surfaces a malformed saved mass stock and preserves it during other DIY edits', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    const malformed = { version: 2, basis: 'mass', strategy: 'individual', finalLiters: 1,
+      groups: [{ id: 'x', totalStockMassG: 100, strength: 20, saltIds: ['unknown'], calibration: null }] };
+    values.set(DIY_CONCENTRATE_INPUTS_STORAGE_KEY, JSON.stringify({ massStockPlan: malformed }));
+    expect(loadDiyConcentrateStockState()?.kind).toBe('invalid');
+    saveDiyConcentrateInputs({ calibrationDropsInput: '100' }, false);
+    expect(JSON.parse(values.get(DIY_CONCENTRATE_INPUTS_STORAGE_KEY)!).massStockPlan).toEqual(malformed);
+  });
+  it.each(['[]', 'null', '"unreadable stock"'])('archives a rejected non-object record %s before another DIY edit', raw => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    values.set(DIY_CONCENTRATE_INPUTS_STORAGE_KEY, raw);
+    values.delete(`${DIY_CONCENTRATE_INPUTS_STORAGE_KEY}:recovery`);
+    saveDiyConcentrateInputs({ calibrationDropsInput: '100' }, false);
+    expect(values.get(`${DIY_CONCENTRATE_INPUTS_STORAGE_KEY}:recovery`)).toBe(raw);
+  });
   it('retains a mass plan without overwriting historical input units', () => {
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => values.get(key) ?? null,

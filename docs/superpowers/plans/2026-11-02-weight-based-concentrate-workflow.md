@@ -124,6 +124,8 @@ Paths below are relative to `artifacts/coffee-water-calculator/` unless stated o
 
 ### Task 6: Cross-workflow verification and regression coverage
 
+**Completion:** Tasks 1–6 are implemented and committed locally. Final verification: 592 unit tests, eight Chromium browser scenarios, frontend/API type checks, generated API contract, production build, preview screenshot, and API health all pass. Final review findings were fixed with red/green recovery tests. Signed-in cross-device synchronization was not interactively exercised; its serialized contract is tested. No push, publish, database migration, or production data change was performed.
+
 **Files:** Modify `e2e/concentrates-mode.spec.ts`; create `e2e/concentrate-mass-workflow.spec.ts`; update only existing tests whose old units genuinely changed. Update relevant `.agents/memory/` topics when implementation is confirmed.
 
 - [ ] **Step 1:** Add browser cases for standalone 100 g/5%, recipe separate/all-in-one masses and gram doses, actual-stock calibration versus water estimate, Guide partial-water sequence, and legacy-volume restore → explicit rebuild → refresh. Seed real saved-record fixtures without auth bypasses.

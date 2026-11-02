@@ -58,6 +58,17 @@ export function scaleMassStockForSaltEdit(stock: { totalStockMassG: number; batc
   const ratio = nextSaltMassG / previousSaltMassG;
   return { totalStockMassG: stock.totalStockMassG * ratio, batchScale: (stock.batchScale ?? 1) * ratio };
 }
+/** Existing DIY spreadsheet cation-equivalent convention; not a new GH/KH rule. */
+export function physicalSaltCaCo3EquivalentFactor(saltId: string, formIdx: number) {
+  const salt = SALTS.find(s => s.id === saltId);
+  const form = salt?.hydrationForms[formIdx];
+  if (!salt || !form) return 0;
+  const molar: Partial<Record<IonId, number>> = { calcium: 40.078, magnesium: 24.305, sodium: 22.990, potassium: 39.098 };
+  const cation = salt.ions.find(ion => molar[ion.ionId] !== undefined);
+  if (!cation) return 0;
+  const equivalent = ['sodium', 'potassium'].includes(cation.ionId) ? 100.0869 / 2 : 100.0869;
+  return cation.fraction * equivalent / molar[cation.ionId]! * salt.anhydrousMass / form.molarMass;
+}
 export function computeRecipeMassDropEquivalents(input: RecipeMassStockInput) {
   const salts = recipeStockSaltMasses(input.saltTargets, input.formIdxBySaltId, input.strength);
   const plan = buildMassStockPlan({ totalStockMassG: input.totalStockMassG, salts });

@@ -21,6 +21,7 @@ export * from './ionRange';
 export * from './massStockGroup';
 export * from './massStockPlan';
 export * from './massStockPlanBasis';
+export * from './massStockPlanDropperStyle';
 export * from './massStockPlanLegacyVolumePlan';
 export * from './massStockPlanRecipe';
 export * from './massStockPlanStrategy';

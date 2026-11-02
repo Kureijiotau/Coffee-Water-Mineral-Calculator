@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildMassStockPlan, computeMassStockDose, resolveStockDropCalibration } from './concentrateMass';
-import { computeRecipeMassDropEquivalents, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit } from './concentrateMass';
+import { computeRecipeMassDropEquivalents, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor } from './concentrateMass';
 
 describe('mass-based stock planning', () => {
   it('balances a 100 g 5% stock and starts with 20–30% of water', () => {
@@ -55,4 +55,8 @@ it('anchors a separate salt edit without changing potency or another stock', () 
   expect(after.totalSaltMgPerStockG).toBe(before.totalSaltMgPerStockG);
   expect(after.doseMassG).toBe(before.doseMassG);
   expect(otherStock).toEqual({ totalStockMassG: 80, batchScale: 1 });
+});
+it('retains spreadsheet CaCO3-equivalent drop targets with physical hydration-correct mass', () => {
+  expect(physicalSaltCaCo3EquivalentFactor('mgso4', 1)).toBeCloseTo(100.0869 / 246.474, 10);
+  expect(physicalSaltCaCo3EquivalentFactor('mgso4', 0)).toBeCloseTo(100.0869 / 120.365, 10);
 });

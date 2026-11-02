@@ -5,10 +5,11 @@ export type MassConcentratePlanSnapshot = {
   workspaceMode?: 'recipe' | 'diy';
   toolMode?: 'recipe' | 'percent' | 'lotus';
   selectedSaltId?: string;
+  dropperStyle?: 'straight' | 'round';
   percentWw?: number;
   recipe?: Record<string, { target: number; formIdx: number }>;
   legacyVolumePlan?: Record<string, unknown>;
-  groups: Array<{ id: string; totalStockMassG: number; strength: number; batchScale?: number; desiredSaltMassMg?: number; saltIds: string[]; calibration: StockDropCalibration | null }>;
+  groups: Array<{ id: string; totalStockMassG: number; strength: number; batchScale?: number; desiredSaltMassMg?: number; physicalSaltPpmPerDrop?: number; caCo3PpmPerDrop?: number; saltIds: string[]; calibration: StockDropCalibration | null }>;
 };
 export const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const positive = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v > 0;
@@ -36,14 +37,20 @@ export function readConcentrateStockRecord(value: unknown):
       return { kind: 'invalid', reason: 'Invalid stock group, calibration, or mixed mass/volume units.' };
     if (g.batchScale !== undefined && !positive(g.batchScale)) return { kind: 'invalid', reason: 'Invalid prepared stock batch scale.' };
     if (g.desiredSaltMassMg !== undefined && !positive(g.desiredSaltMassMg)) return { kind: 'invalid', reason: 'Invalid desired salt dose.' };
+    if (g.physicalSaltPpmPerDrop !== undefined && !positive(g.physicalSaltPpmPerDrop)) return { kind: 'invalid', reason: 'Invalid physical-salt drop target.' };
+    if (g.caCo3PpmPerDrop !== undefined && (!positive(g.caCo3PpmPerDrop) || g.physicalSaltPpmPerDrop !== undefined))
+      return { kind: 'invalid', reason: 'Invalid or conflicting CaCO3-equivalent drop target.' };
     groups.push({ id: g.id, totalStockMassG: g.totalStockMassG, strength: g.strength, saltIds: g.saltIds, calibration: g.calibration,
       ...(positive(g.batchScale) ? { batchScale: g.batchScale } : {}),
-      ...(positive(g.desiredSaltMassMg) ? { desiredSaltMassMg: g.desiredSaltMassMg } : {}) });
+      ...(positive(g.desiredSaltMassMg) ? { desiredSaltMassMg: g.desiredSaltMassMg } : {}),
+      ...(positive(g.physicalSaltPpmPerDrop) ? { physicalSaltPpmPerDrop: g.physicalSaltPpmPerDrop } : {}),
+      ...(positive(g.caCo3PpmPerDrop) ? { caCo3PpmPerDrop: g.caCo3PpmPerDrop } : {}) });
   }
   if (new Set(groups.map(g => g.id)).size !== groups.length) return { kind: 'invalid', reason: 'Duplicate stock groups.' };
   const plan: MassConcentratePlanSnapshot = { version: 2, basis: 'mass', strategy: value.strategy as MassConcentratePlanSnapshot['strategy'], finalLiters: value.finalLiters, groups };
   if (value.workspaceMode === 'recipe' || value.workspaceMode === 'diy') plan.workspaceMode = value.workspaceMode;
   if (value.toolMode === 'recipe' || value.toolMode === 'percent' || value.toolMode === 'lotus') plan.toolMode = value.toolMode;
+  if (value.dropperStyle === 'straight' || value.dropperStyle === 'round') plan.dropperStyle = value.dropperStyle;
   if (value.selectedSaltId !== undefined) {
     if (typeof value.selectedSaltId !== 'string' || !SALTS.some(salt => salt.id === value.selectedSaltId))
       return { kind: 'invalid', reason: 'Unknown stock salt.' };

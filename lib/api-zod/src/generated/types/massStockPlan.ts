@@ -7,6 +7,7 @@
  */
 import type { MassStockGroup } from './massStockGroup';
 import type { MassStockPlanBasis } from './massStockPlanBasis';
+import type { MassStockPlanDropperStyle } from './massStockPlanDropperStyle';
 import type { MassStockPlanLegacyVolumePlan } from './massStockPlanLegacyVolumePlan';
 import type { MassStockPlanRecipe } from './massStockPlanRecipe';
 import type { MassStockPlanStrategy } from './massStockPlanStrategy';
@@ -24,6 +25,7 @@ export interface MassStockPlan {
   toolMode?: MassStockPlanToolMode;
   /** @maxLength 200 */
   selectedSaltId?: string;
+  dropperStyle?: MassStockPlanDropperStyle;
   /**
      * @exclusiveMinimum 0
      * @exclusiveMaximum 100
