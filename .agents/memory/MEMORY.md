@@ -109,3 +109,4 @@
 - [Watermancer 1 mg/drop guide](watermancer-one-mg-drop-guide.md) — calculate for the working fill volume, advise 5–10 mL of bottle headroom, and keep SodaStream salts out
 - [SodaStream bicarbonate salt model](watermancer-carbonated-salt-model.md) — model Mg(OH)₂ and CaCO₃ powder doses as full CO₂-reacted bicarbonate ions in final water.
 - [Watermancer GH-only strength](watermancer-gh-only-strength.md) — keep GH-only scaling paused until the user revisits its ion-balance behavior
+- [Concentrate mass workflow](concentrate-mass-workflow.md) — all concentrate tools and guidance should use w/w and partial-water → salts → mix → remaining-water preparation
