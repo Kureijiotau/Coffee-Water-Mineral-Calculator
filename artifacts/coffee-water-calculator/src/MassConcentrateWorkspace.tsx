@@ -41,16 +41,26 @@ function SummaryMetric({ label, value, detail, tone }: { label: string; value: s
     <div className="mt-1 text-[9px] text-slate-500">{detail}</div>
   </div>;
 }
-function HelpTip({ testId, label, text }: { testId: string; label: string; text: string }) {
+function HelpTip({ testId, label, text, align = 'center' }: { testId: string; label: string; text: string; align?: 'center' | 'right' }) {
+  const [open, setOpen] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const visible = open || hovered || focused;
+  const tooltipId = `${testId}-tooltip`;
+  const position = align === 'right' ? 'right-0' : 'left-1/2 -translate-x-1/2';
   return (
-    <details data-testid={testId} className="group pointer-events-auto relative z-20 inline-flex">
-      <summary aria-label={label} className="grid h-5 w-5 cursor-help list-none place-items-center rounded-full border border-slate-400/50 bg-slate-950/80 text-[11px] font-bold leading-none text-slate-200 outline-none hover:border-fuchsia-300/70 hover:text-white focus-visible:ring-2 focus-visible:ring-fuchsia-300">
+    <span data-testid={testId} className="pointer-events-auto relative z-20 inline-flex" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <button type="button" aria-label={label} aria-expanded={open} aria-describedby={tooltipId}
+        onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onClick={() => setOpen(value => !value)}
+        onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); setFocused(false); } }}
+        className="grid h-5 w-5 cursor-help place-items-center rounded-full border border-slate-400/50 bg-slate-950/80 text-[11px] font-bold leading-none text-slate-200 outline-none hover:border-fuchsia-300/70 hover:text-white focus-visible:ring-2 focus-visible:ring-fuchsia-300">
         <span aria-hidden="true">?</span>
-      </summary>
-      <div role="tooltip" aria-label={label} className="pointer-events-auto absolute right-0 top-full z-[60] hidden w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-fuchsia-200/25 bg-slate-950 p-3 text-left text-xs font-normal leading-relaxed text-slate-100 shadow-xl group-hover:block group-focus-within:block group-open:block">
+      </button>
+      <div id={tooltipId} role="tooltip" aria-label={label}
+        className={`${visible ? 'block' : 'hidden'} pointer-events-auto absolute ${position} top-full z-[60] w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-fuchsia-200/25 bg-slate-950 p-3 text-left text-xs font-normal leading-relaxed text-slate-100 shadow-xl`}>
         {text}
       </div>
-    </details>
+    </span>
   );
 }
 
@@ -296,7 +306,7 @@ export function MassConcentrateWorkspace(props: Props) {
               <HelpTip
                 testId="recipe-target-help"
                 label="Recipe target explanation"
-                text="Set the salt contribution you want in the finished brewing water. The app calculates the concentrate strength and dose from this recipe target, expressed as anhydrous-equivalent mg/L."
+                text="Use this when you have a mineral target for the finished brew. Enter the selected salt's contribution in mg/L as anhydrous equivalent; the card calculates how much salt goes into the concentrate."
               />
             </div>
             <div className="pointer-events-none flex items-center justify-end pr-2">
@@ -304,6 +314,7 @@ export function MassConcentrateWorkspace(props: Props) {
                 testId="weight-percent-help"
                 label="Weight percentage explanation"
                 text="Set the selected salt's share of the finished stock's total weight. For example, 5% w/w means 5 g of salt in 100 g of finished stock; the rest is water."
+                align="right"
               />
             </div>
           </div>

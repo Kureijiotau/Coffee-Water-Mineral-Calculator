@@ -31,24 +31,33 @@ test('explains both advanced stock targets through question-mark help', async ({
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
   await page.getByText('Advanced stock targets', { exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
 
   const recipeHelp = page.getByTestId('recipe-target-help');
-  const recipeButton = recipeHelp.locator('summary');
+  const recipeButton = recipeHelp.getByRole('button', { name: 'Recipe target explanation' });
   await recipeButton.hover();
-  const recipeTooltip = recipeHelp.locator('[role="tooltip"]');
+  const recipeTooltip = recipeHelp.getByRole('tooltip');
   await expect(recipeTooltip).toBeVisible();
-  await expect(recipeTooltip).toContainText('final brewing water');
+  await expect(recipeTooltip).toContainText('finished brew');
+  const recipeTooltipBounds = await recipeTooltip.boundingBox();
+  expect(recipeTooltipBounds).not.toBeNull();
+  expect(recipeTooltipBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(recipeTooltipBounds!.x + recipeTooltipBounds!.width).toBeLessThanOrEqual(390);
   await recipeButton.click();
-  await expect(recipeHelp).toHaveAttribute('open', '');
+  await expect(recipeButton).toHaveAttribute('aria-expanded', 'true');
 
   const strengthHelp = page.getByTestId('weight-percent-help');
-  const strengthButton = strengthHelp.locator('summary');
+  const strengthButton = strengthHelp.getByRole('button', { name: 'Weight percentage explanation' });
   await strengthButton.focus();
-  const strengthTooltip = strengthHelp.locator('[role="tooltip"]');
+  const strengthTooltip = strengthHelp.getByRole('tooltip');
   await expect(strengthTooltip).toBeVisible();
   await expect(strengthTooltip).toContainText('5 g of salt in 100 g of finished stock');
+  const strengthTooltipBounds = await strengthTooltip.boundingBox();
+  expect(strengthTooltipBounds).not.toBeNull();
+  expect(strengthTooltipBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(strengthTooltipBounds!.x + strengthTooltipBounds!.width).toBeLessThanOrEqual(390);
   await strengthButton.press('Enter');
-  await expect(strengthHelp).toHaveAttribute('open', '');
+  await expect(strengthButton).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
