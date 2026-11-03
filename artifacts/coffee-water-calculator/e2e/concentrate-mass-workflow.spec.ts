@@ -27,6 +27,30 @@ test('shows the single-salt weight workflow in its bottle-card layout', async ({
   await expect(page.getByLabel('Shared water calibration weight in grams')).toHaveValue('5');
 });
 
+test('explains both advanced stock targets through question-mark help', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+  await page.getByText('Advanced stock targets', { exact: true }).click();
+
+  const recipeHelp = page.getByTestId('recipe-target-help');
+  const recipeButton = recipeHelp.locator('summary');
+  await recipeButton.hover();
+  const recipeTooltip = recipeHelp.locator('[role="tooltip"]');
+  await expect(recipeTooltip).toBeVisible();
+  await expect(recipeTooltip).toContainText('final brewing water');
+  await recipeButton.click();
+  await expect(recipeHelp).toHaveAttribute('open', '');
+
+  const strengthHelp = page.getByTestId('weight-percent-help');
+  const strengthButton = strengthHelp.locator('summary');
+  await strengthButton.focus();
+  const strengthTooltip = strengthHelp.locator('[role="tooltip"]');
+  await expect(strengthTooltip).toBeVisible();
+  await expect(strengthTooltip).toContainText('5 g of salt in 100 g of finished stock');
+  await strengthButton.press('Enter');
+  await expect(strengthHelp).toHaveAttribute('open', '');
+});
+
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();

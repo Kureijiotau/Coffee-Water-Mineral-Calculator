@@ -41,6 +41,19 @@ function SummaryMetric({ label, value, detail, tone }: { label: string; value: s
     <div className="mt-1 text-[9px] text-slate-500">{detail}</div>
   </div>;
 }
+function HelpTip({ testId, label, text }: { testId: string; label: string; text: string }) {
+  return (
+    <details data-testid={testId} className="group pointer-events-auto relative z-20 inline-flex">
+      <summary aria-label={label} className="grid h-5 w-5 cursor-help list-none place-items-center rounded-full border border-slate-400/50 bg-slate-950/80 text-[11px] font-bold leading-none text-slate-200 outline-none hover:border-fuchsia-300/70 hover:text-white focus-visible:ring-2 focus-visible:ring-fuchsia-300">
+        <span aria-hidden="true">?</span>
+      </summary>
+      <div role="tooltip" aria-label={label} className="pointer-events-auto absolute right-0 top-full z-[60] hidden w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-fuchsia-200/25 bg-slate-950 p-3 text-left text-xs font-normal leading-relaxed text-slate-100 shadow-xl group-hover:block group-focus-within:block group-open:block">
+        {text}
+      </div>
+    </details>
+  );
+}
+
 function downloadText(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click();
@@ -267,15 +280,33 @@ export function MassConcentrateWorkspace(props: Props) {
     </section> : <details className="rounded-2xl border border-slate-700/60 bg-slate-900/45 p-4">
       <summary className="cursor-pointer text-sm font-semibold text-slate-200">Advanced stock targets</summary>
       <div className="mt-4 space-y-3">
-        <div role="tablist" aria-label="DIY stock basis" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+        <div className="relative">
+          <div role="tablist" aria-label="DIY stock basis" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
           <button type="button" role="tab" aria-selected={toolMode === 'recipe'} aria-label="Recipe-equivalent salt stock" onClick={() => setToolMode('recipe')}
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode === 'recipe' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
+            className={`rounded-lg px-2.5 py-1.5 pr-8 text-xs font-semibold transition ${toolMode === 'recipe' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
             Recipe target
           </button>
           <button type="button" role="tab" aria-selected={toolMode === 'percent'} aria-label="Single-salt weight percentage" onClick={() => setToolMode('percent')}
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode === 'percent' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
+            className={`rounded-lg px-2.5 py-1.5 pr-8 text-xs font-semibold transition ${toolMode === 'percent' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
             % w/w
           </button>
+          </div>
+          <div className="pointer-events-none absolute inset-0 grid grid-cols-2 gap-1 p-1">
+            <div className="pointer-events-none flex items-center justify-end pr-2">
+              <HelpTip
+                testId="recipe-target-help"
+                label="Recipe target explanation"
+                text="Set the salt contribution you want in the finished brewing water. The app calculates the concentrate strength and dose from this recipe target, expressed as anhydrous-equivalent mg/L."
+              />
+            </div>
+            <div className="pointer-events-none flex items-center justify-end pr-2">
+              <HelpTip
+                testId="weight-percent-help"
+                label="Weight percentage explanation"
+                text="Set the selected salt's share of the finished stock's total weight. For example, 5% w/w means 5 g of salt in 100 g of finished stock; the rest is water."
+              />
+            </div>
+          </div>
         </div>
         {toolMode === 'recipe' && <label className="block rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs text-cyan-200">
           <span className="block text-[10px] font-semibold uppercase tracking-wider">Recipe target (anhydrous-equivalent mg/L)</span>
