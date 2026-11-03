@@ -17,6 +17,14 @@ test('shows the single-salt weight workflow in its bottle-card layout', async ({
   await expect(page.getByTestId('mass-stock-preparation')).toContainText('20–30% of the calculated');
   await expect(page.getByLabel('DIY single-salt concentrate target stock weight in grams')).toHaveValue('100');
   await expect(page.getByLabel('Final brewing water')).toHaveValue('1');
+  await page.getByLabel('Measured number of drops').fill('100');
+  await page.getByLabel('Shared water calibration weight in grams').fill('5');
+  await expect(page.getByTestId('mass-stock-calibration')).toContainText('0.0500 g');
+  await expect(page.getByTestId('mass-stock-calibration')).toContainText('Shared value');
+  await page.reload();
+  await page.getByTestId('tab-concentrates').click();
+  await expect(page.getByLabel('Measured number of drops')).toHaveValue('100');
+  await expect(page.getByLabel('Shared water calibration weight in grams')).toHaveValue('5');
 });
 
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
@@ -31,15 +39,16 @@ test('prepares 100 g of 5% stock, verifies drops, invalidates changed compositio
   await expect(card).toContainText('Do not tare again');
   await expect(card).toContainText('0.8 g stock');
   await expect(card).toContainText('Water-based planning estimate');
+  await card.getByText('Calibrate this finished stock by weight', { exact: true }).click();
   await card.getByLabel('Single-salt % w/w stock counted stock drops').fill('100');
   await card.getByLabel('Single-salt % w/w stock measured stock weight').fill('5');
   await card.getByRole('button', { name: 'Use measured stock calibration' }).click();
   await expect(card).toContainText('Measured finished-stock calibration');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
+  await page.getByText('Advanced stock targets', { exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Single-salt weight percentage' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Measured finished-stock calibration');
-  await chooseSingleSaltWeightPercentage(page);
   await page.getByLabel('Stock strength percent w/w').fill('6');
   await expect(page.getByTestId('mass-stock-card')).toContainText('The stock composition or tip changed');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Water-based planning estimate');
@@ -152,12 +161,12 @@ test('does not silently replace a malformed saved mass plan', async ({ page }) =
 test('preserves DIY spreadsheet CaCO3-equivalent drop targets by weight', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.getByLabel('Drop target basis').selectOption('caco3');
+  await page.getByRole('button', { name: 'ppm as CaCO₃', exact: true }).click();
   await page.getByRole('button', { name: 'Set strength from drop target' }).click();
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 1 ppm CaCO₃-equivalent per drop');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('DIY spreadsheet basis: 1 ppm CaCO₃-equivalent per drop');
+  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(page.getByTestId('mass-stock-card')).toContainText('DIY spreadsheet basis: 5 ppm CaCO₃-equivalent per drop');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
-  await expect(page.getByLabel('Drop target basis')).toHaveValue('caco3');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 1 ppm CaCO₃-equivalent per drop');
+  await expect(page.getByRole('button', { name: 'ppm as CaCO₃', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
 });

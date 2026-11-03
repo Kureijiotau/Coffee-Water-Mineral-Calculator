@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Check, Droplet, FlaskConical, ListChecks, Pipette } from 'lucide-react';
-import { SALTS, getSaltColorTokens, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
+import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
 import { buildMassStockPlan, computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
   resolveStockDropCalibration, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor, type StockDropCalibration } from './concentrateMass';
 import { checkMassConcentrate, recommendMassConcentrateStrength } from './concentrateMassWarnings';
 import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
 import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type MassConcentratePlanSnapshot } from './concentrateStockStorage';
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
-import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle } from './lotusConcentrate';
+import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, type LotusDropperCalibration, type LotusDropperStyle } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
 
 type Props = {
@@ -31,6 +31,16 @@ const n = (value: number, digits = 3) => Number(value.toFixed(digits)).toString(
 const inputClass = 'mt-1 w-full rounded-lg border border-slate-600/70 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-fuchsia-300';
 const buttonClass = 'rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-xs font-semibold text-fuchsia-100 hover:bg-fuchsia-500/20 disabled:opacity-40';
 const emptyGroup = (id: string): Group => ({ id, totalStockMassG: 100, strength: 20, saltIds: [], calibration: null });
+function SummaryMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: 'sky' | 'emerald' | 'slate' }) {
+  const toneClasses = tone === 'emerald'
+    ? 'border-emerald-300/20 bg-emerald-400/[0.07] text-emerald-200'
+    : tone === 'sky' ? 'border-sky-200/20 bg-sky-400/[0.07] text-sky-100' : 'border-slate-700/60 bg-slate-950/25 text-slate-200';
+  return <div className={`rounded-xl border px-3 py-3 ${toneClasses}`}>
+    <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
+    <div className="mt-1 text-sm font-semibold tabular-nums">{value}</div>
+    <div className="mt-1 text-[9px] text-slate-500">{detail}</div>
+  </div>;
+}
 function downloadText(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click();
@@ -92,7 +102,17 @@ export function MassConcentrateWorkspace(props: Props) {
         ? [{ id: 'all-in-one', name: 'All-in-one concentrate', saltIds: activeSaltIds }]
         : strategy === 'gh-kh' ? splitIntoStockGroups(recipeTargets).map(g => ({ ...g, name: g.name.replace('Stock', 'concentrate') }))
           : activeSaltIds.map(id => ({ id, name: `${SALTS.find(s => s.id === id)?.name ?? id} concentrate`, saltIds: [id] }));
-  const shared = loadDiyConcentrateInputs().lotusCalibrationInputs ?? {};
+  const [sharedCalibrations, setSharedCalibrations] = useState<Record<string, LotusDropperCalibration>>(
+    () => loadDiyConcentrateInputs().lotusCalibrationInputs ?? {},
+  );
+  const shared = sharedCalibrations;
+  const updateSharedCalibration = (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => {
+    const current = shared[style] ?? { dropsInput: '', weightInput: '', style };
+    const next = { ...current, [field]: value, style };
+    const calibrations = { ...shared, [style]: next };
+    setSharedCalibrations(calibrations);
+    saveDiyConcentrateInputs({ ...loadDiyConcentrateInputs(), lotusCalibrationInputs: calibrations });
+  };
   const waterRate = getDiyDropperRateForStyle(tipKey, props.dropsPerMl, shared);
   const dropperRates = {
     straight: getDiyDropperRateForStyle('straight', props.dropsPerMl, shared),
@@ -140,6 +160,7 @@ export function MassConcentrateWorkspace(props: Props) {
     const sync = () => {
       if (isRecipe) return;
       const plan = loadDiyConcentrateStockState();
+      setSharedCalibrations(loadDiyConcentrateInputs().lotusCalibrationInputs ?? {});
       if (plan?.kind === 'mass') applyPlan(plan.plan);
       else if (plan?.kind === 'invalid') setRestoreError(plan.reason);
     };
@@ -322,7 +343,8 @@ export function MassConcentrateWorkspace(props: Props) {
           finalLiters={finalLiters} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={value => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(value) * 3.785411784) : value)}
           onToggleVolumeUnit={props.onToggleVolumeUnit} tipKey={tipKey} dropperRates={dropperRates}
-          onTipChange={setTipKey} waterEstimate={waterEstimate} percentMode={percent || lotus}
+          onTipChange={setTipKey} sharedCalibrations={shared} onSharedCalibrationChange={updateSharedCalibration}
+          waterEstimate={waterEstimate} percentMode={percent || lotus}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} />;
       })}
       {(isRecipe || toolMode === 'lotus') && <button className={buttonClass} aria-label="Open concentrate recipe steps" onClick={() => setShowSteps(v => !v)}>{showSteps ? 'Hide recipe steps' : 'Recipe steps'}</button>}
@@ -342,20 +364,24 @@ export function MassConcentrateWorkspace(props: Props) {
   </div>;
 }
 
-function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, dropperRates, onTipChange, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
+function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, dropperRates, onTipChange, sharedCalibrations, onSharedCalibrationChange, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
   name: string; state: Group; saltTargets: Record<string, number>; forms: Record<string, number>; strength: number; finalLiters: number;
   finalLitersInput: string; volumeUnit: 'liters' | 'gallons'; onFinalLitersChange: (value: string) => void; onToggleVolumeUnit: () => void;
   tipKey: 'straight' | 'round'; dropperRates: Record<'straight' | 'round', number>; onTipChange: (tipKey: 'straight' | 'round') => void;
+  sharedCalibrations: Record<string, LotusDropperCalibration>;
+  onSharedCalibrationChange: (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => void;
   waterEstimate: StockDropCalibration; onUpdate: (patch: Partial<Group>) => void; percentMode: boolean; showSteps: boolean; allowSaltMassEdit: boolean; diySingleSalt: boolean;
-}) {
 }) {
   const [massInput, setMassInput] = useState(String(state.totalStockMassG));
   const [strengthInput, setStrengthInput] = useState(String(state.strength));
   const [dropsInput, setDropsInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.drops) : '');
   const [weighedInput, setWeighedInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.massG) : '');
   const [targetMgInput, setTargetMgInput] = useState(String(state.desiredSaltMassMg ?? 40));
-  const [dropTargetInput, setDropTargetInput] = useState(String(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop ?? 1));
-  const [dropBasis, setDropBasis] = useState<'salt-mg' | 'caco3'>(state.caCo3PpmPerDrop ? 'caco3' : 'salt-mg');
+  const initialSaltId = Object.keys(saltTargets)[0] ?? '';
+  const canUseCaCo3Target = Object.keys(saltTargets).length === 1
+    && physicalSaltCaCo3EquivalentFactor(initialSaltId, forms[initialSaltId] ?? 0) > 0;
+  const [dropTargetInput, setDropTargetInput] = useState(String(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop ?? (canUseCaCo3Target ? 5 : 1)));
+  const [dropBasis, setDropBasis] = useState<'salt-mg' | 'caco3'>(state.caCo3PpmPerDrop ? 'caco3' : state.physicalSaltPpmPerDrop ? 'salt-mg' : canUseCaCo3Target ? 'caco3' : 'salt-mg');
   const [calibrationError, setCalibrationError] = useState('');
   const [jpgStatus, setJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const preparationCardRef = useRef<HTMLElement | null>(null);
@@ -366,10 +392,22 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
   const compositionKey = stockCompositionKey(salts, state.totalStockMassG, forms);
+  const sharedTipCalibration = sharedCalibrations[tipKey];
+  const sharedCalibrationDrops = Number(sharedTipCalibration?.dropsInput ?? 0);
+  const sharedCalibrationWeightG = Number(sharedTipCalibration?.weightInput ?? 0);
+  const hasSharedCalibration = Number.isFinite(sharedCalibrationDrops) && sharedCalibrationDrops > 0
+    && Number.isFinite(sharedCalibrationWeightG) && sharedCalibrationWeightG > 0;
+  const waterMassPerDrop = hasSharedCalibration ? sharedCalibrationWeightG / sharedCalibrationDrops : 1 / dropperRates[tipKey];
   const measured = resolveStockDropCalibration(state.calibration, compositionKey, tipKey);
   const calibration = measured.basis === 'stock' ? state.calibration : waterEstimate;
   const result = computeRecipeMassDropEquivalents({ saltTargets, formIdxBySaltId: forms, strength, totalStockMassG: state.totalStockMassG, calibration, finalLiters, compositionKey, tipKey });
   const warnings = checkMassConcentrate({ strength, saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG });
+  const preparedMass = result.valid ? result : null;
+  const saltMassG = salts.reduce((total, item) => total + item.physicalMassMg / 1000, 0);
+  const saltGPer100MlWater = preparedMass && preparedMass.waterMassG > 0 ? saltMassG / preparedMass.waterMassG * 100 : 0;
+  const solubilityLimitGPer100Ml = salts.length === 1
+    ? getSaltSolubilityLimitGPer100Ml(salts[0].saltId, forms[salts[0].saltId] ?? 0) : null;
+  const willDissolve = solubilityLimitGPer100Ml == null || saltGPer100MlWater <= solubilityLimitGPer100Ml;
   const recommendedStrength = percentMode ? null : recommendMassConcentrateStrength({
     saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
     gramsPerDrop: measured.gramsPerDrop ?? waterEstimate.massG / waterEstimate.drops,
@@ -452,8 +490,12 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" aria-hidden="true" />
         <div>
           <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-sky-100/80">Dropper calibration</div>
-          <h3 className="mt-1 text-base font-semibold text-white">{measured.basis === 'stock' ? 'Calibration in use' : 'Measure this before dosing'}</h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-300">Tare a receiving cup. Hold the dropper vertically and weigh counted drops of this finished stock using the same tip.</p>
+          <h3 className="mt-1 text-base font-semibold text-white">{hasSharedCalibration ? 'Calibration in use' : 'Measure this tip before dosing'}</h3>
+          <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            {hasSharedCalibration
+              ? `Using the saved ${tipKey} tip calibration shared with the Watermancer Guide and DIY Lotus Drops.`
+              : `No ${tipKey} tip calibration is saved yet. Weigh counted water drops here to share this value with the Watermancer Guide and DIY Lotus Drops.`}
+          </p>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-sky-200/15 bg-slate-950/30 p-1" role="group" aria-label="Stock Builder dropper tip style">
@@ -463,36 +505,46 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           {style} Tip · {dropperRates[style].toFixed(1)} Drops/ML
         </button>)}
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="shared-dropper-calibration">
         <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
-          <input aria-label={`${name} counted stock drops`} className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-            inputMode="decimal" placeholder="e.g. 100" value={dropsInput} onChange={e => setDropsInput(e.target.value)} />
+          <input aria-label="Measured number of drops" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
+            inputMode="decimal" placeholder="e.g. 100" value={sharedTipCalibration?.dropsInput ?? ''}
+            onChange={e => onSharedCalibrationChange(tipKey, 'dropsInput', e.target.value)} />
         </label>
         <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
           <span className="mt-1 flex items-center gap-2">
-            <input aria-label={`${name} measured stock weight`} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-              inputMode="decimal" placeholder="e.g. 5" value={weighedInput} onChange={e => setWeighedInput(e.target.value)} />
+            <input aria-label="Shared water calibration weight in grams" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
+              inputMode="decimal" placeholder="e.g. 5" value={sharedTipCalibration?.weightInput ?? ''}
+              onChange={e => onSharedCalibrationChange(tipKey, 'weightInput', e.target.value)} />
             <span className="text-sm text-slate-400">g</span>
           </span>
         </label>
       </div>
-      <button type="button" className="mt-3 rounded-lg border border-sky-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-sky-100 hover:border-sky-200/55 hover:bg-sky-400/10"
-        onClick={() => {
+      <p className="mt-2 text-xs text-slate-400">This is a plain-water calibration. Finished-stock drops can have a different weight; calibrate the prepared stock separately below for the most accurate dose.</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <SummaryMetric label="Water mass per drop" value={`${waterMassPerDrop.toFixed(4)} g`}
+          detail={hasSharedCalibration ? 'shared' : 'estimated'} tone="sky" />
+        <SummaryMetric label="Drops per mL" value={dropperRates[tipKey].toFixed(1)}
+          detail={hasSharedCalibration ? 'shared' : 'estimated'} tone="sky" />
+        <SummaryMetric label="Calibration status" value={hasSharedCalibration ? 'Shared value' : 'Assumption'}
+          detail={hasSharedCalibration ? 'Guide + Lotus Drops' : 'measure for accuracy'} tone={hasSharedCalibration ? 'emerald' : 'slate'} />
+      </div>
+      {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+      <details className="mt-3 rounded-xl border border-slate-700/60 p-3">
+        <summary className="cursor-pointer text-sm text-sky-100">Calibrate this finished stock by weight</summary>
+        <p className="mt-2 text-xs text-slate-400">Tare a receiving cup. Hold the dropper vertically and weigh counted drops of this actual finished stock. Use the same tip. This calibration is saved to this stock, separate from the shared water value.</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs">Counted stock drops<input aria-label={`${name} counted stock drops`} className={inputClass} value={dropsInput} onChange={e => setDropsInput(e.target.value)} /></label>
+          <label className="text-xs">Measured stock weight (g)<input aria-label={`${name} measured stock weight`} className={inputClass} value={weighedInput} onChange={e => setWeighedInput(e.target.value)} /></label>
+        </div>
+        <button type="button" className={`${buttonClass} mt-3`} onClick={() => {
           if (![Number(dropsInput), Number(weighedInput)].every(v => Number.isFinite(v) && v > 0)) { setCalibrationError('Enter a positive drop count and actual stock weight.'); return; }
           onUpdate({ calibration: { basis: 'stock', drops: Number(dropsInput), massG: Number(weighedInput), compositionKey, tipKey } });
           setCalibrationError('');
         }}>Use measured stock calibration</button>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <SummaryMetric label="Stock mass per drop" value={result.valid ? `${n(result.gramsPerDrop)} g` : 'Not measured'}
-          detail={measured.basis === 'stock' ? 'measured finished stock' : 'water estimate'} tone="sky" />
-        <SummaryMetric label="Drops per mL" value={dropperRates[tipKey].toFixed(1)}
-          detail={measured.basis === 'stock' ? 'water estimate' : 'selected tip'} tone="sky" />
-        <SummaryMetric label="Calibration status" value={measured.basis === 'stock' ? 'Measured stock' : 'Water estimate'}
-          detail={measured.basis === 'stock' ? 'this salt and tip' : 'verify finished stock'} tone={measured.basis === 'stock' ? 'emerald' : 'slate'} />
-      </div>
-      {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+      </details>
       {calibrationError && <p role="status" className="mt-2 text-xs text-amber-200">{calibrationError}</p>}
     </section>
 
@@ -535,6 +587,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
             } else setCalibrationError(next.reason);
           }}>Set strength from drop target</button>
       </>}
+      {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-2 text-xs text-amber-100">
+        Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.
+      </p>}
       {(!Number.isFinite(doseMassG) || doseMassG <= 0) && <p role="alert" className="mt-3 text-xs text-red-200">Enter a positive, finite salt dose and brewing-water amount.</p>}
       {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <div className="mt-3 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.07] p-3 text-sm text-emerald-50">
         <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
@@ -542,7 +597,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
         {Number.isFinite(exactDrops) && <p className="mt-1 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalLiters)} mg/L).</p>}
         {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-300">Rounded-drop ions: {recipeDeliveredIons}</p>}
-        {equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-300">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalLiters)} ppm CaCO₃-equivalent per drop; not an additional ion or independent GH/KH target.</p>}
+        {preparedMass && equivalentFactor > 0 && preparedMass.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-300">DIY spreadsheet basis: {n(preparedMass.totalSaltMgPerDrop * equivalentFactor / finalLiters)} ppm CaCO₃-equivalent per drop; not an additional ion or independent GH/KH target.</p>}
       </div>}
     </section>
 
@@ -557,8 +612,8 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           aria-label="Save preparation card as JPG">{jpgStatus === 'saving' ? 'Saving…' : jpgStatus === 'saved' ? 'Saved JPG' : jpgStatus === 'error' ? 'Try again' : 'Save JPG'}</button>
       </div>
       <h2 className="mt-1 text-base font-semibold text-white">Make this concentrate</h2>
-      {!blocked && <div className="mt-3" data-testid="mass-stock-preparation">
-        <ConcentratePreparationSteps totalStockMassG={result.totalStockMassG} waterMassG={result.waterMassG} saltLabel={saltLabel} />
+      {!blocked && preparedMass && <div className="mt-3">
+        <ConcentratePreparationSteps totalStockMassG={preparedMass.totalStockMassG} waterMassG={preparedMass.waterMassG} saltLabel={saltLabel} />
       </div>}
       <div className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${willDissolve ? 'border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-50' : 'border-rose-300/30 bg-rose-400/[0.08] text-rose-50'}`}>
         <span className="flex items-center gap-2">
@@ -571,9 +626,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         className={`mt-2 text-xs ${warning.severity === 'error' ? 'text-red-200' : warning.severity === 'warning' ? 'text-amber-200' : 'text-slate-400'}`}>{warning.message}</p>)}
       <button type="button" className="mt-3 rounded-lg border border-emerald-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-emerald-100 hover:border-emerald-200/55 hover:bg-emerald-400/10"
         disabled={blocked || !Number.isFinite(doseMassG) || doseMassG <= 0}
-        onClick={() => downloadText(`${state.id}-stock-preparation.txt`,
-          [name, `${n(result.strengthPercentWw)}% w/w; total stock ${n(result.totalStockMassG)} g`,
-            ...buildConcentratePreparationSteps({ totalStockMassG: result.totalStockMassG, waterMassG: result.waterMassG, saltLabel }),
+        onClick={() => preparedMass && downloadText(`${state.id}-stock-preparation.txt`,
+          [name, `${n(preparedMass.strengthPercentWw)}% w/w; total stock ${n(preparedMass.totalStockMassG)} g`,
+            ...buildConcentratePreparationSteps({ totalStockMassG: preparedMass.totalStockMassG, waterMassG: preparedMass.waterMassG, saltLabel }),
             WATER_MASS_NOTE, `Dose ${n(doseMassG)} g stock for ${n(finalLiters)} L. Drops: ${measured.basis === 'stock' ? 'measured finished-stock' : 'water-based estimate; verify finished stock'}.`,
             ...warnings.map(w => w.message)].join('\n\n'))}>Download preparation text</button>
     </section>
