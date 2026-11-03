@@ -1,9 +1,28 @@
 import { expect, test } from '@playwright/test';
 
+async function chooseSingleSaltWeightPercentage(page: import('@playwright/test').Page) {
+  await page.getByText('Advanced stock targets', { exact: true }).click();
+  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
+}
+
+test('shows the single-salt weight workflow in its bottle-card layout', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  await expect(page.getByRole('heading', { name: 'DIY single-salt concentrate', exact: true })).toBeVisible();
+  await expect(page.getByText('Concentrate weight and batch volume', { exact: true })).toBeVisible();
+  await expect(page.getByText('Dropper calibration', { exact: true })).toBeVisible();
+  await expect(page.getByText('Desired dose', { exact: true })).toBeVisible();
+  await expect(page.getByText('Preparation', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('mass-stock-preparation')).toContainText('20–30% of the calculated');
+  await expect(page.getByLabel('DIY single-salt concentrate target stock weight in grams')).toHaveValue('100');
+  await expect(page.getByLabel('Final brewing water')).toHaveValue('1');
+});
+
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
+  await chooseSingleSaltWeightPercentage(page);
   await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
   await page.getByLabel('Stock strength percent w/w').fill('5');
   const card = page.getByTestId('mass-stock-card');
@@ -12,7 +31,6 @@ test('prepares 100 g of 5% stock, verifies drops, invalidates changed compositio
   await expect(card).toContainText('Do not tare again');
   await expect(card).toContainText('0.8 g stock');
   await expect(card).toContainText('Water-based planning estimate');
-  await card.getByText('Calibrate this finished stock by weight', { exact: true }).click();
   await card.getByLabel('Single-salt % w/w stock counted stock drops').fill('100');
   await card.getByLabel('Single-salt % w/w stock measured stock weight').fill('5');
   await card.getByRole('button', { name: 'Use measured stock calibration' }).click();
@@ -21,13 +39,14 @@ test('prepares 100 g of 5% stock, verifies drops, invalidates changed compositio
   await page.getByTestId('tab-concentrates').click();
   await expect(page.getByRole('tab', { name: 'Single-salt weight percentage' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Measured finished-stock calibration');
+  await chooseSingleSaltWeightPercentage(page);
   await page.getByLabel('Stock strength percent w/w').fill('6');
   await expect(page.getByTestId('mass-stock-card')).toContainText('The stock composition or tip changed');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Water-based planning estimate');
-  await page.getByLabel('Stock dropper tip').selectOption('round');
+  await page.getByRole('button', { name: /Round tip/i }).click();
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
-  await expect(page.getByLabel('Stock dropper tip')).toHaveValue('round');
+  await expect(page.getByRole('button', { name: /Round tip/i })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('mass-stock-card')).toContainText('Water-based planning estimate');
 });
 
@@ -56,7 +75,7 @@ test('keeps original volume inputs and requires an explicit weight rebuild', asy
 test('exports the same mass preparation sequence, without a stock-volume assumption', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
+  await chooseSingleSaltWeightPercentage(page);
   await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
   await page.getByLabel('Stock strength percent w/w').fill('5');
   await page.evaluate(() => {
