@@ -34,6 +34,12 @@ import { StableNumberInput } from './components/StableNumberInput';
 import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
+  getLitersAfterVolumeUnitToggle,
+  US_GALLON_IN_LITERS,
+  type VolumeUnit,
+} from './volumeUnits';
+export { getLitersAfterVolumeUnitToggle, US_GALLON_IN_LITERS, type VolumeUnit } from './volumeUnits';
+import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
   TdsCard as SharedTdsCard,
@@ -1183,9 +1189,6 @@ const num = (s: string): number => {
   const v = parseFloat(s);
   return !Number.isFinite(v) || v < 0 ? 0 : v;
 };
-
-export type VolumeUnit = 'liters' | 'gallons';
-export const US_GALLON_IN_LITERS = 3.785411784;
 
 export function volumeToLiters(value: string | number, unit: VolumeUnit): number {
   const parsed = typeof value === 'number' ? value : parseFloat(value);
@@ -7369,7 +7372,10 @@ function App() {
                </div>
                <VolumeUnitToggle
                  unit={volumeUnit}
-                 onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
+                 onToggle={() => {
+                   setLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
+                   setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters');
+                 }}
                  className="h-11 min-w-[76px] justify-center rounded-xl border-cyan-300/35 bg-cyan-400/10 px-3 text-[11px] uppercase tracking-wider shadow-sm shadow-cyan-950/30"
                />
             </div>
@@ -9999,7 +10005,13 @@ function ConcentrateWorkspace({
           <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2">
             <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
               Final water ({volumeUnitShortLabel(volumeUnit)})
-              <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+              <VolumeUnitToggle
+                unit={volumeUnit}
+                onToggle={() => {
+                  setDoseLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
+                  onToggleVolumeUnit();
+                }}
+              />
             </span>
             <VolumeInput
               liters={finalLiters}
@@ -11487,10 +11499,14 @@ function LegacyRecipeConcentrateBuilder({
                   <VolumeUnitToggle
                     unit={volumeUnit}
                     onToggle={() => {
-                      const liters = volumeToLiters(finalVolumeInput, volumeUnit);
-                      setFinalVolumeInput(String(volumeUnit === 'liters'
-                        ? liters / US_GALLON_IN_LITERS
-                        : liters));
+                      const liters = getLitersAfterVolumeUnitToggle(
+                        volumeToLiters(finalVolumeInput, volumeUnit),
+                        volumeUnit,
+                      );
+                      setFinalVolumeInput(litersToVolumeInput(
+                        liters,
+                        volumeUnit === 'liters' ? 'gallons' : 'liters',
+                      ));
                       onToggleVolumeUnit();
                     }}
                   />
@@ -12424,8 +12440,14 @@ function DiySingleSaltConcentratePanel({
   const finalVolumeLabel = volumeUnitLabel(volumeUnit);
   const volumeLabel = volumeUnitShortLabel(volumeUnit);
   const toggleBatchVolumeUnit = () => {
-    const liters = volumeToLiters(finalVolumeInput, volumeUnit);
-    setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
+    const liters = getLitersAfterVolumeUnitToggle(
+      volumeToLiters(finalVolumeInput, volumeUnit),
+      volumeUnit,
+    );
+    setFinalVolumeInput(litersToVolumeInput(
+      liters,
+      volumeUnit === 'liters' ? 'gallons' : 'liters',
+    ));
     onToggleVolumeUnit();
   };
   const updateSharedCalibration = (
@@ -13193,8 +13215,14 @@ function RecipeConcentrateBuilder({
               onVolumeChange={value => updateStockVolume(group.id, value)}
               onFinalVolumeChange={updateFinalVolume}
               onToggleVolumeUnit={() => {
-                const liters = volumeToLiters(finalVolumeInput, volumeUnit);
-                setFinalVolumeInput(litersToVolumeInput(liters, volumeUnit === 'liters' ? 'gallons' : 'liters'));
+                const liters = getLitersAfterVolumeUnitToggle(
+                  volumeToLiters(finalVolumeInput, volumeUnit),
+                  volumeUnit,
+                );
+                setFinalVolumeInput(litersToVolumeInput(
+                  liters,
+                  volumeUnit === 'liters' ? 'gallons' : 'liters',
+                ));
                 onToggleVolumeUnit();
               }}
               onDropperStyleChange={onDropperStyleChange}
@@ -15844,7 +15872,13 @@ function BrewerDropperCalibrationCard({
             <label className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2">
               <span className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
                 Final water ({volumeUnitShortLabel(volumeUnit)})
-                <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+                <VolumeUnitToggle
+                  unit={volumeUnit}
+                  onToggle={() => {
+                    setDoseVolumeLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
+                    onToggleVolumeUnit();
+                  }}
+                />
               </span>
               <VolumeInput
                 liters={finalVolumeLiters}
@@ -16096,7 +16130,13 @@ function BrewerSimpleRecipeCard({
               ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
                className="w-20 rounded-lg border border-slate-600/60 bg-slate-900/60 px-2.5 py-1.5 text-center text-sm text-slate-100 placeholder-slate-500 focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
             />
-            <VolumeUnitToggle unit={volumeUnit} onToggle={onToggleVolumeUnit} />
+            <VolumeUnitToggle
+              unit={volumeUnit}
+              onToggle={() => {
+                onVolumeChange(String(getLitersAfterVolumeUnitToggle(liters, volumeUnit)));
+                onToggleVolumeUnit();
+              }}
+            />
           </div>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">

@@ -9,6 +9,7 @@ import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type 
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
 import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, type LotusDropperCalibration, type LotusDropperStyle } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
+import { getLitersAfterVolumeUnitToggle } from './volumeUnits';
 
 type Props = {
   workspaceMode: 'recipe' | 'diy';
@@ -111,6 +112,10 @@ export function MassConcentrateWorkspace(props: Props) {
   const salt = SALTS.find(s => s.id === saltId) ?? SALTS[0];
   const selectedForm = forms[salt.id] ?? salt.defaultFormIdx ?? 0;
   const finalLiters = Number(finalLitersInput);
+  const toggleMassVolumeUnit = () => {
+    setFinalLitersInput(current => String(getLitersAfterVolumeUnitToggle(Number(current), props.volumeUnit)));
+    props.onToggleVolumeUnit();
+  };
   const isRecipe = props.workspaceMode === 'recipe';
   const recipeTargets = isRecipe
     ? Object.fromEntries(Object.entries(props.recipeHandoff?.salts ?? {}).filter(([, entry]) => Number(entry.target) > 0).map(([id, entry]) => [id, Number(entry.target)]))
@@ -283,7 +288,7 @@ export function MassConcentrateWorkspace(props: Props) {
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-t border-slate-700/60 pt-3">
-        <button className={buttonClass} onClick={props.onToggleVolumeUnit}>Use {props.volumeUnit === 'liters' ? 'gallons' : 'liters'} for brewing water</button>
+        <button className={buttonClass} onClick={toggleMassVolumeUnit}>Use {props.volumeUnit === 'liters' ? 'gallons' : 'liters'} for brewing water</button>
         <p className="text-xs text-slate-400">{WATER_MASS_NOTE}</p>
       </div>
       {toolMode === 'lotus' && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-100">Homemade stock estimates use the published salt:water mass ratios. Commercial Lotus recipes remain source references, not exact predictions for a homemade stock. Verify finished-stock drops.</p>}
@@ -384,7 +389,7 @@ export function MassConcentrateWorkspace(props: Props) {
         return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
           finalLiters={finalLiters} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={value => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(value) * 3.785411784) : value)}
-          onToggleVolumeUnit={props.onToggleVolumeUnit} tipKey={tipKey} dropperRates={dropperRates}
+          onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} dropperRates={dropperRates}
           onTipChange={setTipKey} sharedCalibrations={shared} onSharedCalibrationChange={updateSharedCalibration}
           waterEstimate={waterEstimate} percentMode={percent || lotus}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} />;
