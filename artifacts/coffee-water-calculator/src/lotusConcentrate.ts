@@ -82,6 +82,14 @@ export function lotusMeasuredDropsPerMl(
   return drops / waterWeight;
 }
 
+export function hasAnyDiyDropperCalibration(
+  calibrations: LotusStyleCalibrationInputs | undefined,
+): boolean {
+  return (['straight', 'round'] as const).some(
+    style => lotusMeasuredDropsPerMl(calibrations?.[style]) !== null,
+  );
+}
+
 export function getDiyDropperRateForStyle(
   style: LotusDropperStyle,
   nominalStraightDropsPerMl: number,

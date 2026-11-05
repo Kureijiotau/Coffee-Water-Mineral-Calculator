@@ -19,12 +19,43 @@ test('shows the single-salt weight workflow in its bottle-card layout', async ({
   await expect(page.getByLabel('Final brewing water')).toHaveValue('1');
   await page.getByLabel('Measured number of drops').fill('100');
   await page.getByLabel('Shared water calibration weight in grams').fill('5');
-  await expect(page.getByTestId('mass-stock-calibration')).toContainText('0.0500 g');
-  await expect(page.getByTestId('mass-stock-calibration')).toContainText('Shared value');
+  await expect(page.getByTestId('mass-shared-calibration')).toContainText('0.0500 g');
+  await expect(page.getByTestId('mass-shared-calibration')).toContainText('Shared value');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
   await expect(page.getByLabel('Measured number of drops')).toHaveValue('100');
   await expect(page.getByLabel('Shared water calibration weight in grams')).toHaveValue('5');
+});
+
+test('places shared calibration below the mineral selectors and collapses after any tip is saved', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const panel = page.getByTestId('mass-shared-calibration');
+  const selectors = page.locator('select[aria-label="DIY concentrate salt"]').locator('xpath=ancestor::section[1]');
+  await expect(selectors.locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-testid', 'mass-shared-calibration');
+  await expect(panel).toHaveAttribute('open', '');
+  await expect(panel).toContainText('Not calibrated');
+
+  await page.getByRole('button', { name: /Round tip/i }).click();
+  await page.getByLabel('Measured number of drops').fill('60');
+  await page.getByLabel('Shared water calibration weight in grams').fill('5');
+  await expect(panel).toContainText('Calibrated');
+  await expect(panel).toHaveAttribute('open', '');
+
+  await page.getByRole('button', { name: /Straight tip/i }).click();
+  await expect.poll(async () => page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('coffee-water-diy-concentrate-inputs') ?? '{}');
+    return saved.massStockPlan?.dropperStyle;
+  })).toBe('straight');
+  await page.reload();
+  await page.getByTestId('tab-concentrates').click();
+
+  const reopenedPanel = page.getByTestId('mass-shared-calibration');
+  await expect(reopenedPanel).not.toHaveAttribute('open', '');
+  await expect(reopenedPanel).toContainText('Calibrated');
+  await reopenedPanel.locator('summary').click();
+  await expect(reopenedPanel).toContainText('Assumption');
 });
 
 test('explains both advanced stock targets through question-mark help', async ({ page }) => {

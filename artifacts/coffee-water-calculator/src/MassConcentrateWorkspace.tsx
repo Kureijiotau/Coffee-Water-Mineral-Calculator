@@ -7,7 +7,7 @@ import { checkMassConcentrate, recommendMassConcentrateStrength } from './concen
 import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
 import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type MassConcentratePlanSnapshot } from './concentrateStockStorage';
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
-import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, type LotusDropperCalibration, type LotusDropperStyle } from './lotusConcentrate';
+import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, hasAnyDiyDropperCalibration, lotusMeasuredDropsPerMl, type LotusDropperCalibration, type LotusDropperStyle, type LotusStyleCalibrationInputs } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
 import { getLitersAfterVolumeUnitToggle } from './volumeUnits';
 
@@ -63,6 +63,82 @@ function HelpTip({ testId, label, text, align = 'center' }: { testId: string; la
       </div>
     </span>
   );
+}
+
+function SharedDropperCalibrationPanel({ tipKey, dropperRates, sharedCalibrations, onTipChange, onCalibrationChange }: {
+  tipKey: LotusDropperStyle;
+  dropperRates: Record<LotusDropperStyle, number>;
+  sharedCalibrations: LotusStyleCalibrationInputs;
+  onTipChange: (style: LotusDropperStyle) => void;
+  onCalibrationChange: (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => void;
+}) {
+  const hasSavedCalibration = hasAnyDiyDropperCalibration(sharedCalibrations);
+  const selectedCalibration = sharedCalibrations[tipKey];
+  const hasSelectedCalibration = lotusMeasuredDropsPerMl(selectedCalibration) !== null;
+  const drops = Number(selectedCalibration?.dropsInput ?? 0);
+  const weightG = Number(selectedCalibration?.weightInput ?? 0);
+  const waterMassPerDrop = hasSelectedCalibration ? weightG / drops : 1 / dropperRates[tipKey];
+
+  return <details
+    className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/[0.08] via-slate-800/80 to-blue-500/[0.06] p-4 shadow-xl sm:p-5"
+    data-testid="mass-shared-calibration"
+    defaultOpen={!hasSavedCalibration}
+  >
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-sky-100 marker:hidden">
+      <span className="flex items-center gap-2">
+        <Pipette className="h-4 w-4 text-sky-200" aria-hidden="true" />
+        Dropper calibration
+      </span>
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${hasSavedCalibration
+        ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200'
+        : 'border-slate-500/40 bg-slate-950/30 text-slate-400'}`}>
+        {hasSavedCalibration && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+        {hasSavedCalibration ? 'Calibrated' : 'Not calibrated'}
+      </span>
+    </summary>
+    <div className="mt-3">
+      <div className="flex items-center gap-2">
+        <h3 className="text-base font-semibold text-white">{hasSavedCalibration ? 'Saved tip calibration' : 'Measure a tip before dosing'}</h3>
+        <HelpTip
+          testId="mass-calibration-help-diy"
+          label="Dropper calibration explanation"
+          text="This shared value measures plain-water drops for the selected tip. Hold the dropper vertically. Finished concentrate can drop differently, so calibrate the prepared stock separately when you need a more accurate dose."
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-sky-200/15 bg-slate-950/30 p-1" role="group" aria-label="Stock Builder dropper tip style">
+        {(['straight', 'round'] as const).map(style => <button key={style} type="button" onClick={() => onTipChange(style)}
+          aria-pressed={tipKey === style} aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip, ${dropperRates[style].toFixed(1)} drops per mL`}
+          className={`rounded-md px-2 py-2 text-left text-[10px] font-semibold capitalize transition ${tipKey === style ? 'bg-sky-400/15 text-sky-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>
+          {style} Tip · {dropperRates[style].toFixed(1)} Drops/ML
+        </button>)}
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="shared-dropper-calibration">
+        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
+          <input aria-label="Measured number of drops" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
+            inputMode="decimal" placeholder="e.g. 100" value={selectedCalibration?.dropsInput ?? ''}
+            onChange={e => onCalibrationChange(tipKey, 'dropsInput', e.target.value)} />
+        </label>
+        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
+          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
+          <span className="mt-1 flex items-center gap-2">
+            <input aria-label="Shared water calibration weight in grams" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
+              inputMode="decimal" placeholder="e.g. 5" value={selectedCalibration?.weightInput ?? ''}
+              onChange={e => onCalibrationChange(tipKey, 'weightInput', e.target.value)} />
+            <span className="text-sm text-slate-400">g</span>
+          </span>
+        </label>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <SummaryMetric label="Water mass per drop" value={`${waterMassPerDrop.toFixed(4)} g`}
+          detail={hasSelectedCalibration ? 'shared' : 'estimated'} tone="sky" />
+        <SummaryMetric label="Drops per mL" value={dropperRates[tipKey].toFixed(1)}
+          detail={hasSelectedCalibration ? 'shared' : 'estimated'} tone="sky" />
+        <SummaryMetric label="Selected tip status" value={hasSelectedCalibration ? 'Shared value' : 'Assumption'}
+          detail={hasSelectedCalibration ? 'Guide + Lotus Drops' : 'measure for accuracy'} tone={hasSelectedCalibration ? 'emerald' : 'slate'} />
+      </div>
+    </div>
+  </details>;
 }
 
 function downloadText(name: string, text: string) {
