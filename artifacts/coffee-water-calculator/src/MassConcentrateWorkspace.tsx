@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Check, Droplet, FlaskConical, ListChecks, Pipette } from 'lucide-react';
 import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
 import { buildMassStockPlan, computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
+  waterLitersToEquivalentMassKg,
   resolveStockDropCalibration, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor, type StockDropCalibration } from './concentrateMass';
 import { checkMassConcentrate, recommendMassConcentrateStrength } from './concentrateMassWarnings';
 import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
@@ -188,6 +189,7 @@ export function MassConcentrateWorkspace(props: Props) {
   const salt = SALTS.find(s => s.id === saltId) ?? SALTS[0];
   const selectedForm = forms[salt.id] ?? salt.defaultFormIdx ?? 0;
   const finalLiters = Number(finalLitersInput);
+  const finalWaterMassKg = waterLitersToEquivalentMassKg(finalLiters);
   const toggleMassVolumeUnit = () => {
     setFinalLitersInput(current => String(getLitersAfterVolumeUnitToggle(Number(current), props.volumeUnit)));
     props.onToggleVolumeUnit();
@@ -456,14 +458,14 @@ export function MassConcentrateWorkspace(props: Props) {
           // Reformulation is a planning estimate. A measurement of the old
           // composition must not be treated as exact for the new composition.
           const pinned = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets: targets, formIdxBySaltId: groupForms,
-            totalStockMassG: state.totalStockMassG, finalLiters, calibration: waterEstimate, compositionKey: '', tipKey,
+            totalStockMassG: state.totalStockMassG, finalWaterMassKg, calibration: waterEstimate, compositionKey: '', tipKey,
             physicalSaltPpmPerDrop: state.caCo3PpmPerDrop
               ? state.caCo3PpmPerDrop / physicalSaltCaCo3EquivalentFactor(g.saltIds[0], groupForms[g.saltIds[0]] ?? 0)
               : state.physicalSaltPpmPerDrop! });
           strength = pinned.valid ? pinned.strength : NaN;
         }
         return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
-          finalLiters={finalLiters} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
+          finalLiters={finalLiters} finalWaterMassKg={finalWaterMassKg} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={value => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(value) * 3.785411784) : value)}
           onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} dropperRates={dropperRates}
           onTipChange={setTipKey} sharedCalibrations={shared} onSharedCalibrationChange={updateSharedCalibration}
@@ -487,8 +489,8 @@ export function MassConcentrateWorkspace(props: Props) {
   </div>;
 }
 
-function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, dropperRates, onTipChange, sharedCalibrations, onSharedCalibrationChange, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
-  name: string; state: Group; saltTargets: Record<string, number>; forms: Record<string, number>; strength: number; finalLiters: number;
+function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalWaterMassKg, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, dropperRates, onTipChange, sharedCalibrations, onSharedCalibrationChange, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
+  name: string; state: Group; saltTargets: Record<string, number>; forms: Record<string, number>; strength: number; finalLiters: number; finalWaterMassKg: number;
   finalLitersInput: string; volumeUnit: 'liters' | 'gallons'; onFinalLitersChange: (value: string) => void; onToggleVolumeUnit: () => void;
   tipKey: 'straight' | 'round'; dropperRates: Record<'straight' | 'round', number>; onTipChange: (tipKey: 'straight' | 'round') => void;
   sharedCalibrations: Record<string, LotusDropperCalibration>;
@@ -523,7 +525,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const waterMassPerDrop = hasSharedCalibration ? sharedCalibrationWeightG / sharedCalibrationDrops : 1 / dropperRates[tipKey];
   const measured = resolveStockDropCalibration(state.calibration, compositionKey, tipKey);
   const calibration = measured.basis === 'stock' ? state.calibration : waterEstimate;
-  const result = computeRecipeMassDropEquivalents({ saltTargets, formIdxBySaltId: forms, strength, totalStockMassG: state.totalStockMassG, calibration, finalLiters, compositionKey, tipKey });
+  const result = computeRecipeMassDropEquivalents({ saltTargets, formIdxBySaltId: forms, strength, totalStockMassG: state.totalStockMassG, calibration, finalWaterMassKg, compositionKey, tipKey });
   const warnings = checkMassConcentrate({ strength, saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG });
   const preparedMass = result.valid ? result : null;
   const saltMassG = salts.reduce((total, item) => total + item.physicalMassMg / 1000, 0);
@@ -715,7 +717,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           onClick={() => {
             const target = dropBasis === 'caco3' && equivalentFactor > 0 ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput);
             const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
-              calibration: waterEstimate, finalLiters, compositionKey, tipKey, physicalSaltPpmPerDrop: target });
+              calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: target });
             if (next.valid) {
               onUpdate({ strength: next.strength, batchScale: 1, physicalSaltPpmPerDrop: dropBasis === 'caco3' ? undefined : Number(dropTargetInput),
                 caCo3PpmPerDrop: dropBasis === 'caco3' ? Number(dropTargetInput) : undefined });
@@ -733,9 +735,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
         <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
           <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
-          {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalLiters)} mg/L).</p>}
+          {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
           {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-300">Rounded-drop ions: {recipeDeliveredIons}</p>}
-          {preparedMass && equivalentFactor > 0 && preparedMass.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-300">DIY spreadsheet basis: {n(preparedMass.totalSaltMgPerDrop * equivalentFactor / finalLiters)} ppm CaCO₃-equivalent per drop; not an additional ion or independent GH/KH target.</p>}
+          {preparedMass && equivalentFactor > 0 && preparedMass.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-300">DIY spreadsheet basis: {n(preparedMass.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop; not an additional ion or independent GH/KH target.</p>}
           {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">
             Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.
           </p>}
@@ -828,9 +830,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
         <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
           <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
-          {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalLiters)} mg/L).</p>}
+          {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
           {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-400">Rounded-drop ions: {recipeDeliveredIons}</p>}
-          {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalLiters)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
+          {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
           {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.</p>}
         </details>
         {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
@@ -844,7 +846,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <div className="flex flex-wrap items-end gap-2"><label className="text-xs">{dropBasis === 'caco3' && diySingleSalt ? 'CaCO₃-equivalent target (ppm per drop)' : 'Physical salt target (mg/L per drop)'}<input className={`${inputClass} max-w-36`} value={dropTargetInput} onChange={e => setDropTargetInput(e.target.value)} /></label>
         <button className={buttonClass} onClick={() => {
           const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
-            calibration: waterEstimate, finalLiters, compositionKey, tipKey, physicalSaltPpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput) });
+            calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput) });
           if (next.valid) { onUpdate({ strength: next.strength, batchScale: 1,
             physicalSaltPpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? undefined : Number(dropTargetInput),
             caCo3PpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? Number(dropTargetInput) : undefined }); setCalibrationError('Strength changed. Verify drops with the newly prepared finished stock.'); }

@@ -1,94 +1,80 @@
 import { expect, test } from '@playwright/test';
 
-async function chooseSingleSaltWeightPercentage(page: import('@playwright/test').Page) {
-  await page.getByText('Advanced stock targets', { exact: true }).click();
-  await page.getByRole('tab', { name: 'Single-salt weight percentage' }).click();
-}
-
-test('shows the single-salt weight workflow in its bottle-card layout', async ({ page }) => {
+test('shows the simplified DIY flow in salt-to-preparation order', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
 
   await expect(page.getByRole('heading', { name: 'DIY single-salt concentrate', exact: true })).toBeVisible();
-  await expect(page.getByText('Concentrate weight and batch volume', { exact: true })).toBeVisible();
-  await expect(page.getByText('Dropper calibration', { exact: true })).toBeVisible();
-  await expect(page.getByText('Desired dose', { exact: true })).toBeVisible();
-  await expect(page.getByText('Preparation', { exact: true })).toBeVisible();
-  await expect(page.getByTestId('mass-stock-preparation')).toContainText('20–30% of the calculated');
-  await expect(page.getByLabel('DIY single-salt concentrate target stock weight in grams')).toHaveValue('100');
-  await expect(page.getByLabel('Final brewing water')).toHaveValue('1');
-  await page.getByLabel('Measured number of drops').fill('100');
-  await page.getByLabel('Shared water calibration weight in grams').fill('5');
-  await expect(page.getByTestId('mass-shared-calibration')).toContainText('0.0500 g');
-  await expect(page.getByTestId('mass-shared-calibration')).toContainText('Shared value');
-  await page.reload();
-  await page.getByTestId('tab-concentrates').click();
-  await expect(page.getByLabel('Measured number of drops')).toHaveValue('100');
-  await expect(page.getByLabel('Shared water calibration weight in grams')).toHaveValue('5');
+  await expect(page.getByText('Advanced stock targets', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Recipe target (anhydrous-equivalent mg/L)', { exact: true })).toHaveCount(0);
+  await expect(page.getByLabel('Stock strength percent w/w')).toHaveCount(0);
+  await expect(page.getByLabel('Stock dropper tip')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'ppm as CaCO₃', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'mg/L salt per drop', exact: true })).toBeVisible();
+
+  const ordered = await page.evaluate(() => {
+    const selectors = document.querySelector('[aria-label="DIY concentrate salt"]')?.closest('section');
+    const calibration = document.querySelector('[data-testid="mass-shared-calibration"]');
+    const tip = document.querySelector('[data-testid="mass-dosing-tip-selection"]');
+    const stock = document.querySelector('[data-testid="mass-stock-setup"]');
+    const dose = document.querySelector('[data-testid="mass-stock-dose"]');
+    const preparation = document.querySelector('[data-testid="mass-stock-preparation-card"]');
+    const elements = [selectors, calibration, tip, stock, dose, preparation];
+    return elements.every(Boolean) && elements.slice(0, -1).every((element, index) =>
+      Boolean(element!.compareDocumentPosition(elements[index + 1]!) & Node.DOCUMENT_POSITION_FOLLOWING));
+  });
+  expect(ordered).toBe(true);
 });
 
-test('places shared calibration below the mineral selectors and collapses after any tip is saved', async ({ page }) => {
+test('simplified DIY flow calibrates both tips independently and collapses after reload', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
 
   const panel = page.getByTestId('mass-shared-calibration');
-  const selectors = page.locator('select[aria-label="DIY concentrate salt"]').locator('xpath=ancestor::section[1]');
-  await expect(selectors.locator('xpath=following-sibling::*[1]')).toHaveAttribute('data-testid', 'mass-shared-calibration');
   await expect(panel).toHaveAttribute('open', '');
   await expect(panel).toContainText('Not calibrated');
-
-  await page.getByRole('button', { name: /Round tip/i }).click();
-  await page.getByLabel('Measured number of drops').fill('60');
-  await page.getByLabel('Shared water calibration weight in grams').fill('5');
+  await page.getByLabel('Round tip measured drops').fill('60');
+  await page.getByLabel('Round tip water weight in grams').fill('5');
   await expect(panel).toContainText('Calibrated');
   await expect(panel).toHaveAttribute('open', '');
 
-  await page.getByRole('button', { name: /Straight tip/i }).click();
-  await expect.poll(async () => page.evaluate(() => {
-    const saved = JSON.parse(localStorage.getItem('coffee-water-diy-concentrate-inputs') ?? '{}');
-    return saved.massStockPlan?.dropperStyle;
-  })).toBe('straight');
+  await page.getByLabel('Stock dropper tip').selectOption('straight');
+  await expect(page.getByTestId('mass-selected-dropper-rate')).toContainText('Estimated');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
-
+  await expect(page.getByLabel('Stock dropper tip')).toHaveValue('straight');
+  await expect(page.getByTestId('mass-selected-dropper-rate')).toContainText('Estimated');
   const reopenedPanel = page.getByTestId('mass-shared-calibration');
   await expect(reopenedPanel).not.toHaveAttribute('open', '');
   await expect(reopenedPanel).toContainText('Calibrated');
-  await reopenedPanel.locator('summary').click();
-  await expect(reopenedPanel).toContainText('Assumption');
 });
 
-test('explains both advanced stock targets through question-mark help', async ({ page }) => {
+test('simplified DIY flow retains legacy percent-plan data without showing percent controls', async ({ page }) => {
   await page.goto('/');
+  const calibration = { basis: 'stock', drops: 100, massG: 5, compositionKey: 'legacy-stock', tipKey: 'straight' };
+  await page.evaluate(({ calibration }) => localStorage.setItem('coffee-water-diy-concentrate-inputs', JSON.stringify({
+    massStockPlan: {
+      version: 2, basis: 'mass', workspaceMode: 'diy', toolMode: 'percent', selectedSaltId: 'mgso4',
+      dropperStyle: 'straight', percentWw: 5, strategy: 'individual', finalLiters: 1,
+      recipe: { mgso4: { target: 30, formIdx: 0 } },
+      groups: [{ id: 'diy-mgso4', totalStockMassG: 75, strength: 20, saltIds: ['mgso4'], calibration }],
+    },
+  })), { calibration });
+  await page.reload();
   await page.getByTestId('tab-concentrates').click();
-  await page.getByText('Advanced stock targets', { exact: true }).click();
-  await page.setViewportSize({ width: 390, height: 844 });
 
-  const recipeHelp = page.getByTestId('recipe-target-help');
-  const recipeButton = recipeHelp.getByRole('button', { name: 'Recipe target explanation' });
-  await recipeButton.hover();
-  const recipeTooltip = recipeHelp.getByRole('tooltip');
-  await expect(recipeTooltip).toBeVisible();
-  await expect(recipeTooltip).toContainText('finished brew');
-  const recipeTooltipBounds = await recipeTooltip.boundingBox();
-  expect(recipeTooltipBounds).not.toBeNull();
-  expect(recipeTooltipBounds!.x).toBeGreaterThanOrEqual(0);
-  expect(recipeTooltipBounds!.x + recipeTooltipBounds!.width).toBeLessThanOrEqual(390);
-  await recipeButton.click();
-  await expect(recipeButton).toHaveAttribute('aria-expanded', 'true');
-
-  const strengthHelp = page.getByTestId('weight-percent-help');
-  const strengthButton = strengthHelp.getByRole('button', { name: 'Weight percentage explanation' });
-  await strengthButton.focus();
-  const strengthTooltip = strengthHelp.getByRole('tooltip');
-  await expect(strengthTooltip).toBeVisible();
-  await expect(strengthTooltip).toContainText('5 g of salt in 100 g of finished stock');
-  const strengthTooltipBounds = await strengthTooltip.boundingBox();
-  expect(strengthTooltipBounds).not.toBeNull();
-  expect(strengthTooltipBounds!.x).toBeGreaterThanOrEqual(0);
-  expect(strengthTooltipBounds!.x + strengthTooltipBounds!.width).toBeLessThanOrEqual(390);
-  await strengthButton.press('Enter');
-  await expect(strengthButton).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByLabel('DIY single-salt concentrate target stock weight in grams')).toHaveValue('75');
+  await expect(page.getByLabel('Stock strength percent w/w')).toHaveCount(0);
+  await expect(page.getByText('Advanced stock targets', { exact: true })).toHaveCount(0);
+  await expect.poll(async () => page.evaluate(() => {
+    const plan = JSON.parse(localStorage.getItem('coffee-water-diy-concentrate-inputs') ?? '{}').massStockPlan;
+    return {
+      mode: plan.toolMode,
+      percent: plan.percentWw,
+      stockWeight: plan.groups?.[0]?.totalStockMassG,
+      calibration: plan.groups?.[0]?.calibration,
+    };
+  })).toEqual({ mode: 'recipe', percent: 5, stockWeight: 75, calibration });
 });
 
 test('keeps supporting explanations tucked away and dose math collapsed', async ({ page }) => {
@@ -100,43 +86,11 @@ test('keeps supporting explanations tucked away and dose math collapsed', async 
   await waterHelp.getByRole('button').click();
   await expect(waterHelp.getByRole('tooltip')).toContainText('1 mL ≈ 1 g');
 
-  const calibrationHelp = page.locator('[data-testid^="mass-calibration-help-"]').first();
+  const calibrationHelp = page.getByTestId('mass-shared-calibration-help');
   await expect(calibrationHelp.getByRole('tooltip')).toBeHidden();
   await calibrationHelp.getByRole('button').focus();
   await expect(calibrationHelp.getByRole('tooltip')).toContainText('Hold the dropper vertically');
   await expect(page.locator('[data-testid^="mass-stock-dose-details-"]')).not.toHaveAttribute('open', '');
-});
-
-test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
-  await page.goto('/');
-  await page.getByTestId('tab-concentrates').click();
-  await chooseSingleSaltWeightPercentage(page);
-  await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
-  await page.getByLabel('Stock strength percent w/w').fill('5');
-  const card = page.getByTestId('mass-stock-card');
-  await expect(card).toContainText('95 g');
-  await expect(card).toContainText('19–28.5 g');
-  await expect(card).toContainText('Do not tare again');
-  await expect(card).toContainText('0.8 g stock');
-  await expect(card).toContainText('Water-based planning estimate');
-  await card.getByText('Calibrate this finished stock by weight', { exact: true }).click();
-  await card.getByLabel('Single-salt % w/w stock counted stock drops').fill('100');
-  await card.getByLabel('Single-salt % w/w stock measured stock weight').fill('5');
-  await card.getByRole('button', { name: 'Use measured stock calibration' }).click();
-  await expect(card).toContainText('Measured finished-stock calibration');
-  await page.reload();
-  await page.getByTestId('tab-concentrates').click();
-  await page.getByText('Advanced stock targets', { exact: true }).click();
-  await expect(page.getByRole('tab', { name: 'Single-salt weight percentage' })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Measured finished-stock calibration');
-  await page.getByLabel('Stock strength percent w/w').fill('6');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('The stock composition or tip changed');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Water-based planning estimate');
-  await page.getByRole('button', { name: /Round tip/i }).click();
-  await page.reload();
-  await page.getByTestId('tab-concentrates').click();
-  await expect(page.getByRole('button', { name: /Round tip/i })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Water-based planning estimate');
 });
 
 test('keeps original volume inputs and requires an explicit weight rebuild', async ({ page }) => {
@@ -164,9 +118,6 @@ test('keeps original volume inputs and requires an explicit weight rebuild', asy
 test('exports the same mass preparation sequence, without a stock-volume assumption', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await chooseSingleSaltWeightPercentage(page);
-  await page.getByLabel('Single-salt % w/w stock target stock weight in grams').fill('100');
-  await page.getByLabel('Stock strength percent w/w').fill('5');
   await page.evaluate(() => {
     const original = URL.createObjectURL;
     URL.createObjectURL = function (blob: Blob | MediaSource) {
@@ -176,9 +127,9 @@ test('exports the same mass preparation sequence, without a stock-volume assumpt
   });
   await page.getByRole('button', { name: 'Download preparation text' }).click();
   const text = await page.evaluate(() => (window as unknown as { preparationBlob: Blob }).preparationBlob.text());
-  expect(text).toContain('19–28.5 g');
   expect(text).toContain('total contents weigh 100 g');
-  expect(text).toContain('Do not tare again');
+  expect(text).toContain('tare');
+  expect(text).toContain('water');
   expect(text).toContain('This approximation does not apply to finished concentrate.');
   expect(text).not.toMatch(/dose.*mL|mL stock/i);
 });
@@ -202,8 +153,7 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await combined.getByLabel('All-in-one concentrate recipe strength').fill('20');
   await expect(combined).toContainText('5 g stock');
   await page.getByRole('button', { name: 'Open concentrate recipe steps', exact: true }).click();
-  await expect(combined).toContainText('20–30% of the calculated');
-  await expect(combined).toContainText('Do not tare again');
+  await expect(combined).toContainText('total contents weigh');
   await combined.getByRole('button', { name: 'Set strength from drop target' }).click();
   const pinnedStrength = Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue());
   await combined.getByLabel('All-in-one concentrate target stock weight in grams').fill('200');

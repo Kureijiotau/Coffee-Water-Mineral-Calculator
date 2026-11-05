@@ -8,6 +8,11 @@ export type StockDropCalibration = {
 };
 export type MassStockInput = { totalStockMassG: number; salts: Array<{ saltId: string; physicalMassMg: number }> };
 const positive = (value: number) => Number.isFinite(value) && value > 0;
+const PLAIN_WATER_KG_PER_LITER = 1;
+/** One liter of plain water is approximately one kilogram; invalid values pass through for validation. */
+export function waterLitersToEquivalentMassKg(liters: number): number {
+  return liters * PLAIN_WATER_KG_PER_LITER;
+}
 export function buildMassStockPlan({ totalStockMassG, salts }: MassStockInput) {
   if (!positive(totalStockMassG) || salts.some(s => !Number.isFinite(s.physicalMassMg) || s.physicalMassMg < 0))
     return { valid: false as const, reason: 'Enter a positive stock weight and nonnegative, finite salt masses.' };
@@ -16,7 +21,6 @@ export function buildMassStockPlan({ totalStockMassG, salts }: MassStockInput) {
   const waterMassG = totalStockMassG - totalSaltMassMg / 1000;
   if (!positive(waterMassG)) return { valid: false as const, reason: 'Salt mass must be less than total stock mass, leaving water to dissolve it.' };
   return { valid: true as const, totalStockMassG, totalSaltMassMg, waterMassG,
-    initialWaterMinG: waterMassG * 0.2, initialWaterMaxG: waterMassG * 0.3,
     saltMgPerStockG: totalSaltMassMg / totalStockMassG, strengthPercentWw: totalSaltMassMg / totalStockMassG / 10 };
 }
 export function resolveStockDropCalibration(calibration: StockDropCalibration | null, compositionKey: string, tipKey: string) {
@@ -26,19 +30,19 @@ export function resolveStockDropCalibration(calibration: StockDropCalibration | 
   return { gramsPerDrop: calibration.massG / calibration.drops, basis: calibration.basis };
 }
 export function computeMassStockDose(input: {
-  totalStockMassG: number; strength: number; finalLiters: number;
+  totalStockMassG: number; strength: number; finalWaterMassKg: number;
   calibration: StockDropCalibration | null; compositionKey: string; tipKey: string;
 }) {
-  if (![input.totalStockMassG, input.strength, input.finalLiters].every(positive))
-    return { valid: false as const, reason: 'Stock mass, recipe strength, and brew volume must be positive finite numbers.' };
+  if (![input.totalStockMassG, input.strength, input.finalWaterMassKg].every(positive))
+    return { valid: false as const, reason: 'Stock mass, recipe strength, and equivalent water mass must be positive finite numbers.' };
   const calibration = resolveStockDropCalibration(input.calibration, input.compositionKey, input.tipKey);
-  const doseMassG = input.totalStockMassG * input.finalLiters / input.strength;
+  const doseMassG = input.totalStockMassG * input.finalWaterMassKg / input.strength;
   return { valid: true as const, doseMassG, gramsPerDrop: calibration.gramsPerDrop,
     drops: calibration.gramsPerDrop ? doseMassG / calibration.gramsPerDrop : null, calibrationBasis: calibration.basis };
 }
 export type RecipeMassStockInput = {
   saltTargets: Record<string, number>; formIdxBySaltId: Record<string, number>; strength: number;
-  totalStockMassG: number; calibration: StockDropCalibration | null; finalLiters: number; compositionKey: string; tipKey: string;
+  totalStockMassG: number; calibration: StockDropCalibration | null; finalWaterMassKg: number; compositionKey: string; tipKey: string;
 };
 export function recipeStockSaltMasses(saltTargets: Record<string, number>, forms: Record<string, number>, strength: number) {
   return Object.entries(saltTargets).map(([saltId, target]) => {
@@ -82,7 +86,7 @@ export function computeRecipeMassDropEquivalents(input: RecipeMassStockInput) {
     for (const [id, target] of Object.entries(input.saltTargets)) {
       for (const ion of SALTS.find(s => s.id === id)?.ions ?? []) {
         ionPpmPerDrop[ion.ionId] = (ionPpmPerDrop[ion.ionId] ?? 0)
-          + target * input.strength / input.totalStockMassG * dose.gramsPerDrop * ion.fraction / input.finalLiters;
+          + target * input.strength / input.totalStockMassG * dose.gramsPerDrop * ion.fraction / input.finalWaterMassKg;
       }
     }
   }
@@ -96,10 +100,10 @@ export function computeRecipeMassDropEquivalents(input: RecipeMassStockInput) {
 export function computeRecipeMassStrengthForPhysicalSaltPpm(input: Omit<RecipeMassStockInput, 'strength'> & { physicalSaltPpmPerDrop: number }) {
   const calibration = resolveStockDropCalibration(input.calibration, input.compositionKey, input.tipKey);
   const physicalMass = recipeStockSaltMasses(input.saltTargets, input.formIdxBySaltId, 1).reduce((sum, salt) => sum + salt.physicalMassMg, 0);
-  if (!positive(input.physicalSaltPpmPerDrop) || !positive(input.totalStockMassG) || !positive(input.finalLiters)
+  if (!positive(input.physicalSaltPpmPerDrop) || !positive(input.totalStockMassG) || !positive(input.finalWaterMassKg)
     || !positive(physicalMass) || !calibration.gramsPerDrop)
     return { valid: false as const, reason: 'A positive target, recipe, and drop-mass calibration are required.' };
-  const strength = input.physicalSaltPpmPerDrop * input.finalLiters * input.totalStockMassG / (physicalMass * calibration.gramsPerDrop);
+  const strength = input.physicalSaltPpmPerDrop * input.finalWaterMassKg * input.totalStockMassG / (physicalMass * calibration.gramsPerDrop);
   const plan = buildMassStockPlan({ totalStockMassG: input.totalStockMassG, salts: recipeStockSaltMasses(input.saltTargets, input.formIdxBySaltId, strength) });
   if (!plan.valid) return plan;
   return { valid: true as const, strength, calibrationBasis: calibration.basis };
