@@ -60,6 +60,22 @@ test('explains both advanced stock targets through question-mark help', async ({
   await expect(strengthButton).toHaveAttribute('aria-expanded', 'true');
 });
 
+test('keeps supporting explanations tucked away and dose math collapsed', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const waterHelp = page.locator('[data-testid^="mass-water-volume-help-"]').first();
+  await expect(waterHelp.getByRole('tooltip')).toBeHidden();
+  await waterHelp.getByRole('button').click();
+  await expect(waterHelp.getByRole('tooltip')).toContainText('1 mL ≈ 1 g');
+
+  const calibrationHelp = page.locator('[data-testid^="mass-calibration-help-"]').first();
+  await expect(calibrationHelp.getByRole('tooltip')).toBeHidden();
+  await calibrationHelp.getByRole('button').focus();
+  await expect(calibrationHelp.getByRole('tooltip')).toContainText('Hold the dropper vertically');
+  await expect(page.locator('[data-testid^="mass-stock-dose-details-"]')).not.toHaveAttribute('open', '');
+});
+
 test('prepares 100 g of 5% stock, verifies drops, invalidates changed composition, and retains the plan after refresh', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
@@ -160,7 +176,7 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await combined.getByRole('button', { name: 'Set strength from drop target' }).click();
   const pinnedStrength = Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue());
   await combined.getByLabel('All-in-one concentrate target stock weight in grams').fill('200');
-  await expect(combined).toContainText('Pinned planning target');
+  await expect(combined).toContainText('Pinned target');
   await expect.poll(async () => Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue())).toBeCloseTo(pinnedStrength * 2, 6);
 });
 
@@ -196,10 +212,16 @@ test('preserves DIY spreadsheet CaCO3-equivalent drop targets by weight', async 
   await page.getByTestId('tab-concentrates').click();
   await page.getByRole('button', { name: 'ppm as CaCO₃', exact: true }).click();
   await page.getByRole('button', { name: 'Set strength from drop target' }).click();
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('DIY spreadsheet basis: 5 ppm CaCO₃-equivalent per drop');
+  const doseDetails = page.locator('[data-testid^="mass-stock-dose-details-"]').first();
+  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(doseDetails).not.toHaveAttribute('open', '');
+  await doseDetails.locator('summary').click();
+  await expect(doseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(doseDetails).toContainText('DIY spreadsheet basis: 5 ppm CaCO₃-equivalent per drop');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
   await expect(page.getByRole('button', { name: 'ppm as CaCO₃', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+  const reloadedDoseDetails = page.locator('[data-testid^="mass-stock-dose-details-"]').first();
+  await reloadedDoseDetails.locator('summary').click();
+  await expect(reloadedDoseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
 });
