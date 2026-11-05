@@ -89,7 +89,7 @@ test('keeps supporting explanations tucked away and dose math collapsed', async 
   const calibrationHelp = page.getByTestId('mass-shared-calibration-help');
   await expect(calibrationHelp.getByRole('tooltip')).toBeHidden();
   await calibrationHelp.getByRole('button').focus();
-  await expect(calibrationHelp.getByRole('tooltip')).toContainText('Hold the dropper vertically');
+  await expect(calibrationHelp.getByRole('tooltip')).toContainText('holding the dropper vertically');
   await expect(page.locator('[data-testid^="mass-stock-dose-details-"]')).not.toHaveAttribute('open', '');
 });
 
@@ -128,10 +128,13 @@ test('exports the same mass preparation sequence, without a stock-volume assumpt
   await page.getByRole('button', { name: 'Download preparation text' }).click();
   const text = await page.evaluate(() => (window as unknown as { preparationBlob: Blob }).preparationBlob.text());
   expect(text).toContain('total contents weigh 100 g');
-  expect(text).toContain('tare');
-  expect(text).toContain('water');
+  expect(text).toContain('Place the bottle on the scale and tare it once.');
+  expect(text).toContain('Add');
+  expect(text).toContain('splash of your measured water');
+  expect(text).toContain('Leave enough headspace');
+  expect(text).toContain('shake/mix until the salt dissolves');
   expect(text).toContain('This approximation does not apply to finished concentrate.');
-  expect(text).not.toMatch(/dose.*mL|mL stock/i);
+  expect(text).not.toMatch(/20–30%|remaining water|Do not tare again|dose.*mL|mL stock/i);
 });
 
 test('keeps separate recipe stocks independent and doses an all-in-one stock by mass', async ({ page }) => {
@@ -161,14 +164,20 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await expect.poll(async () => Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue())).toBeCloseTo(pinnedStrength * 2, 6);
 });
 
-test('uses grams and partial water in the Watermancer Guide', async ({ page }) => {
+test('uses salt-first mass preparation in the Watermancer Guide', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('tab', { name: 'Watermancer Guide', exact: true }).click();
   await page.getByRole('button', { name: 'Step 4: Prepare 1 mg per drop stocks', exact: true }).click();
   await page.getByLabel('Target stock weight in grams').fill('50');
   const guide = page.getByTestId('guide-stock-preparation');
   await expect(guide).toContainText('g/water drop');
-  await expect(guide).toContainText('20–30% of the calculated');
+  await expect(guide).toContainText('tare it once');
+  await expect(guide).toContainText('Add 1.000 g of the selected salt to the bottle');
+  await expect(guide).toContainText('splash of your measured water');
+  await expect(guide).toContainText('total contents weigh 50 g');
+  await expect(guide).toContainText('headspace');
+  await expect(guide).toContainText('shake/mix');
+  await expect(guide).not.toContainText('20–30%');
   await expect(guide).toContainText('This approximation does not apply to finished concentrate.');
   await expect(guide).not.toContainText('mL stock');
 });

@@ -243,8 +243,8 @@ export function WatermancerGuideStockPreparation({
         </figure>
 
         <div className="self-center" data-testid="guide-stock-mixing-order">
-          {plan ? <ConcentratePreparationSteps totalStockMassG={plan.totalStockMassG} waterMassG={plan.waterMassG} saltLabel={`${plan.saltMassG.toFixed(3)} g of the selected salt, weighed on tared parchment`} />
-            : <p className="text-xs text-slate-400">Tare the bottle; add 20–30% of the calculated water weight, transfer salt, mix, then add the remaining water to total stock weight. Do not tare again.</p>}
+          {plan ? <ConcentratePreparationSteps totalStockMassG={plan.totalStockMassG} waterMassG={plan.waterMassG} saltLabel={`${plan.saltMassG.toFixed(3)} g of the selected salt`} />
+            : <p className="text-xs text-slate-400">Tare the bottle once, add the selected salt amount, then use a splash of the measured water to rinse any clinging crystals from the parchment into the bottle. Add water until salt and water reach the target total stock weight. Leave headspace for shaking; cap and shake/mix until the salt dissolves.</p>}
         </div>
       </div>
 

@@ -4,12 +4,12 @@ const grams = (value: number) => Number(value.toFixed(3)).toString();
 export function buildConcentratePreparationSteps({ totalStockMassG, waterMassG, saltLabel }: PreparationInput): string[] {
   if (![totalStockMassG, waterMassG].every(v => Number.isFinite(v) && v > 0) || waterMassG > totalStockMassG) return [];
   return [
-    'Tare the empty bottle or mixing vessel once.',
-    `Add ${grams(waterMassG * 0.2)}–${grams(waterMassG * 0.3)} g water (20–30% of the calculated ${grams(waterMassG)} g water).`,
-    `Transfer ${saltLabel}. Use a splash of the remaining measured water to rinse clinging crystals from the parchment into the bottle.`,
-    'Shake/mix to dissolve. If needed, add more of the remaining calculated water while mixing; do not add uncounted extra water. Follow salt separation and mixing-order warnings.',
-    `Add the remaining water until the total contents weigh ${grams(totalStockMassG)} g, excluding the bottle. Do not tare again between the first water and this final reading.`,
-    'Mix thoroughly and label with the salt/form, mass-based strength, and total stock weight. Leave enough bottle headroom for shaking.',
+    'Place the bottle on the scale and tare it once.',
+    `Add ${saltLabel} to the bottle.`,
+    'If you weigh the salt on parchment, use a splash of your measured water to rinse any clinging crystals into the bottle.',
+    `Add water until the total contents weigh ${grams(totalStockMassG)} g (salt + water; bottle excluded).`,
+    'Leave enough headspace for shaking.',
+    'Cap the bottle and shake/mix until the salt dissolves.',
   ];
 }
 export function ConcentratePreparationSteps(input: PreparationInput) {

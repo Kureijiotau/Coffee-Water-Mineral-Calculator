@@ -26,10 +26,13 @@ describe('Watermancer Guide stock preparation card', () => {
     expect(html).toContain('50.000 g');
     expect(html).not.toContain('mL stock');
     expect(html).toContain('0.05000 g/water drop');
-    expect(html).toContain('Parchment paper being cut into a small piece for weighing salt.');
-    expect(html).toContain('9.8–14.7 g');
-    expect(html).toContain('remaining measured water');
-    expect(html).toContain('Do not tare again');
+    expect(html).toContain('Place the bottle on the scale and tare it once.');
+    expect(html).toContain('Add 1.000 g of the selected salt to the bottle.');
+    expect(html).toContain('splash of your measured water to rinse any clinging crystals');
+    expect(html).toContain('total contents weigh 50 g');
+    expect(html).toContain('Leave enough headspace for shaking.');
+    expect(html).toContain('shake/mix until the salt dissolves.');
+    expect(html).not.toMatch(/9.8–14.7 g|20–30%|Do not tare again/);
     expect(html).toContain('This approximation does not apply to finished concentrate.');
   });
 
@@ -51,5 +54,24 @@ describe('Watermancer Guide stock preparation card', () => {
     expect(html).toContain('0.560 g');
     expect(html).toContain('49.440 g');
     expect(html).toContain('50.000 g');
+  });
+
+  it('keeps the salt-first instructions available before a stock weight is entered', () => {
+    const html = renderToStaticMarkup(createElement(WatermancerGuideStockPreparation, {
+      calibrations: {},
+      dropperStyle: 'straight',
+      onDropperStyleChange: () => undefined,
+      targetStockMassInput: '',
+      onTargetStockMassInputChange: () => undefined,
+      onOpenCalibration: () => undefined,
+    }));
+
+    expect(html).toContain('Tare the bottle once');
+    expect(html).toContain('add the selected salt');
+    expect(html).toContain('splash of the measured water');
+    expect(html).toContain('target total stock weight');
+    expect(html).toContain('headspace');
+    expect(html).toContain('shake');
+    expect(html).not.toMatch(/20–30%|Do not tare again/);
   });
 });

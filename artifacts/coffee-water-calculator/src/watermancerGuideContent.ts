@@ -90,7 +90,8 @@ export const WATERMANCER_GUIDE_STEPS: readonly WatermancerGuideEntry[] = [
     summary: 'Choose the target finished-stock weight in grams. Water-drop calibration gives a planning estimate; verify each finished stock.',
     details: [
       'Aim for approximately 1 mg of physical salt per drop, then verify the actual prepared stock by weighing counted drops. Different salts can change finished-stock drop mass.',
-      'Tare the bottle once, add 20–30% of the calculated water weight, transfer the salt, shake/mix, then add the remaining water to total stock weight without retaring.',
+      'Place the bottle on the scale and tare it once. Add the calculated salt amount, then use a splash of the measured water to rinse any clinging crystals from the parchment into the bottle. Add water until salt and water reach the target total stock weight. Leave headspace, cap, and shake/mix until dissolved.',
+      'For plain water at room temperature, 1 mL ≈ 1 g. This is a water-only measuring convenience; calculate the finished concentrate by mass.',
     ],
   },
   {

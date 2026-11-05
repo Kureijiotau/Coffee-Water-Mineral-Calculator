@@ -252,4 +252,19 @@ describe('Watermancer Guide copy', () => {
     expect(preparationStep?.summary).toContain('finished-stock weight in grams');
     expect(preparationStep?.summary).not.toContain('bottle size');
   });
+
+  it('uses the salt-first mass preparation order and limits the mL-to-g note to plain water', () => {
+    const preparationStep = WATERMANCER_GUIDE_STEPS.find(step => step.id === 'prepare-stocks');
+    const copy = `${preparationStep?.summary ?? ''} ${flattenGuideDetails(preparationStep?.details)}`;
+
+    expect(copy).toMatch(/place the bottle on the scale and tare.*once/i);
+    expect(copy).toMatch(/add.*salt/i);
+    expect(copy).toMatch(/splash.*measured water.*rinse/i);
+    expect(copy).toMatch(/target stock weight|total stock weight/i);
+    expect(copy).toMatch(/headspace/i);
+    expect(copy).toMatch(/shake/i);
+    expect(copy).toContain('1 mL ≈ 1 g');
+    expect(copy).toMatch(/plain water/i);
+    expect(copy).not.toMatch(/20.?30%|add water before.*salt/i);
+  });
 });

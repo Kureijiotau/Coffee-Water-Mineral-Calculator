@@ -151,6 +151,23 @@ test('keeps Watermancer Guide separate, keyboard-accessible, and locally navigab
   expect(pageWidths.content).toBeLessThanOrEqual(pageWidths.viewport);
 });
 
+test('shows salt-first mass preparation steps in Watermancer Guide Step 4', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-watermancer-guide').click();
+  await page.getByRole('button', { name: 'Step 4: Prepare 1 mg per drop stocks', exact: true }).click();
+
+  const preparationStep = page.getByTestId('step-prepare-stocks');
+  await expect(preparationStep).toBeVisible();
+  await expect(preparationStep).toContainText('Tare the bottle once');
+  await expect(preparationStep).toContainText('Add the calculated salt');
+  await expect(preparationStep).toContainText('splash of the measured water');
+  await expect(preparationStep).toContainText('target stock weight');
+  await expect(preparationStep).toContainText('headspace');
+  await expect(preparationStep).toContainText('shake');
+  await expect(preparationStep).toContainText('1 mL ≈ 1 g');
+  await expect(preparationStep).not.toContainText('20–30%');
+});
+
 test('opens the existing tools without changing the selected Watermancer target', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('mode-watermancer').click();

@@ -3297,11 +3297,6 @@ function App() {
     setCalculatorMode(mode);
     setAppTab('calculator');
   };
-  const handleOpenConcentrates = () => {
-    setConcentrateWorkspaceTab('diy');
-    setAppTab('concentrates');
-  };
-
   // Persist on changes
   useDebouncedPersistence(() => {
     const latestProfiles = profilesRef.current;
@@ -5284,14 +5279,20 @@ function App() {
   const buildCurrentSalts = (liveTargets?: Record<string, number>) =>
     buildSaltRecipeEntries(safeRows, liveTargets);
 
+  const activeConcentrateSaltTargets = showWatermancer
+    ? activeWatermancerSaltTargets
+    : showBrewer
+      ? brewerActiveSaltTargets
+      : saltTargets;
+
   const handleOpenConcentrateFromCurrentRecipe = () => {
-    const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
-    setConcentrateWorkspaceTab('recipe');
+    const salts = buildCurrentSalts(activeConcentrateSaltTargets);
     if (Object.keys(salts).length === 0) {
-      setConcentrateRecipeHandoff(null);
+      setConcentrateWorkspaceTab('diy');
       setAppTab('concentrates');
       return;
     }
+    setConcentrateWorkspaceTab('recipe');
     setConcentrateRecipeHandoff({
       name: displayedRecipeName === 'Custom' ? 'Current recipe' : displayedRecipeName,
       salts,
@@ -5305,13 +5306,15 @@ function App() {
   };
 
   const handleSendRecipeToConcentrate = () => {
-    const salts = buildCurrentSalts(showWatermancer ? activeWatermancerSaltTargets : undefined);
+    const salts = buildCurrentSalts(activeConcentrateSaltTargets);
     if (Object.keys(salts).length === 0) {
       window.alert('Enter at least one salt target before sending a recipe to Concentrate.');
       return;
     }
     handleOpenConcentrateFromCurrentRecipe();
   };
+
+  const handleOpenConcentrates = () => handleOpenConcentrateFromCurrentRecipe();
 
   const handleSaveRecipe = () => {
     const salts = buildCurrentSalts();

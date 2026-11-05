@@ -33,16 +33,6 @@ const n = (value: number, digits = 3) => Number(value.toFixed(digits)).toString(
 const inputClass = 'mt-1 w-full rounded-lg border border-slate-600/70 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-fuchsia-300';
 const buttonClass = 'rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-xs font-semibold text-fuchsia-100 hover:bg-fuchsia-500/20 disabled:opacity-40';
 const emptyGroup = (id: string): Group => ({ id, totalStockMassG: 100, strength: 20, saltIds: [], calibration: null });
-function SummaryMetric({ label, value, detail, tone }: { label: string; value: string; detail: string; tone: 'sky' | 'emerald' | 'slate' }) {
-  const toneClasses = tone === 'emerald'
-    ? 'border-emerald-300/20 bg-emerald-400/[0.07] text-emerald-200'
-    : tone === 'sky' ? 'border-sky-200/20 bg-sky-400/[0.07] text-sky-100' : 'border-slate-700/60 bg-slate-950/25 text-slate-200';
-  return <div className={`rounded-xl border px-3 py-3 ${toneClasses}`}>
-    <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500">{label}</div>
-    <div className="mt-1 text-sm font-semibold tabular-nums">{value}</div>
-    <div className="mt-1 text-[9px] text-slate-500">{detail}</div>
-  </div>;
-}
 function HelpTip({ testId, label, text, align = 'center' }: { testId: string; label: string; text: string; align?: 'center' | 'right' }) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(false);
@@ -66,24 +56,19 @@ function HelpTip({ testId, label, text, align = 'center' }: { testId: string; la
   );
 }
 
-function SharedDropperCalibrationPanel({ tipKey, dropperRates, sharedCalibrations, onTipChange, onCalibrationChange }: {
-  tipKey: LotusDropperStyle;
+function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, onCalibrationChange }: {
   dropperRates: Record<LotusDropperStyle, number>;
   sharedCalibrations: LotusStyleCalibrationInputs;
-  onTipChange: (style: LotusDropperStyle) => void;
   onCalibrationChange: (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => void;
 }) {
   const hasSavedCalibration = hasAnyDiyDropperCalibration(sharedCalibrations);
-  const selectedCalibration = sharedCalibrations[tipKey];
-  const hasSelectedCalibration = lotusMeasuredDropsPerMl(selectedCalibration) !== null;
-  const drops = Number(selectedCalibration?.dropsInput ?? 0);
-  const weightG = Number(selectedCalibration?.weightInput ?? 0);
-  const waterMassPerDrop = hasSelectedCalibration ? weightG / drops : 1 / dropperRates[tipKey];
+  const [open, setOpen] = useState(() => !hasSavedCalibration);
 
   return <details
     className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/[0.08] via-slate-800/80 to-blue-500/[0.06] p-4 shadow-xl sm:p-5"
     data-testid="mass-shared-calibration"
-    defaultOpen={!hasSavedCalibration}
+    open={open}
+    onToggle={event => setOpen(event.currentTarget.open)}
   >
     <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-sky-100 marker:hidden">
       <span className="flex items-center gap-2">
@@ -99,44 +84,46 @@ function SharedDropperCalibrationPanel({ tipKey, dropperRates, sharedCalibration
     </summary>
     <div className="mt-3">
       <div className="flex items-center gap-2">
-        <h3 className="text-base font-semibold text-white">{hasSavedCalibration ? 'Saved tip calibration' : 'Measure a tip before dosing'}</h3>
         <HelpTip
-          testId="mass-calibration-help-diy"
+          testId="mass-shared-calibration-help"
           label="Dropper calibration explanation"
-          text="This shared value measures plain-water drops for the selected tip. Hold the dropper vertically. Finished concentrate can drop differently, so calibrate the prepared stock separately when you need a more accurate dose."
+          text="Weigh plain-water drops while holding the dropper vertically. Record both values for each tip; a tip is calibrated only when both are valid. Finished concentrate can drop differently, so calibrate the prepared stock separately when needed."
         />
+        <p className="text-xs text-slate-400">Measure each tip separately.</p>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-sky-200/15 bg-slate-950/30 p-1" role="group" aria-label="Stock Builder dropper tip style">
-        {(['straight', 'round'] as const).map(style => <button key={style} type="button" onClick={() => onTipChange(style)}
-          aria-pressed={tipKey === style} aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip, ${dropperRates[style].toFixed(1)} drops per mL`}
-          className={`rounded-md px-2 py-2 text-left text-[10px] font-semibold capitalize transition ${tipKey === style ? 'bg-sky-400/15 text-sky-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>
-          {style} Tip · {dropperRates[style].toFixed(1)} Drops/ML
-        </button>)}
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="shared-dropper-calibration">
-        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
-          <input aria-label="Measured number of drops" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-            inputMode="decimal" placeholder="e.g. 100" value={selectedCalibration?.dropsInput ?? ''}
-            onChange={e => onCalibrationChange(tipKey, 'dropsInput', e.target.value)} />
-        </label>
-        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
-          <span className="mt-1 flex items-center gap-2">
-            <input aria-label="Shared water calibration weight in grams" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-              inputMode="decimal" placeholder="e.g. 5" value={selectedCalibration?.weightInput ?? ''}
-              onChange={e => onCalibrationChange(tipKey, 'weightInput', e.target.value)} />
-            <span className="text-sm text-slate-400">g</span>
-          </span>
-        </label>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <SummaryMetric label="Water mass per drop" value={`${waterMassPerDrop.toFixed(4)} g`}
-          detail={hasSelectedCalibration ? 'shared' : 'estimated'} tone="sky" />
-        <SummaryMetric label="Drops per mL" value={dropperRates[tipKey].toFixed(1)}
-          detail={hasSelectedCalibration ? 'shared' : 'estimated'} tone="sky" />
-        <SummaryMetric label="Selected tip status" value={hasSelectedCalibration ? 'Shared value' : 'Assumption'}
-          detail={hasSelectedCalibration ? 'Guide + Lotus Drops' : 'measure for accuracy'} tone={hasSelectedCalibration ? 'emerald' : 'slate'} />
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {(['straight', 'round'] as const).map(style => {
+          const calibration = sharedCalibrations[style];
+          const measuredRate = lotusMeasuredDropsPerMl(calibration);
+          const drops = Number(calibration?.dropsInput ?? 0);
+          const weightG = Number(calibration?.weightInput ?? 0);
+          const rate = dropperRates[style];
+          return <fieldset key={style} className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
+            <legend className="px-1 text-xs font-semibold capitalize text-sky-100">{style} tip</legend>
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              {style === 'straight' ? 'Straight' : 'Round'} tip measured drops
+              <input aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip measured drops`}
+                className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+                inputMode="decimal" placeholder="e.g. 100" value={calibration?.dropsInput ?? ''}
+                onChange={event => onCalibrationChange(style, 'dropsInput', event.target.value)} />
+            </label>
+            <label className="mt-2 block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              {style === 'straight' ? 'Straight' : 'Round'} tip water weight in grams
+              <span className="mt-1 flex items-center gap-2">
+                <input aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip water weight in grams`}
+                  className="w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+                  inputMode="decimal" placeholder="e.g. 5" value={calibration?.weightInput ?? ''}
+                  onChange={event => onCalibrationChange(style, 'weightInput', event.target.value)} />
+                <span className="text-sm text-slate-400">g</span>
+              </span>
+            </label>
+            <p className="mt-2 text-xs text-slate-400">
+              {measuredRate !== null
+                ? `${rate.toFixed(1)} drops/mL measured · ${(weightG / drops).toFixed(4)} g/drop`
+                : `${rate.toFixed(1)} drops/mL estimated`}
+            </p>
+          </fieldset>;
+        })}
       </div>
     </div>
   </details>;
@@ -162,7 +149,8 @@ function readInitial(props: Props) {
 export function MassConcentrateWorkspace(props: Props) {
   const [initial] = useState(() => readInitial(props));
   const initialPlan = initial.kind === 'mass' && (!initial.plan.workspaceMode || initial.plan.workspaceMode === props.workspaceMode) ? initial.plan : null;
-  const [toolMode, setToolMode] = useState<'recipe' | 'percent' | 'lotus'>(initialPlan?.toolMode ?? 'recipe');
+  const [toolMode, setToolMode] = useState<'recipe' | 'lotus'>(() =>
+    props.workspaceMode === 'diy' && initialPlan?.toolMode === 'lotus' ? 'lotus' : 'recipe');
   const [strategy, setStrategy] = useState<MassConcentratePlanSnapshot['strategy']>(initialPlan?.strategy ?? 'individual');
   const [groups, setGroups] = useState<Record<string, Group>>(() => Object.fromEntries(initialPlan?.groups.map(g => [g.id, g]) ?? []));
   const [saltId, setSaltId] = useState(initialPlan?.selectedSaltId ?? 'mgso4');
@@ -203,7 +191,7 @@ export function MassConcentrateWorkspace(props: Props) {
   const activeGroups: Array<{ id: string; name: string; saltIds: string[] }> = !isRecipe && toolMode === 'lotus'
     ? LOTUS_DROPPER_DEFINITIONS.map(d => ({ id: `lotus-${d.id}`, name: `${d.label} homemade stock`, saltIds: [d.saltId] }))
     : !isRecipe
-      ? [{ id: `diy-${salt.id}`, name: toolMode === 'percent' ? 'Single-salt % w/w stock' : 'DIY single-salt concentrate', saltIds: [salt.id] }]
+      ? [{ id: `diy-${salt.id}`, name: 'DIY single-salt concentrate', saltIds: [salt.id] }]
       : strategy === 'all-in-one'
         ? [{ id: 'all-in-one', name: 'All-in-one concentrate', saltIds: activeSaltIds }]
         : strategy === 'gh-kh' ? splitIntoStockGroups(recipeTargets).map(g => ({ ...g, name: g.name.replace('Stock', 'concentrate') }))
@@ -237,7 +225,7 @@ export function MassConcentrateWorkspace(props: Props) {
 
   const applyPlan = (plan: MassConcentratePlanSnapshot) => {
     setGroups(Object.fromEntries(plan.groups.map(g => [g.id, g]))); setStrategy(plan.strategy);
-    setToolMode(plan.toolMode ?? 'recipe'); setFinalLitersInput(String(plan.finalLiters));
+    setToolMode(props.workspaceMode === 'diy' && plan.toolMode === 'lotus' ? 'lotus' : 'recipe'); setFinalLitersInput(String(plan.finalLiters));
     setSaltId(plan.selectedSaltId ?? 'mgso4'); setPercentInput(String(plan.percentWw ?? 5));
     setTipKey(plan.dropperStyle ?? snapshotRef.current.dropperStyle);
     setForms(Object.fromEntries(Object.entries(plan.recipe ?? {}).map(([id, row]) => [id, row.formIdx])));
@@ -297,7 +285,7 @@ export function MassConcentrateWorkspace(props: Props) {
           </div>
         </div>
         {!isRecipe && <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
-          <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode(toolMode === 'lotus' ? 'recipe' : toolMode)}
+          <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode('recipe')}
             className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode !== 'lotus' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
             Stock builder
           </button>
@@ -342,6 +330,21 @@ export function MassConcentrateWorkspace(props: Props) {
         </label>
       </div>
     </section>}
+    {!isRecipe && toolMode !== 'lotus' && <>
+      <SharedDropperCalibrationPanel dropperRates={dropperRates} sharedCalibrations={shared} onCalibrationChange={updateSharedCalibration} />
+      <section className="rounded-2xl border border-sky-300/25 bg-slate-900/55 p-4 shadow-lg" data-testid="mass-dosing-tip-selection">
+        <label className="block text-xs font-semibold text-sky-100">
+          Stock dropper tip
+          <select aria-label="Stock dropper tip" className={inputClass} value={tipKey} onChange={event => setTipKey(event.target.value as LotusDropperStyle)}>
+            <option value="straight">Straight tip</option>
+            <option value="round">Round tip</option>
+          </select>
+        </label>
+        <p className="mt-2 text-xs text-slate-400" data-testid="mass-selected-dropper-rate">
+          {dropperRates[tipKey].toFixed(1)} drops/mL · {lotusMeasuredDropsPerMl(shared[tipKey]) !== null ? 'Calibrated' : 'Estimated'}
+        </p>
+      </section>
+    </>}
     {isRecipe || toolMode === 'lotus' ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6">
       {isRecipe && <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -370,48 +373,7 @@ export function MassConcentrateWorkspace(props: Props) {
         <p className="text-xs text-slate-400">{WATER_MASS_NOTE}</p>
       </div>
       {toolMode === 'lotus' && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-100">Homemade stock estimates use the published salt:water mass ratios. Commercial Lotus recipes remain source references, not exact predictions for a homemade stock. Verify finished-stock drops.</p>}
-    </section> : <details className="rounded-2xl border border-slate-700/60 bg-slate-900/45 p-4">
-      <summary className="cursor-pointer text-sm font-semibold text-slate-200">Advanced stock targets</summary>
-      <div className="mt-4 space-y-3">
-        <div className="relative">
-          <div role="tablist" aria-label="DIY stock basis" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
-          <button type="button" role="tab" aria-selected={toolMode === 'recipe'} aria-label="Recipe-equivalent salt stock" onClick={() => setToolMode('recipe')}
-            className={`rounded-lg px-2.5 py-1.5 pr-8 text-xs font-semibold transition ${toolMode === 'recipe' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
-            Recipe target
-          </button>
-          <button type="button" role="tab" aria-selected={toolMode === 'percent'} aria-label="Single-salt weight percentage" onClick={() => setToolMode('percent')}
-            className={`rounded-lg px-2.5 py-1.5 pr-8 text-xs font-semibold transition ${toolMode === 'percent' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
-            % w/w
-          </button>
-          </div>
-          <div className="pointer-events-none absolute inset-0 grid grid-cols-2 gap-1 p-1">
-            <div className="pointer-events-none flex items-center justify-end pr-2">
-              <HelpTip
-                testId="recipe-target-help"
-                label="Recipe target explanation"
-                text="Use this when you have a mineral target for the finished brew. Enter the selected salt's contribution in mg/L as anhydrous equivalent; the card calculates how much salt goes into the concentrate."
-              />
-            </div>
-            <div className="pointer-events-none flex items-center justify-end pr-2">
-              <HelpTip
-                testId="weight-percent-help"
-                label="Weight percentage explanation"
-                text="Set the selected salt's share of the finished stock's total weight. For example, 5% w/w means 5 g of salt in 100 g of finished stock; the rest is water."
-                align="right"
-              />
-            </div>
-          </div>
-        </div>
-        {toolMode === 'recipe' && <label className="block rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs text-cyan-200">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider">Recipe target (anhydrous-equivalent mg/L)</span>
-          <input className="mt-1 w-full bg-transparent text-sm text-slate-100 outline-none" inputMode="decimal" value={targetInput} onChange={e => setTargetInput(e.target.value)} />
-        </label>}
-        {toolMode === 'percent' && <label className="block rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs text-cyan-200">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider">Strength (% w/w)</span>
-          <input aria-label="Stock strength percent w/w" className="mt-1 w-full bg-transparent text-sm text-slate-100 outline-none" inputMode="decimal" value={percentInput} onChange={e => setPercentInput(e.target.value)} />
-        </label>}
-      </div>
-    </details>}
+    </section> : null}
     {restoreError && <div role="alert" className="rounded-xl border border-red-400/40 p-4 text-sm text-red-200">{restoreError} No stock was silently converted.
       <p className="mt-2">The saved record has not been changed. Starting a new plan keeps a local recovery copy first.</p>
       <button className={`${buttonClass} mt-3`} onClick={() => {
@@ -440,21 +402,16 @@ export function MassConcentrateWorkspace(props: Props) {
         const state = groupFor(g.id);
         let targets = Object.fromEntries(g.saltIds.map(id => [id, recipeTargets[id] ?? 0]));
         let groupForms = Object.fromEntries(g.saltIds.map(id => [id, recipeForms[id] ?? SALTS.find(s => s.id === id)?.defaultFormIdx ?? 0]));
-        const percent = !isRecipe && toolMode === 'percent';
         const lotus = !isRecipe && toolMode === 'lotus';
         let strength = state.strength * (state.batchScale ?? 1);
-        if (percent) {
-          const form = salt.hydrationForms[selectedForm];
-          targets = { [salt.id]: Number(percentInput) / 100 * state.totalStockMassG * 1000 * salt.anhydrousMass / form.molarMass };
-          strength = 1;
-        } else if (lotus) {
+        if (lotus) {
           const def = LOTUS_DROPPER_DEFINITIONS.find(d => `lotus-${d.id}` === g.id)!;
           const stock = lotusMassStockPlan(def, state.totalStockMassG);
           groupForms = { [def.saltId]: SALTS.find(s => s.id === def.saltId)?.defaultFormIdx ?? 0 };
           targets = { [def.saltId]: stock.valid ? stock.anhydrousEquivalentMassMg : NaN };
           strength = 1;
         }
-        if (!percent && !lotus && (state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop)) {
+        if (!lotus && (state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop)) {
           // Reformulation is a planning estimate. A measurement of the old
           // composition must not be treated as exact for the new composition.
           const pinned = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets: targets, formIdxBySaltId: groupForms,
@@ -467,9 +424,7 @@ export function MassConcentrateWorkspace(props: Props) {
         return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
           finalLiters={finalLiters} finalWaterMassKg={finalWaterMassKg} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={value => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(value) * 3.785411784) : value)}
-          onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} dropperRates={dropperRates}
-          onTipChange={setTipKey} sharedCalibrations={shared} onSharedCalibrationChange={updateSharedCalibration}
-          waterEstimate={waterEstimate} percentMode={percent || lotus}
+          onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} />;
       })}
       {(isRecipe || toolMode === 'lotus') && <button className={buttonClass} aria-label="Open concentrate recipe steps" onClick={() => setShowSteps(v => !v)}>{showSteps ? 'Hide recipe steps' : 'Recipe steps'}</button>}
@@ -489,12 +444,10 @@ export function MassConcentrateWorkspace(props: Props) {
   </div>;
 }
 
-function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalWaterMassKg, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, dropperRates, onTipChange, sharedCalibrations, onSharedCalibrationChange, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
+function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalWaterMassKg, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt }: {
   name: string; state: Group; saltTargets: Record<string, number>; forms: Record<string, number>; strength: number; finalLiters: number; finalWaterMassKg: number;
   finalLitersInput: string; volumeUnit: 'liters' | 'gallons'; onFinalLitersChange: (value: string) => void; onToggleVolumeUnit: () => void;
-  tipKey: 'straight' | 'round'; dropperRates: Record<'straight' | 'round', number>; onTipChange: (tipKey: 'straight' | 'round') => void;
-  sharedCalibrations: Record<string, LotusDropperCalibration>;
-  onSharedCalibrationChange: (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => void;
+  tipKey: 'straight' | 'round';
   waterEstimate: StockDropCalibration; onUpdate: (patch: Partial<Group>) => void; percentMode: boolean; showSteps: boolean; allowSaltMassEdit: boolean; diySingleSalt: boolean;
 }) {
   const [massInput, setMassInput] = useState(String(state.totalStockMassG));
@@ -517,12 +470,6 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
   const compositionKey = stockCompositionKey(salts, state.totalStockMassG, forms);
-  const sharedTipCalibration = sharedCalibrations[tipKey];
-  const sharedCalibrationDrops = Number(sharedTipCalibration?.dropsInput ?? 0);
-  const sharedCalibrationWeightG = Number(sharedTipCalibration?.weightInput ?? 0);
-  const hasSharedCalibration = Number.isFinite(sharedCalibrationDrops) && sharedCalibrationDrops > 0
-    && Number.isFinite(sharedCalibrationWeightG) && sharedCalibrationWeightG > 0;
-  const waterMassPerDrop = hasSharedCalibration ? sharedCalibrationWeightG / sharedCalibrationDrops : 1 / dropperRates[tipKey];
   const measured = resolveStockDropCalibration(state.calibration, compositionKey, tipKey);
   const calibration = measured.basis === 'stock' ? state.calibration : waterEstimate;
   const result = computeRecipeMassDropEquivalents({ saltTargets, formIdxBySaltId: forms, strength, totalStockMassG: state.totalStockMassG, calibration, finalWaterMassKg, compositionKey, tipKey });
@@ -617,69 +564,21 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
       </div>
     </section>
 
-    <section className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/[0.08] via-slate-800/80 to-blue-500/[0.06] p-4 shadow-xl sm:p-5" data-testid="mass-stock-calibration">
-      <div className="flex items-start gap-3">
-        <Pipette className="mt-0.5 h-5 w-5 shrink-0 text-sky-200" aria-hidden="true" />
-        <div>
-          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-sky-100/80">
-            <span>Dropper calibration</span>
-            <HelpTip
-              testId={`mass-calibration-help-${state.id}`}
-              label="Dropper calibration explanation"
-              text="This shared value measures plain-water drops for the selected tip. Hold the dropper vertically. Finished concentrate can drop differently, so calibrate the prepared stock separately when you need a more accurate dose."
-            />
-          </div>
-          <h3 className="mt-1 text-base font-semibold text-white">{hasSharedCalibration ? 'Calibration in use' : 'Measure this tip before dosing'}</h3>
-        </div>
+    {state.calibration && measured.basis === 'unavailable' && <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+    <details className="rounded-xl border border-slate-700/60 bg-slate-950/20 p-3" data-testid="mass-stock-calibration">
+      <summary className="cursor-pointer text-sm text-sky-100">Calibrate this finished stock by weight</summary>
+      <p className="mt-2 text-xs text-slate-400">Tare a receiving cup. Hold the dropper vertically and weigh counted drops of this actual finished stock. Use the same tip. This calibration is saved to this stock separately from the shared water calibration.</p>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="text-xs">Counted stock drops<input aria-label={`${name} counted stock drops`} className={inputClass} value={dropsInput} onChange={e => setDropsInput(e.target.value)} /></label>
+        <label className="text-xs">Measured stock weight (g)<input aria-label={`${name} measured stock weight`} className={inputClass} value={weighedInput} onChange={e => setWeighedInput(e.target.value)} /></label>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-sky-200/15 bg-slate-950/30 p-1" role="group" aria-label="Stock Builder dropper tip style">
-        {(['straight', 'round'] as const).map(style => <button key={style} type="button" onClick={() => onTipChange(style)}
-          aria-pressed={tipKey === style} aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip, ${dropperRates[style].toFixed(1)} drops per mL`}
-          className={`rounded-md px-2 py-2 text-left text-[10px] font-semibold capitalize transition ${tipKey === style ? 'bg-sky-400/15 text-sky-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>
-          {style} Tip · {dropperRates[style].toFixed(1)} Drops/ML
-        </button>)}
-      </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2" data-testid="shared-dropper-calibration">
-        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured number of drops</span>
-          <input aria-label="Measured number of drops" className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-            inputMode="decimal" placeholder="e.g. 100" value={sharedTipCalibration?.dropsInput ?? ''}
-            onChange={e => onSharedCalibrationChange(tipKey, 'dropsInput', e.target.value)} />
-        </label>
-        <label className="rounded-xl border border-sky-200/20 bg-slate-950/25 px-3 py-2.5">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Measured weight</span>
-          <span className="mt-1 flex items-center gap-2">
-            <input aria-label="Shared water calibration weight in grams" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none"
-              inputMode="decimal" placeholder="e.g. 5" value={sharedTipCalibration?.weightInput ?? ''}
-              onChange={e => onSharedCalibrationChange(tipKey, 'weightInput', e.target.value)} />
-            <span className="text-sm text-slate-400">g</span>
-          </span>
-        </label>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
-        <SummaryMetric label="Water mass per drop" value={`${waterMassPerDrop.toFixed(4)} g`}
-          detail={hasSharedCalibration ? 'shared' : 'estimated'} tone="sky" />
-        <SummaryMetric label="Drops per mL" value={dropperRates[tipKey].toFixed(1)}
-          detail={hasSharedCalibration ? 'shared' : 'estimated'} tone="sky" />
-        <SummaryMetric label="Calibration status" value={hasSharedCalibration ? 'Shared value' : 'Assumption'}
-          detail={hasSharedCalibration ? 'Guide + Lotus Drops' : 'measure for accuracy'} tone={hasSharedCalibration ? 'emerald' : 'slate'} />
-      </div>
-      {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
-      <details className="mt-3 rounded-xl border border-slate-700/60 p-3">
-        <summary className="cursor-pointer text-sm text-sky-100">Calibrate this finished stock by weight</summary>
-        <p className="mt-2 text-xs text-slate-400">Tare a receiving cup. Hold the dropper vertically and weigh counted drops of this actual finished stock. Use the same tip. This calibration is saved to this stock, separate from the shared water value.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="text-xs">Counted stock drops<input aria-label={`${name} counted stock drops`} className={inputClass} value={dropsInput} onChange={e => setDropsInput(e.target.value)} /></label>
-          <label className="text-xs">Measured stock weight (g)<input aria-label={`${name} measured stock weight`} className={inputClass} value={weighedInput} onChange={e => setWeighedInput(e.target.value)} /></label>
-        </div>
-        <button type="button" className={`${buttonClass} mt-3`} onClick={() => {
-          if (![Number(dropsInput), Number(weighedInput)].every(v => Number.isFinite(v) && v > 0)) { setCalibrationError('Enter a positive drop count and actual stock weight.'); return; }
-          onUpdate({ calibration: { basis: 'stock', drops: Number(dropsInput), massG: Number(weighedInput), compositionKey, tipKey } });
-          setCalibrationError('');
-        }}>Use measured stock calibration</button>
-      </details>
-      {calibrationError && <p role="status" className="mt-2 text-xs text-amber-200">{calibrationError}</p>}
-    </section>
+      <button type="button" className={`${buttonClass} mt-3`} onClick={() => {
+        if (![Number(dropsInput), Number(weighedInput)].every(v => Number.isFinite(v) && v > 0)) { setCalibrationError('Enter a positive drop count and actual stock weight.'); return; }
+        onUpdate({ calibration: { basis: 'stock', drops: Number(dropsInput), massG: Number(weighedInput), compositionKey, tipKey } });
+        setCalibrationError('');
+      }}>Use measured stock calibration</button>
+    </details>
+    {calibrationError && <p role="status" className="text-xs text-amber-200">{calibrationError}</p>}
 
     <section className="rounded-2xl border border-cyan-300/25 bg-slate-800/70 p-4 shadow-xl sm:p-5" data-testid="mass-stock-dose">
       <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">

@@ -1,10 +1,11 @@
 import { expect, it } from 'vitest';
 import { calculateOneMgPerDropStockPlan } from './watermancerGuideStock';
 const waterEstimate = { basis: 'water-estimate' as const, massG: 5, drops: 100, compositionKey: '', tipKey: 'straight' };
-it('uses target finished mass, with explicit estimate provenance and partial water', () => {
+it('uses target finished mass and explicit estimate provenance without partial-water ranges', () => {
   const plan = calculateOneMgPerDropStockPlan(50, waterEstimate);
-  expect(plan).toMatchObject({ totalStockMassG: 50, saltMassG: 1, waterMassG: 49,
-    initialWaterMinG: 9.8, initialWaterMaxG: 14.7, calibrationBasis: 'water-estimate' });
+  expect(plan).toMatchObject({ totalStockMassG: 50, saltMassG: 1, waterMassG: 49, calibrationBasis: 'water-estimate' });
+  expect(plan).not.toHaveProperty('initialWaterMinG');
+  expect(plan).not.toHaveProperty('initialWaterMaxG');
   expect(plan).not.toHaveProperty('stockVolumeMl');
   expect(plan).not.toHaveProperty('minimumBottleVolumeMl');
 });
