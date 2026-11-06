@@ -32,6 +32,7 @@ import { DeferredPanelBoundary, DeferredPanelFallback } from './components/Defer
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
+import { ConcentratePreparationSteps } from './concentratePreparation';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
   getLitersAfterVolumeUnitToggle,
@@ -140,12 +141,13 @@ import {
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   lotusCalibratedStockPlan,
   lotusDropsPerMl,
+  lotusMassStockPlan,
   lotusMeasuredDropsPerMl,
   migrateLotusCalibrationInputs,
-  lotusStockPlan,
   type LotusCalibrationLegacyCandidate,
   type LotusCalibrationMigration,
   type LotusDropperCalibration,
+  type LotusDropperId,
   type LotusDropperStyle,
 } from './lotusConcentrate';
 import { EMPIRICAL_WATERS } from './empiricalWaters';
@@ -10102,7 +10104,11 @@ function LotusDropsSection({
   onSaveSnapshot: () => void;
 }) {
   const [stockVolumeInput, setStockVolumeInput] = useState(String(LOTUS_BOTTLE_VOLUME_ML));
+  const [selectedDropperId, setSelectedDropperId] = useState<LotusDropperId>('magnesium');
+  const [finishedStockMassInput, setFinishedStockMassInput] = useState('');
   const [showBonusEpsom, setShowBonusEpsom] = useState(false);
+  const [brewVolumeMl, setBrewVolumeMl] = useState(LOTUS_BREW_VOLUME_ML);
+  const [brewVolumeUnit, setBrewVolumeUnit] = useState<'mL' | 'L' | 'Gal'>('mL');
   const [expandedDropReferences, setExpandedDropReferences] = useState<Record<string, boolean>>({});
   const [storedDiyInputs] = useState(loadDiyConcentrateInputs);
   const [lotusCalibrationState, setLotusCalibrationState] = useState<LotusCalibrationMigration>(
@@ -10119,15 +10125,46 @@ function LotusDropsSection({
   const straightModelDropsPerMl = lotusDropsPerMl('straight', straightBaselineDropsPerMl);
   const stockPlans = LOTUS_DROPPER_DEFINITIONS
     .filter(dropper => !dropper.isBonus || showBonusEpsom)
-    .map(dropper => {
-      return lotusCalibratedStockPlan(
-        dropper,
-        style,
-        stockVolumeMl,
-        straightBaselineDropsPerMl,
-        lotusCalibrationInputs[style],
-      );
-    });
+    .map(dropper => lotusCalibratedStockPlan(
+      dropper,
+      style,
+      stockVolumeMl,
+      straightBaselineDropsPerMl,
+      lotusCalibrationInputs[style],
+    ));
+  const selectedDropper = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === selectedDropperId)
+    ?? LOTUS_DROPPER_DEFINITIONS[0];
+  const selectedPlan = lotusCalibratedStockPlan(
+    selectedDropper,
+    style,
+    LOTUS_BOTTLE_VOLUME_ML,
+    straightBaselineDropsPerMl,
+    lotusCalibrationInputs[style],
+  );
+  const selectedCalibrationRate = lotusMeasuredDropsPerMl(lotusCalibrationInputs[style]);
+  const selectedStyleIsCalibrated = selectedCalibrationRate !== null;
+  const parsedFinishedMass = finishedStockMassInput.trim() === ''
+    ? null
+    : Number(finishedStockMassInput);
+  const finishedMassPlan = selectedStyleIsCalibrated && parsedFinishedMass !== null
+    ? lotusMassStockPlan(selectedDropper, parsedFinishedMass)
+    : null;
+  const hasValidFinishedMass = finishedMassPlan?.valid === true;
+  const volumeScaleMl = brewVolumeUnit === 'mL'
+    ? 1
+    : brewVolumeUnit === 'L'
+      ? 1000
+      : US_GALLON_IN_LITERS * 1000;
+  const volumeUnitLabel = brewVolumeUnit;
+  const volumeDisplayValue = brewVolumeMl / volumeScaleMl;
+  const volumeDisplayPrecision = brewVolumeUnit === 'mL' ? 0 : brewVolumeUnit === 'L' ? 2 : 3;
+  const volumeDisplayText = `${Number(volumeDisplayValue.toFixed(volumeDisplayPrecision))} ${volumeUnitLabel}`;
+  const brewVolumeScale = LOTUS_BREW_VOLUME_ML / brewVolumeMl;
+  const sourcePpmAtSelectedVolume = selectedPlan.lotusReferenceIonPpmPerDrop * brewVolumeScale;
+  const calibratedPpmAtSelectedVolume = selectedPlan.ionPpmPerDrop * brewVolumeScale;
+  const sliderMin = 50 / volumeScaleMl;
+  const sliderMax = 2000 / volumeScaleMl;
+  const sliderStep = 10 / volumeScaleMl;
 
   useEffect(() => {
     const storedCalibrations: Record<string, LotusDropperCalibration> = {
@@ -10406,6 +10443,61 @@ function LotusDropsSection({
         </div>
       </div>
       <section
+        className="rounded-xl border border-amber-300/20 bg-slate-950/25 p-3"
+        data-testid="lotus-selected-dropper"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <label className="min-w-[220px] flex-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-200/80">Dropper to prepare</span>
+            <select
+              aria-label="Dropper to prepare"
+              data-testid="lotus-dropper-select"
+              value={selectedDropperId}
+              onChange={event => setSelectedDropperId(event.target.value as LotusDropperId)}
+              className="mt-1 w-full rounded-lg border border-slate-700/70 bg-slate-900/75 px-3 py-2 text-sm font-semibold text-slate-100 outline-none focus:border-amber-300/60"
+            >
+              {LOTUS_DROPPER_DEFINITIONS
+                .filter(dropper => !dropper.isBonus || showBonusEpsom)
+                .map(dropper => (
+                  <option key={dropper.id} value={dropper.id}>
+                    {dropper.label}{dropper.isBonus ? ' · Bonus, not Lotus' : ''}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1.5 pt-6 text-[10px] font-semibold text-amber-200">
+            <input
+              type="checkbox"
+              checked={showBonusEpsom}
+              onChange={event => {
+                const checked = event.target.checked;
+                setShowBonusEpsom(checked);
+                if (!checked && selectedDropperId === 'bonus-epsom') {
+                  setSelectedDropperId('magnesium');
+                }
+              }}
+              className="accent-amber-400"
+            />
+            Add bonus Epsom
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+          <strong className="text-slate-100">{selectedPlan.saltName}</strong>
+          <span className="text-xs text-slate-400">{selectedPlan.saltFormula}</span>
+          <span className="text-xs text-slate-500">· {selectedPlan.hydrationForm}</span>
+          {selectedPlan.isBonus && (
+            <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+              Bonus · not Lotus
+            </span>
+          )}
+        </div>
+        {selectedPlan.isBonus && (
+          <p className="mt-2 text-[10px] leading-relaxed text-amber-100/75">
+            Optional Epsom concentrate; the Lotus reference is magnesium-matched and does not make this a Lotus product.
+          </p>
+        )}
+      </section>
+      <section
         className="rounded-xl border border-rose-300/20 bg-rose-400/[0.05] p-3"
         aria-labelledby="lotus-shared-calibration-title"
         data-testid="lotus-shared-calibration"
@@ -10414,7 +10506,7 @@ function LotusDropsSection({
           <div>
             <h3 id="lotus-shared-calibration-title" className="text-sm font-semibold text-rose-100">Dropper calibration</h3>
             <p className="mt-1 max-w-3xl text-[10px] leading-relaxed text-slate-400">
-              Calibrate each tip style once. The selected style and its measured rate apply to every Lotus solution card.
+              Calibrate each tip style once. Its saved measurement is shared by every Lotus dropper that uses that tip.
               Weigh dispensed water; 1 g is treated as 1 mL.
             </p>
           </div>
@@ -10530,7 +10622,7 @@ function LotusDropsSection({
                     <span>{calibrationStyle} tip</span>
                   </h4>
                   <span className="text-[9px] uppercase tracking-wider text-slate-500">
-                    {style === calibrationStyle ? 'Active for all cards' : 'Saved for this style'}
+                    {style === calibrationStyle ? 'Selected style' : 'Saved for this style'}
                   </span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
@@ -10574,6 +10666,167 @@ function LotusDropsSection({
           })}
         </div>
       </section>
+      <section className="space-y-3 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.035] p-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-cyan-100">Brew-water volume</h3>
+            <p className="mt-0.5 text-[10px] text-slate-400">Adjusts the ppm-per-drop reference only.</p>
+          </div>
+          <strong className="text-sm tabular-nums text-cyan-100" data-testid="lotus-brew-volume-value">
+            {volumeDisplayText}
+          </strong>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-1 rounded-lg border border-slate-700/70 bg-slate-950/35 p-1" role="group" aria-label="Lotus brew volume units">
+            {(['mL', 'L', 'Gal'] as const).map(unit => (
+              <button
+                key={unit}
+                type="button"
+                aria-pressed={brewVolumeUnit === unit}
+                onClick={() => setBrewVolumeUnit(unit)}
+                className={`rounded-md px-3 py-1 text-[10px] font-semibold transition ${
+                  brewVolumeUnit === unit
+                    ? 'bg-cyan-300/20 text-cyan-100 ring-1 ring-cyan-200/30'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
+              >
+                {unit}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            aria-label="Reset brew volume"
+            onClick={() => {
+              setBrewVolumeMl(LOTUS_BREW_VOLUME_ML);
+              setBrewVolumeUnit('mL');
+            }}
+            className="rounded-lg border border-slate-600/70 bg-slate-900/60 px-3 py-1.5 text-[10px] font-semibold text-slate-300 transition hover:border-cyan-200/40 hover:text-cyan-100"
+          >
+            Reset to 450 mL
+          </button>
+        </div>
+        <input
+          type="range"
+          aria-label="Final brewing water volume"
+          aria-valuetext={volumeDisplayText}
+          data-testid="lotus-brew-volume-slider"
+          min={sliderMin}
+          max={sliderMax}
+          step={sliderStep}
+          value={volumeDisplayValue}
+          onChange={event => setBrewVolumeMl(Number(event.target.value) * volumeScaleMl)}
+          className="h-2 w-full cursor-pointer accent-cyan-300"
+        />
+        <div className="flex justify-between text-[9px] tabular-nums text-slate-500">
+          <span>50 mL</span>
+          <span>2 L</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2" data-testid={`lotus-per-drop-summary-${selectedPlan.id}`}>
+          <div
+            className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5"
+            data-testid="lotus-fixed-reference"
+          >
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              {selectedPlan.isBonus ? 'Mg-matched Lotus reference' : 'Lotus source reference'}
+            </div>
+            <div className="mt-1 text-sm font-semibold tabular-nums text-slate-100">
+              +{sourcePpmAtSelectedVolume.toFixed(3)} ppm {ION_MAP[selectedPlan.ionId].name} / drop
+            </div>
+            <div className="mt-0.5 text-[9px] text-slate-500">Source model · {volumeDisplayText} final water</div>
+          </div>
+          <div
+            className="rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] p-2.5"
+            data-testid="lotus-calibrated-ppm-per-drop"
+          >
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/75">
+              Your {style} dropper · {selectedCalibrationRate === null ? 'estimate' : 'calibrated'}
+            </div>
+            <div className="mt-1 text-sm font-semibold tabular-nums text-cyan-100">
+              +{calibratedPpmAtSelectedVolume.toFixed(3)} ppm {ION_MAP[selectedPlan.ionId].name} / drop
+            </div>
+            <div className="mt-0.5 text-[9px] text-slate-500">
+              {selectedPlan.dropsPerMl.toFixed(1)} drops/mL · {volumeDisplayText} final water
+            </div>
+          </div>
+        </div>
+        <p className="text-[9px] leading-relaxed text-slate-500">
+          The source reference is fixed to Lotus’s published model; calibration changes only your per-drop estimate.
+          Lotus’s homemade stock ratio and hydrate are estimates, not published specifications.
+        </p>
+      </section>
+      <section className="space-y-3 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.035] p-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-emerald-100">Prepare this stock</h3>
+            <p className="mt-0.5 text-[10px] text-slate-400">Finished weight includes salt + water, not the bottle.</p>
+          </div>
+          <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${
+            selectedStyleIsCalibrated
+              ? 'border border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
+              : 'border border-amber-300/25 bg-amber-400/10 text-amber-200'
+          }`}>
+            {selectedStyleIsCalibrated ? `${style} calibrated` : `Calibrate ${style} tip`}
+          </span>
+        </div>
+        {!selectedStyleIsCalibrated && (
+          <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] text-amber-100/90">
+            Complete the selected tip-style calibration above to unlock the finished stock weight.
+          </p>
+        )}
+        <label className="block max-w-sm">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Finished stock mass</span>
+          <span className="mt-1 flex items-center gap-2 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2">
+            <StableNumberInput
+              min="0.01"
+              step="0.01"
+              value={finishedStockMassInput}
+              onChange={event => setFinishedStockMassInput(event.target.value)}
+              disabled={!selectedStyleIsCalibrated}
+              placeholder="e.g. 100"
+              aria-label="Finished stock mass in grams"
+              data-testid="lotus-finished-stock-mass"
+              className="w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            />
+            <span className="text-xs text-slate-400">g</span>
+          </span>
+        </label>
+        {finishedStockMassInput.trim() !== '' && !hasValidFinishedMass && (
+          <p role="alert" className="text-[10px] text-amber-200">
+            Enter a positive, finite finished stock mass.
+          </p>
+        )}
+        {finishedMassPlan?.valid && (
+          <>
+            <div className="grid gap-2 sm:grid-cols-2" data-testid="lotus-finished-stock-amounts">
+              <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Salt to weigh</div>
+                <strong className="mt-1 block text-sm tabular-nums text-slate-100" data-testid="lotus-stock-salt-mass">
+                  {finishedMassPlan.saltMassG.toFixed(3)} g
+                </strong>
+              </div>
+              <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5">
+                <div className="text-[9px] uppercase tracking-wider text-slate-500">Water to add</div>
+                <strong className="mt-1 block text-sm tabular-nums text-slate-100" data-testid="lotus-stock-water-mass">
+                  {finishedMassPlan.waterMassG.toFixed(3)} g
+                </strong>
+              </div>
+            </div>
+            <div
+              className="rounded-lg border border-emerald-300/20 bg-slate-950/25 p-3"
+              data-testid="lotus-selected-stock-preparation"
+            >
+              <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">Preparation steps</h4>
+              <ConcentratePreparationSteps
+                totalStockMassG={finishedMassPlan.totalStockMassG}
+                waterMassG={finishedMassPlan.waterMassG}
+                saltLabel={`${finishedMassPlan.saltMassG.toFixed(3)} g ${selectedPlan.hydrationForm} ${selectedPlan.saltName}`}
+              />
+            </div>
+          </>
+        )}
+      </section>
+      <div className="hidden" aria-hidden="true">
       <div className="flex flex-wrap items-end justify-between gap-2 px-1">
         <h2 className="text-base font-semibold text-slate-100">Concentrates</h2>
          <div className="flex flex-wrap items-center gap-2">
@@ -10789,6 +11042,7 @@ function LotusDropsSection({
             </article>
           );
         })}
+      </div>
       </div>
       <p className="text-[10px] leading-relaxed text-slate-500">
         Sources:{' '}

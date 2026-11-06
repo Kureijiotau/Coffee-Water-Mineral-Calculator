@@ -16,6 +16,9 @@
 - The finished-stock target is salt plus water; the bottle is excluded.
 - Keep preparation and all stock calculations weight-based. Mention mL ≈ g only as a convenience for plain water.
 - Calibration determines drops per mL and calibrated per-drop guidance only. It must never change the Lotus salt-to-water ratio or the salt mass for a given finished stock mass.
+- Show the selected ion's calibrated ppm-per-drop value for the selected final brewing-water volume separately from the Lotus source-model reference.
+- The brew-volume slider defaults to 450 mL, offers mL/L/Gal display units, ranges from 50 to 2000 mL in 10 mL increments, and resets to 450 mL.
+- Brew volume rescales the displayed ppm references only; published Lotus drop counts, source-model ion amounts per drop, and concentrate preparation masses remain unchanged.
 - Do not claim to know Lotus's undisclosed stock concentrations or hydration forms.
 - Keep Bonus Epsom visibly distinct from Lotus products.
 - Do not change regular recipe concentrates or other calculator modes.
@@ -90,7 +93,7 @@ Reuse the saved Round/Straight calibration controls. Allow a positive finite fin
 
 - [ ] **Step 5: Render batch masses and ordered preparation instructions**
 
-Use `lotusMassStockPlan` for salt and water grams. Show the existing fixed Lotus-model reference and calibrated per-drop guidance as compact secondary information. Use `ConcentratePreparationSteps` with a salt label containing the calculated salt mass and the target total mass; retain the water-only 1 g ≈ 1 mL note.
+Use `lotusMassStockPlan` for salt and water grams. Add a 50–2000 mL brew-volume slider with 10 mL increments, 450 mL default, mL/L/Gal display toggles, and a reset-to-450-mL button. Scale the selected dropper's source and calibrated ppm-per-drop references to that volume while keeping source-model ion quantities per drop, official Lotus recipe drops, and stock preparation masses unchanged. Use `ConcentratePreparationSteps` with a salt label containing the calculated salt mass and the target total mass; retain the water-only 1 g ≈ 1 mL note.
 
 - [ ] **Step 6: Run the focused browser test and verify the main interaction path**
 
@@ -112,11 +115,11 @@ Expected: PASS for selecting a dropper, calibrating the selected style, entering
 
 - [ ] **Step 1: Add browser assertions for dropper-specific content and optional Bonus Epsom**
 
-Verify every selector option resolves to its expected salt/form, only one preparation target is shown, Bonus Epsom remains optional and labeled as an extra, and the fixed Lotus reference text/values remain visible and unchanged.
+Verify every selector option resolves to its expected salt/form, only one preparation target is shown, Bonus Epsom remains optional and labeled as an extra, and source-reference values remain distinct from the calibrated row.
 
 - [ ] **Step 2: Add browser assertions for invalid mass and style switching**
 
-Verify blank/invalid/non-positive masses do not produce ingredient quantities, an uncalibrated selected style blocks preparation, and switching back to a calibrated style restores eligibility.
+Verify blank/invalid/non-positive masses do not produce ingredient quantities, an uncalibrated selected style blocks preparation, switching back to a calibrated style restores eligibility, and changing brew volume rescales ppm references without changing recipe drops or preparation masses.
 
 - [ ] **Step 3: Run focused Lotus and shared-calibration tests**
 

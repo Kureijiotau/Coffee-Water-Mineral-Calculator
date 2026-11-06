@@ -27,6 +27,23 @@ import {
 } from './lotusConcentrate';
 
 describe('DIY Lotus Drops calculations', () => {
+  it('preserves each Lotus salt-to-water ratio at multiple finished stock masses', () => {
+    for (const dropper of LOTUS_DROPPER_DEFINITIONS) {
+      const reference = lotusStockPlan(dropper, 'straight', 100);
+      const referenceRatio = reference.saltMassG / 100;
+
+      for (const totalStockMassG of [20, 100, 250]) {
+        const plan = lotusMassStockPlan(dropper, totalStockMassG);
+
+        expect(plan.valid).toBe(true);
+        if (!plan.valid) continue;
+        expect(plan.totalStockMassG).toBe(totalStockMassG);
+        expect(plan.saltMassG + plan.waterMassG).toBeCloseTo(totalStockMassG, 10);
+        expect(plan.saltMassG / plan.waterMassG).toBeCloseTo(referenceRatio, 10);
+      }
+    }
+  });
+
   it('maps the four commercial droppers to the expected salts', () => {
     expect(LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus).map(dropper => [dropper.id, dropper.saltId])).toEqual([
       ['magnesium', 'mgcl2'],
@@ -153,6 +170,24 @@ describe('DIY Lotus Drops calculations', () => {
       calciumPlan.saltMgPerMl / calciumPlan.dropsPerMl,
       8,
     );
+  });
+
+  it('updates calibrated ppm per drop while preserving each fixed Lotus reference', () => {
+    const calibration = {
+      dropsInput: '100',
+      weightInput: '4',
+      style: 'straight' as const,
+    };
+
+    for (const dropper of LOTUS_DROPPER_DEFINITIONS) {
+      const estimated = lotusCalibratedStockPlan(dropper, 'straight', 59, 20);
+      const calibrated = lotusCalibratedStockPlan(dropper, 'straight', 59, 20, calibration);
+
+      expect(calibrated.dropsPerMl).toBe(25);
+      expect(calibrated.saltMassG).toBeCloseTo(estimated.saltMassG, 10);
+      expect(calibrated.lotusReferenceIonPpmPerDrop).toBe(estimated.lotusReferenceIonPpmPerDrop);
+      expect(calibrated.ionPpmPerDrop).not.toBeCloseTo(estimated.ionPpmPerDrop, 8);
+    }
   });
 
   it('keeps the Lotus source-drop reference separate from calibrated dropper output', () => {

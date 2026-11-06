@@ -59,11 +59,18 @@ the ratio identical at every batch size. Calibration and tip selection cannot
 alter either ingredient mass for the same target.
 
 Keep the existing fixed Lotus-model reference and calibrated per-drop guidance
-as compact, read-only secondary information. Calibration may change the
-calibrated per-drop values, but not the fixed Lotus-model reference. Clearly
-identify Lotus stock strength as an estimate based on public recipe/drop-weight
-data; do not claim to know Lotus's undisclosed stock concentrations or
-hydration forms.
+as compact, read-only secondary information. Include a small, explicit
+ion-contribution value in ppm per drop for the selected dropper, based on the
+selected style's current calibration and the selected final brewing-water
+volume. Add a slider defaulting to 450 mL, with mL, L, and Gal display units,
+and a reset button that restores 450 mL and mL units. Use a 50–2000 mL physical
+range in 10 mL increments. The source-based Lotus reference and the calibrated
+dropper's ppm-per-drop value both scale to the selected final brewing-water
+volume; changing calibration affects only the calibrated value. The slider
+must not change the published Lotus drop counts, concentrate salt/water masses,
+or the underlying source-model ion quantities per drop. Clearly identify Lotus
+stock strength as an estimate based on public recipe/drop-weight data; do not
+claim to know Lotus's undisclosed stock concentrations or hydration forms.
 
 ### Preparation instructions
 
@@ -98,6 +105,14 @@ water, not finished stock.
   fixed Lotus reference values, and ion calculations remain unchanged for all
   droppers and tip styles. Salt/water preparation masses vary with the entered
   total mass while retaining the established ratio.
+- The selected dropper shows a compact calibrated ion ppm-per-drop value for
+  the selected final brewing-water volume; it updates with the selected tip
+  calibration and remains distinct from the Lotus source-model reference.
+- The brew-volume slider starts at 450 mL, converts its displayed value between
+  mL, L, and Gal without changing the physical volume, and resets to 450 mL.
+- Changing brew volume rescales only the displayed per-drop ppm references;
+  Lotus recipe drop counts, per-drop source-model ion amounts, and concentrate
+  preparation masses remain unchanged.
 - Calibration changes per-drop guidance but not salt/water masses for a fixed
   finished stock mass.
 - Salt mass plus water mass equals the target finished mass, and the existing

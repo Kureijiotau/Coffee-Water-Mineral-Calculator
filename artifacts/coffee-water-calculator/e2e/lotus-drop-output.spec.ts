@@ -1,54 +1,128 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
-test('shows fixed Lotus-model and personal per-drop ppm/mg on every DIY Lotus card', async ({ page }) => {
+async function openLotusDropsWithoutSavedCalibration(page: Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('coffee-water-diy-concentrate-inputs', JSON.stringify({
+      lotusCalibrationInputs: {},
+    }));
+  });
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
   await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
+}
 
-  const physicalSaltForms = {
-    magnesium: { name: 'Magnesium Chloride', formula: 'MgCl₂', form: 'Hexahydrate' },
-    calcium: { name: 'Calcium Chloride', formula: 'CaCl₂', form: 'Dihydrate' },
-    potassium: { name: 'Potassium Bicarbonate', formula: 'KHCO₃', form: 'Anhydrous' },
-    sodium: { name: 'Sodium Bicarbonate', formula: 'NaHCO₃', form: 'Anhydrous' },
-  };
+async function selectStyle(page: Page, style: 'Round' | 'Straight') {
+  await page.getByRole('group', { name: 'Lotus dropper tip style' })
+    .getByRole('button', { name: style, exact: true })
+    .click();
+}
 
-  for (const [id, salt] of Object.entries(physicalSaltForms)) {
-    const summary = page.getByTestId(`lotus-per-drop-summary-${id}`);
-    const lotusRow = page.getByTestId(`lotus-drop-lotus-${id}`);
-    const userRow = page.getByTestId(`lotus-drop-user-${id}`);
-    await expect(summary).toBeVisible();
-    await expect(lotusRow).toBeVisible();
-    await expect(userRow).toBeVisible();
-    await expect(lotusRow).toContainText(salt.name);
-    await expect(userRow).toContainText(salt.name);
-    const saltDoseHeader = summary.getByRole('columnheader', { name: /salt dose/i });
-    await expect(saltDoseHeader).toContainText(salt.formula);
-    await expect(saltDoseHeader).toContainText(salt.form);
-  }
+test('selects one dropper and gates mass preparation on its tip calibration', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
 
-  const lotusReference = page.getByTestId('lotus-drop-lotus-magnesium');
-  const userDropper = page.getByTestId('lotus-drop-user-magnesium');
-  await expect(lotusReference).toContainText('2.430 ppm');
-  await expect(lotusReference).toContainText('9.149 mg');
-  await expect(userDropper).toContainText('3.933 ppm');
-  await expect(userDropper).toContainText('20.0 drops/mL · estimate');
+  const selector = page.getByRole('combobox', { name: 'Dropper to prepare' });
+  await expect(selector).toHaveValue('magnesium');
+  const activeDropper = page.getByTestId('lotus-selected-dropper');
+  await expect(activeDropper).toContainText('Magnesium Chloride');
+  await expect(activeDropper).toContainText('Hexahydrate');
 
-  const referenceBeforeCalibration = await lotusReference.textContent();
-  const dropperBeforeCalibration = await userDropper.textContent();
+  const massInput = page.getByTestId('lotus-finished-stock-mass');
+  await expect(massInput).toBeDisabled();
+  await expect(page.getByTestId('lotus-selected-stock-preparation')).toHaveCount(0);
+
+  await selectStyle(page, 'Straight');
+  await expect(massInput).toBeDisabled();
   await page.getByTestId('input-lotus-calibration-drops-straight').fill('100');
   await page.getByTestId('input-lotus-calibration-weight-straight').fill('4');
-  await expect(userDropper).toContainText('25.0 drops/mL · calibrated');
-  await expect(lotusReference).toHaveText(referenceBeforeCalibration ?? '');
-  await expect(userDropper).not.toHaveText(dropperBeforeCalibration ?? '');
+  await expect(massInput).toBeEnabled();
+
+  await massInput.fill('0');
+  await expect(page.getByTestId('lotus-selected-stock-preparation')).toHaveCount(0);
+  await massInput.fill('100');
+  const prep = page.getByTestId('lotus-selected-stock-preparation');
+  await expect(prep).toBeVisible();
+  await expect(prep).toContainText('tare it once');
+  await expect(prep).toContainText('100 g (salt + water; bottle excluded)');
+  await expect(prep).toContainText('headspace');
+  await expect(prep).toContainText('shake/mix until the salt dissolves');
+
+  await selectStyle(page, 'Round');
+  await expect(massInput).toBeDisabled();
+  await page.getByTestId('input-lotus-calibration-drops-round').fill('60');
+  await page.getByTestId('input-lotus-calibration-weight-round').fill('5');
+  await expect(massInput).toBeEnabled();
+});
+
+test('shows calibrated ppm per drop separately from the fixed Lotus reference', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  const selector = page.getByRole('combobox', { name: 'Dropper to prepare' });
+
+  const saltForms = [
+    { value: 'magnesium', salt: 'Magnesium Chloride', form: 'Hexahydrate' },
+    { value: 'calcium', salt: 'Calcium Chloride', form: 'Dihydrate' },
+    { value: 'potassium', salt: 'Potassium Bicarbonate', form: 'Anhydrous' },
+    { value: 'sodium', salt: 'Sodium Bicarbonate', form: 'Anhydrous' },
+  ];
+
+  for (const item of saltForms) {
+    await selector.selectOption(item.value);
+    const selected = page.getByTestId('lotus-selected-dropper');
+    await expect(selected).toContainText(item.salt);
+    await expect(selected).toContainText(item.form);
+  }
 
   await page.getByRole('checkbox', { name: 'Add bonus Epsom' }).check();
-  const epsom = page.getByTestId('lotus-per-drop-summary-bonus-epsom');
-  await expect(epsom).toBeVisible();
-  await expect(epsom).toContainText('Mg-matched Lotus reference');
-  await expect(epsom).toContainText('Salt mass is estimated');
-  await expect(page.getByTestId('lotus-drop-lotus-bonus-epsom')).toContainText('Magnesium Sulfate');
-  await expect(page.getByTestId('lotus-drop-user-bonus-epsom')).toContainText('Magnesium Sulfate');
-  const epsomHeader = epsom.getByRole('columnheader', { name: /salt dose/i });
-  await expect(epsomHeader).toContainText('MgSO₄');
-  await expect(epsomHeader).toContainText('Heptahydrate (Epsom)');
+  await selector.selectOption('bonus-epsom');
+  const bonus = page.getByTestId('lotus-selected-dropper');
+  await expect(bonus).toContainText('Magnesium Sulfate');
+  await expect(bonus).toContainText('Heptahydrate (Epsom)');
+  await expect(bonus).toContainText('Bonus · not Lotus');
+
+  await selector.selectOption('magnesium');
+  await selectStyle(page, 'Straight');
+  await page.getByTestId('input-lotus-calibration-drops-straight').fill('100');
+  await page.getByTestId('input-lotus-calibration-weight-straight').fill('4');
+  const massInput = page.getByTestId('lotus-finished-stock-mass');
+  await massInput.fill('100');
+
+  const fixedReference = page.getByTestId('lotus-fixed-reference');
+  const calibratedDrop = page.getByTestId('lotus-calibrated-ppm-per-drop');
+  await expect(fixedReference).toContainText('2.430 ppm');
+  await expect(calibratedDrop).toContainText('3.146 ppm');
+  await expect(calibratedDrop).toContainText('450 mL');
+  const saltMassBefore = await page.getByTestId('lotus-stock-salt-mass').textContent();
+  const waterMassBefore = await page.getByTestId('lotus-stock-water-mass').textContent();
+
+  const volumeValue = page.getByTestId('lotus-brew-volume-value');
+  const volumeSlider = page.getByTestId('lotus-brew-volume-slider');
+  await expect(volumeValue).toHaveText('450 mL');
+  await page.getByRole('group', { name: 'Lotus brew volume units' })
+    .getByRole('button', { name: 'L', exact: true })
+    .click();
+  await expect(volumeValue).toHaveText('0.45 L');
+  await volumeSlider.evaluate((element: HTMLInputElement) => {
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setValue?.call(element, '0.9');
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(volumeValue).toHaveText('0.9 L');
+  await expect(fixedReference).toContainText('1.215 ppm');
+  await expect(calibratedDrop).toContainText('1.573 ppm');
+  await expect(page.getByTestId('lotus-stock-salt-mass')).toHaveText(saltMassBefore ?? '');
+  await expect(page.getByTestId('lotus-stock-water-mass')).toHaveText(waterMassBefore ?? '');
+  await page.getByRole('group', { name: 'Lotus brew volume units' })
+    .getByRole('button', { name: 'Gal', exact: true })
+    .click();
+  await expect(volumeValue).toHaveText('0.238 Gal');
+  await page.getByRole('button', { name: 'Reset brew volume' }).click();
+  await expect(volumeValue).toHaveText('450 mL');
+  await expect(fixedReference).toContainText('2.430 ppm');
+  await expect(calibratedDrop).toContainText('3.146 ppm');
+
+  await page.getByTestId('input-lotus-calibration-drops-straight').fill('120');
+  await expect(calibratedDrop).toContainText('2.622 ppm');
+  await expect(fixedReference).toContainText('2.430 ppm');
+  await expect(page.getByTestId('lotus-stock-salt-mass')).toHaveText(saltMassBefore ?? '');
+  await expect(page.getByTestId('lotus-stock-water-mass')).toHaveText(waterMassBefore ?? '');
 });
