@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { LotusMassPreparationPanel } from './LotusMassPreparationPanel';
+import { LotusInlineStockPreparation } from './LotusInlineStockPreparation';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
@@ -101,6 +102,28 @@ describe('Lotus stock preparation reference checks', () => {
           dropper,
           style: 'straight',
           calibration: { dropsInput: '100', weightInput: '5', style: 'straight' },
+          massInput: finishedMass,
+          onMassInputChange: () => {},
+        }));
+
+        expect(markup).toContain(`data-testid="lotus-stock-salt-mass">${expectedSalt} g</strong>`);
+        expect(markup).toContain(`data-testid="lotus-stock-water-mass">${expectedWater} g</strong>`);
+        if (fixture.id === 'bonus-epsom') {
+          expect(markup).toContain('Optional Epsom reference · not Lotus');
+          expect(markup).toContain('Epsom is not a Lotus product.');
+        }
+      }
+    }
+  });
+
+  it('renders inline stock amounts from the same independent fixtures', () => {
+    for (const fixture of STOCK_PREPARATION_FIXTURES) {
+      const dropper = LOTUS_DROPPER_DEFINITIONS.find(item => item.id === fixture.id)!;
+      for (const [finishedMass, [expectedSalt, expectedWater]] of Object.entries(fixture.amounts)) {
+        const markup = renderToStaticMarkup(createElement(LotusInlineStockPreparation, {
+          dropper,
+          style: 'straight',
+          isCalibrated: true,
           massInput: finishedMass,
           onMassInputChange: () => {},
         }));
