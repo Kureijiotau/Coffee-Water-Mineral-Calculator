@@ -14,9 +14,10 @@ test('edits the shared tip calibration in Stock Builder and reuses it in the Gui
 
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
+  await page.getByTestId('mass-shared-calibration').locator('summary').click();
 
-  const dropsInput = page.getByLabel('Measured number of drops');
-  const weightInput = page.getByLabel('Measured drop weight in grams');
+  const dropsInput = page.getByRole('textbox', { name: 'Straight tip measured drops' });
+  const weightInput = page.getByRole('textbox', { name: 'Straight tip water weight in grams' });
   await expect(dropsInput).toHaveValue('100');
   await expect(weightInput).toHaveValue('3');
   await expect(dropsInput).not.toHaveAttribute('readonly');
@@ -24,21 +25,28 @@ test('edits the shared tip calibration in Stock Builder and reuses it in the Gui
 
   await dropsInput.fill('120');
   await weightInput.fill('4');
-  await expect(page.getByTestId('diy-stock-builder-tip-straight'))
-    .toHaveAccessibleName('Straight tip, 30.0 drops per mL');
+  await expect(page.getByTestId('mass-selected-dropper-rate'))
+    .toHaveText('30.0 drops/mL · Calibrated');
 
-  await page.getByTestId('diy-stock-builder-tip-round').click();
-  await expect(dropsInput).toHaveValue('80');
-  await expect(weightInput).toHaveValue('4');
-  await page.getByTestId('diy-stock-builder-tip-straight').click();
+  await page.getByRole('combobox', { name: 'Stock dropper tip' }).selectOption('round');
+  const roundDropsInput = page.getByRole('textbox', { name: 'Round tip measured drops' });
+  const roundWeightInput = page.getByRole('textbox', { name: 'Round tip water weight in grams' });
+  await expect(roundDropsInput).toHaveValue('80');
+  await expect(roundWeightInput).toHaveValue('4');
+  await expect(page.getByTestId('mass-selected-dropper-rate'))
+    .toHaveText('20.0 drops/mL · Calibrated');
+  await page.getByRole('combobox', { name: 'Stock dropper tip' }).selectOption('straight');
+  await expect(page.getByTestId('mass-selected-dropper-rate'))
+    .toHaveText('30.0 drops/mL · Calibrated');
   await expect(dropsInput).toHaveValue('120');
   await expect(weightInput).toHaveValue('4');
 
   await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
-  await expect(page.getByTestId('input-lotus-calibration-drops-straight')).toHaveValue('120');
-  await expect(page.getByTestId('input-lotus-calibration-weight-straight')).toHaveValue('4');
-  await expect(page.getByTestId('input-lotus-calibration-drops-round')).toHaveValue('80');
-  await expect(page.getByTestId('input-lotus-calibration-weight-round')).toHaveValue('4');
+  await page.getByTestId('mass-shared-calibration').locator('summary').click();
+  await expect(page.getByRole('textbox', { name: 'Straight tip measured drops' })).toHaveValue('120');
+  await expect(page.getByRole('textbox', { name: 'Straight tip water weight in grams' })).toHaveValue('4');
+  await expect(page.getByRole('textbox', { name: 'Round tip measured drops' })).toHaveValue('80');
+  await expect(page.getByRole('textbox', { name: 'Round tip water weight in grams' })).toHaveValue('4');
 
   await page.getByTestId('tab-watermancer-guide').click();
   await page.getByTestId('button-step-calibrate').click();
@@ -50,8 +58,9 @@ test('edits the shared tip calibration in Stock Builder and reuses it in the Gui
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
   await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
-  await expect(page.getByTestId('input-lotus-calibration-drops-straight')).toHaveValue('120');
-  await expect(page.getByTestId('input-lotus-calibration-weight-straight')).toHaveValue('4');
-  await expect(page.getByTestId('input-lotus-calibration-drops-round')).toHaveValue('80');
-  await expect(page.getByTestId('input-lotus-calibration-weight-round')).toHaveValue('4');
+  await page.getByTestId('mass-shared-calibration').locator('summary').click();
+  await expect(page.getByRole('textbox', { name: 'Straight tip measured drops' })).toHaveValue('120');
+  await expect(page.getByRole('textbox', { name: 'Straight tip water weight in grams' })).toHaveValue('4');
+  await expect(page.getByRole('textbox', { name: 'Round tip measured drops' })).toHaveValue('80');
+  await expect(page.getByRole('textbox', { name: 'Round tip water weight in grams' })).toHaveValue('4');
 });

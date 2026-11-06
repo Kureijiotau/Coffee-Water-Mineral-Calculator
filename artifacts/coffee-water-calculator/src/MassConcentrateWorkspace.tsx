@@ -8,7 +8,8 @@ import { checkMassConcentrate, recommendMassConcentrateStrength } from './concen
 import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
 import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type MassConcentratePlanSnapshot } from './concentrateStockStorage';
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
-import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, hasAnyDiyDropperCalibration, lotusMeasuredDropsPerMl, type LotusDropperCalibration, type LotusDropperStyle, type LotusStyleCalibrationInputs } from './lotusConcentrate';
+import { LotusMassPreparationPanel } from './LotusMassPreparationPanel';
+import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, hasAnyDiyDropperCalibration, lotusMeasuredDropsPerMl, type LotusDropperCalibration, type LotusDropperId, type LotusDropperStyle, type LotusStyleCalibrationInputs } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
 import { getLitersAfterVolumeUnitToggle } from './volumeUnits';
 
@@ -56,13 +57,18 @@ function HelpTip({ testId, label, text, align = 'center' }: { testId: string; la
   );
 }
 
-function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, onCalibrationChange }: {
+function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selectedStyle, onCalibrationChange }: {
   dropperRates: Record<LotusDropperStyle, number>;
   sharedCalibrations: LotusStyleCalibrationInputs;
+  selectedStyle: LotusDropperStyle;
   onCalibrationChange: (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => void;
 }) {
   const hasSavedCalibration = hasAnyDiyDropperCalibration(sharedCalibrations);
-  const [open, setOpen] = useState(() => !hasSavedCalibration);
+  const selectedStyleIsCalibrated = lotusMeasuredDropsPerMl(sharedCalibrations[selectedStyle]) !== null;
+  const [open, setOpen] = useState(() => !hasSavedCalibration || !selectedStyleIsCalibrated);
+  useEffect(() => {
+    if (!selectedStyleIsCalibrated) setOpen(true);
+  }, [selectedStyle, selectedStyleIsCalibrated]);
 
   return <details
     className="rounded-2xl border border-sky-300/30 bg-gradient-to-br from-sky-400/[0.08] via-slate-800/80 to-blue-500/[0.06] p-4 shadow-xl sm:p-5"
@@ -75,11 +81,13 @@ function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, onCal
         <Pipette className="h-4 w-4 text-sky-200" aria-hidden="true" />
         Dropper calibration
       </span>
-      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${hasSavedCalibration
+      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${selectedStyleIsCalibrated
         ? 'border-emerald-300/30 bg-emerald-400/10 text-emerald-200'
         : 'border-slate-500/40 bg-slate-950/30 text-slate-400'}`}>
-        {hasSavedCalibration && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-        {hasSavedCalibration ? 'Calibrated' : 'Not calibrated'}
+        {selectedStyleIsCalibrated && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+        {selectedStyleIsCalibrated
+          ? `${selectedStyle} calibrated`
+          : hasSavedCalibration ? `Calibrate ${selectedStyle}` : 'Not calibrated'}
       </span>
     </summary>
     <div className="mt-3">
@@ -151,6 +159,17 @@ export function MassConcentrateWorkspace(props: Props) {
   const initialPlan = initial.kind === 'mass' && (!initial.plan.workspaceMode || initial.plan.workspaceMode === props.workspaceMode) ? initial.plan : null;
   const [toolMode, setToolMode] = useState<'recipe' | 'lotus'>(() =>
     props.workspaceMode === 'diy' && initialPlan?.toolMode === 'lotus' ? 'lotus' : 'recipe');
+  const [selectedLotusDropperId, setSelectedLotusDropperId] = useState<LotusDropperId>(() => {
+    if (initialPlan?.toolMode === 'lotus') {
+      return LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.saltId === initialPlan.selectedSaltId)?.id ?? 'magnesium';
+    }
+    return 'magnesium';
+  });
+  const [lotusMassInputs, setLotusMassInputs] = useState<Record<string, string>>(() => Object.fromEntries(
+    (initialPlan?.groups ?? [])
+      .filter(group => group.id.startsWith('lotus-') && Number.isFinite(group.totalStockMassG) && group.totalStockMassG > 0)
+      .map(group => [group.id.slice('lotus-'.length), String(group.totalStockMassG)]),
+  ));
   const [strategy, setStrategy] = useState<MassConcentratePlanSnapshot['strategy']>(initialPlan?.strategy ?? 'individual');
   const [groups, setGroups] = useState<Record<string, Group>>(() => Object.fromEntries(initialPlan?.groups.map(g => [g.id, g]) ?? []));
   const [saltId, setSaltId] = useState(initialPlan?.selectedSaltId ?? 'mgso4');
@@ -175,6 +194,10 @@ export function MassConcentrateWorkspace(props: Props) {
   const cardsRef = useRef<HTMLDivElement>(null);
   const snapshotRef = useRef(props.initialSnapshot);
   const salt = SALTS.find(s => s.id === saltId) ?? SALTS[0];
+  const selectedLotusDropper = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === selectedLotusDropperId)
+    ?? LOTUS_DROPPER_DEFINITIONS[0];
+  const selectedLotusSalt = SALTS.find(item => item.id === selectedLotusDropper.saltId) ?? SALTS[0];
+  const selectedLotusForm = selectedLotusSalt.hydrationForms[selectedLotusSalt.defaultFormIdx ?? 0] ?? selectedLotusSalt.hydrationForms[0];
   const selectedForm = forms[salt.id] ?? salt.defaultFormIdx ?? 0;
   const finalLiters = Number(finalLitersInput);
   const finalWaterMassKg = waterLitersToEquivalentMassKg(finalLiters);
@@ -215,17 +238,36 @@ export function MassConcentrateWorkspace(props: Props) {
   const waterEstimate: StockDropCalibration = { basis: 'water-estimate', drops: waterRate, massG: 1, compositionKey: '', tipKey };
   const groupFor = (id: string) => groups[id] ?? emptyGroup(id);
   const update = (id: string, patch: Partial<Group>) => setGroups(previous => ({ ...previous, [id]: { ...(previous[id] ?? emptyGroup(id)), ...patch } }));
+  const updateLotusMassInput = (value: string) => {
+    setLotusMassInputs(previous => ({ ...previous, [selectedLotusDropperId]: value }));
+    update(`lotus-${selectedLotusDropperId}`, {
+      totalStockMassG: value.trim() === '' ? NaN : Number(value),
+      batchScale: 1,
+    });
+  };
   const actualRecipe = isRecipe ? recipeTargets : { [salt.id]: Number(targetInput) };
   const data: MassConcentratePlanSnapshot = { version: 2, basis: 'mass', workspaceMode: props.workspaceMode, toolMode: isRecipe ? 'recipe' : toolMode,
-    selectedSaltId: salt.id, dropperStyle: tipKey, percentWw: Number(percentInput), strategy, finalLiters,
+    selectedSaltId: !isRecipe && toolMode === 'lotus' ? selectedLotusDropper.saltId : salt.id, dropperStyle: tipKey, percentWw: Number(percentInput), strategy, finalLiters,
     recipe: Object.fromEntries(Object.entries(actualRecipe).filter(([, value]) => value > 0).map(([id, target]) => [id, { target, formIdx: recipeForms[id] ?? 0 }])),
-    groups: activeGroups.filter(g => g.saltIds.length).map(g => ({ ...groupFor(g.id), saltIds: g.saltIds })),
+    groups: activeGroups
+      .filter(g => g.saltIds.length && (
+        isRecipe || toolMode !== 'lotus'
+        || (groups[g.id] && Number.isFinite(groups[g.id].totalStockMassG) && groups[g.id].totalStockMassG > 0)
+      ))
+      .map(g => ({ ...groupFor(g.id), saltIds: g.saltIds })),
     ...(legacyOriginal ? { legacyVolumePlan: legacyOriginal } : {}) };
   const dataKey = JSON.stringify(data);
 
   const applyPlan = (plan: MassConcentratePlanSnapshot) => {
     setGroups(Object.fromEntries(plan.groups.map(g => [g.id, g]))); setStrategy(plan.strategy);
-    setToolMode(props.workspaceMode === 'diy' && plan.toolMode === 'lotus' ? 'lotus' : 'recipe'); setFinalLitersInput(String(plan.finalLiters));
+    setToolMode(props.workspaceMode === 'diy' && plan.toolMode === 'lotus' ? 'lotus' : 'recipe');
+    if (props.workspaceMode === 'diy' && plan.toolMode === 'lotus') {
+      setSelectedLotusDropperId(LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.saltId === plan.selectedSaltId)?.id ?? 'magnesium');
+      setLotusMassInputs(Object.fromEntries(plan.groups
+        .filter(group => group.id.startsWith('lotus-') && Number.isFinite(group.totalStockMassG) && group.totalStockMassG > 0)
+        .map(group => [group.id.slice('lotus-'.length), String(group.totalStockMassG)])));
+    }
+    setFinalLitersInput(String(plan.finalLiters));
     setSaltId(plan.selectedSaltId ?? 'mgso4'); setPercentInput(String(plan.percentWw ?? 5));
     setTipKey(plan.dropperStyle ?? snapshotRef.current.dropperStyle);
     setForms(Object.fromEntries(Object.entries(plan.recipe ?? {}).map(([id, row]) => [id, row.formIdx])));
@@ -279,7 +321,7 @@ export function MassConcentrateWorkspace(props: Props) {
               {isRecipe
                 ? 'Build and calibrate the concentrate for the imported calculator recipe.'
                 : toolMode === 'lotus'
-                  ? 'Craft four independent mineral stocks for your own brewing setup.'
+                  ? 'Prepare one Lotus-style mineral stock at a time.'
                   : 'Build a single-mineral concentrate by weight.'}
             </div>
           </div>
@@ -330,8 +372,64 @@ export function MassConcentrateWorkspace(props: Props) {
         </label>
       </div>
     </section>}
+    {!isRecipe && toolMode === 'lotus' && <section className="rounded-2xl border border-amber-300/25 bg-slate-900/60 p-4 shadow-xl sm:p-5" data-testid="lotus-selected-dropper">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-xs font-semibold text-amber-100">
+          Dropper to prepare
+          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={inputClass}
+            value={selectedLotusDropperId}
+            onChange={event => setSelectedLotusDropperId(event.target.value as LotusDropperId)}>
+            {LOTUS_DROPPER_DEFINITIONS.map(dropper => (
+              <option key={dropper.id} value={dropper.id}>
+                {dropper.label}{dropper.isBonus ? ' · optional, not Lotus' : ''}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex items-end gap-2">
+          <span className="flex-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs">
+            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Selected mineral</span>
+            <strong className="mt-1 block text-sm" style={{ color: getSaltColorTokens(selectedLotusSalt).primary }}>{selectedLotusSalt.name}</strong>
+            <span className="text-[10px] text-slate-400">{selectedLotusSalt.formula} · {selectedLotusForm?.label}</span>
+          </span>
+          {selectedLotusDropper.isBonus && (
+            <span className="mb-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+              Bonus · not Lotus
+            </span>
+          )}
+          <span
+            className={`mb-1 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${
+              lotusMeasuredDropsPerMl(shared[tipKey]) !== null
+                ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
+                : 'border-amber-300/25 bg-amber-400/10 text-amber-200'
+            }`}
+            data-testid="lotus-selected-calibration-status"
+          >
+            {lotusMeasuredDropsPerMl(shared[tipKey]) !== null ? `${tipKey} calibrated` : `${tipKey} needs calibration`}
+          </span>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/30 p-1" role="group" aria-label="Lotus dropper tip style">
+        {(['straight', 'round'] as const).map(style => (
+          <button key={style} type="button" aria-pressed={tipKey === style} onClick={() => setTipKey(style)}
+            className={`rounded-md px-3 py-2 text-xs font-semibold capitalize transition ${
+              tipKey === style
+                ? 'bg-cyan-400/15 text-cyan-100 shadow-sm ring-1 ring-cyan-200/25'
+                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+            }`}>
+            {style === 'straight' ? 'Straight' : 'Round'}
+          </button>
+        ))}
+      </div>
+    </section>}
+    {!isRecipe && toolMode === 'lotus' && <SharedDropperCalibrationPanel
+      dropperRates={dropperRates}
+      sharedCalibrations={shared}
+      selectedStyle={tipKey}
+      onCalibrationChange={updateSharedCalibration}
+    />}
     {!isRecipe && toolMode !== 'lotus' && <>
-      <SharedDropperCalibrationPanel dropperRates={dropperRates} sharedCalibrations={shared} onCalibrationChange={updateSharedCalibration} />
+      <SharedDropperCalibrationPanel dropperRates={dropperRates} sharedCalibrations={shared} selectedStyle={tipKey} onCalibrationChange={updateSharedCalibration} />
       <section className="rounded-2xl border border-sky-300/25 bg-slate-900/55 p-4 shadow-lg" data-testid="mass-dosing-tip-selection">
         <label className="block text-xs font-semibold text-sky-100">
           Stock dropper tip
@@ -345,7 +443,7 @@ export function MassConcentrateWorkspace(props: Props) {
         </p>
       </section>
     </>}
-    {isRecipe || toolMode === 'lotus' ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6">
+    {isRecipe ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6">
       {isRecipe && <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-fuchsia-100">{props.recipeHandoff?.name}</div>
@@ -372,7 +470,6 @@ export function MassConcentrateWorkspace(props: Props) {
         <button className={buttonClass} onClick={toggleMassVolumeUnit}>Use {props.volumeUnit === 'liters' ? 'gallons' : 'liters'} for brewing water</button>
         <p className="text-xs text-slate-400">{WATER_MASS_NOTE}</p>
       </div>
-      {toolMode === 'lotus' && <p className="rounded-xl border border-amber-300/20 bg-amber-300/5 p-3 text-xs text-amber-100">Homemade stock estimates use the published salt:water mass ratios. Commercial Lotus recipes remain source references, not exact predictions for a homemade stock. Verify finished-stock drops.</p>}
     </section> : null}
     {restoreError && <div role="alert" className="rounded-xl border border-red-400/40 p-4 text-sm text-red-200">{restoreError} No stock was silently converted.
       <p className="mt-2">The saved record has not been changed. Starting a new plan keeps a local recovery copy first.</p>
@@ -398,7 +495,16 @@ export function MassConcentrateWorkspace(props: Props) {
         setLegacy(null);
       }}>Rebuild by weight</button>
     </section> : !restoreError && <div ref={cardsRef} className="space-y-4">
-      {activeGroups.map(g => {
+      {!isRecipe && toolMode === 'lotus' ? (
+        <LotusMassPreparationPanel
+          dropper={selectedLotusDropper}
+          style={tipKey}
+          fallbackStraightDropsPerMl={props.dropsPerMl}
+          calibration={shared[tipKey]}
+          massInput={lotusMassInputs[selectedLotusDropperId] ?? ''}
+          onMassInputChange={updateLotusMassInput}
+        />
+      ) : activeGroups.map(g => {
         const state = groupFor(g.id);
         let targets = Object.fromEntries(g.saltIds.map(id => [id, recipeTargets[id] ?? 0]));
         let groupForms = Object.fromEntries(g.saltIds.map(id => [id, recipeForms[id] ?? SALTS.find(s => s.id === id)?.defaultFormIdx ?? 0]));

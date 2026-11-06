@@ -2,9 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function openLotusDropsWithoutSavedCalibration(page: Page) {
   await page.addInitScript(() => {
+    const initializedKey = 'lotus-output-test-initialized';
+    if (sessionStorage.getItem(initializedKey) === '1') return;
     localStorage.setItem('coffee-water-diy-concentrate-inputs', JSON.stringify({
       lotusCalibrationInputs: {},
     }));
+    sessionStorage.setItem(initializedKey, '1');
   });
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
@@ -32,8 +35,8 @@ test('selects one dropper and gates mass preparation on its tip calibration', as
 
   await selectStyle(page, 'Straight');
   await expect(massInput).toBeDisabled();
-  await page.getByTestId('input-lotus-calibration-drops-straight').fill('100');
-  await page.getByTestId('input-lotus-calibration-weight-straight').fill('4');
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
+  await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
   await expect(massInput).toBeEnabled();
 
   await massInput.fill('0');
@@ -48,9 +51,16 @@ test('selects one dropper and gates mass preparation on its tip calibration', as
 
   await selectStyle(page, 'Round');
   await expect(massInput).toBeDisabled();
-  await page.getByTestId('input-lotus-calibration-drops-round').fill('60');
-  await page.getByTestId('input-lotus-calibration-weight-round').fill('5');
+  await page.getByRole('textbox', { name: 'Round tip measured drops' }).fill('60');
+  await page.getByRole('textbox', { name: 'Round tip water weight in grams' }).fill('5');
   await expect(massInput).toBeEnabled();
+
+  await page.reload();
+  await page.getByTestId('tab-concentrates').click();
+  await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Dropper to prepare' })).toHaveValue('magnesium');
+  await expect(page.getByTestId('lotus-finished-stock-mass')).toHaveValue('100');
+  await expect(page.getByTestId('lotus-selected-stock-preparation')).toBeVisible();
 });
 
 test('shows calibrated ppm per drop separately from the fixed Lotus reference', async ({ page }) => {
@@ -71,7 +81,6 @@ test('shows calibrated ppm per drop separately from the fixed Lotus reference', 
     await expect(selected).toContainText(item.form);
   }
 
-  await page.getByRole('checkbox', { name: 'Add bonus Epsom' }).check();
   await selector.selectOption('bonus-epsom');
   const bonus = page.getByTestId('lotus-selected-dropper');
   await expect(bonus).toContainText('Magnesium Sulfate');
@@ -80,8 +89,8 @@ test('shows calibrated ppm per drop separately from the fixed Lotus reference', 
 
   await selector.selectOption('magnesium');
   await selectStyle(page, 'Straight');
-  await page.getByTestId('input-lotus-calibration-drops-straight').fill('100');
-  await page.getByTestId('input-lotus-calibration-weight-straight').fill('4');
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
+  await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
   const massInput = page.getByTestId('lotus-finished-stock-mass');
   await massInput.fill('100');
 
@@ -120,7 +129,7 @@ test('shows calibrated ppm per drop separately from the fixed Lotus reference', 
   await expect(fixedReference).toContainText('2.430 ppm');
   await expect(calibratedDrop).toContainText('3.146 ppm');
 
-  await page.getByTestId('input-lotus-calibration-drops-straight').fill('120');
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('120');
   await expect(calibratedDrop).toContainText('2.622 ppm');
   await expect(fixedReference).toContainText('2.430 ppm');
   await expect(page.getByTestId('lotus-stock-salt-mass')).toHaveText(saltMassBefore ?? '');
