@@ -126,7 +126,7 @@ export function LotusMassPreparationPanel({
         <div className="grid gap-2 sm:grid-cols-2" data-testid={`lotus-per-drop-summary-${dropper.id}`}>
           <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5" data-testid="lotus-fixed-reference">
             <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-              {dropper.isBonus ? 'Mg-matched Lotus reference' : 'Lotus source reference'}
+              {dropper.isBonus ? 'Optional Epsom reference · not Lotus' : 'Lotus source reference'}
             </div>
             <div className="mt-1 text-sm font-semibold tabular-nums text-slate-100">
               +{sourceIonPpm.toFixed(3)} ppm {ionLabel} / drop

@@ -1,17 +1,7 @@
-import { lotusMassStockPlan } from './lotusConcentrate';
-import { LOTUS_DROPPER_DEFINITIONS as MASS_DROPPERS, lotusStockPlan as legacyLotusPlan } from './lotusConcentrate';
-it('builds homemade stocks from total mass without redefining commercial references', () => {
-  const definition = MASS_DROPPERS[0];
-  const source = legacyLotusPlan(definition, 'straight', 100);
-  const ratio = source.saltMassG / 100;
-  const plan = lotusMassStockPlan(definition, 100);
-  expect(plan.valid).toBe(true);
-  if (!plan.valid) return;
-  expect(plan.saltMassG).toBeCloseTo(100 * ratio / (1 + ratio), 10);
-  expect(plan.saltMassG + plan.waterMassG).toBeCloseTo(100, 10);
-  expect(legacyLotusPlan(definition, 'straight', 100)).toEqual(source);
-});
 import { describe, expect, it } from 'vitest';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { LotusMassPreparationPanel } from './LotusMassPreparationPanel';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
@@ -23,27 +13,110 @@ import {
   lotusPublishedDrops,
   lotusRecipeById,
   lotusStraightBaselineFromMeasuredRate,
+  lotusMassStockPlan,
   lotusStockPlan,
 } from './lotusConcentrate';
 
-describe('DIY Lotus Drops calculations', () => {
-  it('preserves each Lotus salt-to-water ratio at multiple finished stock masses', () => {
-    for (const dropper of LOTUS_DROPPER_DEFINITIONS) {
-      const reference = lotusStockPlan(dropper, 'straight', 100);
-      const referenceRatio = reference.saltMassG / 100;
+// Fixed independent mass-balance references from Lotus's published ion inputs,
+// average drop masses, 0.56 Round factor, and the selected salt hydration forms.
+// Lotus does not publish proprietary bottle ratios; these fixtures protect the
+// app's stated public-data estimate rather than claiming exact bottle contents.
+const STOCK_PREPARATION_FIXTURES = [
+  {
+    id: 'magnesium',
+    saltToWaterRatio: 0.296075353973,
+    amounts: {
+      20: ['4.569', '15.431'],
+      100: ['22.844', '77.156'],
+      250: ['57.110', '192.890'],
+    },
+  },
+  {
+    id: 'calcium',
+    saltToWaterRatio: 0.197871709691,
+    amounts: {
+      20: ['3.304', '16.696'],
+      100: ['16.519', '83.481'],
+      250: ['41.297', '208.703'],
+    },
+  },
+  {
+    id: 'potassium',
+    saltToWaterRatio: 0.126754757583,
+    amounts: {
+      20: ['2.250', '17.750'],
+      100: ['11.250', '88.750'],
+      250: ['28.124', '221.876'],
+    },
+  },
+  {
+    id: 'sodium',
+    saltToWaterRatio: 0.104228876194,
+    amounts: {
+      20: ['1.888', '18.112'],
+      100: ['9.439', '90.561'],
+      250: ['23.598', '226.402'],
+    },
+  },
+  {
+    id: 'bonus-epsom',
+    saltToWaterRatio: 0.383033010248,
+    amounts: {
+      20: ['5.539', '14.461'],
+      100: ['27.695', '72.305'],
+      250: ['69.238', '180.762'],
+    },
+  },
+] as const;
 
-      for (const totalStockMassG of [20, 100, 250]) {
-        const plan = lotusMassStockPlan(dropper, totalStockMassG);
+describe('Lotus stock preparation reference checks', () => {
+  it('matches independent salt-to-water and finished-mass fixtures for every dropper', () => {
+    expect(STOCK_PREPARATION_FIXTURES.map(fixture => fixture.id)).toEqual(
+      LOTUS_DROPPER_DEFINITIONS.map(dropper => dropper.id),
+    );
 
+    for (const fixture of STOCK_PREPARATION_FIXTURES) {
+      const dropper = LOTUS_DROPPER_DEFINITIONS.find(item => item.id === fixture.id)!;
+
+      for (const [finishedMass, [expectedSalt, expectedWater]] of Object.entries(fixture.amounts)) {
+        const plan = lotusMassStockPlan(dropper, Number(finishedMass));
         expect(plan.valid).toBe(true);
         if (!plan.valid) continue;
-        expect(plan.totalStockMassG).toBe(totalStockMassG);
-        expect(plan.saltMassG + plan.waterMassG).toBeCloseTo(totalStockMassG, 10);
-        expect(plan.saltMassG / plan.waterMassG).toBeCloseTo(referenceRatio, 10);
+
+        expect(plan.saltMassG / plan.waterMassG).toBeCloseTo(fixture.saltToWaterRatio, 10);
+        expect(plan.saltMassG).toBeCloseTo(Number(expectedSalt), 2);
+        expect(plan.waterMassG).toBeCloseTo(Number(expectedWater), 2);
+        expect(plan.saltMassG + plan.waterMassG).toBeCloseTo(Number(finishedMass), 10);
+        expect(plan.saltMassG.toFixed(3)).toBe(expectedSalt);
+        expect(plan.waterMassG.toFixed(3)).toBe(expectedWater);
       }
     }
   });
 
+  it('renders the fixture amounts and identifies the optional Epsom reference separately', () => {
+    for (const fixture of STOCK_PREPARATION_FIXTURES) {
+      const dropper = LOTUS_DROPPER_DEFINITIONS.find(item => item.id === fixture.id)!;
+      for (const [finishedMass, [expectedSalt, expectedWater]] of Object.entries(fixture.amounts)) {
+        const markup = renderToStaticMarkup(createElement(LotusMassPreparationPanel, {
+          dropper,
+          style: 'straight',
+          calibration: { dropsInput: '100', weightInput: '5', style: 'straight' },
+          massInput: finishedMass,
+          onMassInputChange: () => {},
+        }));
+
+        expect(markup).toContain(`data-testid="lotus-stock-salt-mass">${expectedSalt} g</strong>`);
+        expect(markup).toContain(`data-testid="lotus-stock-water-mass">${expectedWater} g</strong>`);
+        if (fixture.id === 'bonus-epsom') {
+          expect(markup).toContain('Optional Epsom reference · not Lotus');
+          expect(markup).toContain('Epsom is not a Lotus product.');
+        }
+      }
+    }
+  });
+});
+
+describe('DIY Lotus Drops calculations', () => {
   it('maps the four commercial droppers to the expected salts', () => {
     expect(LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus).map(dropper => [dropper.id, dropper.saltId])).toEqual([
       ['magnesium', 'mgcl2'],
