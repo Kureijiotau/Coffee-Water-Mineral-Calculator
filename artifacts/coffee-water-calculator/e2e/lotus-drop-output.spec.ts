@@ -135,3 +135,66 @@ test('shows calibrated ppm per drop separately from the fixed Lotus reference', 
   await expect(page.getByTestId('lotus-stock-salt-mass')).toHaveText(saltMassBefore ?? '');
   await expect(page.getByTestId('lotus-stock-water-mass')).toHaveText(waterMassBefore ?? '');
 });
+
+test('supports the complete Lotus preparation flow at a phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const dropper = page.getByRole('combobox', { name: 'Dropper to prepare' });
+  await dropper.selectOption('calcium');
+  await expect(page.getByTestId('lotus-selected-dropper')).toContainText('Calcium Chloride');
+
+  const tipGroup = page.getByRole('group', { name: 'Lotus dropper tip style' });
+  const straightTip = tipGroup.getByRole('button', { name: 'Straight', exact: true });
+  await straightTip.click();
+  await expect(straightTip).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
+  await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
+  await expect(page.getByTestId('lotus-selected-calibration-status')).toContainText('calibrated');
+
+  const massInput = page.getByRole('textbox', { name: 'Finished stock mass in grams' });
+  await massInput.fill('100');
+  const preparation = page.getByTestId('lotus-selected-stock-preparation');
+  await expect(preparation).toBeVisible();
+  await expect(preparation.getByRole('listitem')).toHaveText([
+    'Place the bottle on the scale and tare it once.',
+    /^Add \d+\.\d{3} g Dihydrate Calcium Chloride to the bottle\.$/,
+    'If you weigh the salt on parchment, use a splash of your measured water to rinse any clinging crystals into the bottle.',
+    'Add water until the total contents weigh 100 g (salt + water; bottle excluded).',
+    'Leave enough headspace for shaking.',
+    'Cap the bottle and shake/mix until the salt dissolves.',
+  ]);
+  await expect(preparation).toContainText('For plain water at room temperature, 1 mL ≈ 1 g, so you can weigh your water.');
+
+  const volume = page.getByTestId('lotus-brew-volume-value');
+  const slider = page.getByRole('slider', { name: 'Final brewing water volume' });
+  const units = page.getByRole('group', { name: 'Lotus brew volume units' });
+  await expect(volume).toHaveText('450 mL');
+  await units.getByRole('button', { name: 'L', exact: true }).click();
+  await slider.press('ArrowRight');
+  await expect(volume).toHaveText('0.46 L');
+  await page.getByRole('button', { name: 'Reset brew volume' }).click();
+  await expect(volume).toHaveText('450 mL');
+
+  const tapTargets = [
+    dropper,
+    straightTip,
+    tipGroup.getByRole('button', { name: 'Round', exact: true }),
+    page.getByRole('textbox', { name: 'Straight tip measured drops' }),
+    page.getByRole('textbox', { name: 'Straight tip water weight in grams' }),
+    massInput,
+    units.getByRole('button', { name: 'mL', exact: true }),
+    page.getByRole('button', { name: 'Reset brew volume' }),
+    slider,
+  ];
+  for (const target of tapTargets) {
+    const box = await target.boundingBox();
+    expect(box?.height ?? 0, `${await target.getAttribute('aria-label') ?? await target.textContent()} tap height`).toBeGreaterThanOrEqual(40);
+  }
+
+  const documentWidth = await page.evaluate(() => ({
+    client: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth,
+  }));
+  expect(documentWidth.scroll, 'page should not scroll horizontally on a phone').toBeLessThanOrEqual(documentWidth.client);
+});

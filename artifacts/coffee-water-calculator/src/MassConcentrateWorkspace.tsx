@@ -111,7 +111,7 @@ function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selec
             <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               {style === 'straight' ? 'Straight' : 'Round'} tip measured drops
               <input aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip measured drops`}
-                className="mt-1 w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+                className="mt-1 min-h-11 w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
                 inputMode="decimal" placeholder="e.g. 100" value={calibration?.dropsInput ?? ''}
                 onChange={event => onCalibrationChange(style, 'dropsInput', event.target.value)} />
             </label>
@@ -119,7 +119,7 @@ function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selec
               {style === 'straight' ? 'Straight' : 'Round'} tip water weight in grams
               <span className="mt-1 flex items-center gap-2">
                 <input aria-label={`${style === 'straight' ? 'Straight' : 'Round'} tip water weight in grams`}
-                  className="w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
+                  className="min-h-11 w-full bg-transparent text-lg font-semibold tabular-nums text-white outline-none"
                   inputMode="decimal" placeholder="e.g. 5" value={calibration?.weightInput ?? ''}
                   onChange={event => onCalibrationChange(style, 'weightInput', event.target.value)} />
                 <span className="text-sm text-slate-400">g</span>
@@ -376,7 +376,7 @@ export function MassConcentrateWorkspace(props: Props) {
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block text-xs font-semibold text-amber-100">
           Dropper to prepare
-          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={inputClass}
+          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={`${inputClass} min-h-11`}
             value={selectedLotusDropperId}
             onChange={event => setSelectedLotusDropperId(event.target.value as LotusDropperId)}>
             {LOTUS_DROPPER_DEFINITIONS.map(dropper => (
@@ -412,7 +412,7 @@ export function MassConcentrateWorkspace(props: Props) {
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/30 p-1" role="group" aria-label="Lotus dropper tip style">
         {(['straight', 'round'] as const).map(style => (
           <button key={style} type="button" aria-pressed={tipKey === style} onClick={() => setTipKey(style)}
-            className={`rounded-md px-3 py-2 text-xs font-semibold capitalize transition ${
+            className={`min-h-11 rounded-md px-3 py-2 text-xs font-semibold capitalize transition ${
               tipKey === style
                 ? 'bg-cyan-400/15 text-cyan-100 shadow-sm ring-1 ring-cyan-200/25'
                 : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
