@@ -108,11 +108,40 @@ describe('Lotus stock preparation reference checks', () => {
 
         expect(markup).toContain(`data-testid="lotus-stock-salt-mass">${expectedSalt} g</strong>`);
         expect(markup).toContain(`data-testid="lotus-stock-water-mass">${expectedWater} g</strong>`);
+        expect(markup).toContain('data-testid="lotus-selected-stock-preparation"');
         if (fixture.id === 'bonus-epsom') {
           expect(markup).toContain('Optional Epsom reference · not Lotus');
           expect(markup).toContain('Epsom is not a Lotus product.');
         }
       }
+    }
+  });
+
+  it('rejects non-positive and non-finite finished stock weights', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    for (const finishedMass of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(lotusMassStockPlan(magnesium, finishedMass)).toEqual({
+        valid: false,
+        reason: 'Enter a positive finished stock weight.',
+      });
+    }
+  });
+
+  it('hides stock amounts and preparation steps for blank or invalid weights', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    for (const massInput of ['', '   ', '0', '-1', 'NaN', 'Infinity', '-Infinity']) {
+      const markup = renderToStaticMarkup(createElement(LotusMassPreparationPanel, {
+        dropper: magnesium,
+        style: 'straight',
+        calibration: { dropsInput: '100', weightInput: '5', style: 'straight' },
+        massInput,
+        onMassInputChange: () => {},
+      }));
+
+      expect(markup).not.toContain('data-testid="lotus-finished-stock-amounts"');
+      expect(markup).not.toContain('data-testid="lotus-stock-salt-mass"');
+      expect(markup).not.toContain('data-testid="lotus-stock-water-mass"');
+      expect(markup).not.toContain('data-testid="lotus-selected-stock-preparation"');
     }
   });
 
