@@ -373,10 +373,10 @@ export function MassConcentrateWorkspace(props: Props) {
       </div>
     </section>}
     {!isRecipe && toolMode === 'lotus' && <section className="rounded-2xl border border-amber-300/25 bg-slate-900/60 p-4 shadow-xl sm:p-5" data-testid="lotus-selected-dropper">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block text-xs font-semibold text-amber-100">
-          Dropper to prepare
-          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={`${inputClass} min-h-11`}
+      <div className="grid items-start gap-3 sm:grid-cols-2">
+        <label className="block min-w-0 text-xs font-semibold text-amber-100">
+          <span className="block min-h-4">Dropper to prepare</span>
+          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={`${inputClass} min-h-14`}
             value={selectedLotusDropperId}
             onChange={event => setSelectedLotusDropperId(event.target.value as LotusDropperId)}>
             {LOTUS_DROPPER_DEFINITIONS.map(dropper => (
@@ -386,27 +386,22 @@ export function MassConcentrateWorkspace(props: Props) {
             ))}
           </select>
         </label>
-        <div className="flex items-end gap-2">
-          <span className="flex-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs">
-            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Selected mineral</span>
-            <strong className="mt-1 block text-sm" style={{ color: getSaltColorTokens(selectedLotusSalt).primary }}>{selectedLotusSalt.name}</strong>
-            <span className="text-[10px] text-slate-400">{selectedLotusSalt.formula} · {selectedLotusForm?.label}</span>
-          </span>
-          {selectedLotusDropper.isBonus && (
-            <span className="mb-1 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
-              Bonus · not Lotus
-            </span>
-          )}
-          <span
-            className={`mb-1 rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${
-              lotusMeasuredDropsPerMl(shared[tipKey]) !== null
-                ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
-                : 'border-amber-300/25 bg-amber-400/10 text-amber-200'
-            }`}
-            data-testid="lotus-selected-calibration-status"
+        <div className="min-w-0">
+          <span className="block min-h-4 text-xs font-semibold text-amber-100">Selected mineral</span>
+          <div
+            className="mt-1 flex min-h-14 items-center justify-between gap-3 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs"
+            data-testid="lotus-selected-mineral"
           >
-            {lotusMeasuredDropsPerMl(shared[tipKey]) !== null ? `${tipKey} calibrated` : `${tipKey} needs calibration`}
-          </span>
+            <span className="min-w-0">
+              <strong className="block text-sm" style={{ color: getSaltColorTokens(selectedLotusSalt).primary }}>{selectedLotusSalt.name}</strong>
+              <span className="text-[10px] text-slate-400">{selectedLotusSalt.formula} · {selectedLotusForm?.label}</span>
+            </span>
+            {selectedLotusDropper.isBonus && (
+              <span className="shrink-0 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+                Bonus · not Lotus
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/30 p-1" role="group" aria-label="Lotus dropper tip style">

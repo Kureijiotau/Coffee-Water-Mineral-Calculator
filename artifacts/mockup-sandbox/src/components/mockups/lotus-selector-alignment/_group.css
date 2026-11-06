@@ -1,0 +1,40 @@
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background: #020617;
+}
+
+body {
+  color: #e2e8f0;
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 8% -8%, rgb(14 165 233 / 0.2), transparent 32rem),
+    radial-gradient(circle at 92% 0%, rgb(99 102 241 / 0.18), transparent 30rem),
+    radial-gradient(circle at 50% 110%, rgb(16 185 129 / 0.12), transparent 34rem),
+    linear-gradient(145deg, #020617 0%, #0f172a 48%, #020617 100%);
+}
+
+.app-panel--quiet {
+  border-color: rgb(148 163 184 / 0.14);
+  background:
+    linear-gradient(135deg, rgb(30 41 59 / 0.86), rgb(15 23 42 / 0.72)),
+    radial-gradient(circle at 0% 0%, rgb(56 189 248 / 0.08), transparent 28rem);
+  box-shadow:
+    0 18px 40px -28px rgb(2 6 23 / 0.95),
+    0 0 0 1px rgb(255 255 255 / 0.025) inset;
+}
+
+.app-card {
+  border-radius: 1rem;
+}

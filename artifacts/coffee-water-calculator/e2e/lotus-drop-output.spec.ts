@@ -150,7 +150,7 @@ test('supports the complete Lotus preparation flow at a phone viewport', async (
   await expect(straightTip).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
   await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
-  await expect(page.getByTestId('lotus-selected-calibration-status')).toContainText('calibrated');
+  await expect(page.getByTestId('mass-shared-calibration').locator('summary')).toContainText('straight calibrated');
 
   const massInput = page.getByRole('textbox', { name: 'Finished stock mass in grams' });
   await massInput.fill('100');
@@ -191,6 +191,50 @@ test('supports the complete Lotus preparation flow at a phone viewport', async (
     const box = await target.boundingBox();
     expect(box?.height ?? 0, `${await target.getAttribute('aria-label') ?? await target.textContent()} tap height`).toBeGreaterThanOrEqual(40);
   }
+
+  const documentWidth = await page.evaluate(() => ({
+    client: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth,
+  }));
+  expect(documentWidth.scroll, 'page should not scroll horizontally on a phone').toBeLessThanOrEqual(documentWidth.client);
+});
+
+test('aligns Lotus fields and keeps the calibration status in one place', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const section = page.getByTestId('lotus-selected-dropper');
+  const dropper = page.getByRole('combobox', { name: 'Dropper to prepare' });
+  await expect(section.getByTestId('lotus-selected-calibration-status')).toHaveCount(0);
+  await expect(page.getByTestId('mass-shared-calibration').locator('summary')).toContainText('Not calibrated');
+
+  const mineral = page.getByTestId('lotus-selected-mineral');
+  const dropperBox = await dropper.boundingBox();
+  const mineralBox = await mineral.boundingBox();
+  expect(dropperBox).not.toBeNull();
+  expect(mineralBox).not.toBeNull();
+  expect(Math.abs(dropperBox!.y - mineralBox!.y)).toBeLessThanOrEqual(2);
+  expect(Math.abs(dropperBox!.height - mineralBox!.height)).toBeLessThanOrEqual(2);
+
+  await dropper.focus();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('group', { name: 'Lotus dropper tip style' })
+    .getByRole('button', { name: 'Straight', exact: true })).toBeFocused();
+});
+
+test('keeps the optional mineral marker inside its phone-width summary', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const dropper = page.getByRole('combobox', { name: 'Dropper to prepare' });
+  await dropper.selectOption('bonus-epsom');
+  const mineral = page.getByTestId('lotus-selected-mineral');
+  await expect(mineral).toContainText('Bonus · not Lotus');
+
+  const dropperBox = await dropper.boundingBox();
+  const mineralBox = await mineral.boundingBox();
+  expect(dropperBox).not.toBeNull();
+  expect(mineralBox).not.toBeNull();
+  expect(mineralBox!.y).toBeGreaterThan(dropperBox!.y);
 
   const documentWidth = await page.evaluate(() => ({
     client: document.documentElement.clientWidth,
