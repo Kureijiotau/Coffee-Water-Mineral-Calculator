@@ -1,0 +1,109 @@
+.current-water-shell {
+  min-height: 100vh;
+  isolation: isolate;
+  overflow: hidden;
+  color: #e2e8f0;
+  background:
+    radial-gradient(circle at 8% -8%, rgb(14 165 233 / 0.2), transparent 32rem),
+    radial-gradient(circle at 92% 0%, rgb(99 102 241 / 0.18), transparent 30rem),
+    radial-gradient(circle at 50% 110%, rgb(16 185 129 / 0.12), transparent 34rem),
+    linear-gradient(145deg, #020617 0%, #0f172a 48%, #020617 100%);
+}
+
+.current-water-shell::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgb(148 163 184 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 0.025) 1px, transparent 1px);
+  background-size: 42px 42px;
+  content: '';
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+  pointer-events: none;
+}
+
+.current-water-stack {
+  gap: 1rem;
+}
+
+.current-water-header {
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 24px 60px -30px rgb(2 6 23 / 0.95),
+    0 0 0 1px rgb(255 255 255 / 0.04) inset;
+}
+
+.current-water-header::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgb(255 255 255 / 0.12), transparent 24%, transparent 72%, rgb(255 255 255 / 0.05));
+  content: '';
+  pointer-events: none;
+}
+
+.current-water-header__bar {
+  position: relative;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.16) inset, 0 -16px 40px rgb(2 6 23 / 0.2) inset;
+}
+
+.current-water-quiet {
+  border-color: rgb(148 163 184 / 0.14);
+  background:
+    linear-gradient(135deg, rgb(30 41 59 / 0.86), rgb(15 23 42 / 0.72)),
+    radial-gradient(circle at 0% 0%, rgb(56 189 248 / 0.08), transparent 28rem);
+  box-shadow: 0 18px 40px -28px rgb(2 6 23 / 0.95), 0 0 0 1px rgb(255 255 255 / 0.025) inset;
+}
+
+.current-mineral-table {
+  --mineral-table-line: rgb(148 163 184 / 0.11);
+  background: linear-gradient(180deg, rgb(15 23 42 / 0.24), transparent 22rem), rgb(2 6 23 / 0.08);
+}
+
+.current-mineral-row {
+  border-color: var(--mineral-table-line);
+  background-color: rgb(15 23 42 / 0.12);
+}
+
+.current-mineral-row:nth-of-type(even) {
+  background-color: rgb(30 41 59 / 0.17);
+}
+
+.current-mineral-input {
+  border: 1px solid rgb(100 116 139 / 0.48);
+  background: linear-gradient(135deg, rgb(15 23 42 / 0.88), rgb(2 6 23 / 0.58)), rgb(2 6 23 / 0.55);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 8px 18px -16px rgb(2 6 23 / 0.95);
+}
+
+.current-mineral-dose {
+  border-color: rgb(52 211 153 / 0.3);
+  background: linear-gradient(135deg, rgb(6 78 59 / 0.2), rgb(2 6 23 / 0.62)), rgb(2 6 23 / 0.55);
+}
+
+.current-water-input {
+  min-width: 0;
+  border: 1px solid rgb(71 85 105 / 0.7);
+  border-radius: 0.625rem;
+  background: rgb(2 6 23 / 0.55);
+  padding: 0.55rem 0.75rem;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+.current-water-input:focus {
+  outline: 2px solid rgb(56 189 248 / 0.38);
+  outline-offset: 1px;
+}
+
+.current-water-select {
+  color-scheme: dark;
+}
+
+.current-water-details > summary {
+  list-style: none;
+}
+
+.current-water-details > summary::-webkit-details-marker {
+  display: none;
+}
