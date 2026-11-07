@@ -20,6 +20,24 @@ async function selectStyle(page: Page, style: 'Round' | 'Straight') {
     .click();
 }
 
+test('uses one compact neutral card surface across Lotus controls and preparation', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const cards = [
+    page.getByTestId('lotus-selected-dropper'),
+    page.getByTestId('mass-shared-calibration'),
+    page.getByRole('heading', { name: 'Brew-water volume' }).locator('xpath=../../..'),
+    page.getByRole('heading', { name: 'Prepare this stock' }).locator('xpath=../../..'),
+  ];
+  const backgroundColors = await Promise.all(cards.map(card =>
+    card.evaluate(element => getComputedStyle(element).backgroundColor)));
+  const borderColors = await Promise.all(cards.map(card =>
+    card.evaluate(element => getComputedStyle(element).borderTopColor)));
+
+  expect(new Set(backgroundColors).size, 'Lotus cards should share one quiet background').toBe(1);
+  expect(new Set(borderColors).size, 'Lotus cards should share one subtle border').toBe(1);
+});
+
 test('selects one dropper and gates mass preparation on its tip calibration', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
 

@@ -67,7 +67,7 @@ export function LotusMassPreparationPanel({
 
   return (
     <>
-      <section className="space-y-3 rounded-xl border border-cyan-300/20 bg-cyan-400/[0.035] p-3">
+      <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-semibold text-cyan-100">Brew-water volume</h3>
@@ -152,7 +152,7 @@ export function LotusMassPreparationPanel({
         )}
       </section>
 
-      <section className="space-y-3 rounded-xl border border-emerald-300/20 bg-emerald-400/[0.035] p-3">
+      <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold text-emerald-100">Prepare this stock</h3>
