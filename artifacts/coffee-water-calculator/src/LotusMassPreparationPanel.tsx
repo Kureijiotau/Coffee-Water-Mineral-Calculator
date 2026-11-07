@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
+import { Droplet, RotateCcw, Scale } from 'lucide-react';
+import { ConcentratePreparationSteps } from './concentratePreparation';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_BREW_VOLUME_ML,
@@ -67,11 +68,15 @@ export function LotusMassPreparationPanel({
 
   return (
     <>
-      <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+      <section
+        className="space-y-3 rounded-2xl border border-cyan-300/20 bg-gradient-to-br from-cyan-400/[0.06] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5"
+        data-testid="lotus-brew-volume-section"
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="text-sm font-semibold text-cyan-100">Brew-water volume</h3>
-            <p className="mt-0.5 text-[10px] text-slate-400">Changes the ppm-per-drop reference only.</p>
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Droplet className="h-4 w-4 text-cyan-300" aria-hidden="true" /> Brew-water volume
+            </h3>
           </div>
           <strong className="text-sm tabular-nums text-cyan-100" data-testid="lotus-brew-volume-value">
             {volumeText}
@@ -102,9 +107,9 @@ export function LotusMassPreparationPanel({
               setBrewVolumeMl(LOTUS_BREW_VOLUME_ML);
               setVolumeUnit('mL');
             }}
-            className="min-h-10 rounded-lg border border-slate-600/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold text-slate-300 transition hover:border-cyan-200/40 hover:text-cyan-100"
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-600/70 bg-slate-900/60 px-3 py-2 text-[10px] font-semibold text-slate-300 transition hover:border-cyan-200/40 hover:text-cyan-100"
           >
-            Reset to 450 mL
+            <RotateCcw className="h-3 w-3" aria-hidden="true" /> Reset
           </button>
         </div>
         <input
@@ -121,6 +126,7 @@ export function LotusMassPreparationPanel({
         />
         <div className="flex justify-between text-[9px] tabular-nums text-slate-500">
           <span>50 mL</span>
+          <span className="text-cyan-100/65">Changes ppm per drop</span>
           <span>2 L</span>
         </div>
         <div className="grid gap-2 sm:grid-cols-2" data-testid={`lotus-per-drop-summary-${dropper.id}`}>
@@ -152,60 +158,59 @@ export function LotusMassPreparationPanel({
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+      <section
+        className="space-y-3 rounded-2xl border border-emerald-300/20 bg-gradient-to-br from-emerald-400/[0.07] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5"
+        data-testid="lotus-stock-preparation-section"
+      >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h3 className="text-sm font-semibold text-emerald-100">Prepare this stock</h3>
-            <p className="mt-0.5 text-[10px] text-slate-400">Finished weight is salt + water; the bottle is excluded.</p>
+            <p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-200/75">
+              <Scale className="h-3.5 w-3.5" aria-hidden="true" /> Weight-based preparation
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-white">Make this stock</h3>
           </div>
-          <span className={`rounded-full px-2 py-1 text-[9px] font-semibold uppercase tracking-wider ${
-            isCalibrated
-              ? 'border border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
-              : 'border border-amber-300/25 bg-amber-400/10 text-amber-200'
-          }`}>
-            {isCalibrated ? `${style} calibrated` : `Calibrate ${style} tip`}
-          </span>
         </div>
-        {!isCalibrated && (
-          <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-400/[0.06] px-3 py-2 text-[10px] text-amber-100/90">
-            Calibrate the selected tip style above before entering a finished stock weight.
-          </p>
-        )}
-        <label className="block max-w-sm">
-          <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Finished stock mass</span>
-          <span className="mt-1 flex items-center gap-2 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2">
-            <input
-              inputMode="decimal"
-              value={massInput}
-              onChange={event => onMassInputChange(event.target.value)}
-              disabled={!isCalibrated}
-              placeholder="e.g. 100"
-              aria-label="Finished stock mass in grams"
-              data-testid="lotus-finished-stock-mass"
-              className="min-h-11 w-full bg-transparent text-right text-sm font-semibold tabular-nums text-slate-100 outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            />
-            <span className="text-xs text-slate-400">g</span>
-          </span>
-        </label>
+        <div className={`grid gap-2 ${stockPlan?.valid ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
+          <label className="block rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Finished stock mass</span>
+            <span className="mt-1 flex items-center gap-2">
+              <input
+                inputMode="decimal"
+                value={massInput}
+                onChange={event => onMassInputChange(event.target.value)}
+                disabled={!isCalibrated}
+                placeholder="e.g. 100"
+                aria-label="Finished stock mass in grams"
+                data-testid="lotus-finished-stock-mass"
+                className="min-h-11 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <span className="text-xs text-slate-400">g</span>
+            </span>
+          </label>
+          {stockPlan?.valid && (
+            <div className="contents" data-testid="lotus-finished-stock-amounts">
+              <div className="rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Salt to weigh</div>
+                <strong className="mt-1 block text-xl font-semibold tabular-nums text-white" data-testid="lotus-stock-salt-mass">
+                  {stockPlan.saltMassG.toFixed(3)} <span className="text-xs font-medium text-slate-400">g</span>
+                </strong>
+                <div className="text-[9px] text-slate-500">{hydrationForm.label} {salt.name}</div>
+              </div>
+              <div className="rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+                <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Water to add</div>
+                <strong className="mt-1 block text-xl font-semibold tabular-nums text-white" data-testid="lotus-stock-water-mass">
+                  {stockPlan.waterMassG.toFixed(3)} <span className="text-xs font-medium text-slate-400">g</span>
+                </strong>
+                <div className="text-[9px] text-slate-500">Bottle excluded</div>
+              </div>
+            </div>
+          )}
+        </div>
         {parsedMass !== null && !stockPlan?.valid && (
           <p role="alert" className="text-[10px] text-amber-200">Enter a positive, finite finished stock mass.</p>
         )}
         {stockPlan?.valid && (
           <>
-            <div className="grid gap-2 sm:grid-cols-2" data-testid="lotus-finished-stock-amounts">
-              <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5">
-                <div className="text-[9px] uppercase tracking-wider text-slate-500">Salt to weigh</div>
-                <strong className="mt-1 block text-sm tabular-nums text-slate-100" data-testid="lotus-stock-salt-mass">
-                  {stockPlan.saltMassG.toFixed(3)} g
-                </strong>
-              </div>
-              <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5">
-                <div className="text-[9px] uppercase tracking-wider text-slate-500">Water to add</div>
-                <strong className="mt-1 block text-sm tabular-nums text-slate-100" data-testid="lotus-stock-water-mass">
-                  {stockPlan.waterMassG.toFixed(3)} g
-                </strong>
-              </div>
-            </div>
             <div className="rounded-lg border border-emerald-300/20 bg-slate-950/25 p-3" data-testid="lotus-selected-stock-preparation">
               <h4 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-emerald-200">Preparation steps</h4>
               <ConcentratePreparationSteps
@@ -213,7 +218,6 @@ export function LotusMassPreparationPanel({
                 waterMassG={stockPlan.waterMassG}
                 saltLabel={`${stockPlan.saltMassG.toFixed(3)} g ${hydrationForm.label} ${salt.name}`}
               />
-              <p className="mt-2 text-[9px] leading-relaxed text-slate-500">{WATER_MASS_NOTE}</p>
             </div>
           </>
         )}

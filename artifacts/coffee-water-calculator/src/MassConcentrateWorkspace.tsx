@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, Beaker, Check, Droplet, FlaskConical, ListChecks, Pipette, Scale } from 'lucide-react';
+import { AlertTriangle, Beaker, Check, ChevronDown, Droplet, FlaskConical, ListChecks, Pipette, Scale } from 'lucide-react';
 import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
 import { buildMassStockPlan, computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
   waterLitersToEquivalentMassKg,
@@ -65,35 +65,25 @@ function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selec
   footer?: ReactNode;
 }) {
   const hasSavedCalibration = hasAnyDiyDropperCalibration(sharedCalibrations);
-  const selectedStyleIsCalibrated = lotusMeasuredDropsPerMl(sharedCalibrations[selectedStyle]) !== null;
-  const calibratedStyles = (['straight', 'round'] as const)
-    .filter(style => lotusMeasuredDropsPerMl(sharedCalibrations[style]) !== null);
-  const calibrationStatus = selectedStyleIsCalibrated
-    ? `${selectedStyle} calibrated`
-    : calibratedStyles.length > 0
-      ? `Calibrated: ${calibratedStyles.join(' + ')}`
-      : 'Not calibrated';
   const [open, setOpen] = useState(() => !hasSavedCalibration);
   useEffect(() => {
     if (!hasSavedCalibration) setOpen(true);
   }, [hasSavedCalibration]);
 
   return <details
-    className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5"
+    className="current-water-details mt-3 rounded-xl border border-sky-300/20 bg-sky-400/[0.045] px-3 py-2.5"
     data-testid="mass-shared-calibration"
     open={open}
     onToggle={event => setOpen(event.currentTarget.open)}
   >
-    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-100 marker:hidden">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-semibold text-sky-100 marker:hidden">
       <span className="flex items-center gap-2">
-        <Pipette className="h-4 w-4 text-cyan-200/80" aria-hidden="true" />
+        <Pipette className="h-3.5 w-3.5 text-sky-200" aria-hidden="true" />
         Dropper calibration
       </span>
-      <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${selectedStyleIsCalibrated
-        ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
-        : 'border-slate-500/40 bg-slate-950/30 text-slate-400'}`}>
-        {selectedStyleIsCalibrated && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-        {calibrationStatus}
+      <span className="flex items-center gap-2 text-[10px] text-slate-400">
+        {selectedStyle === 'straight' ? 'Straight' : 'Round'} tip · {dropperRates[selectedStyle].toFixed(1)} drops/mL
+        <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
       </span>
     </summary>
     <div className="mt-3">
@@ -230,6 +220,7 @@ export function MassConcentrateWorkspace(props: Props) {
     () => loadDiyConcentrateInputs().lotusCalibrationInputs ?? {},
   );
   const shared = sharedCalibrations;
+  const selectedLotusCalibrated = lotusMeasuredDropsPerMl(shared[tipKey]) !== null;
   const updateSharedCalibration = (style: LotusDropperStyle, field: 'dropsInput' | 'weightInput', value: string) => {
     const current = shared[style] ?? { dropsInput: '', weightInput: '', style };
     const next = { ...current, [field]: value, style };
@@ -397,11 +388,28 @@ export function MassConcentrateWorkspace(props: Props) {
         </div>
       </div>
     </div>
-    {!isRecipe && toolMode === 'lotus' && <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5" data-testid="lotus-selected-dropper">
-      <div className="grid items-start gap-3 sm:grid-cols-2">
-        <label className="block min-w-0 text-xs font-semibold text-slate-300">
-          <span className="block min-h-4">Dropper to prepare</span>
-          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={`${inputClass} min-h-14`}
+    {!isRecipe && toolMode === 'lotus' && <section className="rounded-2xl border border-rose-300/20 bg-gradient-to-br from-rose-400/[0.08] via-slate-800/75 to-amber-400/[0.045] p-4 shadow-xl sm:p-5" data-testid="lotus-selected-dropper">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+          <Pipette className="h-4 w-4 text-rose-200" aria-hidden="true" /> Dropper setup
+        </h2>
+        <span
+          data-testid="lotus-selected-calibration-status"
+          className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold ${
+            selectedLotusCalibrated
+              ? 'border-emerald-300/25 bg-emerald-400/10 text-emerald-200'
+              : 'border-amber-300/25 bg-amber-400/10 text-amber-200'
+          }`}
+        >
+          {selectedLotusCalibrated
+            ? `${tipKey === 'straight' ? 'Straight' : 'Round'} calibrated`
+            : 'Not calibrated'}
+        </span>
+      </div>
+      <div className="mt-3 grid items-start gap-2 sm:grid-cols-[1.15fr_1fr]">
+        <label className="block min-w-0 rounded-xl border border-rose-200/15 bg-slate-950/35 px-3 py-2.5 text-xs font-semibold text-slate-300" data-testid="lotus-dropper-field">
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-rose-100/75">Dropper to prepare</span>
+          <select aria-label="Dropper to prepare" data-testid="lotus-dropper-select" className={`${inputClass} min-h-12`}
             value={selectedLotusDropperId}
             onChange={event => setSelectedLotusDropperId(event.target.value as LotusDropperId)}>
             {LOTUS_DROPPER_DEFINITIONS.map(dropper => (
@@ -411,43 +419,45 @@ export function MassConcentrateWorkspace(props: Props) {
             ))}
           </select>
         </label>
-        <div className="min-w-0">
-          <span className="block min-h-4 text-xs font-semibold text-slate-300">Selected mineral</span>
-          <div
-            className="mt-1 flex min-h-14 items-center justify-between gap-3 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs"
-            data-testid="lotus-selected-mineral"
-          >
-            <span className="min-w-0">
-              <strong className="block text-sm" style={{ color: getSaltColorTokens(selectedLotusSalt).primary }}>{selectedLotusSalt.name}</strong>
-              <span className="text-[10px] text-slate-400">{selectedLotusSalt.formula} · {selectedLotusForm?.label}</span>
-            </span>
-            {selectedLotusDropper.isBonus && (
-              <span className="shrink-0 rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
-                Bonus · not Lotus
+        <div
+          className="min-w-0 rounded-xl border border-slate-700/70 bg-slate-950/35 p-2.5"
+          data-testid="lotus-selected-mineral"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Selected mineral</div>
+              <span className="mt-1 block min-w-0">
+                <strong className="block text-sm" style={{ color: getSaltColorTokens(selectedLotusSalt).primary }}>{selectedLotusSalt.name}</strong>
+                <span className="text-[10px] text-slate-400">{selectedLotusSalt.formula} · {selectedLotusForm?.label}</span>
               </span>
-            )}
+              {selectedLotusDropper.isBonus && (
+                <span className="mt-1 inline-flex rounded-full border border-amber-300/25 bg-amber-400/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-amber-200">
+                  Bonus · not Lotus
+                </span>
+              )}
+            </div>
+            <div className="grid shrink-0 grid-cols-2 gap-1 rounded-lg border border-slate-700/70 bg-slate-900/70 p-1" role="group" aria-label="Lotus dropper tip style">
+              {(['straight', 'round'] as const).map(style => (
+                <button key={style} type="button" aria-pressed={tipKey === style} onClick={() => setTipKey(style)}
+                  className={`min-h-10 rounded-md px-3 py-2 text-xs font-semibold capitalize transition ${
+                    tipKey === style
+                      ? 'bg-cyan-400/10 text-cyan-100 shadow-sm ring-1 ring-cyan-200/20'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                  }`}>
+                  {style === 'straight' ? 'Straight' : 'Round'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-slate-700/60 bg-slate-950/30 p-1" role="group" aria-label="Lotus dropper tip style">
-        {(['straight', 'round'] as const).map(style => (
-          <button key={style} type="button" aria-pressed={tipKey === style} onClick={() => setTipKey(style)}
-            className={`min-h-11 rounded-md px-3 py-2 text-xs font-semibold capitalize transition ${
-              tipKey === style
-               ? 'bg-cyan-400/10 text-cyan-100 shadow-sm ring-1 ring-cyan-200/20'
-                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-            }`}>
-            {style === 'straight' ? 'Straight' : 'Round'}
-          </button>
-        ))}
-      </div>
+      <SharedDropperCalibrationPanel
+        dropperRates={dropperRates}
+        sharedCalibrations={shared}
+        selectedStyle={tipKey}
+        onCalibrationChange={updateSharedCalibration}
+      />
     </section>}
-    {!isRecipe && toolMode === 'lotus' && <SharedDropperCalibrationPanel
-      dropperRates={dropperRates}
-      sharedCalibrations={shared}
-      selectedStyle={tipKey}
-      onCalibrationChange={updateSharedCalibration}
-    />}
     {isRecipe ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6">
       {isRecipe && <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -538,7 +548,7 @@ export function MassConcentrateWorkspace(props: Props) {
           onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} diyControls={diyControls} />;
       })}
-      {(isRecipe || toolMode === 'lotus') && <button className={buttonClass} aria-label="Open concentrate recipe steps" onClick={() => setShowSteps(v => !v)}>{showSteps ? 'Hide recipe steps' : 'Recipe steps'}</button>}
+      {isRecipe && <button className={buttonClass} aria-label="Open concentrate recipe steps" onClick={() => setShowSteps(v => !v)}>{showSteps ? 'Hide recipe steps' : 'Recipe steps'}</button>}
       {(isRecipe || toolMode === 'lotus') && <button className={`${buttonClass} ml-2`} onClick={async () => {
         setExportError('');
         if (!cardsRef.current) return;

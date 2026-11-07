@@ -106,8 +106,8 @@ describe('Lotus stock preparation reference checks', () => {
           onMassInputChange: () => {},
         }));
 
-        expect(markup).toContain(`data-testid="lotus-stock-salt-mass">${expectedSalt} g</strong>`);
-        expect(markup).toContain(`data-testid="lotus-stock-water-mass">${expectedWater} g</strong>`);
+        expect(markup).toContain(`data-testid="lotus-stock-salt-mass">${expectedSalt} <span`);
+        expect(markup).toContain(`data-testid="lotus-stock-water-mass">${expectedWater} <span`);
         expect(markup).toContain('data-testid="lotus-selected-stock-preparation"');
         if (fixture.id === 'bonus-epsom') {
           expect(markup).toContain('Optional Epsom reference · not Lotus');

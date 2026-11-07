@@ -20,22 +20,31 @@ async function selectStyle(page: Page, style: 'Round' | 'Straight') {
     .click();
 }
 
-test('uses one compact neutral card surface across Lotus controls and preparation', async ({ page }) => {
+test('uses a consistent card hierarchy across Lotus setup, volume, and preparation', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
 
   const cards = [
     page.getByTestId('lotus-selected-dropper'),
-    page.getByTestId('mass-shared-calibration'),
-    page.getByRole('heading', { name: 'Brew-water volume' }).locator('xpath=../../..'),
-    page.getByRole('heading', { name: 'Prepare this stock' }).locator('xpath=../../..'),
+    page.getByTestId('lotus-brew-volume-section'),
+    page.getByTestId('lotus-stock-preparation-section'),
   ];
-  const backgroundColors = await Promise.all(cards.map(card =>
-    card.evaluate(element => getComputedStyle(element).backgroundColor)));
-  const borderColors = await Promise.all(cards.map(card =>
-    card.evaluate(element => getComputedStyle(element).borderTopColor)));
+  for (const card of cards) {
+    await expect(card).toHaveClass(/rounded-2xl/);
+    await expect(card).toHaveClass(/p-4/);
+  }
+  await expect(page.getByTestId('mass-shared-calibration')).toHaveClass(/rounded-xl/);
+});
 
-  expect(new Set(backgroundColors).size, 'Lotus cards should share one quiet background').toBe(1);
-  expect(new Set(borderColors).size, 'Lotus cards should share one subtle border').toBe(1);
+test('groups Lotus dropper selection, tip style, and calibration into one setup card', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const setup = page.getByTestId('lotus-selected-dropper');
+  await expect(setup).toContainText('Dropper setup');
+  await expect(setup.getByRole('group', { name: 'Lotus dropper tip style' })).toBeVisible();
+  await expect(setup.getByTestId('mass-shared-calibration')).toBeVisible();
+  await expect(setup.getByTestId('lotus-selected-calibration-status')).toContainText('Not calibrated');
+  await expect(setup.getByTestId('mass-shared-calibration').locator('summary')).not.toContainText('Not calibrated');
+  await expect(page.getByRole('button', { name: 'Open concentrate recipe steps' })).toHaveCount(0);
 });
 
 test('selects one dropper and gates mass preparation on its tip calibration', async ({ page }) => {
@@ -168,7 +177,7 @@ test('supports the complete Lotus preparation flow at a phone viewport', async (
   await expect(straightTip).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
   await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
-  await expect(page.getByTestId('mass-shared-calibration').locator('summary')).toContainText('straight calibrated');
+  await expect(page.getByTestId('lotus-selected-calibration-status')).toContainText('Straight calibrated');
 
   const massInput = page.getByRole('textbox', { name: 'Finished stock mass in grams' });
   await massInput.fill('100');
@@ -222,16 +231,15 @@ test('aligns Lotus fields and keeps the calibration status in one place', async 
 
   const section = page.getByTestId('lotus-selected-dropper');
   const dropper = page.getByRole('combobox', { name: 'Dropper to prepare' });
-  await expect(section.getByTestId('lotus-selected-calibration-status')).toHaveCount(0);
-  await expect(page.getByTestId('mass-shared-calibration').locator('summary')).toContainText('Not calibrated');
+  await expect(section.getByTestId('lotus-selected-calibration-status')).toContainText('Not calibrated');
+  await expect(page.getByTestId('mass-shared-calibration').locator('summary')).not.toContainText('Not calibrated');
 
   const mineral = page.getByTestId('lotus-selected-mineral');
-  const dropperBox = await dropper.boundingBox();
+  const dropperBox = await page.getByTestId('lotus-dropper-field').boundingBox();
   const mineralBox = await mineral.boundingBox();
   expect(dropperBox).not.toBeNull();
   expect(mineralBox).not.toBeNull();
   expect(Math.abs(dropperBox!.y - mineralBox!.y)).toBeLessThanOrEqual(2);
-  expect(Math.abs(dropperBox!.height - mineralBox!.height)).toBeLessThanOrEqual(2);
 
   await dropper.focus();
   await page.keyboard.press('Tab');
