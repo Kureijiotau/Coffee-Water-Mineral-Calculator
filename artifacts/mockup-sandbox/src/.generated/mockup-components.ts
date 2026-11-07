@@ -13,6 +13,7 @@ export const modules: ModuleMap = {
   "./components/mockups/unified-workflows/CurrentConcentrates.tsx": () => import("../components/mockups/unified-workflows/CurrentConcentrates.tsx"),
   "./components/mockups/unified-workflows/DraftCalculator.tsx": () => import("../components/mockups/unified-workflows/DraftCalculator.tsx"),
   "./components/mockups/unified-workflows/DraftConcentrates.tsx": () => import("../components/mockups/unified-workflows/DraftConcentrates.tsx"),
+  "./components/mockups/unified-workflows/LotusConcentrateProposal.tsx": () => import("../components/mockups/unified-workflows/LotusConcentrateProposal.tsx"),
   "./components/mockups/water-browser/MineralFingerprint.tsx": () => import("../components/mockups/water-browser/MineralFingerprint.tsx"),
   "./components/mockups/water-browser/SortableTable.tsx": () => import("../components/mockups/water-browser/SortableTable.tsx"),
   "./components/mockups/water-tasting-focused/FocusedWaterTasting.tsx": () => import("../components/mockups/water-tasting-focused/FocusedWaterTasting.tsx"),
