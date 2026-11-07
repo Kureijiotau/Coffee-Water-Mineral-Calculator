@@ -1,0 +1,135 @@
+<style>
+  #frame-content { background: #07111f; color: #e2e8f0; }
+  .intro { max-width: 1000px; margin: 0 auto 1.25rem; }
+  .intro h2 { color: #f8fafc; margin-bottom: .25rem; }
+  .intro p { color: #94a3b8; font-size: .88rem; }
+  .direction-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    max-width: 1250px;
+    margin: auto;
+  }
+  .direction {
+    min-width: 0;
+    border: 1px solid #26364a;
+    border-radius: 16px;
+    background: linear-gradient(160deg, #142338, #0c1728);
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+  }
+  .direction:hover { border-color: #6b829d; transform: translateY(-2px); }
+  .direction.selected { border: 2px solid #67e8f9; box-shadow: 0 0 0 3px #22d3ee20; }
+  .direction h3 { color: #f8fafc; font-size: 1rem; margin: 0 0 .25rem; }
+  .direction > p { min-height: 2.5rem; color: #9cacc0; font-size: .76rem; margin-bottom: .8rem; }
+  .tag {
+    display: inline-flex; border-radius: 99px; padding: .18rem .5rem;
+    font-size: .62rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    color: #a5f3fc; background: #164e63; margin-bottom: .55rem;
+  }
+  .mini {
+    border: 1px solid #304156; border-radius: 12px; overflow: hidden;
+    background: #0b1422; padding: .7rem; display: grid; gap: .5rem;
+  }
+  .mini-top { display:flex; justify-content:space-between; align-items:center; gap:.5rem; }
+  .mini-title { font-size: .73rem; font-weight: 700; color: #f1f5f9; }
+  .mini-sub { font-size: .61rem; color: #7f91a8; }
+  .pill { border-radius:99px; padding:.18rem .45rem; font-size:.58rem; font-weight:700; white-space:nowrap; }
+  .rose { color:#fecdd3; background:#88133755; border:1px solid #fb718533; }
+  .cyan { color:#a5f3fc; background:#164e634d; border:1px solid #67e8f933; }
+  .amber { color:#fde68a; background:#78350f55; border:1px solid #fbbf2433; }
+  .emerald { color:#a7f3d0; background:#064e3b66; border:1px solid #34d39933; }
+  .controls { display:grid; grid-template-columns: 1.2fr .8fr; gap:.4rem; }
+  .control {
+    min-width:0; border:1px solid #26364a; border-radius:8px; padding:.45rem .5rem;
+    background:#111e30; font-size:.65rem; color:#d7e1ef;
+  }
+  .control small { display:block; color:#778aa2; font-size:.52rem; text-transform:uppercase; letter-spacing:.07em; margin-bottom:.15rem; }
+  .full { grid-column:1 / -1; }
+  .switch { display:grid; grid-template-columns:1fr 1fr; gap:.25rem; border:1px solid #25364b; padding:.22rem; border-radius:8px; background:#0a1422; }
+  .switch span { text-align:center; border-radius:6px; padding:.3rem; color:#8090a5; font-size:.59rem; }
+  .switch .active-rose { color:#ffe4e6; background:#9f123955; }
+  .switch .active-cyan { color:#cffafe; background:#155e7555; }
+  .switch .active-emerald { color:#d1fae5; background:#065f4655; }
+  .metric-row { display:grid; grid-template-columns:1fr 1fr; gap:.4rem; }
+  .metric { border:1px solid #26364a; border-radius:8px; padding:.45rem; background:#111e30; }
+  .metric label { display:block; font-size:.52rem; color:#8293a9; text-transform:uppercase; letter-spacing:.05em; }
+  .metric strong { display:block; margin-top:.18rem; color:#e6edf6; font-size:.68rem; }
+  .metric em { font-style:normal; color:#8293a9; font-size:.54rem; }
+  .slider { height:5px; border-radius:9px; background:linear-gradient(90deg,#22d3ee 0 22%,#25364b 22%); margin:.2rem 0; }
+  .steps { display:grid; gap:.25rem; }
+  .step { border:1px solid #26364a; border-radius:7px; padding:.38rem .48rem; color:#b8c5d5; font-size:.59rem; }
+  .note { margin-top:.75rem; color:#8293a9; font-size:.66rem; }
+  @media (max-width: 900px) { .direction-grid { grid-template-columns:1fr; } .direction > p { min-height:0; } }
+  @media (prefers-reduced-motion: reduce) { .direction { transition:none; } }
+</style>
+
+<div class="intro">
+  <h2>Lotus Drops, aligned with DIY</h2>
+  <p>Choose how closely the Lotus page should follow the DIY concentrate layout. The Lotus-specific calibration, volume, ppm references, and Epsom option stay available in each direction.</p>
+</div>
+
+<div class="direction-grid">
+  <div class="direction" data-choice="shared-layout-lotus-accents" onclick="toggleSelect(this)">
+    <span class="tag">Recommended</span>
+    <h3>Shared layout, Lotus accents</h3>
+    <p>Use the DIY card sizes, spacing, control heights, and section order while keeping Lotus rose/cyan/amber cues.</p>
+    <div class="mini">
+      <div class="mini-top"><div><div class="mini-title">DIY Lotus Drops</div><div class="mini-sub">Prepare one dropper at a time</div></div><span class="pill rose">Independent</span></div>
+      <div class="switch"><span class="active-rose">Stock builder</span><span>DIY Lotus Drops</span></div>
+      <div class="controls">
+        <div class="control"><small>Dropper</small>Magnesium</div>
+        <div class="control"><small>Mineral</small>Magnesium chloride</div>
+        <div class="control full"><small>Tip style</small><span class="pill rose">Straight</span> <span class="pill">Round</span><span class="pill emerald" style="float:right">Calibrated</span></div>
+      </div>
+      <div class="control"><div class="mini-top"><span><small>Dropper calibration</small>Shared by tip style</span><span class="pill emerald">Straight ready</span></div></div>
+      <div class="control"><div class="mini-top"><span><small>Brew-water volume</small>450 mL</span><span class="pill cyan">Reset</span></div><div class="slider"></div><div class="switch"><span class="active-cyan">mL</span><span>L&nbsp;&nbsp; Gal</span></div></div>
+      <div class="metric-row"><div class="metric"><label>Lotus source</label><strong>+ — ppm Mg/drop</strong><em>Published reference</em></div><div class="metric"><label>Your dropper</label><strong>+ — ppm Mg/drop</strong><em>Calibrated / estimate</em></div></div>
+      <div class="control"><small>Finished stock mass</small>100 g</div>
+      <div class="steps"><div class="step">Salt to weigh · Water to add</div><div class="step">Preparation steps · water mass note</div></div>
+      <div class="note">Bonus Epsom remains optional and clearly marked “not Lotus.”</div>
+    </div>
+  </div>
+
+  <div class="direction" data-choice="shared-layout-shared-accents" onclick="toggleSelect(this)">
+    <span class="tag">Most uniform</span>
+    <h3>Shared layout and accents</h3>
+    <p>Use the same DIY green/teal active-state colors throughout, retaining Lotus-only controls and data.</p>
+    <div class="mini">
+      <div class="mini-top"><div><div class="mini-title">DIY Lotus Drops</div><div class="mini-sub">Prepare one dropper at a time</div></div><span class="pill emerald">Independent</span></div>
+      <div class="switch"><span>Stock builder</span><span class="active-emerald">DIY Lotus Drops</span></div>
+      <div class="controls">
+        <div class="control"><small>Dropper</small>Magnesium</div>
+        <div class="control"><small>Mineral</small>Magnesium chloride</div>
+        <div class="control full"><small>Tip style</small><span class="pill emerald">Straight</span> <span class="pill">Round</span><span class="pill emerald" style="float:right">Calibrated</span></div>
+      </div>
+      <div class="control"><div class="mini-top"><span><small>Dropper calibration</small>Shared by tip style</span><span class="pill emerald">Straight ready</span></div></div>
+      <div class="control"><div class="mini-top"><span><small>Brew-water volume</small>450 mL</span><span class="pill emerald">Reset</span></div><div class="slider" style="background:linear-gradient(90deg,#34d399 0 22%,#25364b 22%)"></div><div class="switch"><span class="active-emerald">mL</span><span>L&nbsp;&nbsp; Gal</span></div></div>
+      <div class="metric-row"><div class="metric"><label>Lotus source</label><strong>+ — ppm Mg/drop</strong><em>Published reference</em></div><div class="metric"><label>Your dropper</label><strong>+ — ppm Mg/drop</strong><em>Calibrated / estimate</em></div></div>
+      <div class="control"><small>Finished stock mass</small>100 g</div>
+      <div class="steps"><div class="step">Salt to weigh · Water to add</div><div class="step">Preparation steps · water mass note</div></div>
+      <div class="note">Bonus Epsom remains optional and clearly marked “not Lotus.”</div>
+    </div>
+  </div>
+
+  <div class="direction" data-choice="spacing-only" onclick="toggleSelect(this)">
+    <span class="tag">Smallest change</span>
+    <h3>Keep Lotus layout, tidy spacing</h3>
+    <p>Make controls, padding, and gaps more consistent, but retain the current section arrangement.</p>
+    <div class="mini">
+      <div class="mini-top"><div><div class="mini-title">DIY Lotus Drops</div><div class="mini-sub">Prepare one dropper at a time</div></div><span class="pill rose">Independent</span></div>
+      <div class="controls">
+        <div class="control"><small>Dropper to prepare</small>Magnesium</div>
+        <div class="control"><small>Selected mineral</small>Magnesium chloride</div>
+      </div>
+      <div class="control"><div class="mini-top"><span><small>Dropper calibration</small>Separate card</span><span class="pill emerald">Straight ready</span></div></div>
+      <div class="control"><div class="mini-top"><span><small>Brew-water volume</small>450 mL</span><span class="pill cyan">Reset</span></div><div class="slider"></div><div class="switch"><span class="active-cyan">mL</span><span>L&nbsp;&nbsp; Gal</span></div></div>
+      <div class="metric-row"><div class="metric"><label>Lotus source</label><strong>+ — ppm Mg/drop</strong><em>Published reference</em></div><div class="metric"><label>Your dropper</label><strong>+ — ppm Mg/drop</strong><em>Calibrated / estimate</em></div></div>
+      <div class="control"><small>Finished stock mass</small>100 g</div>
+      <div class="steps"><div class="step">Salt to weigh · Water to add</div><div class="step">Preparation steps · water mass note</div></div>
+    </div>
+  </div>
+</div>
+
+<p class="note" style="max-width:1250px;margin:1rem auto 0">No choice changes the Lotus math. The references remain separate from your calibrated dropper result, and the optional Epsom concentrate stays labeled as a non-Lotus bonus.</p>
