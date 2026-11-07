@@ -269,11 +269,33 @@ test('preserves DIY spreadsheet CaCO3-equivalent drop targets by weight', async 
   await expect(doseDetails).not.toHaveAttribute('open', '');
   await doseDetails.locator('summary').click();
   await expect(doseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
-  await expect(doseDetails).toContainText('DIY spreadsheet basis: 5 ppm CaCO₃-equivalent per drop');
+  await expect(doseDetails).toContainText('not an additional ion or independent GH/KH target');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
   await expect(page.getByRole('button', { name: 'ppm as CaCO₃', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const reloadedDoseDetails = page.locator('[data-testid^="mass-stock-dose-details-"]').first();
   await reloadedDoseDetails.locator('summary').click();
   await expect(reloadedDoseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+});
+
+test('shows live DIY CaCO3-equivalent ppm per drop using finished-stock calibration when available', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+  await page.getByRole('button', { name: 'ppm as CaCO₃', exact: true }).click();
+  await page.getByRole('button', { name: 'Set strength from drop target' }).click();
+
+  const perDrop = page.getByTestId('mass-diy-per-drop-equivalent');
+  await expect(perDrop).toBeVisible();
+  await expect(perDrop).toContainText('CaCO₃-equivalent per drop');
+  await expect(perDrop).toContainText('5 ppm');
+  await expect(perDrop).toContainText('Estimated');
+
+  await page.getByLabel('Stock dropper tip').selectOption('straight');
+  const stockCalibration = page.getByTestId('mass-stock-calibration');
+  await stockCalibration.locator('summary').click();
+  await stockCalibration.locator('input').nth(0).fill('100');
+  await stockCalibration.locator('input').nth(1).fill('4');
+  await stockCalibration.getByRole('button', { name: 'Use measured stock calibration' }).click();
+  await expect(perDrop).toContainText('Measured');
+  await expect(perDrop).toContainText('4 ppm');
 });

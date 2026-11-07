@@ -599,6 +599,8 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const blocked = !result.valid || warnings.some(w => w.severity === 'error');
   const saltLabel = salts.map(s => `${n(s.physicalMassMg / 1000)} g ${SALTS.find(item => item.id === s.saltId)?.name ?? s.saltId}`).join(' + ');
   const doseMassG = result.valid ? percentMode ? Number(targetMgInput) / result.totalSaltMgPerStockG : result.doseMassG : NaN;
+  const diyPpmCaCo3PerDrop = preparedMass && equivalentFactor > 0 && preparedMass.totalSaltMgPerDrop !== null
+    ? preparedMass.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg : null;
   const dropMass = result.valid ? result.gramsPerDrop : null;
   const exactDrops = dropMass ? doseMassG / dropMass : NaN;
   const roundedDrops = Number.isFinite(exactDrops) ? Math.round(exactDrops) : NaN;
@@ -732,11 +734,18 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
         {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}
         <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
+        {diyPpmCaCo3PerDrop !== null && <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-emerald-200/15 bg-slate-950/25 px-3 py-2" data-testid="mass-diy-per-drop-equivalent">
+          <div>
+            <p className="text-[10px] font-semibold text-emerald-100">CaCO₃-equivalent per drop</p>
+            <p className="mt-0.5 text-sm font-semibold tabular-nums text-emerald-200">+{n(diyPpmCaCo3PerDrop)} ppm <span className="text-[10px] font-normal text-slate-400">in {n(finalLiters)} L</span></p>
+          </div>
+          <span className="shrink-0 text-[10px] font-medium text-slate-400">{measured.basis === 'stock' ? 'Measured stock' : 'Estimated'}</span>
+        </div>}
         <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
           <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
           {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
           {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-300">Rounded-drop ions: {recipeDeliveredIons}</p>}
-          {preparedMass && equivalentFactor > 0 && preparedMass.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-300">DIY spreadsheet basis: {n(preparedMass.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop; not an additional ion or independent GH/KH target.</p>}
+          {diyPpmCaCo3PerDrop !== null && <p className="mt-1 text-xs text-slate-300">The CaCO₃-equivalent per-drop value is a planning reference, not an additional ion or independent GH/KH target.</p>}
           {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">
             Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.
           </p>}
