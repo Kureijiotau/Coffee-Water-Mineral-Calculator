@@ -28,3 +28,37 @@ test('the concentrate batch-volume toggle also turns its default 1 L into one ga
   await expect(volumeInput).toHaveValue('1');
   await expect(page.getByRole('button', { name: 'Toggle brewing water units' })).toHaveText('gallons');
 });
+
+test('calculator volume conversion stays correct through repeated unit switches', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('mode-brewer').click();
+
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toHaveValue('1');
+  await page.getByRole('button', { name: 'Switch volume units to gallons' }).click();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in gallons' })).toHaveValue('1');
+
+  await page.getByRole('button', { name: 'Switch volume units to liters' }).click();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toHaveValue('3.785411784');
+  await page.getByRole('button', { name: 'Switch volume units to gallons' }).click();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in gallons' })).toHaveValue('1');
+
+  await page.getByRole('button', { name: 'Switch volume units to liters' }).click();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toHaveValue('3.785411784');
+});
+
+test('concentrate batch conversion stays correct through repeated unit switches', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const volumeInput = page.getByLabel('Final brewing water');
+  const toggle = page.getByRole('button', { name: 'Toggle brewing water units' });
+  await expect(volumeInput).toHaveValue('1');
+  await toggle.click();
+  await expect(volumeInput).toHaveValue('1');
+  await toggle.click();
+  await expect(volumeInput).toHaveValue('3.785411784');
+  await toggle.click();
+  await expect(volumeInput).toHaveValue('1');
+  await toggle.click();
+  await expect(volumeInput).toHaveValue('3.785411784');
+});

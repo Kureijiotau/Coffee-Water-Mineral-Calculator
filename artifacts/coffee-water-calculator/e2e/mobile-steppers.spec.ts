@@ -108,6 +108,20 @@ test('mobile volume steppers respond to taps and held touches', async ({ page })
   await expect.poll(async () => Number((await waterReading.innerText()).replace(/[^\d.-]/g, ''))).toBeGreaterThan(2);
 });
 
+test('mobile calculator volume units switch repeatedly without losing the value', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('mode-brewer').tap();
+
+  await page.getByRole('button', { name: 'Switch volume units to gallons' }).tap();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in gallons' })).toHaveValue('1');
+  await page.getByRole('button', { name: 'Switch volume units to liters' }).tap();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toHaveValue('3.785411784');
+  await page.getByRole('button', { name: 'Switch volume units to gallons' }).tap();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in gallons' })).toHaveValue('1');
+  await page.getByRole('button', { name: 'Switch volume units to liters' }).tap();
+  await expect(page.getByRole('textbox', { name: 'Final batch volume in liters' })).toHaveValue('3.785411784');
+});
+
 test('Watermancer doses repeat on hold while Mixer doses respond to taps', async ({ page }) => {
   await openWatermancer(page);
   const watermancerRow = await activateWatermancerSalt(page, 'Calcium Chloride');
