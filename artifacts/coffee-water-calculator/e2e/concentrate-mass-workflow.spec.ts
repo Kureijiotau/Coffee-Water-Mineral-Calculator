@@ -185,6 +185,47 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await expect.poll(async () => Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue())).toBeCloseTo(pinnedStrength * 2, 6);
 });
 
+test('shows recipe stock controls beside preparation on desktop and stacks them on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.getByTestId('mode-alchemist').click();
+  await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
+  await page.getByRole('button', { name: 'Make Concentrate', exact: true }).click();
+
+  const magnesium = page.getByTestId('mass-stock-card')
+    .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
+  const controls = magnesium.locator('[data-testid^="mass-recipe-controls-"]');
+  const preparation = magnesium.locator('[data-testid^="mass-recipe-preparation-"]');
+  await expect(controls).toBeVisible();
+  await expect(preparation).toBeVisible();
+  const desktop = await Promise.all([controls.boundingBox(), preparation.boundingBox()]);
+  expect(desktop[0]).not.toBeNull();
+  expect(desktop[1]).not.toBeNull();
+  expect(desktop[1]!.x).toBeGreaterThan(desktop[0]!.x);
+  await expect(magnesium.getByLabel('Magnesium Sulfate concentrate target stock weight in grams')).toBeVisible();
+  await expect(magnesium.getByLabel('Magnesium Sulfate concentrate recipe strength')).toBeVisible();
+  await expect(magnesium.getByRole('button', { name: 'Download preparation text' })).toBeVisible();
+  await page.evaluate(() => {
+    const original = URL.createObjectURL;
+    URL.createObjectURL = function (blob: Blob | MediaSource) {
+      if (blob instanceof Blob) (window as unknown as { recipePreparationBlob: Blob }).recipePreparationBlob = blob;
+      return original.call(URL, blob);
+    };
+  });
+  await magnesium.getByRole('button', { name: 'Download preparation text' }).click();
+  const exportedText = await page.evaluate(() => (window as unknown as { recipePreparationBlob: Blob }).recipePreparationBlob.text());
+  expect(exportedText).toContain('total contents weigh 100 g');
+  expect(exportedText).toContain('salt + water');
+  expect(exportedText).toContain('Dose');
+
+  await page.setViewportSize({ width: 402, height: 874 });
+  const mobile = await Promise.all([controls.boundingBox(), preparation.boundingBox()]);
+  expect(mobile[0]).not.toBeNull();
+  expect(mobile[1]).not.toBeNull();
+  expect(mobile[1]!.y).toBeGreaterThan(mobile[0]!.y);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test('uses salt-first mass preparation in the Watermancer Guide', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('tab', { name: 'Watermancer Guide', exact: true }).click();

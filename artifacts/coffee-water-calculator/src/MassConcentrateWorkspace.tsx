@@ -816,84 +816,180 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
     </div>
     </div>
   </div>;
-  return <section className="app-card rounded-2xl border border-fuchsia-400/25 bg-slate-900/65 p-5 space-y-4" data-testid="mass-stock-card">
-    <h3 className="font-semibold text-fuchsia-100">{name}</h3>
-    <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-xs">Target stock weight (g)<input aria-label={`${name} target stock weight in grams`} className={inputClass} inputMode="decimal" placeholder="e.g. 100" value={massInput}
-        onChange={e => { setMassInput(e.target.value); onUpdate({ totalStockMassG: e.target.value.trim() ? Number(e.target.value) : NaN, batchScale: 1 }); }} /></label>
-      {!percentMode && <label className="text-xs">Recipe strength (× one-liter equivalents)<input aria-label={`${name} recipe strength`} className={inputClass} inputMode="decimal" value={strengthInput}
-        onChange={e => { setStrengthInput(e.target.value); onUpdate({ strength: e.target.value.trim() ? Number(e.target.value) : NaN, batchScale: 1, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined }); }} /></label>}
-    </div>
-    {!result.valid ? <p role="alert" className="text-sm text-red-200">{result.reason}</p> : <>
-      <p className="text-xs text-slate-400">{n(result.strengthPercentWw)}% w/w · {n(result.totalSaltMgPerStockG)} mg salt / g stock</p>
-      <div className="space-y-2">{salts.map(s => {
-        const salt = SALTS.find(item => item.id === s.saltId)!;
-        const form = salt.hydrationForms[forms[salt.id] ?? salt.defaultFormIdx ?? 0];
-        return <div key={salt.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span style={{ color: getSaltColorTokens(salt).primary }}>{salt.name} <small className="text-slate-400">({form?.label})</small></span>
-          {allowSaltMassEdit && salts.length === 1 ? <label className="text-xs">Salt mass (g)<input aria-label={`${name} salt mass in grams`} className={`${inputClass} max-w-32`} inputMode="decimal" value={n(s.physicalMassMg / 1000, 6)}
-            onChange={e => { const next = Number(e.target.value); if (Number.isFinite(next) && next > 0 && s.physicalMassMg > 0) {
-              const scaled = scaleMassStockForSaltEdit(state, s.physicalMassMg / 1000, next);
-              if (scaled) onUpdate({ ...scaled, strength: state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop ? strength : state.strength, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined });
-            } }} /></label>
-            : <strong>{n(s.physicalMassMg / 1000)} g</strong>}</div>;
-      })}</div>
-      {(state.batchScale ?? 1) !== 1 && <p className="text-xs text-slate-400">Prepared batch scaled ×{n(state.batchScale ?? 1)} at unchanged mass fraction. This bottle contains ×{n(strength)} one-liter recipe equivalents; the reference strength control stays ×{n(state.strength)}.</p>}
-      {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="text-xs text-amber-100">Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.</p>}
-      <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-950/50 p-3 text-sm">
-        <span>Water <strong className="block text-cyan-200">{n(result.waterMassG)} g</strong></span>
-        <span>Total contents <strong className="block text-fuchsia-100">{n(result.totalStockMassG)} g</strong></span>
+  return <article className="space-y-4" data-testid="mass-stock-card">
+    <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.06fr)_minmax(390px,0.94fr)]" data-testid={`mass-recipe-layout-${state.id}`}>
+      <div className="space-y-4" data-testid={`mass-recipe-controls-${state.id}`}>
+        <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+          <h3 className="font-semibold text-fuchsia-100">{name}</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Concentrate weight</span>
+              <span className="mt-1 flex items-center gap-2">
+                <input aria-label={`${name} target stock weight in grams`} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal" placeholder="e.g. 100" value={massInput}
+                  onChange={e => { setMassInput(e.target.value); onUpdate({ totalStockMassG: e.target.value.trim() ? Number(e.target.value) : NaN, batchScale: 1 }); }} />
+                <span className="text-sm text-slate-400">g</span>
+              </span>
+            </label>
+            {!percentMode && <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recipe strength</span>
+              <span className="mt-1 flex items-center gap-2">
+                <input aria-label={`${name} recipe strength`} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal" value={strengthInput}
+                  onChange={e => { setStrengthInput(e.target.value); onUpdate({ strength: e.target.value.trim() ? Number(e.target.value) : NaN, batchScale: 1, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined }); }} />
+                <span className="text-sm text-slate-400">×</span>
+              </span>
+              <span className="mt-1 block text-[10px] text-slate-500">One-liter recipe equivalents</span>
+            </label>}
+          </div>
+          {!result.valid ? <p role="alert" className="mt-3 text-sm text-red-200">{result.reason}</p> : <>
+            <div className="mt-3 rounded-xl border border-slate-700/60 bg-slate-950/25 p-3">
+              <p className="text-xs text-slate-400">{n(result.strengthPercentWw)}% w/w · {n(result.totalSaltMgPerStockG)} mg salt / g stock</p>
+              <div className="mt-2 space-y-2">{salts.map(s => {
+                const salt = SALTS.find(item => item.id === s.saltId)!;
+                const form = salt.hydrationForms[forms[salt.id] ?? salt.defaultFormIdx ?? 0];
+                return <div key={salt.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span style={{ color: getSaltColorTokens(salt).primary }}>{salt.name} <small className="text-slate-400">({form?.label})</small></span>
+                  {allowSaltMassEdit && salts.length === 1 ? <label className="text-xs">Salt mass (g)<input aria-label={`${name} salt mass in grams`} className={`${inputClass} max-w-32`} inputMode="decimal" value={n(s.physicalMassMg / 1000, 6)}
+                    onChange={e => { const next = Number(e.target.value); if (Number.isFinite(next) && next > 0 && s.physicalMassMg > 0) {
+                      const scaled = scaleMassStockForSaltEdit(state, s.physicalMassMg / 1000, next);
+                      if (scaled) onUpdate({ ...scaled, strength: state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop ? strength : state.strength, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined });
+                    } }} /></label>
+                    : <strong>{n(s.physicalMassMg / 1000)} g</strong>}
+                </div>;
+              })}</div>
+            </div>
+            {(state.batchScale ?? 1) !== 1 && <p className="text-xs text-slate-400">Prepared batch scaled ×{n(state.batchScale ?? 1)} at unchanged mass fraction. This bottle contains ×{n(strength)} one-liter recipe equivalents; the reference strength control stays ×{n(state.strength)}.</p>}
+            {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="text-xs text-amber-100">Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.</p>}
+            <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-950/50 p-3 text-sm">
+              <span>Water <strong className="block text-cyan-200">{n(result.waterMassG)} g</strong></span>
+              <span>Total contents <strong className="block text-fuchsia-100">{n(result.totalStockMassG)} g</strong></span>
+            </div>
+          </>}
+        </section>
+
+        <section className="rounded-2xl border border-cyan-300/25 bg-slate-800/70 p-4 shadow-xl sm:p-5">
+          <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-cyan-200/70">
+            <Droplet className="h-4 w-4 text-cyan-300/80" aria-hidden="true" />
+            <span>Desired dose</span>
+            <HelpTip testId={`mass-dose-help-${state.id}`} label="Dose target explanation"
+              text="Choose whether the per-drop target is expressed as CaCO₃-equivalent ppm or physical salt mg/L. The planned strength uses your stock weight and water calibration; verify drops with the finished stock before relying on them." />
+          </div>
+          {percentMode && <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">Desired physical salt dose (mg)</span>
+            <input aria-label={`${name} desired salt dose in milligrams`} className="mt-1 w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" value={targetMgInput}
+              onChange={e => { setTargetMgInput(e.target.value); onUpdate({ desiredSaltMassMg: e.target.value.trim() ? Number(e.target.value) : NaN }); }} />
+          </label>}
+          {!percentMode && <>
+            <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-cyan-200/15 bg-slate-950/30 p-1" role="group" aria-label="Drop target basis">
+              <button type="button" onClick={() => setDropBasis('caco3')} aria-pressed={dropBasis === 'caco3'} disabled={equivalentFactor <= 0}
+                className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'caco3' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'} disabled:cursor-not-allowed disabled:opacity-40`}>ppm as CaCO₃</button>
+              <button type="button" onClick={() => setDropBasis('salt-mg')} aria-pressed={dropBasis === 'salt-mg'}
+                className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'salt-mg' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>mg/L salt per drop</button>
+            </div>
+            <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                {dropBasis === 'caco3' ? 'Desired ppm as CaCO₃ per drop' : 'Desired physical salt (mg/L per drop)'}
+              </span>
+              <span className="mt-1 flex items-center gap-2">
+                <input aria-label={dropBasis === 'caco3' ? 'DIY CaCO3 ppm per drop' : 'DIY physical salt mg per L per drop'}
+                  className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal"
+                  value={dropTargetInput} onChange={e => setDropTargetInput(e.target.value)} />
+                <span className="text-sm text-slate-400">{dropBasis === 'caco3' ? 'ppm' : 'mg/L'}</span>
+              </span>
+            </label>
+            <button type="button" className="mt-3 rounded-lg border border-cyan-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-200/55 hover:bg-cyan-400/10"
+              onClick={() => {
+                const target = dropBasis === 'caco3' && equivalentFactor > 0 ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput);
+                const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
+                  calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: target });
+                if (next.valid) {
+                  onUpdate({ strength: next.strength, batchScale: 1, physicalSaltPpmPerDrop: dropBasis === 'caco3' ? undefined : Number(dropTargetInput),
+                    caCo3PpmPerDrop: dropBasis === 'caco3' ? Number(dropTargetInput) : undefined });
+                  setStrengthMessage('Strength changed. Verify drops with the newly prepared finished stock.');
+                  setCalibrationError('');
+                } else setStrengthMessage(next.reason);
+              }}>Set strength from drop target</button>
+          </>}
+          {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-2 text-xs text-amber-100">
+            Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.
+          </p>}
+          {(!Number.isFinite(doseMassG) || doseMassG <= 0) && <p role="alert" className="mt-3 text-xs text-red-200">Enter a positive, finite salt dose and brewing-water amount.</p>}
+          {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm">
+            <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
+            {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}
+            <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
+            <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
+              <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
+              {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
+              {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-400">Rounded-drop ions: {recipeDeliveredIons}</p>}
+              {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
+              {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.</p>}
+            </details>
+            {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+          </div>}
+          {strengthMessage && <p role="status" className="mt-2 text-xs text-amber-200">{strengthMessage}</p>}
+        </section>
       </div>
-      {percentMode && <label className="block text-xs">Desired physical salt dose (mg)<input aria-label={`${name} desired salt dose in milligrams`} className={inputClass} value={targetMgInput}
-        onChange={e => { setTargetMgInput(e.target.value); onUpdate({ desiredSaltMassMg: e.target.value.trim() ? Number(e.target.value) : NaN }); }} /></label>}
-      {(!Number.isFinite(doseMassG) || doseMassG <= 0) && <p role="alert" className="text-xs text-red-200">Enter a positive, finite salt dose and brewing-water amount.</p>}
-      {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm">
-        <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
-        {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}
-        <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
-        <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
-          <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
-          {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
-          {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-400">Rounded-drop ions: {recipeDeliveredIons}</p>}
-          {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
-          {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.</p>}
+
+      <div className="space-y-4" data-testid={`mass-recipe-preparation-${state.id}`}>
+        <section ref={preparationCardRef} className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">
+              <ListChecks className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />
+              <span>Preparation</span>
+            </div>
+            <span className="text-right text-[10px] text-slate-400">Salt + water · not the bottle</span>
+          </div>
+          <h4 className="mt-1 text-base font-semibold text-white">Make this concentrate</h4>
+          {!blocked && (showSteps || percentMode) && <div className="mt-3">
+            <ConcentratePreparationSteps totalStockMassG={result.totalStockMassG} waterMassG={result.waterMassG} saltLabel={saltLabel} />
+          </div>}
+          {preparedMass && <div className={`mt-3 flex items-center justify-between gap-3 rounded-xl border px-3 py-3 ${willDissolve ? 'border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-50' : 'border-rose-300/30 bg-rose-400/[0.08] text-rose-50'}`}>
+            <span className="flex items-center gap-2">
+              {willDissolve ? <Check className="h-4 w-4 text-emerald-300" aria-hidden="true" /> : <AlertTriangle className="h-4 w-4 text-rose-300" aria-hidden="true" />}
+              {willDissolve ? 'Dissolves at this concentration' : 'May not fully dissolve'}
+            </span>
+            <strong className="text-right text-[10px] tabular-nums">{saltGPer100MlWater.toFixed(2)} / {solubilityLimitGPer100Ml == null ? '—' : solubilityLimitGPer100Ml.toFixed(2)} g per 100 mL</strong>
+          </div>}
+          {warnings.map((warning, i) => <p key={i} role={warning.severity === 'error' ? 'alert' : undefined}
+            className={`mt-2 text-xs ${warning.severity === 'error' ? 'text-red-200' : warning.severity === 'warning' ? 'text-amber-200' : 'text-slate-400'}`}>{warning.message}</p>)}
+          {preparedMass && <button className="mt-3 rounded-lg border border-emerald-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-emerald-100 hover:border-emerald-200/55 hover:bg-emerald-400/10"
+            disabled={blocked || !Number.isFinite(doseMassG) || doseMassG <= 0} onClick={() => downloadText(`${state.id}-stock-preparation.txt`,
+              [name, `${n(preparedMass.strengthPercentWw)}% w/w; total stock ${n(preparedMass.totalStockMassG)} g`,
+                ...buildConcentratePreparationSteps({ totalStockMassG: preparedMass.totalStockMassG, waterMassG: preparedMass.waterMassG, saltLabel }),
+                WATER_MASS_NOTE, `Dose ${n(doseMassG)} g stock for ${n(finalLiters)} L. Drops: ${measured.basis === 'stock' ? 'measured finished-stock' : 'water-based estimate; verify finished stock'}.`,
+                ...warnings.map(w => w.message)].join('\n\n'))}>Download preparation text</button>}
+        </section>
+
+        <details className="rounded-xl border border-sky-300/20 bg-slate-900/55 p-4" data-testid="mass-stock-calibration">
+          <summary className="cursor-pointer text-sm font-semibold text-sky-100">
+            Calibrate this finished stock by weight
+            <span className="mt-1 block text-xs font-normal text-slate-400">Separate from water-tip calibration</span>
+          </summary>
+          <p className="mt-3 text-xs text-slate-400">Tare a receiving cup. Hold the dropper vertically and weigh counted drops of this actual finished stock. Use the same tip. This calibration is saved to this stock separately from the shared water calibration.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs">Counted stock drops<input aria-label={`${name} counted stock drops`} className={inputClass} value={dropsInput} onChange={event => setDropsInput(event.target.value)} /></label>
+            <label className="text-xs">Measured stock weight (g)<input aria-label={`${name} measured stock weight`} className={inputClass} value={weighedInput} onChange={event => setWeighedInput(event.target.value)} /></label>
+          </div>
+          <button type="button" className={`${buttonClass} mt-3`} onClick={() => {
+            if (![Number(dropsInput), Number(weighedInput)].every(value => Number.isFinite(value) && value > 0)) { setCalibrationError('Enter a positive drop count and actual stock weight.'); return; }
+            onUpdate({ calibration: { basis: 'stock', drops: Number(dropsInput), massG: Number(weighedInput), compositionKey, tipKey } });
+            setCalibrationError('');
+          }}>Use measured stock calibration</button>
+          {calibrationError && <p role="status" className="mt-2 text-xs text-amber-200">{calibrationError}</p>}
         </details>
-        {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
-      </div>}
-      {!percentMode && <div className="space-y-2">
-        <button className={buttonClass} disabled={recommendedStrength === null} onClick={() => onUpdate({ strength: recommendedStrength!, batchScale: 1, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined })}>
-          {recommendedStrength === null ? 'No concern-free recommendation at this weight' : `Use conservative recommendation ×${recommendedStrength}`}
-        </button><p className="text-xs text-slate-400">Uses the existing safety margin and ×500 model cap, plus at least one planning drop for 0.1 L. This is an estimate, not a stability guarantee.</p>
-        {diySingleSalt && <label className="block text-xs">Drop target basis<select aria-label="Drop target basis" className={inputClass} value={dropBasis} onChange={e => setDropBasis(e.target.value as typeof dropBasis)}>
-          <option value="salt-mg">Physical salt mg/L per drop</option><option value="caco3" disabled={equivalentFactor <= 0}>DIY spreadsheet CaCO₃-equivalent ppm/drop</option></select></label>}
-        <div className="flex flex-wrap items-end gap-2"><label className="text-xs">{dropBasis === 'caco3' && diySingleSalt ? 'CaCO₃-equivalent target (ppm per drop)' : 'Physical salt target (mg/L per drop)'}<input className={`${inputClass} max-w-36`} value={dropTargetInput} onChange={e => setDropTargetInput(e.target.value)} /></label>
-        <button className={buttonClass} onClick={() => {
-          const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
-            calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput) });
-          if (next.valid) { onUpdate({ strength: next.strength, batchScale: 1,
-            physicalSaltPpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? undefined : Number(dropTargetInput),
-            caCo3PpmPerDrop: dropBasis === 'caco3' && diySingleSalt ? Number(dropTargetInput) : undefined }); setCalibrationError('Strength changed. Verify drops with the newly prepared finished stock.'); }
-          else setCalibrationError(next.reason);
-        }}>Set strength from drop target</button></div></div>}
-      <details className="rounded-xl border border-slate-700/60 p-3">
-        <summary className="cursor-pointer text-sm text-fuchsia-100">Calibrate this finished stock by weight</summary>
-        <p className="mt-2 text-xs text-slate-400">Tare a receiving cup. Holding the dropper vertically, weigh counted drops of this actual finished stock. Use the same tip. Water calibration is only an estimate.</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="text-xs">Counted stock drops<input aria-label={`${name} counted stock drops`} className={inputClass} value={dropsInput} onChange={e => setDropsInput(e.target.value)} /></label>
-          <label className="text-xs">Measured stock weight (g)<input aria-label={`${name} measured stock weight`} className={inputClass} value={weighedInput} onChange={e => setWeighedInput(e.target.value)} /></label>
-        </div><button className={`${buttonClass} mt-3`} onClick={() => {
-          if (![Number(dropsInput), Number(weighedInput)].every(v => Number.isFinite(v) && v > 0)) { setCalibrationError('Enter a positive drop count and actual stock weight.'); return; }
-          onUpdate({ calibration: { basis: 'stock', drops: Number(dropsInput), massG: Number(weighedInput), compositionKey, tipKey } }); setCalibrationError('');
-        }}>Use measured stock calibration</button>
-      </details>
-      {calibrationError && <p role="status" className="text-xs text-amber-200">{calibrationError}</p>}
-      {(showSteps || percentMode) && !blocked && <ConcentratePreparationSteps totalStockMassG={result.totalStockMassG} waterMassG={result.waterMassG} saltLabel={saltLabel} />}
-      <button className={buttonClass} disabled={blocked || !Number.isFinite(doseMassG) || doseMassG <= 0} onClick={() => downloadText(`${state.id}-stock-preparation.txt`,
-        [name, `${n(result.strengthPercentWw)}% w/w; total stock ${n(result.totalStockMassG)} g`,
-          ...buildConcentratePreparationSteps({ totalStockMassG: result.totalStockMassG, waterMassG: result.waterMassG, saltLabel }),
-          WATER_MASS_NOTE, `Dose ${n(doseMassG)} g stock for ${n(finalLiters)} L. Drops: ${measured.basis === 'stock' ? 'measured finished-stock' : 'water-based estimate; verify finished stock'}.`,
-          ...warnings.map(w => w.message)].join('\n\n'))}>Download preparation text</button>
-    </>}
-    {warnings.map((warning, i) => <p key={i} role={warning.severity === 'error' ? 'alert' : undefined} className={`text-xs ${warning.severity === 'error' ? 'text-red-200' : warning.severity === 'warning' ? 'text-amber-200' : 'text-slate-400'}`}>{warning.message}</p>)}
-  </section>;
+
+        <details className="rounded-2xl border border-slate-700/60 bg-slate-900/45 p-4" data-testid="mass-stock-advanced-strength">
+          <summary className="cursor-pointer text-sm font-semibold text-slate-200">Advanced stock safety</summary>
+          <div className="mt-3 space-y-3">
+            {!percentMode && <div className="space-y-2">
+              <button className={buttonClass} disabled={recommendedStrength === null} onClick={() => onUpdate({ strength: recommendedStrength!, batchScale: 1, physicalSaltPpmPerDrop: undefined, caCo3PpmPerDrop: undefined })}>
+                {recommendedStrength === null ? 'No concern-free recommendation at this weight' : `Use conservative recommendation ×${recommendedStrength}`}
+              </button>
+              <p className="text-xs text-slate-400">Uses the existing safety margin and ×500 model cap, plus at least one planning drop for 0.1 L. This is an estimate, not a stability guarantee.</p>
+            </div>}
+          </div>
+        </details>
+      </div>
+    </div>
+  </article>;
 }
