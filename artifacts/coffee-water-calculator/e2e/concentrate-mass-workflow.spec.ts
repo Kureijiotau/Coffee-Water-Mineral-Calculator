@@ -1,10 +1,31 @@
 import { expect, test } from '@playwright/test';
 
+test('places DIY stock controls beside preparation on desktop and stacks them on phones', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const controls = page.getByTestId('mass-diy-controls');
+  const preparation = page.getByTestId('mass-diy-preparation');
+  await expect(controls).toBeVisible();
+  await expect(preparation).toBeVisible();
+  const desktop = await Promise.all([controls.boundingBox(), preparation.boundingBox()]);
+  expect(desktop[0]).not.toBeNull();
+  expect(desktop[1]).not.toBeNull();
+  expect(desktop[1]!.x).toBeGreaterThan(desktop[0]!.x);
+
+  await page.setViewportSize({ width: 402, height: 874 });
+  const mobile = await Promise.all([controls.boundingBox(), preparation.boundingBox()]);
+  expect(mobile[0]).not.toBeNull();
+  expect(mobile[1]).not.toBeNull();
+  expect(mobile[1]!.y).toBeGreaterThan(mobile[0]!.y);
+});
+
 test('shows the simplified DIY flow in salt-to-preparation order', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
 
-  await expect(page.getByRole('heading', { name: 'DIY single-salt concentrate', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Build a single-salt stock', exact: true })).toBeVisible();
   await expect(page.getByText('Advanced stock targets', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Recipe target (anhydrous-equivalent mg/L)', { exact: true })).toHaveCount(0);
   await expect(page.getByLabel('Stock strength percent w/w')).toHaveCount(0);
