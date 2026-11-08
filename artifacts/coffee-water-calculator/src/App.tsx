@@ -35,11 +35,13 @@ import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from 
 import { ConcentratePreparationSteps } from './concentratePreparation';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
-  getLitersAfterVolumeUnitToggle,
+  createVolumeInputValues,
   US_GALLON_IN_LITERS,
+  updateVolumeInputValue,
+  volumeInputToLiters,
   type VolumeUnit,
 } from './volumeUnits';
-export { getLitersAfterVolumeUnitToggle, US_GALLON_IN_LITERS, type VolumeUnit } from './volumeUnits';
+export { US_GALLON_IN_LITERS, type VolumeUnit } from './volumeUnits';
 import {
   HardnessCard as SharedHardnessCard,
   SimpleMetricCard as SharedSimpleMetricCard,
@@ -1193,9 +1195,7 @@ const num = (s: string): number => {
 };
 
 export function volumeToLiters(value: string | number, unit: VolumeUnit): number {
-  const parsed = typeof value === 'number' ? value : parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return 0;
-  return unit === 'gallons' ? parsed * US_GALLON_IN_LITERS : parsed;
+  return volumeInputToLiters(value, unit);
 }
 
 function waterPlanToMixerSource(
@@ -1321,6 +1321,7 @@ function VolumeInput({
   liters,
   unit,
   onChangeLiters,
+  onUnitChangeLiters,
   ariaLabel,
   placeholder,
   className,
@@ -1329,24 +1330,66 @@ function VolumeInput({
   liters: number;
   unit: VolumeUnit;
   onChangeLiters: (value: string) => void;
+  onUnitChangeLiters?: (value: string) => void;
   ariaLabel: string;
   placeholder?: string;
   className: string;
   showStepper?: boolean;
 }) {
-  const [inputValue, setInputValue] = useState(() => litersToVolumeInput(liters, unit));
+  const [inputValues, setInputValues] = useState(() =>
+    createVolumeInputValues(litersToVolumeInput(liters, 'liters')),
+  );
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputValuesRef = useRef(inputValues);
+  inputValuesRef.current = inputValues;
+  const onChangeLitersRef = useRef(onChangeLiters);
+  onChangeLitersRef.current = onChangeLiters;
+  const onUnitChangeLitersRef = useRef(onUnitChangeLiters);
+  onUnitChangeLitersRef.current = onUnitChangeLiters;
+  const previousUnitRef = useRef(unit);
+  const hasInitializedRef = useRef(false);
+  const pendingUnitSyncLitersRef = useRef<number | null>(null);
+  const notifyUnitValue = (value: string) => {
+    (onUnitChangeLitersRef.current ?? onChangeLitersRef.current)(value);
+  };
 
   useEffect(() => {
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      previousUnitRef.current = unit;
+      const nextLiters = volumeToLiters(inputValuesRef.current[unit], unit);
+      pendingUnitSyncLitersRef.current = nextLiters;
+      notifyUnitValue(String(nextLiters));
+      return;
+    }
+
+    if (previousUnitRef.current !== unit) {
+      previousUnitRef.current = unit;
+      const nextLiters = volumeToLiters(inputValuesRef.current[unit], unit);
+      pendingUnitSyncLitersRef.current = nextLiters;
+      notifyUnitValue(String(nextLiters));
+      return;
+    }
+
+    if (pendingUnitSyncLitersRef.current !== null) {
+      const pendingLiters = pendingUnitSyncLitersRef.current;
+      pendingUnitSyncLitersRef.current = null;
+      if (Number(liters) === pendingLiters) return;
+    }
+
     if (inputRef.current === document.activeElement) return;
-    setInputValue(litersToVolumeInput(liters, unit));
+    setInputValues(previous => updateVolumeInputValue(
+      previous,
+      unit,
+      litersToVolumeInput(liters, unit),
+    ));
   }, [liters, unit]);
 
   const stepValue = (direction: -1 | 1) => {
-    const currentValue = Number(litersToVolumeInput(liters, unit)) || 0;
+    const currentValue = Number(inputValues[unit]) || 0;
     const nextValue = Math.max(0, Number((currentValue + direction * 0.1).toFixed(2)));
     const nextInput = String(nextValue);
-    setInputValue(nextInput);
+    setInputValues(previous => updateVolumeInputValue(previous, unit, nextInput));
     onChangeLiters(String(volumeToLiters(nextInput, unit)));
   };
 
@@ -1356,10 +1399,10 @@ function VolumeInput({
       inputMode="decimal"
       min="0"
       step="0.1"
-      value={inputValue}
+      value={inputValues[unit]}
       onChange={event => {
         const nextValue = event.target.value;
-        setInputValue(nextValue);
+        setInputValues(previous => updateVolumeInputValue(previous, unit, nextValue));
         if (!nextValue.trim()) {
           onChangeLiters('');
           return;
@@ -7367,6 +7410,7 @@ function App() {
                      if (showWatermancer) enterWatermancerManualMode();
                      setLiters(value);
                    }}
+                   onUnitChangeLiters={setLiters}
                    placeholder={volumeUnitLabel(volumeUnit)}
                    ariaLabel={`Final batch volume in ${volumeUnitLabel(volumeUnit)}`}
                     className="w-full border-0 bg-transparent px-0 py-2 text-center text-base font-semibold tabular-nums text-slate-100 placeholder:text-cyan-100/30 focus:outline-none focus:ring-0"
@@ -7377,10 +7421,7 @@ function App() {
                </div>
                <VolumeUnitToggle
                  unit={volumeUnit}
-                 onToggle={() => {
-                   setLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
-                   setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters');
-                 }}
+                 onToggle={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
                  className="h-11 min-w-[76px] justify-center rounded-xl border-cyan-300/35 bg-cyan-400/10 px-3 text-[11px] uppercase tracking-wider shadow-sm shadow-cyan-950/30"
                />
             </div>
@@ -10012,10 +10053,7 @@ function ConcentrateWorkspace({
               Final water ({volumeUnitShortLabel(volumeUnit)})
               <VolumeUnitToggle
                 unit={volumeUnit}
-                onToggle={() => {
-                  setDoseLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
-                  onToggleVolumeUnit();
-                }}
+                onToggle={onToggleVolumeUnit}
               />
             </span>
             <VolumeInput
@@ -11127,7 +11165,13 @@ function LegacyRecipeConcentrateBuilder({
     'all-in-one': '100',
   });
   const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
-  const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
+  const [finalVolumeInputs, setFinalVolumeInputs] = useState(() =>
+    createVolumeInputValues(String(handoff.finalLiters)),
+  );
+  const finalVolumeInput = finalVolumeInputs[volumeUnit];
+  const updateFinalVolume = (value: string) => {
+    setFinalVolumeInputs(previous => updateVolumeInputValue(previous, volumeUnit, value));
+  };
 
   const strength = Math.max(0, Number(strengthInput) || 0);
   const allInOneStockVolumeMl = Math.max(0, Number(stockVolumeInputs['all-in-one'] ?? '100') || 0);
@@ -11308,11 +11352,10 @@ function LegacyRecipeConcentrateBuilder({
     setMeasuredDropsPerMlInput(
       restored?.measuredDropsPerMl != null ? String(restored.measuredDropsPerMl) : '',
     );
-    setFinalVolumeInput(
-      restored?.finalLiters && restored.finalLiters > 0
-        ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
-        : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
-    );
+    const restoredLiters = restored?.finalLiters && restored.finalLiters > 0
+      ? restored.finalLiters
+      : handoff.finalLiters;
+    setFinalVolumeInputs(previous => ({ ...previous, liters: String(restoredLiters) }));
   }, [handoff]);
 
   useEffect(() => {
@@ -11684,17 +11727,7 @@ function LegacyRecipeConcentrateBuilder({
                   <span>Selected final water volume</span>
                   <VolumeUnitToggle
                     unit={volumeUnit}
-                    onToggle={() => {
-                      const liters = getLitersAfterVolumeUnitToggle(
-                        volumeToLiters(finalVolumeInput, volumeUnit),
-                        volumeUnit,
-                      );
-                      setFinalVolumeInput(litersToVolumeInput(
-                        liters,
-                        volumeUnit === 'liters' ? 'gallons' : 'liters',
-                      ));
-                      onToggleVolumeUnit();
-                    }}
+                    onToggle={onToggleVolumeUnit}
                   />
                 </span>
                 <div className="mt-1 flex items-center gap-2">
@@ -11702,7 +11735,7 @@ function LegacyRecipeConcentrateBuilder({
                     min="0.001"
                     step="0.1"
                     value={finalVolumeInput}
-                    onChange={event => setFinalVolumeInput(event.target.value)}
+                    onChange={event => updateFinalVolume(event.target.value)}
                     className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-100 outline-none"
                     aria-label={`Selected final water volume in ${volumeUnitLabel(volumeUnit)}`}
                   />
@@ -12461,10 +12494,13 @@ function DiySingleSaltConcentratePanel({
   const [stockWeightInput, setStockWeightInput] = useState(
     storedInputs.stockWeightInput ?? storedInputs.stockVolumeInput ?? '100',
   );
-  const [finalVolumeInput, setFinalVolumeInput] = useState(
-    storedInputs.finalVolumeInput
-      ?? String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
-  );
+  const [finalVolumeInputs, setFinalVolumeInputs] = useState(() => ({
+    liters: storedInputs.finalVolumeInputs?.liters
+      ?? storedInputs.finalVolumeInput
+      ?? String(handoff.finalLiters),
+    gallons: storedInputs.finalVolumeInputs?.gallons ?? '1',
+  }));
+  const finalVolumeInput = finalVolumeInputs[volumeUnit];
   const [calibrationDropsInput, setCalibrationDropsInput] = useState(storedInputs.calibrationDropsInput ?? '');
   const [calibrationWeightInput, setCalibrationWeightInput] = useState(storedInputs.calibrationWeightInput ?? '');
   const [editableSharedCalibrations, setEditableSharedCalibrations] = useState(
@@ -12550,6 +12586,7 @@ function DiySingleSaltConcentratePanel({
       stockWeightInput,
       stockVolumeInput: storedInputs.stockVolumeInput,
       finalVolumeInput,
+      finalVolumeInputs,
       calibrationDropsInput,
       calibrationWeightInput,
       desiredPpmInput,
@@ -12563,6 +12600,7 @@ function DiySingleSaltConcentratePanel({
     desiredSaltMgInput,
     desiredDoseBasis,
     finalVolumeInput,
+    finalVolumeInputs,
     stockWeightInput,
   storedInputs.stockVolumeInput,
   ]);
@@ -12622,20 +12660,12 @@ function DiySingleSaltConcentratePanel({
     desiredDoseBasis,
   ]);
 
-  const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
+  const updateFinalVolume = (value: string) => {
+    setFinalVolumeInputs(previous => updateVolumeInputValue(previous, volumeUnit, value));
+  };
   const finalVolumeLabel = volumeUnitLabel(volumeUnit);
   const volumeLabel = volumeUnitShortLabel(volumeUnit);
-  const toggleBatchVolumeUnit = () => {
-    const liters = getLitersAfterVolumeUnitToggle(
-      volumeToLiters(finalVolumeInput, volumeUnit),
-      volumeUnit,
-    );
-    setFinalVolumeInput(litersToVolumeInput(
-      liters,
-      volumeUnit === 'liters' ? 'gallons' : 'liters',
-    ));
-    onToggleVolumeUnit();
-  };
+  const toggleBatchVolumeUnit = () => onToggleVolumeUnit();
   const updateSharedCalibration = (
     field: 'dropsInput' | 'weightInput',
     value: string,
@@ -13008,7 +13038,10 @@ function RecipeConcentrateBuilder({
   const [saltMassScales, setSaltMassScales] = useState<Record<string, number>>({});
   const [saltMassInputs, setSaltMassInputs] = useState<Record<string, Record<string, string>>>({});
   const [measuredDropsPerMlInput, setMeasuredDropsPerMlInput] = useState('');
-  const [finalVolumeInput, setFinalVolumeInput] = useState(String(handoff.finalLiters));
+  const [finalVolumeInputs, setFinalVolumeInputs] = useState(() =>
+    createVolumeInputValues(String(handoff.finalLiters)),
+  );
+  const finalVolumeInput = finalVolumeInputs[volumeUnit];
 
   const saltTargets = Object.fromEntries(
     Object.entries(handoff.salts).map(([saltId, entry]) => [saltId, num(entry.target)]),
@@ -13219,11 +13252,10 @@ function RecipeConcentrateBuilder({
     setMeasuredDropsPerMlInput(
       restored?.measuredDropsPerMl != null ? String(restored.measuredDropsPerMl) : '',
     );
-    setFinalVolumeInput(
-      restored?.finalLiters && restored.finalLiters > 0
-        ? String(volumeUnit === 'gallons' ? restored.finalLiters / US_GALLON_IN_LITERS : restored.finalLiters)
-        : String(volumeUnit === 'gallons' ? handoff.finalLiters / US_GALLON_IN_LITERS : handoff.finalLiters),
-    );
+    const restoredFinalLiters = restored?.finalLiters && restored.finalLiters > 0
+      ? restored.finalLiters
+      : handoff.finalLiters;
+    setFinalVolumeInputs(previous => ({ ...previous, liters: String(restoredFinalLiters) }));
   }, [handoff, singleSaltOnly]);
 
   useEffect(() => {
@@ -13291,7 +13323,9 @@ function RecipeConcentrateBuilder({
     );
   }
 
-  const updateFinalVolume = (value: string) => setFinalVolumeInput(value);
+  const updateFinalVolume = (value: string) => {
+    setFinalVolumeInputs(previous => updateVolumeInputValue(previous, volumeUnit, value));
+  };
   const modeHeader = stockStrategy === 'gh-kh'
     ? { badge: 'GH + KH', description: 'compatible minerals stay in separate bottles', heading: 'Two bottles. One balanced water.', intro: 'Prepare each compatible stock, then add both to the finished water.' }
     : stockStrategy === 'individual'
@@ -13400,17 +13434,7 @@ function RecipeConcentrateBuilder({
               onStrengthChange={value => updateStrength(group.id, value)}
               onVolumeChange={value => updateStockVolume(group.id, value)}
               onFinalVolumeChange={updateFinalVolume}
-              onToggleVolumeUnit={() => {
-                const liters = getLitersAfterVolumeUnitToggle(
-                  volumeToLiters(finalVolumeInput, volumeUnit),
-                  volumeUnit,
-                );
-                setFinalVolumeInput(litersToVolumeInput(
-                  liters,
-                  volumeUnit === 'liters' ? 'gallons' : 'liters',
-                ));
-                onToggleVolumeUnit();
-              }}
+              onToggleVolumeUnit={onToggleVolumeUnit}
               onDropperStyleChange={onDropperStyleChange}
               onMeasuredDropsPerMlChange={setMeasuredDropsPerMlInput}
               onPhysicalSaltPpmPerDropChange={stockStrategy === 'all-in-one'
@@ -16060,10 +16084,7 @@ function BrewerDropperCalibrationCard({
                 Final water ({volumeUnitShortLabel(volumeUnit)})
                 <VolumeUnitToggle
                   unit={volumeUnit}
-                  onToggle={() => {
-                    setDoseVolumeLiters(current => String(getLitersAfterVolumeUnitToggle(Number(current), volumeUnit)));
-                    onToggleVolumeUnit();
-                  }}
+                  onToggle={onToggleVolumeUnit}
                 />
               </span>
               <VolumeInput
@@ -16318,10 +16339,7 @@ function BrewerSimpleRecipeCard({
             />
             <VolumeUnitToggle
               unit={volumeUnit}
-              onToggle={() => {
-                onVolumeChange(String(getLitersAfterVolumeUnitToggle(liters, volumeUnit)));
-                onToggleVolumeUnit();
-              }}
+              onToggle={onToggleVolumeUnit}
             />
           </div>
         </div>

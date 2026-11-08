@@ -1,12 +1,22 @@
 export type VolumeUnit = 'liters' | 'gallons';
+export type VolumeInputValues = Record<VolumeUnit, string>;
 
 export const US_GALLON_IN_LITERS = 3.785411784;
 
-/**
- * Return the canonical liter amount after a unit toggle.
- * A literal 1 L default becomes a one-gallon batch; other volumes retain
- * their physical amount while their displayed unit changes.
- */
-export function getLitersAfterVolumeUnitToggle(liters: number, unit: VolumeUnit): number {
-  return unit === 'liters' && liters === 1 ? US_GALLON_IN_LITERS : liters;
+export function createVolumeInputValues(litersInput: string | number): VolumeInputValues {
+  return { liters: String(litersInput), gallons: '1' };
+}
+
+export function updateVolumeInputValue(
+  values: VolumeInputValues,
+  unit: VolumeUnit,
+  value: string,
+): VolumeInputValues {
+  return { ...values, [unit]: value };
+}
+
+export function volumeInputToLiters(value: string | number, unit: VolumeUnit): number {
+  const numeric = typeof value === 'number' ? value : parseFloat(value);
+  if (!Number.isFinite(numeric) || numeric < 0) return 0;
+  return unit === 'gallons' ? numeric * US_GALLON_IN_LITERS : numeric;
 }

@@ -12,7 +12,11 @@ import { HelpTip } from './HelpTip';
 import { LotusMassPreparationPanel } from './LotusMassPreparationPanel';
 import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, hasAnyDiyDropperCalibration, lotusMeasuredDropsPerMl, type LotusDropperCalibration, type LotusDropperId, type LotusDropperStyle, type LotusStyleCalibrationInputs } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
-import { getLitersAfterVolumeUnitToggle } from './volumeUnits';
+import {
+  createVolumeInputValues,
+  updateVolumeInputValue,
+  volumeInputToLiters,
+} from './volumeUnits';
 
 type Props = {
   workspaceMode: 'recipe' | 'diy';
@@ -154,7 +158,10 @@ export function MassConcentrateWorkspace(props: Props) {
   }));
   const [targetInput, setTargetInput] = useState(String(initialPlan?.recipe?.[initialPlan?.selectedSaltId ?? 'mgso4']?.target ?? (props.diySaltTargets.mgso4 > 0 ? props.diySaltTargets.mgso4 : 30)));
   const [percentInput, setPercentInput] = useState(String(initialPlan?.percentWw ?? 5));
-  const [finalLitersInput, setFinalLitersInput] = useState(String(initialPlan?.finalLiters ?? props.recipeHandoff?.finalLiters ?? props.diyFinalLiters));
+  const [finalVolumeInputs, setFinalVolumeInputs] = useState(() =>
+    createVolumeInputValues(String(initialPlan?.finalLiters ?? props.recipeHandoff?.finalLiters ?? props.diyFinalLiters)),
+  );
+  const finalLitersInput = finalVolumeInputs[props.volumeUnit];
   const [tipKey, setTipKey] = useState<'straight' | 'round'>(initialPlan?.dropperStyle ?? props.initialSnapshot.dropperStyle);
   const [legacy, setLegacy] = useState<Record<string, unknown> | null>(() => {
     if (initial.kind === 'legacy-volume') return initial.original;
@@ -175,12 +182,12 @@ export function MassConcentrateWorkspace(props: Props) {
   const selectedLotusSalt = SALTS.find(item => item.id === selectedLotusDropper.saltId) ?? SALTS[0];
   const selectedLotusForm = selectedLotusSalt.hydrationForms[selectedLotusSalt.defaultFormIdx ?? 0] ?? selectedLotusSalt.hydrationForms[0];
   const selectedForm = forms[salt.id] ?? salt.defaultFormIdx ?? 0;
-  const finalLiters = Number(finalLitersInput);
+  const finalLiters = volumeInputToLiters(finalLitersInput, props.volumeUnit);
   const finalWaterMassKg = waterLitersToEquivalentMassKg(finalLiters);
-  const toggleMassVolumeUnit = () => {
-    setFinalLitersInput(current => String(getLitersAfterVolumeUnitToggle(Number(current), props.volumeUnit)));
-    props.onToggleVolumeUnit();
+  const updateFinalLitersInput = (value: string) => {
+    setFinalVolumeInputs(previous => updateVolumeInputValue(previous, props.volumeUnit, value));
   };
+  const toggleMassVolumeUnit = () => props.onToggleVolumeUnit();
   const isRecipe = props.workspaceMode === 'recipe';
   const recipeTargets = isRecipe
     ? Object.fromEntries(Object.entries(props.recipeHandoff?.salts ?? {}).filter(([, entry]) => Number(entry.target) > 0).map(([id, entry]) => [id, Number(entry.target)]))
@@ -292,7 +299,7 @@ export function MassConcentrateWorkspace(props: Props) {
         .filter(group => group.id.startsWith('lotus-') && Number.isFinite(group.totalStockMassG) && group.totalStockMassG > 0)
         .map(group => [group.id.slice('lotus-'.length), String(group.totalStockMassG)])));
     }
-    setFinalLitersInput(String(plan.finalLiters));
+    setFinalVolumeInputs(previous => ({ ...previous, liters: String(plan.finalLiters) }));
     setSaltId(plan.selectedSaltId ?? 'mgso4'); setPercentInput(String(plan.percentWw ?? 5));
     setTipKey(plan.dropperStyle ?? snapshotRef.current.dropperStyle);
     setForms(Object.fromEntries(Object.entries(plan.recipe ?? {}).map(([id, row]) => [id, row.formIdx])));
@@ -449,8 +456,8 @@ export function MassConcentrateWorkspace(props: Props) {
         <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-200">Final brewing water ({props.volumeUnit === 'gallons' ? 'US gal' : 'L'})</span>
           <input aria-label="Final brewing water" className="mt-1 w-full bg-transparent text-sm text-slate-100 outline-none" inputMode="decimal"
-            value={props.volumeUnit === 'gallons' ? n(finalLiters / 3.785411784, 6) : finalLitersInput}
-            onChange={e => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(e.target.value) * 3.785411784) : e.target.value)} />
+            value={finalLitersInput}
+            onChange={e => updateFinalLitersInput(e.target.value)} />
         </label>
         <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-cyan-200">Dropper tip</span>
@@ -522,7 +529,7 @@ export function MassConcentrateWorkspace(props: Props) {
         }
         return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
           finalLiters={finalLiters} finalWaterMassKg={finalWaterMassKg} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
-          onFinalLitersChange={value => setFinalLitersInput(props.volumeUnit === 'gallons' ? String(Number(value) * 3.785411784) : value)}
+          onFinalLitersChange={updateFinalLitersInput}
           onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} diyControls={diyControls} />;
       })}
@@ -661,7 +668,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           </span>
           <span className="mt-1 flex items-center gap-2">
             <input aria-label="Final brewing water" className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal"
-              value={volumeUnit === 'gallons' ? n(finalLiters / 3.785411784, 6) : finalLitersInput}
+              value={finalLitersInput}
               onChange={e => onFinalLitersChange(e.target.value)} />
             <span className="text-sm text-slate-400">{volumeUnit === 'gallons' ? 'US gal' : 'L'}</span>
           </span>

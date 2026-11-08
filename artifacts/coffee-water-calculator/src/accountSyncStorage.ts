@@ -14,6 +14,7 @@ export type DiyConcentrateStoredInputs = {
   stockWeightInput?: string;
   stockVolumeInput?: string;
   finalVolumeInput?: string;
+  finalVolumeInputs?: Partial<Record<"liters" | "gallons", string>>;
   calibrationDropsInput?: string;
   calibrationWeightInput?: string;
   desiredPpmInput?: string;
@@ -99,6 +100,17 @@ export function loadDiyConcentrateInputsRecord(): DiyConcentrateStoredInputs | n
     ] as const;
     for (const key of stringKeys) {
       if (typeof source[key] === "string") stored[key] = source[key] as string;
+    }
+    if (
+      source.finalVolumeInputs
+      && typeof source.finalVolumeInputs === "object"
+      && !Array.isArray(source.finalVolumeInputs)
+    ) {
+      const values = source.finalVolumeInputs as Record<string, unknown>;
+      const finalVolumeInputs: NonNullable<DiyConcentrateStoredInputs["finalVolumeInputs"]> = {};
+      if (typeof values.liters === "string") finalVolumeInputs.liters = values.liters;
+      if (typeof values.gallons === "string") finalVolumeInputs.gallons = values.gallons;
+      stored.finalVolumeInputs = finalVolumeInputs;
     }
     if (source.desiredDoseBasis === "caco3" || source.desiredDoseBasis === "salt-mg") {
       stored.desiredDoseBasis = source.desiredDoseBasis;

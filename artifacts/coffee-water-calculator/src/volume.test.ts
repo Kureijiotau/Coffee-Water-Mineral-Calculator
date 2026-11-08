@@ -3,19 +3,21 @@ import {
   litersToVolumeInput,
   volumeToLiters,
 } from './App';
-import { getLitersAfterVolumeUnitToggle, US_GALLON_IN_LITERS } from './volumeUnits';
+import {
+  createVolumeInputValues,
+  updateVolumeInputValue,
+  volumeInputToLiters,
+  US_GALLON_IN_LITERS,
+} from './volumeUnits';
 
 describe('volume unit conversion', () => {
-  it('turns the untouched 1 L default into 1 US gallon when switching to gallons', () => {
-    expect(getLitersAfterVolumeUnitToggle(1, 'liters')).toBe(US_GALLON_IN_LITERS);
-  });
+  it('keeps independent liter and gallon entries while toggling', () => {
+    const liters = createVolumeInputValues('1.5');
+    const both = updateVolumeInputValue(liters, 'gallons', '1.9');
 
-  it('keeps non-default liter volumes unchanged when switching units', () => {
-    expect(getLitersAfterVolumeUnitToggle(1.5, 'liters')).toBe(1.5);
-  });
-
-  it('converts gallon inputs normally when switching back to liters', () => {
-    expect(getLitersAfterVolumeUnitToggle(US_GALLON_IN_LITERS, 'gallons')).toBe(US_GALLON_IN_LITERS);
+    expect(both).toEqual({ liters: '1.5', gallons: '1.9' });
+    expect(volumeInputToLiters(both.liters, 'liters')).toBe(1.5);
+    expect(volumeInputToLiters(both.gallons, 'gallons')).toBeCloseTo(1.9 * US_GALLON_IN_LITERS, 10);
   });
 
   it('converts one US gallon to liters', () => {
