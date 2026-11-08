@@ -372,17 +372,17 @@ export function MassConcentrateWorkspace(props: Props) {
             </div>
           </div>
         </div>
-        {!isRecipe && <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
-          <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode('recipe')}
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode !== 'lotus' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
-            Stock builder
-          </button>
-          <button type="button" role="tab" aria-selected={toolMode === 'lotus'} onClick={() => setToolMode('lotus')}
-            className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode === 'lotus' ? 'border border-rose-400/40 bg-rose-500/15 text-rose-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
-            DIY Lotus Drops
-          </button>
-        </div>}
-        <div className="flex items-center gap-2">
+        <div data-testid="concentrate-header-actions" className="flex w-full items-center justify-end gap-2 sm:w-auto">
+          {!isRecipe && <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
+            <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode('recipe')}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode !== 'lotus' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
+              Stock builder
+            </button>
+            <button type="button" role="tab" aria-selected={toolMode === 'lotus'} onClick={() => setToolMode('lotus')}
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode === 'lotus' ? 'border border-rose-400/40 bg-rose-500/15 text-rose-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
+              DIY Lotus Drops
+            </button>
+          </div>}
           <button className={buttonClass} onClick={props.onSaveSnapshot} disabled={!!legacy || !!restoreError}>Save</button>
           {isRecipe && <button className={buttonClass} onClick={props.onClearRecipeHandoff}>Clear recipe</button>}
         </div>

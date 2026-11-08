@@ -64,6 +64,22 @@ test('keeps both concentrate workspaces under Concentrates and defaults to DIY',
   await expect(page.getByTestId('concentrate-workspace-diy')).toHaveAttribute('aria-selected', 'true');
 });
 
+test('aligns concentrate mode tabs and save button at the right edge', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const header = page.locator('.concentrate-workspace > .app-panel').first();
+  const actions = page.getByTestId('concentrate-header-actions');
+  await expect(actions.getByRole('tablist', { name: 'DIY concentrate workspace' })).toBeVisible();
+  await expect(actions.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+
+  const headerBox = await header.boundingBox();
+  const actionsBox = await actions.boundingBox();
+  expect(headerBox).not.toBeNull();
+  expect(actionsBox).not.toBeNull();
+  expect(Math.abs(headerBox!.x + headerBox!.width - actionsBox!.x - actionsBox!.width)).toBeLessThan(36);
+});
+
 test('opens Recipe Concentrate with the active Alchemist salt target', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
