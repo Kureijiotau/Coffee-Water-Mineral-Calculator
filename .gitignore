@@ -50,6 +50,24 @@ Thumbs.db
 .cache/
 .local/
 
+# Static assets imported by the production Vite bundle.
+!attached_assets/
+!attached_assets/1_1792294122443.jpg
+!attached_assets/2_1792294122443.jpg
+!attached_assets/4_1792294122444.jpg
+!attached_assets/5_1792294122444.jpg
+!attached_assets/6_1792294122444.jpg
+!attached_assets/9_1792294122446.jpg
+!attached_assets/Kapp_1787058386404.gif
+!attached_assets/Kapp_1787058386404_last.png
+!attached_assets/ez_1785735003821.png
+!attached_assets/image_1787373159788.png
+!attached_assets/robert-asami-logo-transparent.png
+!attached_assets/rounded_1786763676557.jpg
+!attached_assets/straight_1786763676557.jpg
+!attached_assets/watermancer-guide-step5-dropper-lineup.jpg
+!attached_assets/watermancer-header-256.webp
+
 # Local git worktrees for isolated development
 .worktrees/
 

@@ -2,6 +2,7 @@
 - [Vite env var inlining](vite-env-inlining.md) — Vite only inlines `VITE_*` vars with dot notation, not bracket notation, in production builds
 - [Clerk CNAME host on www](clerk-www-cname-key-host.md) — remove `www.` before host-derived key construction when the verified Frontend API CNAME is on the apex
 - [Vercel monorepo API deployment](vercel-monorepo-api-deploy.md) — API deployments must use an API-package-only build instead of the root recursive build
+- [Vercel static assets](vercel-static-assets.md) — every asset imported by the production Vite bundle must be tracked; attached uploads may be globally ignored
 - [Vercel Neon production database](vercel-neon-database.md) — keep Vercel’s Neon schema separate from Replit’s development database
 - [Base water final mixture](base-water-final-mixture.md) — keep base salt recipe metrics separate from configured-water final mixture metrics
 - [Ion profile view model](ion-profile-view-model.md) — distinguish original salt-only ions from final configured-water ions with an explicit toggle
