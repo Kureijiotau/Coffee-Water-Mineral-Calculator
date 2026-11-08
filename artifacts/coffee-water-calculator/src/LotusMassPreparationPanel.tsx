@@ -171,7 +171,7 @@ export function LotusMassPreparationPanel({
         </div>
         <div className={`grid gap-2 ${stockPlan?.valid ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
           <label className="block rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
-            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Finished stock mass</span>
+            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Finished concentrate mass</span>
             <span className="mt-1 flex items-center gap-2">
               <input
                 inputMode="decimal"
