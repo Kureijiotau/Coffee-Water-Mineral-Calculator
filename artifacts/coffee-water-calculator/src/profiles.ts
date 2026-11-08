@@ -46,14 +46,6 @@ function readJSON<T>(key: string, fallback: T): T {
   }
 }
 
-function writeJSON(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore quota / privacy mode errors */
-  }
-}
-
 export function loadProfiles(): WaterProfile[] {
   const parsed = readJSON<unknown>(getAccountSyncStorageKey(PROFILES_KEY), []);
   const stored = Array.isArray(parsed)

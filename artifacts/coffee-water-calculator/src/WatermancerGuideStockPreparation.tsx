@@ -76,7 +76,6 @@ export function WatermancerGuideStockPreparation({
     dropperStyle,
     LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
   );
-  const dropsPerMl = measuredDropsPerMl ?? estimatedDropsPerMl;
   const waterDropMassG = measuredDropsPerMl !== null && savedCalibration
     ? Number(savedCalibration.weightInput) / Number(savedCalibration.dropsInput)
     : 1 / estimatedDropsPerMl;

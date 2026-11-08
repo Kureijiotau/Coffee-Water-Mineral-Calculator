@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Camera, Loader2, Check, X, AlertTriangle, ScanLine } from 'lucide-react';
+import { Camera, Loader2, Check, AlertTriangle, ScanLine } from 'lucide-react';
 import { ION_MAP, type IonId } from '@/waterData';
 
 // On Replit, the proxy routes /api/* to the API server automatically.

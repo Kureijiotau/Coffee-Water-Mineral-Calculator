@@ -96,14 +96,6 @@ function loadHiddenMixerSourceIds(): Set<string> {
   }
 }
 
-function saveHiddenMixerSourceIds(ids: Set<string>): void {
-  try {
-    localStorage.setItem(MIXER_HIDDEN_SOURCES_STORAGE_KEY, JSON.stringify([...ids]));
-  } catch {
-    // Local storage is best effort in private browsing and embedded previews.
-  }
-}
-
 function mixerSourceStorageId(source: Pick<WaterMixerSavedSource, 'id' | 'sourceId'>): string | null {
   const id = source.sourceId?.trim() || source.id?.trim();
   return id || null;
@@ -966,7 +958,7 @@ export default function WaterMixer({
   const [importMessage, setImportMessage] = useState('');
   const [pendingImport, setPendingImport] = useState<WaterMixerSavedSource | null>(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [hiddenSourceIds, setHiddenSourceIds] = useState<Set<string>>(loadHiddenMixerSourceIds);
+  const [hiddenSourceIds] = useState<Set<string>>(loadHiddenMixerSourceIds);
   const hasRunFinishedWaterCleanupRef = useRef(false);
   const [shareCardOpen, setShareCardOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);

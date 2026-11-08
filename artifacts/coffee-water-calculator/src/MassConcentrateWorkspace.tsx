@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, Beaker, Check, ChevronDown, Droplet, FlaskConical, ListChecks, Pipette, Scale } from 'lucide-react';
+import { AlertTriangle, Beaker, Check, ChevronDown, Droplet, FlaskConical, ListChecks, Pipette } from 'lucide-react';
 import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
-import { buildMassStockPlan, computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
+import { computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
   waterLitersToEquivalentMassKg,
   resolveStockDropCalibration, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor, type StockDropCalibration } from './concentrateMass';
 import { checkMassConcentrate, recommendMassConcentrateStrength } from './concentrateMassWarnings';

@@ -107,7 +107,6 @@ export function inferTasteProfile(answers: TastePreferenceAnswers): TasteInferen
   const magnesiumFromSulfate = sulfateSalt * (24.305 / 120.365);
   const chlorideSalt = Math.max(0, profile.magnesium - magnesiumFromSulfate) / (24.305 / 95.205);
   const calciumSalt = profile.calcium / (40.078 / 110.978);
-  const chlorideFromOtherSalts = chlorideSalt * (70.90 / 95.205) + calciumSalt * (70.90 / 110.978);
   const bicarbonateSalt = profile.bicarbonate / (61.017 / 84.007);
   // Sodium bicarbonate contributes sodium as well as bicarbonate. Subtract
   // that contribution before solving the remaining chloride with NaCl.

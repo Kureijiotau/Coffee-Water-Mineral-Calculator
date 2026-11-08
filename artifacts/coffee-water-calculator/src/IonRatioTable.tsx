@@ -5,7 +5,6 @@ import { completeIonTotals } from './watermancerSolver';
 import { StableNumberInput } from './components/StableNumberInput';
 import {
   DEFAULT_ION_RATIO_DRAFT,
-  ION_RATIO_DEFINITIONS,
   cloneIonRatioDraft,
   anchorIonRatioDraftToGh,
   evaluateIonRatioDraft,

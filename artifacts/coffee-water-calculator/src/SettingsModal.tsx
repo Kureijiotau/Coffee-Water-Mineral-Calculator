@@ -4,7 +4,7 @@ import {
   ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE,
   type IonId, type RangeSet, type WaterProfile,
 } from '@/waterData';
-import { createProfile, emptyRangeSet } from '@/profiles';
+import { createProfile } from '@/profiles';
 import { StableNumberInput } from './components/StableNumberInput';
 
 interface Props {

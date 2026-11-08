@@ -67,7 +67,6 @@ export const ION_RATIO_DEFINITIONS: IonRatioDefinition[] = [
   },
 ];
 
-const ratio = (first: number, second: number): string => String(first / second);
 const GH_MAGNESIUM_FACTOR = CACO3_FACTOR.magnesium ?? 4.118;
 const GH_CALCIUM_FACTOR = CACO3_FACTOR.calcium ?? 2.497;
 const KH_BICARBONATE_FACTOR = CACO3_FACTOR.bicarbonate ?? 0.820;

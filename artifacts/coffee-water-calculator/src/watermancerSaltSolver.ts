@@ -116,7 +116,7 @@ export function solveBoundedCoupledSaltTargets({
     activeSetSize: number,
   ): boolean => {
     const normalized = Object.fromEntries(
-      allowedSalts.map((salt, index) => {
+      allowedSalts.map(salt => {
         const raw = Number(saltTargets[salt.id] ?? 0);
         if (!Number.isFinite(raw) || raw <= SOLVER_EPSILON) return [salt.id, 0];
         const minimum = Math.max(0, Number(minimumDosePpmFor(salt.id)) || 0);

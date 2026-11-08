@@ -17,7 +17,6 @@ import {
   type WaterMixSourceSnapshot,
 } from './waterMixer';
 import {
-  LEGACY_WATER_PAYLOAD_VERSION,
   migrateLegacyWaterPayload,
 } from './legacyWaterRecovery';
 import {

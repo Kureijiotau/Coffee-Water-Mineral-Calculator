@@ -997,7 +997,6 @@ export function checkConcentrate(
     // Actually in pure water CaSO₄ solubility is ~15 mM, so [Ca²⁺][SO₄²⁻] limit ≈ 225 mM²
     const limitMmSq = 225; // ~15² for gypsum
     if (product > limitMmSq) {
-      const limiting = Math.min(ca, so4);
       const maxStrength = Math.floor(strength * Math.sqrt(limitMmSq / product));
       const names = [...new Set([...sources('calcium'), ...sources('sulfate')])];
       warnings.push({
@@ -1074,7 +1073,6 @@ export function checkConcentrate(
 
   // ── 3. Measurement precision warning at high × ─────────
   if (strength >= 150) {
-    const mLperL = (1000 / strength).toFixed(1);
     const ppmShift = +(0.5 / (1000 / strength) * 100).toFixed(1);
     warnings.push({
       severity: 'info',

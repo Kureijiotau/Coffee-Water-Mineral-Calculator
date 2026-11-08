@@ -29,15 +29,6 @@ function formatSpectrumValue(value: number): string {
   return '0';
 }
 
-function getScoreColor(mode: 'descriptive' | 'affective', value: number): string {
-  if (mode === 'descriptive') {
-    const saturation = 22 + (value / 15) * 45;
-    const lightness = 72 - (value / 15) * 18;
-    return `hsl(190 ${saturation}% ${lightness}%)`;
-  }
-  return getWaterTastingAffectiveColor('overall', value);
-}
-
 function AffectiveAssessment({
   form,
   onChange,
