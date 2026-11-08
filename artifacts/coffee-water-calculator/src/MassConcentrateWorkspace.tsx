@@ -767,13 +767,6 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
       </div>
       {warnings.map((warning, i) => <p key={i} role={warning.severity === 'error' ? 'alert' : undefined}
         className={`mt-2 text-xs ${warning.severity === 'error' ? 'text-red-200' : warning.severity === 'warning' ? 'text-amber-200' : 'text-slate-400'}`}>{warning.message}</p>)}
-      <button type="button" className="mt-3 rounded-lg border border-emerald-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-emerald-100 hover:border-emerald-200/55 hover:bg-emerald-400/10"
-        disabled={blocked || !Number.isFinite(doseMassG) || doseMassG <= 0}
-        onClick={() => preparedMass && downloadText(`${state.id}-stock-preparation.txt`,
-          [name, `${n(preparedMass.strengthPercentWw)}% w/w; total stock ${n(preparedMass.totalStockMassG)} g`,
-            ...buildConcentratePreparationSteps({ totalStockMassG: preparedMass.totalStockMassG, waterMassG: preparedMass.waterMassG, saltLabel }),
-            WATER_MASS_NOTE, `Dose ${n(doseMassG)} g stock for ${n(finalLiters)} L. Drops: ${measured.basis === 'stock' ? 'measured finished-stock' : 'water-based estimate; verify finished stock'}.`,
-            ...warnings.map(w => w.message)].join('\n\n'))}>Download preparation text</button>
     </section>
 
     {state.calibration && measured.basis === 'unavailable' && <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 p-3 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}

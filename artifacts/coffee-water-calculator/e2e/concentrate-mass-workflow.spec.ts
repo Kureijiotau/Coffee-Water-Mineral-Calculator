@@ -136,26 +136,11 @@ test('keeps original volume inputs and requires an explicit weight rebuild', asy
   await expect(page.getByText('Legacy volume-based stock — historical record')).toHaveCount(0);
 });
 
-test('exports the same mass preparation sequence, without a stock-volume assumption', async ({ page }) => {
+test('keeps DIY image export without a preparation text download button', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await page.evaluate(() => {
-    const original = URL.createObjectURL;
-    URL.createObjectURL = function (blob: Blob | MediaSource) {
-      if (blob instanceof Blob) (window as unknown as { preparationBlob: Blob }).preparationBlob = blob;
-      return original.call(URL, blob);
-    };
-  });
-  await page.getByRole('button', { name: 'Download preparation text' }).click();
-  const text = await page.evaluate(() => (window as unknown as { preparationBlob: Blob }).preparationBlob.text());
-  expect(text).toContain('total contents weigh 100 g');
-  expect(text).toContain('Place the bottle on the scale and tare it once.');
-  expect(text).toContain('Add');
-  expect(text).toContain('splash of your measured water');
-  expect(text).toContain('Leave enough headspace');
-  expect(text).toContain('shake/mix until the salt dissolves');
-  expect(text).toContain('This approximation does not apply to finished concentrate.');
-  expect(text).not.toMatch(/20–30%|remaining water|Do not tare again|dose.*mL|mL stock/i);
+  await expect(page.getByRole('button', { name: 'Download preparation text' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save preparation card as JPG' })).toBeVisible();
 });
 
 test('keeps separate recipe stocks independent and doses an all-in-one stock by mass', async ({ page }) => {
