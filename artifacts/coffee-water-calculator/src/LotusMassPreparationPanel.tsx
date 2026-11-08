@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Droplet, RotateCcw, Scale } from 'lucide-react';
+import { HelpTip } from './HelpTip';
 import { ConcentratePreparationSteps } from './concentratePreparation';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
@@ -165,6 +166,7 @@ export function LotusMassPreparationPanel({
           <div>
             <p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-200/75">
               <Scale className="h-3.5 w-3.5" aria-hidden="true" /> Weight-based preparation
+              <HelpTip testId="lotus-weight-help" label="Why weight-based preparation" text="Weighing is more accurate than measuring volume, so this asks for the finished concentrate mass instead of a volume. For water, 1 mL is about 1 g, so grams and mL are interchangeable for the water." />
             </p>
             <h3 className="mt-1 text-base font-semibold text-white">Make this concentrate </h3>
           </div>
