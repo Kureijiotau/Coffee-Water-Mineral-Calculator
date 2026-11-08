@@ -64,14 +64,14 @@ test('keeps both concentrate workspaces under Concentrates and defaults to DIY',
   await expect(page.getByTestId('concentrate-workspace-diy')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('aligns concentrate mode tabs and save button at the right edge', async ({ page }) => {
+test('aligns concentrate mode tabs at the right edge without a save button', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
 
   const header = page.locator('.concentrate-workspace > .app-panel').first();
   const actions = page.getByTestId('concentrate-header-actions');
   await expect(actions.getByRole('tablist', { name: 'DIY concentrate workspace' })).toBeVisible();
-  await expect(actions.getByRole('button', { name: 'Save', exact: true })).toBeVisible();
+  await expect(actions.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
 
   const headerBox = await header.boundingBox();
   const actionsBox = await actions.boundingBox();

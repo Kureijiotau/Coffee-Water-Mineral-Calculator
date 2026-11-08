@@ -362,7 +362,6 @@ export function MassConcentrateWorkspace(props: Props) {
               DIY Lotus Drops
             </button>
           </div>}
-          <button className={buttonClass} onClick={props.onSaveSnapshot} disabled={!!legacy || !!restoreError}>Save</button>
           {isRecipe && <button className={buttonClass} onClick={props.onClearRecipeHandoff}>Clear recipe</button>}
         </div>
       </div>
