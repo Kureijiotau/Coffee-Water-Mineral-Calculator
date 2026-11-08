@@ -157,7 +157,6 @@ export function LotusMassPreparationPanel({
           </p>
         )}
       </section>
-
       <section
         className="space-y-3 rounded-2xl border border-emerald-300/20 bg-gradient-to-br from-emerald-400/[0.07] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5"
         data-testid="lotus-stock-preparation-section"
@@ -167,7 +166,7 @@ export function LotusMassPreparationPanel({
             <p className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-200/75">
               <Scale className="h-3.5 w-3.5" aria-hidden="true" /> Weight-based preparation
             </p>
-            <h3 className="mt-1 text-base font-semibold text-white">Make this stock</h3>
+            <h3 className="mt-1 text-base font-semibold text-white">Make this concentrate </h3>
           </div>
         </div>
         <div className={`grid gap-2 ${stockPlan?.valid ? 'sm:grid-cols-3' : 'sm:grid-cols-1'}`}>
