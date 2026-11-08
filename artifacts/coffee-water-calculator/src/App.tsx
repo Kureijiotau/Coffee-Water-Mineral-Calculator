@@ -9,12 +9,12 @@ import watermancerHeaderImage from '@assets/watermancer-header-256.webp';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Gem, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, ChevronUp, Menu, Pencil, ScanLine } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, Pencil, ScanLine } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
   SALTS, MEME_SALT_IDS, IONS, ACTIVE_ION_IDS, ION_MAP, AIKI_DEFAULT_PROFILE, WATERMANCER_SENSORY_PROFILE, RECIPES, CACO3_FACTOR, WATERMANCER_SALT_ORDER, classifyIon, computeSaltMg, computeSaltTargetPpm,
-  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, findIonOvershoots, findIonUnderdoses, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
+  computeIonTotals, computeSaltIonPpmTotal, computeSupplementalIonTotals, computeNaClTargetForSodiumGap, computeGH, computeKH, checkConcentrate, getSaltSolubilityLimitGPer100Ml, findStrongestSafeConcentrateStrength, findRecommendedAllInOneConcentrateStrength, findConcentrateLimitingConstraint, splitIntoStockGroups, getSaltColorTokens, CONCENTRATE_MINIMUM_DOSE_LITERS, CONCENTRATE_MINIMUM_WHOLE_DROPS,
   SUPPLEMENTAL_ION_MAP, type IonId, type SupplementalIonId, type TrafficLevel, type WaterProfile, type RangeSet,
   type SaltRecipe, type SaltRecipeEntry, type ConcentrateWarning, type StockGroup,
 } from '@/waterData';
@@ -32,7 +32,6 @@ import { DeferredPanelBoundary, DeferredPanelFallback } from './components/Defer
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
-import { ConcentratePreparationSteps } from './concentratePreparation';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
   createVolumeInputValues,
@@ -48,8 +47,8 @@ import {
   TdsCard as SharedTdsCard,
 } from './components/MetricCards';
 import {
-  loadProfiles, loadUserCreatedProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
-  saveNerdLevel, loadCalculatorMode, saveCalculatorMode, createProfile,
+  loadProfiles, saveProfiles, saveActiveProfileId, PROFILES_KEY,
+  saveNerdLevel, loadCalculatorMode, saveCalculatorMode,
   type NerdLevel,
   type CalculatorMode,
 } from '@/profiles';
@@ -84,7 +83,6 @@ import {
 } from './profileSync';
 import {
   ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
-  DIY_CONCENTRATE_INPUTS_STORAGE_KEY,
   getAccountSyncStorageKey,
   loadDiyConcentrateInputs,
   saveDiyConcentrateInputs,
@@ -162,7 +160,6 @@ import {
   recipeCardRecord,
   recipeCardSaltRecipe,
   scanRecipeCardImage,
-  type RecipeCardScanResult,
 } from './recipeCardReader';
 import {
   LEGACY_WATER_PAYLOAD_VERSION,
@@ -174,24 +171,17 @@ import {
   type WaterRecipeSharePayload,
 } from './waterRecipeShare';
 import {
-  normalizeWatermancerIonOrder,
   normalizeWatermancerIonSourcePreferences,
-  type WatermancerIonDeviation,
-  type WatermancerIonConflict,
   type WatermancerIonSourcePreference,
-  type WatermancerMatchRecommendationAction,
   type WatermancerMatchRecommendation,
-  type WatermancerMatchDiagnostics,
   type WatermancerRouteCandidate,
   type WatermancerStrategy,
   type WatermancerSaltObjective,
   type WatermancerMatchingMode,
-  type WatermancerOvershootPolicy,
   type WatermancerSolverResult,
   type WatermancerPlan,
 } from './watermancerPlan';
 import { evaluateWatermancerRatios, type WatermancerRatioEvaluation } from './watermancerRatios';
-import { solveBoundedCoupledSaltTargets } from './watermancerSaltSolver';
 import {
   completeIonTotals,
   computeWatermancerBottledIons,
@@ -841,12 +831,6 @@ export function watermancerBestMatchPreviewIsCurrent(
   return Boolean(preview && preview.inputSignature === currentInputSignature);
 }
 
-const WATERMANCER_STRATEGY_LABELS: Record<WatermancerStrategy, string> = {
-  'closest-match': 'Closest match',
-  'water-first': 'Water-first',
-  'gh-kh-harmony': 'GH / KH harmony',
-  'added-water-mineral-first': 'Added-water mineral-first',
-};
 type OvershootSettings = {
   enabled: boolean;
   allowedIons: IonId[];
@@ -948,26 +932,6 @@ function loadWatermancerResultDock(): 'center' | 'left' | 'right' {
     // Use the default position when localStorage is unavailable.
   }
   return 'center';
-}
-
-function watermancerSourcePreferencePenalty(
-  plan: WatermancerPlan,
-  waterIons: Partial<Record<IonId, number>>,
-  saltTargets: Record<string, number>,
-): number {
-  const saltIons = computeIonTotals(saltTargets, {}, 1);
-  return ACTIVE_ION_IDS.reduce((total, id) => {
-    const preference = plan.ionSourcePreferences?.[id] ?? 'dont-care';
-    const water = Math.max(waterIons[id] ?? 0, 0);
-    const salt = Math.max(saltIons[id] ?? 0, 0);
-    const target = Math.max(plan.targetIons[id] ?? 0, 0);
-    if (preference === 'water-only') return total + salt * 1000;
-    if (preference === 'salt-only') return total + water * 1000;
-    if (preference === 'water-then-salt') {
-      return total + Math.max(salt - Math.max(target - water, 0), 0) * 20;
-    }
-    return total;
-  }, 0);
 }
 
 function HoldStepperButton({
@@ -1185,9 +1149,6 @@ const TRAFFIC_STYLES: Record<TrafficLevel, { dot: string; text: string; border: 
   yellow: { dot: 'bg-amber-400',   text: 'text-amber-300',   border: 'border-amber-500/40',   bg: 'bg-amber-500/10',   label: 'Elevated' },
   red:    { dot: 'bg-rose-400',    text: 'text-rose-300',    border: 'border-rose-500/40',    bg: 'bg-rose-500/10',    label: 'Too high' },
 };
-
-const formatIonThreshold = (value: number): string =>
-  value.toFixed(2).replace(/\.?0+$/, '');
 
 const num = (s: string): number => {
   const v = parseFloat(s);
@@ -1470,7 +1431,6 @@ const fmt = (n: number): string => n.toLocaleString(undefined, { maximumFraction
 
 const API_BASE: string = import.meta.env.VITE_API_URL ?? '';
 
-const AUTO_FILL_MAX_ML = 2000;
 const DEFAULT_AUTO_FILL_DEVIATION_PPM = 1;
 const AUTO_FILL_SOURCE_PRIORITY: IonId[] = [
   'calcium',
@@ -2616,35 +2576,6 @@ function useDebouncedPersistence(
   }, [flush]);
 }
 
-function DeferredMount({
-  children,
-  fallback,
-}: {
-  children: ReactNode;
-  fallback: ReactNode;
-}) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (mounted) return;
-    const host = hostRef.current;
-    if (!host || typeof IntersectionObserver === 'undefined') {
-      setMounted(true);
-      return;
-    }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      setMounted(true);
-      observer.disconnect();
-    }, { rootMargin: '240px 0px' });
-    observer.observe(host);
-    return () => observer.disconnect();
-  }, [mounted]);
-
-  return <div ref={hostRef}>{mounted ? children : fallback}</div>;
-}
-
 function App() {
   const [liters, setLiters] = useState('1');
   const [rows, setRows] = useState<SaltRow[]>(
@@ -2778,7 +2709,6 @@ function App() {
   const [autoFillPriorityPreset, setAutoFillPriorityPreset] = useState<AutoFillPriorityPreset>(() => loadAutoFillSettings().preset);
   const [autoFillCustomPriority, setAutoFillCustomPriority] = useState<IonId[]>(() => loadAutoFillSettings().customPriority);
   const [autoFillDeviationPpm, setAutoFillDeviationPpm] = useState(() => loadAutoFillSettings().deviationPpm);
-  const [fillWaterNudgeSeen, setFillWaterNudgeSeen] = useState(false);
   const [overshootSettings, setOvershootSettings] = useState<OvershootSettings>(() => loadOvershootSettings());
   const [brewerDropsPerMl, setBrewerDropsPerMl] = useState(() => loadDropsPerMl());
   const guideExportRef = useRef<HTMLElement | null>(null);
@@ -2853,11 +2783,6 @@ function App() {
     enterWatermancerManualMode();
     setMineralWaters(prev => prev.filter(e => e.id !== id));
   };
-  useEffect(() => {
-    if (mineralWaters.some(entry => num(entry.volumeMl) > 0)) {
-      setFillWaterNudgeSeen(true);
-    }
-  }, [mineralWaters]);
   const addAdditionWater = (partial?: { name?: string; ions?: Partial<Record<IonId, string>>; metadata?: Partial<Record<keyof WaterMetadata, string>>; volumeMl?: string }) => {
     enterWatermancerManualMode();
     const entry: MineralWaterEntry = {
@@ -3991,7 +3916,6 @@ function App() {
   const handleFillBaseWaters = () => {
     if (!beginWatermancerAction()) return;
     enterWatermancerManualMode();
-    setFillWaterNudgeSeen(true);
     setMineralWaters(prev => autoFillWaterVolumes(
       prev,
       batchMl,
@@ -4388,38 +4312,6 @@ function App() {
     : watermancerCurrentStatus === 'partial'
       ? 'Partial match'
       : 'Ready to match';
-  const watermancerStatusDescription = watermancerCurrentStatus === 'matched'
-    ? watermancerMatchingMode === 'ratios'
-      ? 'Your current water and salt route meets every ion floor and protects zero-target ions.'
-      : 'Your current water and salt route is within the active ion tolerances.'
-    : watermancerCurrentStatus === 'partial'
-      ? watermancerMatchingMode === 'ratios'
-        ? 'The route is usable, but one or more ion floors or zero-target protections still need attention.'
-        : 'The route is usable, but one or more ions are still outside the active tolerances.'
-      : 'Choose a water source or enable a salt to start comparing the route with your target.';
-  const watermancerStatusTone = watermancerCurrentStatus === 'matched'
-    ? {
-        border: 'border-emerald-300/35',
-        background: 'bg-emerald-500/[0.08]',
-        dot: 'bg-emerald-300 shadow-[0_0_12px_rgba(110,231,183,0.9)]',
-        label: 'text-emerald-200',
-        value: 'text-emerald-100',
-      }
-    : watermancerCurrentStatus === 'partial'
-      ? {
-          border: 'border-amber-300/35',
-          background: 'bg-amber-500/[0.08]',
-          dot: 'bg-amber-300 shadow-[0_0_12px_rgba(252,211,77,0.85)]',
-          label: 'text-amber-200',
-          value: 'text-amber-100',
-        }
-      : {
-          border: 'border-cyan-300/25',
-          background: 'bg-cyan-500/[0.045]',
-          dot: 'bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,0.65)]',
-          label: 'text-cyan-200/80',
-          value: 'text-slate-100',
-        };
   const adjustWatermancerDose = (saltId: string, currentMg: number, deltaMg: number) => {
     enterWatermancerManualMode();
     if (deltaMg !== 0) {
@@ -4596,10 +4488,6 @@ function App() {
     () => computeIonTotals(effectiveSuggestedSaltTargets, combinedBottledIons, dil),
     [effectiveSuggestedSaltTargets, combinedBottledIons, dil],
   );
-  const supplementalIonTotals = useMemo(
-    () => computeSupplementalIonTotals(effectiveSuggestedSaltTargets),
-    [effectiveSuggestedSaltTargets],
-  );
   const watermancerSilicaConcentrationPpm = calculateWatermancerSilicaPpm(watermancerSilicaDrops, L);
   useEffect(() => {
     if (!watermancerSilicaTargetEnabled) return;
@@ -4637,53 +4525,21 @@ function App() {
     }),
     [activeWatermancerSaltTargets, watermancerSilicaConcentrationPpm],
   );
-  const finalMixtureOvershoots = useMemo(
-    () => findIonOvershoots(suggestedIonTotals, finalMixtureTargetIons),
-    [finalMixtureTargetIons, suggestedIonTotals],
-  );
-  const finalMixtureUnderdoses = useMemo(
-    () => findIonUnderdoses(suggestedIonTotals, finalMixtureTargetIons),
-    [finalMixtureTargetIons, suggestedIonTotals],
-  );
   const ionProfileIons = suggestedIonTotals;
-  const preferredMagnesiumSaltId = magnesiumPreference === 'sulfates'
-    ? 'mgso4'
-    : magnesiumPreference === 'chlorides'
-      ? 'mgcl2'
-      : null;
-  const gh = computeGH(ionTotals);
-  const kh = computeKH(ionTotals);
   const baseSaltGh = computeGH(saltOnlyIons);
   const baseSaltKh = computeKH(saltOnlyIons);
   const ghBottled = computeGH(bottledIons);
   const khBottled = computeKH(bottledIons);
-  const ghSalt = baseSaltGh;
-  const khSalt = baseSaltKh;
   const tdsSalt = useMemo(() => {
     // Recipe targets are ion concentrations. Sum only the salt-derived ions;
     // hydration water is not part of TDS.
     const recipeIons = computeIonTotals(saltTargets, {}, 1);
     return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
   }, [saltTargets]);
-  const tdsMineral = useMemo(() => {
-    // Use the same modeled ion contribution as the rest of the calculator.
-    // Metadata TDS can include unmodeled substances and must not be added to
-    // the ion-derived final result a second time.
-    return hasMineralWater
-      ? Object.values(bottledIons).reduce((total, ppm) => total + ppm, 0)
-      : 0;
-  }, [hasMineralWater, bottledIons]);
-  const tds = tdsSalt;
-  const finalGh = computeGH(suggestedIonTotals);
-  const finalKh = computeKH(suggestedIonTotals);
-  const finalTds = Object.values(suggestedIonTotals).reduce((total, ppm) => total + ppm, 0);
   const finalSaltIons = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, {}, 1),
     [effectiveSuggestedSaltTargets],
   );
-  const finalSaltGh = computeGH(finalSaltIons);
-  const finalSaltKh = computeKH(finalSaltIons);
-  const finalSaltTds = Object.values(finalSaltIons).reduce((total, ppm) => total + ppm, 0);
   const reviewFinalIons = showWatermancer ? watermancerCurrentFinalIons : suggestedIonTotals;
   const reviewSaltIons = showWatermancer
     ? computeIonTotals(activeWatermancerSaltTargets, {}, 1)
@@ -4847,10 +4703,6 @@ function App() {
   const originalTargetGh = originalTargetMetricValues.gh;
   const originalTargetKh = originalTargetMetricValues.kh;
   const originalTargetTds = originalTargetMetricValues.tds;
-  const bicarbonateTarget = finalMixtureTargetIons.bicarbonate ?? 0;
-  const bicarbonateFromWater = bottledIons.bicarbonate ?? 0;
-  const bicarbonateWaterOvershoot = hasMineralWater
-    && bicarbonateFromWater > bicarbonateTarget + 0.05;
   const tdsForRecipeSteps = useMemo(() => {
     return computeModeledTds(
       effectiveSuggestedSaltTargets,
@@ -4981,7 +4833,6 @@ function App() {
     setSodiumCorrectionOn(false);
     setWaterComparisonOpen(false);
     setSelectedWaterComparisonKey('');
-    setFillWaterNudgeSeen(false);
     setShowWatermancerResetConfirm(false);
   };
 

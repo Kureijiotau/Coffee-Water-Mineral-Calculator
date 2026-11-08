@@ -336,7 +336,7 @@ test('shows the existing mineral analysis card for each profile source', async (
     .getAttribute('value');
   expect(alchemistOptionValue).toMatch(/^alchemist:/);
   await select.selectOption(alchemistOptionValue!);
-  await expect(analysis).toContainText('Current setup');
+  await expect(analysis).toContainText('Current mix');
 
   await select.selectOption('saved:e2e-finished-profile');
   await expect(analysis).toContainText('Finished E2E Water');

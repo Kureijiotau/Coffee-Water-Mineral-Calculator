@@ -52,7 +52,7 @@ test('keeps both concentrate workspaces under Concentrates and defaults to DIY',
   await expect(page.getByTestId('tab-concentrates')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Calculator', exact: true })).toHaveAttribute('aria-selected', 'false');
   await expect(page.getByTestId('concentrate-workspace-diy')).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByText('DIY single-salt concentrate', { exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Build a single-salt stock', exact: true })).toBeVisible();
 
   await page.getByTestId('concentrate-workspace-recipe').click();
   await expect(page.getByTestId('concentrate-workspace-recipe')).toHaveAttribute('aria-selected', 'true');
