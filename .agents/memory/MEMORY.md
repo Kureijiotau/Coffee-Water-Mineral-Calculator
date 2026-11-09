@@ -111,3 +111,4 @@
 - [SodaStream bicarbonate salt model](watermancer-carbonated-salt-model.md) — model Mg(OH)₂ and CaCO₃ powder doses as full CO₂-reacted bicarbonate ions in final water.
 - [Watermancer GH-only strength](watermancer-gh-only-strength.md) — keep GH-only scaling paused until the user revisits its ion-balance behavior
 - [Concentrate mass workflow](concentrate-mass-workflow.md) — use mass-only concentrate math, salt-first preparation, crystal rinse-in, and mL≈g for water only
+- [Live unused-code validation](live-unused-code-check.md) — scope import/CSS checks to active workflows while preserving archive-only selectors without hiding neighboring dead styles

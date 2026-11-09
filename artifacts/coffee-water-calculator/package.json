@@ -12,6 +12,8 @@
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --config vitest.config.ts",
+    "check:unused-live": "node --test scripts/check-unused-live.test.mjs && node scripts/check-unused-live.mjs",
+    "test:unused-live": "node --test scripts/check-unused-live.test.mjs",
     "test:browser": "playwright test --config playwright.config.ts",
     "desktop:dev:web": "cross-env PORT=3000 BASE_PATH=/ vite --config vite.config.ts --host 127.0.0.1",
     "desktop:dev": "concurrently -k \"pnpm run desktop:dev:web\" \"wait-on http://127.0.0.1:3000 && electron electron/main.cjs\"",
