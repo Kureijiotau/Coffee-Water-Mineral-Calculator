@@ -34,6 +34,10 @@ salt-to-water stock ratios are therefore modeled estimates based on public
 recipe and drop data. The calculator must identify the output as an
 extrapolation.
 
+Lotus’s published drop-weight references are 0.0716 g for standard Round
+droppers (from its [dropper variability study](https://lotuscoffeeproducts.com/blogs/lotus-blog/precision-brewing-an-exploration-of-dropper-variability-in-making-water-for-coffee))
+and 0.04 g for the Straight tip (from its [Straight Dropper product page](https://lotuscoffeeproducts.com/products/precision-dropper-straight-tipped)).
+
 ## User experience
 
 - Keep the existing Lotus dropper selection, calibration, volume slider, and
@@ -47,8 +51,9 @@ extrapolation.
   volume.
 - Reuse the existing selected brew-water volume and selected tip style. Do not
   add duplicate volume or tip controls.
-- Use the selected style’s saved calibration when available. If it is missing,
-  use the app’s nominal style rate and visibly label the counts as estimated.
+- Use the selected style’s saved water-weight calibration when available. If it
+  is missing, use Lotus’s published average drop weight for that style and
+  visibly label the counts as estimated.
 - Include a short disclosure that these are Watermancer estimates for its DIY
   stocks, plus a link to Lotus’s published instructions.
 - Keep Bonus Epsom out of these presets; it is not one of Lotus’s four recipe
@@ -63,9 +68,9 @@ For each preset:
 2. For each corresponding DIY stock, use the salt and hydration form already
    used by the stock-preparation plan. Derive salt mg per gram of finished
    stock from the plan, then estimate salt mass per drop using the selected
-   tip’s measured water grams per drop. Use the nominal style rate only when
-   calibration is absent; this retains the app’s water-density approximation.
-   Apply the selected salt form’s cation fraction to get ion mg per drop.
+   tip’s measured water grams per drop. Without calibration, use Lotus’s
+   published average drop mass for the selected style. Apply the selected salt
+   form’s cation fraction to get ion mg per drop.
 3. Calculate required drops as:
 
    `round(target ion mg/L × brew-water liters ÷ DIY stock ion mg per drop)`
@@ -93,13 +98,13 @@ shared-calibration behavior.
 ## Verification
 
 - Verify the seven preset names and source URL against the official instructions.
-- Verify nominal-rate output against existing published Lotus dose calculations
-  at the default 450 mL volume.
+- Verify uncalibrated output against existing published Lotus dose calculations
+  at the default 450 mL volume using the published Round/Straight drop weights.
 - Verify counts scale with brew volume and with calibrated drops per milliliter.
 - Verify each DIY stock’s modeled strength is used, and that changing only its
   batch size leaves the per-drop strength unchanged.
-- Verify uncalibrated output uses the nominal rate and is labeled as an
-  estimate.
+- Verify uncalibrated output uses the published style drop weight and is labeled
+  as an estimate.
 - Verify the panel starts collapsed, opens accessibly, and recalculates after
   changing the shared volume or selected calibration.
 - Run the calculator’s unit tests, typecheck, production build, and focused
