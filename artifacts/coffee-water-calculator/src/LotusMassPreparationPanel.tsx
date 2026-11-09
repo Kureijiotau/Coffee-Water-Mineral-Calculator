@@ -7,6 +7,7 @@ import {
   LOTUS_BREW_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_NOMINAL_STRAIGHT_DROPS_PER_ML,
+  calculateLotusDiyRecipeDoses,
   lotusCalibratedStockPlan,
   lotusMassStockPlan,
   lotusMeasuredDropsPerMl,
@@ -14,6 +15,7 @@ import {
   type LotusDropperCalibration,
   type LotusDropperStyle,
 } from './lotusConcentrate';
+import { LOTUS_RECIPES } from './lotusRecipes';
 import { SALTS } from './waterData';
 
 const US_GALLON_IN_ML = 3785.411784;
@@ -35,6 +37,7 @@ export function LotusMassPreparationPanel({
 }) {
   const [brewVolumeMl, setBrewVolumeMl] = useState(LOTUS_BREW_VOLUME_ML);
   const [volumeUnit, setVolumeUnit] = useState<'mL' | 'L' | 'Gal'>('mL');
+  const [selectedRecipeId, setSelectedRecipeId] = useState('');
   const measuredDropsPerMl = lotusMeasuredDropsPerMl(calibration);
   const isCalibrated = measuredDropsPerMl !== null;
   const referencePlan = lotusStockPlan(dropper, style, LOTUS_BOTTLE_VOLUME_ML, fallbackStraightDropsPerMl);
@@ -51,6 +54,10 @@ export function LotusMassPreparationPanel({
   const displayedVolume = brewVolumeMl / displayedVolumeScale;
   const precision = volumeUnit === 'mL' ? 0 : volumeUnit === 'L' ? 2 : 3;
   const volumeText = `${Number(displayedVolume.toFixed(precision))} ${volumeUnit}`;
+  const selectedRecipe = LOTUS_RECIPES.find(recipe => recipe.id === selectedRecipeId);
+  const recipeDosePlan = selectedRecipe
+    ? calculateLotusDiyRecipeDoses(selectedRecipe, style, brewVolumeMl, calibration)
+    : null;
   const referenceScale = LOTUS_BREW_VOLUME_ML / brewVolumeMl;
   const sourceIonPpm = referencePlan.lotusReferenceIonPpmPerDrop * referenceScale;
   const calibratedIonPpm = calibratedPlan.ionPpmPerDrop * referenceScale;
@@ -223,6 +230,81 @@ export function LotusMassPreparationPanel({
           </>
         )}
       </section>
+      <details
+        className="rounded-2xl border border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-400/[0.06] via-slate-800/75 to-violet-400/[0.045] p-4 shadow-xl sm:p-5"
+        data-testid="lotus-recipe-dose-panel"
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 marker:hidden">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Droplet className="h-4 w-4 shrink-0 text-fuchsia-200" aria-hidden="true" />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-slate-100">Dose a published Lotus recipe</span>
+              <span className="mt-0.5 block text-[10px] text-slate-400">
+                {volumeText} · {style === 'round' ? 'Round' : 'Straight'} tip
+              </span>
+            </span>
+          </span>
+          <span className="shrink-0 rounded-full border border-fuchsia-300/20 bg-fuchsia-300/[0.07] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-wider text-fuchsia-100/80">
+            DIY estimate
+          </span>
+        </summary>
+        <div className="mt-3 space-y-3 border-t border-fuchsia-200/10 pt-3">
+          <label className="block rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5">
+            <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+              Published recipe
+            </span>
+            <select
+              aria-label="Published Lotus recipe"
+              data-testid="lotus-recipe-dose-select"
+              value={selectedRecipeId}
+              onChange={event => setSelectedRecipeId(event.target.value)}
+              className="mt-1 min-h-11 w-full bg-transparent text-sm font-semibold text-slate-100 outline-none"
+            >
+              <option value="">Choose a recipe</option>
+              {LOTUS_RECIPES.map(recipe => (
+                <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
+              ))}
+            </select>
+          </label>
+          {recipeDosePlan && selectedRecipe && (
+            <div className="space-y-3" data-testid="lotus-recipe-dose-results">
+              <div className="grid gap-2 sm:grid-cols-2">
+                {LOTUS_DROPPER_DEFINITIONS.filter(dropper => !dropper.isBonus).map(dropper => (
+                  <div
+                    key={dropper.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-700/60 bg-slate-950/35 px-3 py-2.5"
+                    data-testid={`lotus-recipe-dose-row-${dropper.id}`}
+                  >
+                    <span className="text-xs font-medium text-slate-300">{dropper.label}</span>
+                    <strong
+                      className="text-sm font-semibold tabular-nums text-white"
+                      data-testid={`lotus-recipe-dose-count-${dropper.id}`}
+                    >
+                      {recipeDosePlan.counts[dropper.id as 'magnesium' | 'calcium' | 'potassium' | 'sodium']} drops
+                    </strong>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] leading-relaxed text-slate-400">
+                Watermancer estimate for DIY stocks, not Lotus’s unpublished commercial concentrates.
+                {' '}
+                {recipeDosePlan.dropMassSource === 'calibration'
+                  ? 'Using your calibration.'
+                  : 'Lotus reference estimate.'}
+                {' '}
+                <a
+                  className="font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-2 hover:text-cyan-100"
+                  href={selectedRecipe.sourceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Lotus instructions
+                </a>
+              </p>
+            </div>
+          )}
+        </div>
+      </details>
     </>
   );
 }

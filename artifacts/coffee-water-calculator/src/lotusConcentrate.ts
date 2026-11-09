@@ -387,6 +387,65 @@ export function lotusMassStockPlan(dropper: LotusDropperDefinition, totalStockMa
     anhydrousEquivalentMassMg: saltMassG * 1000 * salt.anhydrousMass / reference.hydrationMolarMass };
 }
 
+export type LotusRecipeStockId = 'magnesium' | 'calcium' | 'potassium' | 'sodium';
+
+export interface LotusDiyRecipeDosePlan {
+  counts: Record<LotusRecipeStockId, number>;
+  dropMassSource: 'calibration' | 'lotus-reference';
+}
+
+/**
+ * Extrapolate a published Lotus ion target into whole drops of Watermancer's
+ * modeled DIY stocks. Drop mass is the calibrated plain-water mass per drop
+ * when available, otherwise Lotus's published average for the selected tip.
+ */
+export function calculateLotusDiyRecipeDoses(
+  recipe: LotusRecipe,
+  style: LotusDropperStyle,
+  brewVolumeMl: number,
+  calibration?: LotusDropperCalibration,
+): LotusDiyRecipeDosePlan {
+  if (!Number.isFinite(brewVolumeMl) || brewVolumeMl <= 0) {
+    throw new RangeError('Brew-water volume must be a positive finite number.');
+  }
+
+  const measuredDropsPerMl = lotusMeasuredDropsPerMl(calibration);
+  const hasCalibration = measuredDropsPerMl !== null;
+  const dropMassG = hasCalibration
+    ? 1 / measuredDropsPerMl
+    : LOTUS_SOURCE_DROP_MASS_MG[style] / 1000;
+  const targetIons = lotusIonTargetsExact(recipe.publishedInputs);
+  const counts: Record<LotusRecipeStockId, number> = {
+    magnesium: 0,
+    calcium: 0,
+    potassium: 0,
+    sodium: 0,
+  };
+
+  for (const dropper of LOTUS_DROPPER_DEFINITIONS) {
+    if (dropper.isBonus) continue;
+    const stockPlan = lotusMassStockPlan(dropper, 1);
+    if (!stockPlan.valid) {
+      throw new Error(`Unable to calculate the ${dropper.label} DIY stock strength.`);
+    }
+
+    const targetIonMg = targetIons[dropper.inputKey] * (brewVolumeMl / 1000);
+    if (targetIonMg <= 0) continue;
+
+    const ionFraction = hydrationIonFraction(dropper.saltId, dropper.ionId);
+    const ionMgPerDrop = stockPlan.saltMgPerStockG * dropMassG * ionFraction;
+    if (!Number.isFinite(ionMgPerDrop) || ionMgPerDrop <= 0) {
+      throw new Error(`Unable to calculate the ${dropper.label} DIY stock dose.`);
+    }
+    counts[dropper.id as LotusRecipeStockId] = Math.round(targetIonMg / ionMgPerDrop);
+  }
+
+  return {
+    counts,
+    dropMassSource: hasCalibration ? 'calibration' : 'lotus-reference',
+  };
+}
+
 export function lotusCalibratedStockPlan(
   dropper: typeof LOTUS_DROPPER_DEFINITIONS[number],
   style: LotusDropperStyle,

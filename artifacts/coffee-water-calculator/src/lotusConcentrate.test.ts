@@ -7,6 +7,7 @@ import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_DROPPER_DEFINITIONS,
   LOTUS_SOURCE_DROP_MASS_MG,
+  calculateLotusDiyRecipeDoses,
   lotusCalibratedStockPlan,
   lotusDropsPerMl,
   lotusMeasuredDropsPerMl,
@@ -17,6 +18,7 @@ import {
   lotusMassStockPlan,
   lotusStockPlan,
 } from './lotusConcentrate';
+import { LOTUS_RECIPES } from './lotusRecipes';
 
 // Fixed independent mass-balance references from Lotus's published ion inputs,
 // average drop masses, 0.56 Round factor, and the selected salt hydration forms.
@@ -426,5 +428,113 @@ describe('DIY Lotus Drops calculations', () => {
       weightInput: '-5',
       style: 'straight',
     })).toEqual(fallback);
+  });
+});
+
+describe('DIY Lotus published-recipe doses', () => {
+  const publishedCounts = {
+    'lotus-light-and-bright': {
+      round: { magnesium: 0, calcium: 3, potassium: 3, sodium: 0 },
+      straight: { magnesium: 0, calcium: 6, potassium: 5, sodium: 0 },
+    },
+    'lotus-simple-and-sweet': {
+      round: { magnesium: 2, calcium: 3, potassium: 2, sodium: 3 },
+      straight: { magnesium: 3, calcium: 6, potassium: 3, sodium: 5 },
+    },
+    'lotus-light-and-bright-espresso': {
+      round: { magnesium: 1, calcium: 0, potassium: 5, sodium: 0 },
+      straight: { magnesium: 2, calcium: 0, potassium: 9, sodium: 0 },
+    },
+    'lotus-simple-and-sweet-espresso': {
+      round: { magnesium: 1, calcium: 0, potassium: 0, sodium: 6 },
+      straight: { magnesium: 2, calcium: 0, potassium: 0, sodium: 11 },
+    },
+    'lotus-bright-and-juicy': {
+      round: { magnesium: 2, calcium: 2, potassium: 1, sodium: 1 },
+      straight: { magnesium: 4, calcium: 4, potassium: 2, sodium: 2 },
+    },
+    'lotus-raos-recipe': {
+      round: { magnesium: 2, calcium: 2, potassium: 1, sodium: 1 },
+      straight: { magnesium: 3, calcium: 4, potassium: 2, sodium: 2 },
+    },
+    'lotus-ultra-light': {
+      round: { magnesium: 1, calcium: 1, potassium: 1, sodium: 0 },
+      straight: { magnesium: 2, calcium: 2, potassium: 2, sodium: 0 },
+    },
+  } as const;
+
+  it('matches all seven published 450 mL drop counts with Lotus reference drop weights', () => {
+    expect(LOTUS_RECIPES.map(recipe => recipe.id)).toEqual(Object.keys(publishedCounts));
+
+    for (const recipe of LOTUS_RECIPES) {
+      for (const style of ['round', 'straight'] as const) {
+        const plan = calculateLotusDiyRecipeDoses(recipe, style, 450);
+        expect(plan.counts).toEqual(publishedCounts[recipe.id as keyof typeof publishedCounts][style]);
+        expect(plan.dropMassSource).toBe('lotus-reference');
+      }
+    }
+  });
+
+  it('uses the measured mass per drop for the selected style', () => {
+    const rao = LOTUS_RECIPES.find(recipe => recipe.id === 'lotus-raos-recipe')!;
+    const straight = calculateLotusDiyRecipeDoses(rao, 'straight', 450, {
+      dropsInput: '100',
+      weightInput: '8',
+      style: 'straight',
+    });
+    const round = calculateLotusDiyRecipeDoses(rao, 'round', 450, {
+      dropsInput: '100',
+      weightInput: '5.6',
+      style: 'round',
+    });
+
+    expect(straight).toEqual({
+      counts: { magnesium: 2, calcium: 2, potassium: 1, sodium: 1 },
+      dropMassSource: 'calibration',
+    });
+    expect(round).toEqual({
+      counts: { magnesium: 2, calcium: 3, potassium: 1, sodium: 2 },
+      dropMassSource: 'calibration',
+    });
+  });
+
+  it('uses Lotus reference weights when calibration is missing or incomplete', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+    const withoutCalibration = calculateLotusDiyRecipeDoses(recipe, 'straight', 450);
+    const partialCalibration = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, {
+      dropsInput: '100',
+      weightInput: '',
+      style: 'straight',
+    });
+
+    expect(partialCalibration).toEqual(withoutCalibration);
+    expect(partialCalibration.dropMassSource).toBe('lotus-reference');
+  });
+
+  it('scales counts with brew volume and returns whole nonnegative counts at the range limits', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+
+    expect(calculateLotusDiyRecipeDoses(recipe, 'straight', 900).counts).toEqual({
+      magnesium: 6,
+      calcium: 12,
+      potassium: 6,
+      sodium: 10,
+    });
+
+    for (const brewVolumeMl of [50, 2000]) {
+      const counts = Object.values(calculateLotusDiyRecipeDoses(recipe, 'round', brewVolumeMl).counts);
+      expect(counts).toHaveLength(4);
+      expect(counts.every(count => Number.isFinite(count) && Number.isInteger(count) && count >= 0)).toBe(true);
+    }
+  });
+
+  it('keeps the DIY stock strength ratio constant across prepared batch sizes', () => {
+    const magnesium = LOTUS_DROPPER_DEFINITIONS.find(dropper => dropper.id === 'magnesium')!;
+    const plans = [20, 100, 250].map(totalMassG => lotusMassStockPlan(magnesium, totalMassG));
+
+    expect(plans.every(plan => plan.valid)).toBe(true);
+    const strengths = plans.flatMap(plan => plan.valid ? [plan.saltMgPerStockG] : []);
+    expect(strengths[1]).toBeCloseTo(strengths[0], 10);
+    expect(strengths[2]).toBeCloseTo(strengths[0], 10);
   });
 });

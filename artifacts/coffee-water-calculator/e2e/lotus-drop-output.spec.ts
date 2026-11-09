@@ -268,3 +268,74 @@ test('keeps the optional mineral marker inside its phone-width summary', async (
   }));
   expect(documentWidth.scroll, 'page should not scroll horizontally on a phone').toBeLessThanOrEqual(documentWidth.client);
 });
+
+test('offers a collapsed published-recipe dosing calculator below stock preparation', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const preparation = page.getByTestId('lotus-stock-preparation-section');
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel.locator('summary')).toContainText('Dose a published Lotus recipe');
+  await expect(panel).not.toHaveAttribute('open', '');
+
+  const preparationBox = await preparation.boundingBox();
+  const panelBox = await panel.boundingBox();
+  expect(preparationBox).not.toBeNull();
+  expect(panelBox).not.toBeNull();
+  expect(panelBox!.y).toBeGreaterThan(preparationBox!.y);
+
+  await panel.locator('summary').click();
+  const selector = panel.getByRole('combobox', { name: 'Published Lotus recipe' });
+  await expect(selector).toHaveValue('');
+  await expect(selector.locator('option')).toHaveCount(8);
+  await expect(panel.getByTestId('lotus-recipe-dose-results')).toHaveCount(0);
+
+  await selectStyle(page, 'Straight');
+  await selector.selectOption('lotus-simple-and-sweet');
+  await expect(panel.getByTestId('lotus-recipe-dose-results')).toBeVisible();
+  await expect(panel.getByTestId('lotus-recipe-dose-count-magnesium')).toHaveText('3 drops');
+  await expect(panel.getByTestId('lotus-recipe-dose-count-calcium')).toHaveText('6 drops');
+  await expect(panel.getByTestId('lotus-recipe-dose-count-potassium')).toHaveText('3 drops');
+  await expect(panel.getByTestId('lotus-recipe-dose-count-sodium')).toHaveText('5 drops');
+  await expect(panel).toContainText('Watermancer estimate for DIY stocks');
+  await expect(panel.getByRole('link', { name: 'Lotus instructions' }))
+    .toHaveAttribute('href', 'https://lotuscoffeeproducts.com/pages/product-instructions');
+});
+
+test('recalculates Lotus recipe counts for brew volume and saved tip calibration', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Straight');
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  await panel.getByRole('combobox', { name: 'Published Lotus recipe' })
+    .selectOption('lotus-simple-and-sweet');
+
+  const magnesiumCount = page.getByTestId('lotus-recipe-dose-count-magnesium');
+  const calciumCount = page.getByTestId('lotus-recipe-dose-count-calcium');
+  const potassiumCount = page.getByTestId('lotus-recipe-dose-count-potassium');
+  const sodiumCount = page.getByTestId('lotus-recipe-dose-count-sodium');
+  await expect(magnesiumCount).toHaveText('3 drops');
+  await expect(panel).toContainText('Lotus reference estimate');
+
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
+  await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('5');
+  await expect(panel).toContainText('Using your calibration');
+  await expect(magnesiumCount).toHaveText('2 drops');
+  await expect(calciumCount).toHaveText('5 drops');
+  await expect(potassiumCount).toHaveText('2 drops');
+  await expect(sodiumCount).toHaveText('4 drops');
+
+  const slider = page.getByRole('slider', { name: 'Final brewing water volume' });
+  await slider.evaluate((element: HTMLInputElement) => {
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setValue?.call(element, '900');
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText('900 mL');
+  await expect(magnesiumCount).toHaveText('5 drops');
+  await expect(calciumCount).toHaveText('10 drops');
+  await expect(potassiumCount).toHaveText('5 drops');
+  await expect(sodiumCount).toHaveText('8 drops');
+});
