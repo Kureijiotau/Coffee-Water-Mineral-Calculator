@@ -18,6 +18,10 @@ recommend a dose that keeps the target while using a safer, weaker stock.
   masses, dose details, and per-drop outputs update from that strength.
 - Keep total finished stock mass as a separate weight-based preparation input.
   No concentrate-volume math is introduced.
+- When the user changes finished stock weight, keep the selected g/L dose and
+  recalculate strength to preserve the recipe target, unless an existing pinned
+  per-drop target is active. A per-drop pin keeps its current priority until the
+  user explicitly edits the g/L dose, which clears the conflicting pin.
 - Changing the brew-water amount scales the displayed total dose while retaining
   the selected grams-per-liter setting and resulting recipe strength.
 - Invalid or blank input remains editable but must not apply invalid strength to

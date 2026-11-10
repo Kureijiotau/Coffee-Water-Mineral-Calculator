@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { buildMassStockPlan, computeMassStockDose, resolveStockDropCalibration } from './concentrateMass';
-import { computeRecipeMassDropEquivalents, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor } from './concentrateMass';
+import {
+  computeRecipeMassDropEquivalents,
+  computeRecipeMassStrengthForDose,
+  computeRecipeMassStrengthForPhysicalSaltPpm,
+  scaleMassStockForSaltEdit,
+  physicalSaltCaCo3EquivalentFactor,
+} from './concentrateMass';
 import * as concentrateMass from './concentrateMass';
 
 describe('mass-based stock planning', () => {
@@ -52,6 +58,32 @@ it('solves physical mg/drop without converting stock grams to mL', () => {
     totalStockMassG: 100, finalWaterMassKg: 1, calibration: { basis: 'water-estimate', drops: 100, massG: 5, compositionKey: '', tipKey: 'straight' },
     compositionKey: '', tipKey: 'straight', physicalSaltPpmPerDrop: 1 });
   expect(result).toMatchObject({ valid: true, strength: 200, calibrationBasis: 'water-estimate' });
+});
+it('derives recipe strength from a finished-stock dose in grams per liter', () => {
+  const result = computeRecipeMassStrengthForDose({ totalStockMassG: 100, doseGramsPerLiter: 10 });
+  expect(result).toEqual({ valid: true, strength: 10 });
+
+  const oneLiterDose = computeMassStockDose({
+    totalStockMassG: 100,
+    strength: result.valid ? result.strength : Number.NaN,
+    finalWaterMassKg: 1,
+    calibration: null,
+    compositionKey: '',
+    tipKey: 'straight',
+  });
+  expect(oneLiterDose).toMatchObject({ valid: true, doseMassG: 10 });
+});
+it.each([
+  { totalStockMassG: 0, doseGramsPerLiter: 10 },
+  { totalStockMassG: 100, doseGramsPerLiter: 0 },
+  { totalStockMassG: -100, doseGramsPerLiter: 10 },
+  { totalStockMassG: 100, doseGramsPerLiter: -10 },
+  { totalStockMassG: Number.NaN, doseGramsPerLiter: 10 },
+  { totalStockMassG: 100, doseGramsPerLiter: Number.NaN },
+  { totalStockMassG: Number.POSITIVE_INFINITY, doseGramsPerLiter: 10 },
+  { totalStockMassG: 100, doseGramsPerLiter: Number.POSITIVE_INFINITY },
+])('rejects invalid recipe dose-strength inputs: $totalStockMassG g / $doseGramsPerLiter g/L', input => {
+  expect(computeRecipeMassStrengthForDose(input)).toMatchObject({ valid: false });
 });
 it('anchors a separate salt edit without changing potency or another stock', () => {
   const otherStock = { totalStockMassG: 80, batchScale: 1 };

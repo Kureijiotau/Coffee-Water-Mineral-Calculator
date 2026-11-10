@@ -3,7 +3,7 @@ import { AlertTriangle, Beaker, Check, ChevronDown, Droplet, FlaskConical, ListC
 import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
 import { computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
   waterLitersToEquivalentMassKg,
-  resolveStockDropCalibration, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor, type StockDropCalibration } from './concentrateMass';
+  resolveStockDropCalibration, computeRecipeMassStrengthForDose, computeRecipeMassStrengthForPhysicalSaltPpm, scaleMassStockForSaltEdit, physicalSaltCaCo3EquivalentFactor, type StockDropCalibration } from './concentrateMass';
 import { checkMassConcentrate, recommendMassConcentrateStrength } from './concentrateMassWarnings';
 import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MASS_NOTE } from './concentratePreparation';
 import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type MassConcentratePlanSnapshot } from './concentrateStockStorage';
@@ -530,7 +530,7 @@ export function MassConcentrateWorkspace(props: Props) {
         return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
           finalLiters={finalLiters} finalWaterMassKg={finalWaterMassKg} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={updateFinalLitersInput}
-          onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus}
+          onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus} editableRecipeDose={isRecipe}
           onUpdate={patch => update(g.id, patch)} showSteps={showSteps} allowSaltMassEdit={isRecipe && strategy === 'individual'} diySingleSalt={!isRecipe && toolMode !== 'lotus'} diyControls={diyControls} />;
       })}
       {isRecipe && <button className={buttonClass} aria-label="Open concentrate recipe steps" onClick={() => setShowSteps(v => !v)}>{showSteps ? 'Hide recipe steps' : 'Recipe steps'}</button>}
@@ -550,14 +550,18 @@ export function MassConcentrateWorkspace(props: Props) {
   </div>;
 }
 
-function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalWaterMassKg, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, waterEstimate, onUpdate, percentMode, showSteps, allowSaltMassEdit, diySingleSalt, diyControls }: {
+function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters, finalWaterMassKg, finalLitersInput, volumeUnit, onFinalLitersChange, onToggleVolumeUnit, tipKey, waterEstimate, onUpdate, percentMode, editableRecipeDose, showSteps, allowSaltMassEdit, diySingleSalt, diyControls }: {
   name: string; state: Group; saltTargets: Record<string, number>; forms: Record<string, number>; strength: number; finalLiters: number; finalWaterMassKg: number;
   finalLitersInput: string; volumeUnit: 'liters' | 'gallons'; onFinalLitersChange: (value: string) => void; onToggleVolumeUnit: () => void;
   tipKey: 'straight' | 'round';
-  waterEstimate: StockDropCalibration; onUpdate: (patch: Partial<Group>) => void; percentMode: boolean; showSteps: boolean; allowSaltMassEdit: boolean; diySingleSalt: boolean; diyControls: ReactNode;
+  waterEstimate: StockDropCalibration; onUpdate: (patch: Partial<Group>) => void; percentMode: boolean; editableRecipeDose: boolean; showSteps: boolean; allowSaltMassEdit: boolean; diySingleSalt: boolean; diyControls: ReactNode;
 }) {
   const [massInput, setMassInput] = useState(String(state.totalStockMassG));
   const [strengthInput, setStrengthInput] = useState(String(state.strength));
+  const initialDoseGramsPerLiter = state.totalStockMassG / strength;
+  const [doseGramsPerLiterInput, setDoseGramsPerLiterInput] = useState(
+    Number.isFinite(initialDoseGramsPerLiter) && initialDoseGramsPerLiter > 0 ? String(initialDoseGramsPerLiter) : '',
+  );
   const [dropsInput, setDropsInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.drops) : '');
   const [weighedInput, setWeighedInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.massG) : '');
   const [targetMgInput, setTargetMgInput] = useState(String(state.desiredSaltMassMg ?? 40));
@@ -574,6 +578,10 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
     setMassInput(String(state.totalStockMassG));
     setStrengthInput(String(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop ? strength : state.strength));
   }, [state.totalStockMassG, state.strength, state.physicalSaltPpmPerDrop, state.caCo3PpmPerDrop, strength]);
+  useEffect(() => {
+    const doseGramsPerLiter = state.totalStockMassG / strength;
+    setDoseGramsPerLiterInput(Number.isFinite(doseGramsPerLiter) && doseGramsPerLiter > 0 ? n(doseGramsPerLiter, 6) : '');
+  }, [state.totalStockMassG, strength]);
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
   const compositionKey = stockCompositionKey(salts, state.totalStockMassG, forms);
@@ -591,6 +599,16 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
     saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
     gramsPerDrop: measured.gramsPerDrop ?? waterEstimate.massG / waterEstimate.drops,
   });
+  const parsedDoseGramsPerLiter = doseGramsPerLiterInput.trim() === '' ? Number.NaN : Number(doseGramsPerLiterInput);
+  const requestedDoseStrength = computeRecipeMassStrengthForDose({
+    totalStockMassG: state.totalStockMassG,
+    doseGramsPerLiter: parsedDoseGramsPerLiter,
+  });
+  const doseExceedsSafeRecommendation = editableRecipeDose && requestedDoseStrength.valid
+    && (recommendedStrength === null || requestedDoseStrength.strength > recommendedStrength);
+  const safeDoseGramsPerLiter = recommendedStrength && recommendedStrength > 0
+    ? state.totalStockMassG / recommendedStrength
+    : null;
   const blocked = !result.valid || warnings.some(w => w.severity === 'error');
   const saltLabel = salts.map(s => `${n(s.physicalMassMg / 1000)} g ${SALTS.find(item => item.id === s.saltId)?.name ?? s.saltId}`).join(' + ');
   const doseMassG = result.valid ? percentMode ? Number(targetMgInput) / result.totalSaltMgPerStockG : result.doseMassG : NaN;
@@ -823,7 +841,20 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Concentrate weight</span>
               <span className="mt-1 flex items-center gap-2">
                 <input aria-label={`${name} target stock weight in grams`} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal" placeholder="e.g. 100" value={massInput}
-                  onChange={e => { setMassInput(e.target.value); onUpdate({ totalStockMassG: e.target.value.trim() ? Number(e.target.value) : NaN, batchScale: 1 }); }} />
+                  onChange={e => {
+                    const value = e.target.value;
+                    const totalStockMassG = value.trim() ? Number(value) : Number.NaN;
+                    setMassInput(value);
+                    const patch: Partial<Group> = { totalStockMassG, batchScale: 1 };
+                    if (editableRecipeDose && !state.physicalSaltPpmPerDrop && !state.caCo3PpmPerDrop) {
+                      const next = computeRecipeMassStrengthForDose({
+                        totalStockMassG,
+                        doseGramsPerLiter: doseGramsPerLiterInput.trim() === '' ? Number.NaN : Number(doseGramsPerLiterInput),
+                      });
+                      if (next.valid) patch.strength = next.strength;
+                    }
+                    onUpdate(patch);
+                  }} />
                 <span className="text-sm text-slate-400">g</span>
               </span>
             </label>
@@ -910,6 +941,45 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
             Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.
           </p>}
           {(!Number.isFinite(doseMassG) || doseMassG <= 0) && <p role="alert" className="mt-3 text-xs text-red-200">Enter a positive, finite salt dose and brewing-water amount.</p>}
+          {editableRecipeDose && <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200/20 bg-slate-950/25 px-3 py-2.5 text-xs">
+            <span className="font-medium text-emerald-100">Stock dose per 1 L brew water</span>
+            <span className="flex items-center gap-2">
+              <input
+                aria-label={`${name} dose in grams per liter`}
+                data-testid={`recipe-dose-per-liter-${state.id}`}
+                className="w-24 rounded-lg border border-emerald-200/25 bg-slate-950/50 px-2 py-1.5 text-right text-base font-semibold tabular-nums text-emerald-100 outline-none focus:border-emerald-200/60"
+                inputMode="decimal"
+                value={doseGramsPerLiterInput}
+                onChange={event => {
+                  const value = event.target.value;
+                  setDoseGramsPerLiterInput(value);
+                  const next = computeRecipeMassStrengthForDose({
+                    totalStockMassG: state.totalStockMassG,
+                    doseGramsPerLiter: value.trim() === '' ? Number.NaN : Number(value),
+                  });
+                  if (next.valid) {
+                    onUpdate({
+                      strength: next.strength,
+                      batchScale: 1,
+                      physicalSaltPpmPerDrop: undefined,
+                      caCo3PpmPerDrop: undefined,
+                    });
+                    setCalibrationError('');
+                  }
+                }}
+              />
+              <span className="text-slate-400">g/L</span>
+            </span>
+          </label>}
+          {editableRecipeDose && !requestedDoseStrength.valid && <p role="alert" data-testid="recipe-dose-input-error" className="mt-2 text-xs text-red-200">
+            Enter a positive, finite dose in g/L. The last valid stock strength remains in use.
+          </p>}
+          {doseExceedsSafeRecommendation && <div role="alert" data-testid="recipe-dose-safety" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/[0.08] p-3 text-xs text-amber-100">
+            <p>This dose makes the stock too concentrated for the conservative modeled safety recommendation.</p>
+            {safeDoseGramsPerLiter !== null
+              ? <p className="mt-1">Use at least <strong>{n(safeDoseGramsPerLiter, 5)} g/L</strong> (about {n(safeDoseGramsPerLiter * finalWaterMassKg, 5)} g for this brew) at up to ×{n(recommendedStrength!)} strength to preserve the recipe target.</p>
+              : <p className="mt-1">No safe grams-per-liter recommendation is available for this stock weight and recipe. Increase the stock weight or revise the recipe.</p>}
+          </div>}
           {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm">
             <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
             {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}

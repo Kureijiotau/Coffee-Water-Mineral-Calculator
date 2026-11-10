@@ -40,6 +40,19 @@ export function computeMassStockDose(input: {
   return { valid: true as const, doseMassG, gramsPerDrop: calibration.gramsPerDrop,
     drops: calibration.gramsPerDrop ? doseMassG / calibration.gramsPerDrop : null, calibrationBasis: calibration.basis };
 }
+export function computeRecipeMassStrengthForDose(input: {
+  totalStockMassG: number;
+  doseGramsPerLiter: number;
+}) {
+  if (!positive(input.totalStockMassG) || !positive(input.doseGramsPerLiter)) {
+    return { valid: false as const, reason: 'Enter a positive stock weight and dose in grams per liter.' };
+  }
+  const strength = input.totalStockMassG / input.doseGramsPerLiter;
+  if (!positive(strength)) {
+    return { valid: false as const, reason: 'The requested dose produces an invalid stock strength.' };
+  }
+  return { valid: true as const, strength };
+}
 export type RecipeMassStockInput = {
   saltTargets: Record<string, number>; formIdxBySaltId: Record<string, number>; strength: number;
   totalStockMassG: number; calibration: StockDropCalibration | null; finalWaterMassKg: number; compositionKey: string; tipKey: string;
