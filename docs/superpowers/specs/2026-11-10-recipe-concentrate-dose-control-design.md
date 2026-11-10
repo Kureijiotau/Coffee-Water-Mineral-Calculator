@@ -34,6 +34,9 @@ recommend a dose that keeps the target while using a safer, weaker stock.
   minimum grams per liter needed to preserve the recipe target at that strength.
   Fewer grams per liter require a stronger stock, so the safer alternative is a
   larger dose.
+- If the current stock setup has no conservative safe-strength recommendation,
+  say no safe grams-per-liter recommendation is available for that setup; do
+  not invent a value.
 - Continue to treat the checks as modeled estimates, not a laboratory guarantee.
 - Existing blocking behavior for unsafe preparation remains in force.
 
