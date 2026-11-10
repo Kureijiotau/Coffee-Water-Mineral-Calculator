@@ -569,15 +569,40 @@ describe('DIY Lotus published-recipe doses', () => {
     ).counts.calcium).toBe(1);
   });
 
-  it('falls back to water calibration for incomplete finished-stock measurements', () => {
+  it('falls back to water calibration for incomplete or invalid finished-stock measurements', () => {
     const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
     const calibration = { dropsInput: '100', weightInput: '5', style: 'straight' as const };
     const fallback = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration);
-    const incomplete = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration, {
-      magnesium: { dropsInput: '10', weightInput: '' },
+    const invalidMeasurements = [
+      { dropsInput: '', weightInput: '2' },
+      { dropsInput: '0', weightInput: '2' },
+      { dropsInput: '-1', weightInput: '2' },
+      { dropsInput: 'NaN', weightInput: '2' },
+      { dropsInput: 'Infinity', weightInput: '2' },
+      { dropsInput: '-Infinity', weightInput: '2' },
+      { dropsInput: '10', weightInput: '' },
+      { dropsInput: '10', weightInput: '0' },
+      { dropsInput: '10', weightInput: '-2' },
+      { dropsInput: '10', weightInput: 'NaN' },
+      { dropsInput: '10', weightInput: 'Infinity' },
+      { dropsInput: '10', weightInput: '-Infinity' },
+    ];
+
+    expect(fallback.dropMassSource).toBe('calibration');
+    expect(fallback.stockDropMassSources).toEqual({
+      magnesium: 'calibration',
+      calcium: 'calibration',
+      potassium: 'calibration',
+      sodium: 'calibration',
     });
 
-    expect(incomplete).toEqual(fallback);
+    for (const measurement of invalidMeasurements) {
+      const plan = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration, {
+        magnesium: measurement,
+      });
+
+      expect(plan).toEqual(fallback);
+    }
   });
 
   it('shows a valid stock measurement as active even when that recipe needs zero drops', () => {
