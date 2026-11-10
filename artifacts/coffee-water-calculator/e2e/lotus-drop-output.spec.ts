@@ -387,6 +387,67 @@ test('keeps published Lotus recipe counts unchanged when finished stock mass cha
   }
 });
 
+test('keeps published Lotus recipe counts unchanged with Round tips when finished stock mass changes', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Round');
+
+  const roundStyle = page.getByRole('group', { name: 'Lotus dropper tip style' })
+    .getByRole('button', { name: 'Round', exact: true });
+  const roundDrops = page.getByRole('textbox', { name: 'Round tip measured drops' });
+  const roundWeight = page.getByRole('textbox', { name: 'Round tip water weight in grams' });
+  await roundDrops.fill('60');
+  await roundWeight.fill('5');
+  await expect(page.getByTestId('lotus-selected-calibration-status')).toContainText('Round calibrated');
+
+  const massInput = page.getByRole('textbox', { name: 'Finished stock mass in grams' });
+  await massInput.fill('100');
+  const saltMass = page.getByTestId('lotus-stock-salt-mass');
+  await expect(saltMass).toBeVisible();
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  const recipeSelector = panel.getByRole('combobox', { name: 'Published Lotus recipe' });
+  const recipeIds = await recipeSelector.locator('option').evaluateAll(options =>
+    options.map(option => (option as HTMLOptionElement).value).filter(Boolean),
+  );
+  expect(recipeIds.length, 'the published recipe list should not be empty').toBeGreaterThan(0);
+
+  const doseCountIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
+  const saltMassBefore = await saltMass.innerText();
+  const brewVolumeBefore = await page.getByTestId('lotus-brew-volume-value').innerText();
+
+  for (const recipeId of recipeIds) {
+    await recipeSelector.selectOption(recipeId);
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+    const countsBefore = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+
+    await massInput.fill('250');
+    await expect(massInput).toHaveValue('250');
+    await expect(saltMass).not.toHaveText(saltMassBefore);
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText(brewVolumeBefore);
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+
+    const countsAfter = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+    expect(countsAfter, `${recipeId} Round-tip drop counts should not depend on finished stock mass`)
+      .toEqual(countsBefore);
+
+    await massInput.fill('100');
+    await expect(saltMass).toHaveText(saltMassBefore);
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText(brewVolumeBefore);
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+  }
+});
+
 test('uses and restores a separate finished-stock drop measurement for each stock', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
   await selectStyle(page, 'Straight');
