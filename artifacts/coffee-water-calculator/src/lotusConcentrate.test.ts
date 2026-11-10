@@ -603,6 +603,19 @@ describe('DIY Lotus published-recipe doses', () => {
     expect(partialCalibration.dropMassSource).toBe('lotus-reference');
   });
 
+  it.each([
+    { label: 'zero', brewVolumeMl: 0 },
+    { label: 'negative', brewVolumeMl: -100 },
+    { label: 'NaN', brewVolumeMl: Number.NaN },
+    { label: 'positive infinity', brewVolumeMl: Number.POSITIVE_INFINITY },
+    { label: 'negative infinity', brewVolumeMl: Number.NEGATIVE_INFINITY },
+  ])('rejects a $label brew volume with the documented RangeError', ({ brewVolumeMl }) => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+
+    expect(() => calculateLotusDiyRecipeDoses(recipe, 'straight', brewVolumeMl))
+      .toThrow(new RangeError('Brew-water volume must be a positive finite number.'));
+  });
+
   it('scales counts with brew volume and returns whole nonnegative counts at the range limits', () => {
     const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
 
