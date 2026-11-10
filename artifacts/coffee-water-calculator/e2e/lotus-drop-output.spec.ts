@@ -354,23 +354,37 @@ test('keeps published Lotus recipe counts unchanged when finished stock mass cha
 
   const panel = page.getByTestId('lotus-recipe-dose-panel');
   await panel.locator('summary').click();
-  await panel.getByRole('combobox', { name: 'Published Lotus recipe' })
-    .selectOption('lotus-simple-and-sweet');
+  const recipeSelector = panel.getByRole('combobox', { name: 'Published Lotus recipe' });
+  const recipeIds = await recipeSelector.locator('option').evaluateAll(options =>
+    options.map(option => (option as HTMLOptionElement).value).filter(Boolean),
+  );
+  expect(recipeIds.length, 'the published recipe list should not be empty').toBeGreaterThan(0);
 
   const doseCountIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
-  const countsBefore = await Promise.all(doseCountIds.map(id =>
-    page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
-  ));
   const saltMassBefore = await saltMass.innerText();
+  const brewVolumeBefore = await page.getByTestId('lotus-brew-volume-value').innerText();
 
-  await massInput.fill('250');
-  await expect(massInput).toHaveValue('250');
-  await expect(saltMass).not.toHaveText(saltMassBefore);
+  for (const recipeId of recipeIds) {
+    await recipeSelector.selectOption(recipeId);
+    const countsBefore = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
 
-  const countsAfter = await Promise.all(doseCountIds.map(id =>
-    page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
-  ));
-  expect(countsAfter).toEqual(countsBefore);
+    await massInput.fill('250');
+    await expect(massInput).toHaveValue('250');
+    await expect(saltMass).not.toHaveText(saltMassBefore);
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText(brewVolumeBefore);
+
+    const countsAfter = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+    expect(countsAfter, `${recipeId} drop counts should not depend on finished stock mass`)
+      .toEqual(countsBefore);
+
+    await massInput.fill('100');
+    await expect(saltMass).toHaveText(saltMassBefore);
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText(brewVolumeBefore);
+  }
 });
 
 test('uses and restores a separate finished-stock drop measurement for each stock', async ({ page }) => {
