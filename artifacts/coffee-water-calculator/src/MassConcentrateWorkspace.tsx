@@ -575,12 +575,17 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const [jpgStatus, setJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const preparationCardRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    setMassInput(String(state.totalStockMassG));
+    if (Number.isFinite(state.totalStockMassG) && state.totalStockMassG > 0) {
+      setMassInput(String(state.totalStockMassG));
+    }
     setStrengthInput(String(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop ? strength : state.strength));
   }, [state.totalStockMassG, state.strength, state.physicalSaltPpmPerDrop, state.caCo3PpmPerDrop, strength]);
   useEffect(() => {
+    if (!Number.isFinite(state.totalStockMassG) || state.totalStockMassG <= 0 || !Number.isFinite(strength) || strength <= 0) return;
     const doseGramsPerLiter = state.totalStockMassG / strength;
-    setDoseGramsPerLiterInput(Number.isFinite(doseGramsPerLiter) && doseGramsPerLiter > 0 ? n(doseGramsPerLiter, 6) : '');
+    if (Number.isFinite(doseGramsPerLiter) && doseGramsPerLiter > 0) {
+      setDoseGramsPerLiterInput(n(doseGramsPerLiter, 6));
+    }
   }, [state.totalStockMassG, strength]);
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
