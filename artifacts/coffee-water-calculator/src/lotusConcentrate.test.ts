@@ -535,6 +535,40 @@ describe('DIY Lotus published-recipe doses', () => {
     });
   });
 
+  it('rounds a calibrated dose across the calcium half-drop boundary', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+    const calibration = {
+      dropsInput: '100',
+      weightInput: '5',
+      style: 'straight' as const,
+    };
+
+    expect(calculateLotusDiyRecipeDoses(recipe, 'straight', 46.81, calibration).counts.calcium).toBe(0);
+    expect(calculateLotusDiyRecipeDoses(recipe, 'straight', 46.83, calibration).counts.calcium).toBe(1);
+  });
+
+  it('rounds a finished-stock dose across the calcium half-drop boundary', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+    const stockMeasurements = {
+      calcium: { dropsInput: '10', weightInput: '2' },
+    };
+
+    expect(calculateLotusDiyRecipeDoses(
+      recipe,
+      'straight',
+      187.26,
+      undefined,
+      stockMeasurements,
+    ).counts.calcium).toBe(0);
+    expect(calculateLotusDiyRecipeDoses(
+      recipe,
+      'straight',
+      187.29,
+      undefined,
+      stockMeasurements,
+    ).counts.calcium).toBe(1);
+  });
+
   it('falls back to water calibration for incomplete finished-stock measurements', () => {
     const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
     const calibration = { dropsInput: '100', weightInput: '5', style: 'straight' as const };
