@@ -341,6 +341,38 @@ test('recalculates Lotus recipe counts for brew volume and saved tip calibration
   await expect(sodiumCount).toHaveText('8 drops');
 });
 
+test('keeps published Lotus recipe counts unchanged when finished stock mass changes', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Straight');
+  await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
+  await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('4');
+
+  const massInput = page.getByRole('textbox', { name: 'Finished stock mass in grams' });
+  await massInput.fill('100');
+  const saltMass = page.getByTestId('lotus-stock-salt-mass');
+  await expect(saltMass).toBeVisible();
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  await panel.getByRole('combobox', { name: 'Published Lotus recipe' })
+    .selectOption('lotus-simple-and-sweet');
+
+  const doseCountIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
+  const countsBefore = await Promise.all(doseCountIds.map(id =>
+    page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+  ));
+  const saltMassBefore = await saltMass.innerText();
+
+  await massInput.fill('250');
+  await expect(massInput).toHaveValue('250');
+  await expect(saltMass).not.toHaveText(saltMassBefore);
+
+  const countsAfter = await Promise.all(doseCountIds.map(id =>
+    page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+  ));
+  expect(countsAfter).toEqual(countsBefore);
+});
+
 test('uses and restores a separate finished-stock drop measurement for each stock', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
   await selectStyle(page, 'Straight');
