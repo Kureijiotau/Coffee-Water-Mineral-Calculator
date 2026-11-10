@@ -1,7 +1,11 @@
 import type { WaterProfile } from "@/waterData";
 import type { WatermancerProfile } from "./watermancerProfiles";
 import type { WaterTastingCollection } from "./waterTasting";
-import type { LotusDropperCalibration, LotusDropperStyle } from "./lotusConcentrate";
+import type {
+  LotusDropperCalibration,
+  LotusDropperStyle,
+  LotusStockDropMeasurement,
+} from "./lotusConcentrate";
 import { readConcentrateStockRecord, type MassConcentratePlanSnapshot } from "./concentrateStockStorage";
 
 export const DIY_CONCENTRATE_INPUTS_STORAGE_KEY = "coffee-water-diy-concentrate-inputs";
@@ -21,6 +25,7 @@ export type DiyConcentrateStoredInputs = {
   desiredSaltMgInput?: string;
   desiredDoseBasis?: "caco3" | "salt-mg";
   lotusCalibrationInputs?: Record<string, LotusDropperCalibration>;
+  lotusStockDropMeasurements?: Record<string, LotusStockDropMeasurement>;
 };
 
 export type AccountSyncLocalData = {
@@ -137,6 +142,26 @@ export function loadDiyConcentrateInputsRecord(): DiyConcentrateStoredInputs | n
         };
       }
       stored.lotusCalibrationInputs = calibrations;
+    }
+    if (
+      source.lotusStockDropMeasurements
+      && typeof source.lotusStockDropMeasurements === "object"
+      && !Array.isArray(source.lotusStockDropMeasurements)
+    ) {
+      const measurements: NonNullable<DiyConcentrateStoredInputs["lotusStockDropMeasurements"]> = {};
+      for (const [id, value] of Object.entries(source.lotusStockDropMeasurements as Record<string, unknown>)) {
+        if (!id || !value || typeof value !== "object" || Array.isArray(value)) continue;
+        const measurement = value as Record<string, unknown>;
+        if (
+          typeof measurement.dropsInput !== "string"
+          || typeof measurement.weightInput !== "string"
+        ) continue;
+        measurements[id] = {
+          dropsInput: measurement.dropsInput,
+          weightInput: measurement.weightInput,
+        };
+      }
+      stored.lotusStockDropMeasurements = measurements;
     }
     return stored;
   } catch {

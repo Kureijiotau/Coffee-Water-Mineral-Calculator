@@ -389,21 +389,47 @@ export function lotusMassStockPlan(dropper: LotusDropperDefinition, totalStockMa
 
 export type LotusRecipeStockId = 'magnesium' | 'calcium' | 'potassium' | 'sodium';
 
+export interface LotusStockDropMeasurement {
+  dropsInput: string;
+  weightInput: string;
+}
+
+export type LotusRecipeDropMassSource = 'stock-measurement' | 'calibration' | 'lotus-reference';
+
+export function lotusMeasuredStockDropMassG(
+  measurement?: LotusStockDropMeasurement,
+): number | null {
+  const drops = Number(measurement?.dropsInput);
+  const weightG = Number(measurement?.weightInput);
+  if (
+    !measurement
+    || measurement.dropsInput.trim() === ''
+    || measurement.weightInput.trim() === ''
+    || !Number.isFinite(drops)
+    || drops <= 0
+    || !Number.isFinite(weightG)
+    || weightG <= 0
+  ) return null;
+  return weightG / drops;
+}
+
 export interface LotusDiyRecipeDosePlan {
   counts: Record<LotusRecipeStockId, number>;
-  dropMassSource: 'calibration' | 'lotus-reference';
+  dropMassSource: LotusRecipeDropMassSource | 'mixed';
+  stockDropMassSources: Record<LotusRecipeStockId, LotusRecipeDropMassSource>;
 }
 
 /**
  * Extrapolate a published Lotus ion target into whole drops of Watermancer's
- * modeled DIY stocks. Drop mass is the calibrated plain-water mass per drop
- * when available, otherwise Lotus's published average for the selected tip.
+ * modeled DIY stocks. Each valid finished-stock measurement is preferred,
+ * followed by calibrated plain-water drop mass and Lotus's published average.
  */
 export function calculateLotusDiyRecipeDoses(
   recipe: LotusRecipe,
   style: LotusDropperStyle,
   brewVolumeMl: number,
   calibration?: LotusDropperCalibration,
+  stockMeasurements?: Partial<Record<LotusRecipeStockId, LotusStockDropMeasurement>>,
 ): LotusDiyRecipeDosePlan {
   if (!Number.isFinite(brewVolumeMl) || brewVolumeMl <= 0) {
     throw new RangeError('Brew-water volume must be a positive finite number.');
@@ -421,6 +447,12 @@ export function calculateLotusDiyRecipeDoses(
     potassium: 0,
     sodium: 0,
   };
+  const stockDropMassSources: Record<LotusRecipeStockId, LotusRecipeDropMassSource> = {
+    magnesium: hasCalibration ? 'calibration' : 'lotus-reference',
+    calcium: hasCalibration ? 'calibration' : 'lotus-reference',
+    potassium: hasCalibration ? 'calibration' : 'lotus-reference',
+    sodium: hasCalibration ? 'calibration' : 'lotus-reference',
+  };
 
   for (const dropper of LOTUS_DROPPER_DEFINITIONS) {
     if (dropper.isBonus) continue;
@@ -430,19 +462,26 @@ export function calculateLotusDiyRecipeDoses(
     }
 
     const targetIonMg = targetIons[dropper.inputKey] * (brewVolumeMl / 1000);
+    const measurement = stockMeasurements?.[dropper.id as LotusRecipeStockId];
+    const measuredStockDropMassG = lotusMeasuredStockDropMassG(measurement);
+    const activeDropMassG = measuredStockDropMassG ?? dropMassG;
+    const stockId = dropper.id as LotusRecipeStockId;
+    if (measuredStockDropMassG !== null) stockDropMassSources[stockId] = 'stock-measurement';
     if (targetIonMg <= 0) continue;
 
     const ionFraction = hydrationIonFraction(dropper.saltId, dropper.ionId);
-    const ionMgPerDrop = stockPlan.saltMgPerStockG * dropMassG * ionFraction;
+    const ionMgPerDrop = stockPlan.saltMgPerStockG * activeDropMassG * ionFraction;
     if (!Number.isFinite(ionMgPerDrop) || ionMgPerDrop <= 0) {
       throw new Error(`Unable to calculate the ${dropper.label} DIY stock dose.`);
     }
-    counts[dropper.id as LotusRecipeStockId] = Math.round(targetIonMg / ionMgPerDrop);
+    counts[stockId] = Math.round(targetIonMg / ionMgPerDrop);
   }
 
+  const uniqueSources = new Set(Object.values(stockDropMassSources));
   return {
     counts,
-    dropMassSource: hasCalibration ? 'calibration' : 'lotus-reference',
+    dropMassSource: uniqueSources.size === 1 ? [...uniqueSources][0] : 'mixed',
+    stockDropMassSources,
   };
 }
 

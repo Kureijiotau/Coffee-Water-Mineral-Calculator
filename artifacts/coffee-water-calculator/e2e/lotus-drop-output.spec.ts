@@ -6,6 +6,7 @@ async function openLotusDropsWithoutSavedCalibration(page: Page) {
     if (sessionStorage.getItem(initializedKey) === '1') return;
     localStorage.setItem('coffee-water-diy-concentrate-inputs', JSON.stringify({
       lotusCalibrationInputs: {},
+      lotusStockDropMeasurements: {},
     }));
     sessionStorage.setItem(initializedKey, '1');
   });
@@ -320,7 +321,7 @@ test('recalculates Lotus recipe counts for brew volume and saved tip calibration
 
   await page.getByRole('textbox', { name: 'Straight tip measured drops' }).fill('100');
   await page.getByRole('textbox', { name: 'Straight tip water weight in grams' }).fill('5');
-  await expect(panel).toContainText('Using your calibration');
+  await expect(page.getByTestId('lotus-recipe-dose-basis-magnesium')).toHaveText('Water calibration');
   await expect(magnesiumCount).toHaveText('2 drops');
   await expect(calciumCount).toHaveText('5 drops');
   await expect(potassiumCount).toHaveText('2 drops');
@@ -338,4 +339,46 @@ test('recalculates Lotus recipe counts for brew volume and saved tip calibration
   await expect(calciumCount).toHaveText('10 drops');
   await expect(potassiumCount).toHaveText('5 drops');
   await expect(sodiumCount).toHaveText('8 drops');
+});
+
+test('uses and restores a separate finished-stock drop measurement for each stock', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Straight');
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  await panel.getByRole('combobox', { name: 'Published Lotus recipe' })
+    .selectOption('lotus-simple-and-sweet');
+  await expect(page.getByTestId('lotus-recipe-dose-basis-magnesium'))
+    .toHaveText('Lotus reference estimate');
+
+  const magnesiumDrops = page.getByRole('textbox', { name: 'Magnesium stock measured drops' });
+  const magnesiumWeight = page.getByRole('textbox', { name: 'Magnesium stock measured weight in grams' });
+  await magnesiumDrops.fill('10');
+  await magnesiumWeight.fill('2');
+  await expect(page.getByTestId('lotus-stock-measurement-status'))
+    .toContainText('0.2000 g/drop');
+  await expect(page.getByTestId('lotus-recipe-dose-basis-magnesium'))
+    .toHaveText('Finished-stock measurement');
+  await expect(page.getByTestId('lotus-recipe-dose-count-magnesium')).toHaveText('1 drops');
+
+  await page.getByRole('combobox', { name: 'Dropper to prepare' }).selectOption('calcium');
+  await page.getByRole('textbox', { name: 'Calcium stock measured drops' }).fill('10');
+  await page.getByRole('textbox', { name: 'Calcium stock measured weight in grams' }).fill('2');
+  await expect(page.getByTestId('lotus-recipe-dose-basis-calcium'))
+    .toHaveText('Finished-stock measurement');
+
+  await page.getByRole('combobox', { name: 'Dropper to prepare' }).selectOption('magnesium');
+  await expect(magnesiumDrops).toHaveValue('10');
+  await expect(magnesiumWeight).toHaveValue('2');
+  await page.reload();
+  await page.getByTestId('tab-concentrates').click();
+  await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Magnesium stock measured drops' })).toHaveValue('10');
+  await expect(page.getByRole('textbox', { name: 'Magnesium stock measured weight in grams' })).toHaveValue('2');
+  await page.getByTestId('lotus-recipe-dose-panel').locator('summary').click();
+  await page.getByRole('combobox', { name: 'Published Lotus recipe' })
+    .selectOption('lotus-simple-and-sweet');
+  await expect(page.getByTestId('lotus-recipe-dose-basis-magnesium'))
+    .toHaveText('Finished-stock measurement');
 });

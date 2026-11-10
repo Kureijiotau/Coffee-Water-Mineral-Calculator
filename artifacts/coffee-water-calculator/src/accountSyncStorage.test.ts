@@ -94,4 +94,36 @@ describe('DIY concentrate input storage', () => {
 
     expect(loadDiyConcentrateInputs()).toEqual(inputs);
   });
+
+  it('restores and preserves measured drop weights for each Lotus stock', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    });
+    const inputs = {
+      lotusStockDropMeasurements: {
+        magnesium: { dropsInput: '20', weightInput: '1.8' },
+        calcium: { dropsInput: '15', weightInput: '1.2' },
+        invalid: { dropsInput: 15, weightInput: '1.2' },
+      },
+    };
+    saveDiyConcentrateInputs(inputs, false);
+
+    const restored = loadDiyConcentrateInputs();
+    expect(restored).toEqual({
+      lotusStockDropMeasurements: {
+        magnesium: { dropsInput: '20', weightInput: '1.8' },
+        calcium: { dropsInput: '15', weightInput: '1.2' },
+      },
+    });
+
+    saveDiyConcentrateInputs({ ...restored, stockWeightInput: '125' }, false);
+    expect(loadDiyConcentrateInputs()).toEqual({
+      stockWeightInput: '125',
+      lotusStockDropMeasurements: {
+        magnesium: { dropsInput: '20', weightInput: '1.8' },
+        calcium: { dropsInput: '15', weightInput: '1.2' },
+      },
+    });
+  });
 });

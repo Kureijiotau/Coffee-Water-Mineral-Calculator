@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Droplet, RotateCcw, Scale } from 'lucide-react';
 import { HelpTip } from './HelpTip';
 import { ConcentratePreparationSteps } from './concentratePreparation';
+import {
+  ACCOUNT_SYNC_REMOTE_CHANGE_EVENT,
+  loadDiyConcentrateInputs,
+  saveDiyConcentrateInputs,
+} from './accountSyncStorage';
 import {
   LOTUS_BOTTLE_VOLUME_ML,
   LOTUS_BREW_VOLUME_ML,
@@ -11,14 +16,21 @@ import {
   lotusCalibratedStockPlan,
   lotusMassStockPlan,
   lotusMeasuredDropsPerMl,
+  lotusMeasuredStockDropMassG,
   lotusStockPlan,
   type LotusDropperCalibration,
   type LotusDropperStyle,
+  type LotusStockDropMeasurement,
 } from './lotusConcentrate';
 import { LOTUS_RECIPES } from './lotusRecipes';
 import { SALTS } from './waterData';
 
 const US_GALLON_IN_ML = 3785.411784;
+const DROP_MASS_SOURCE_LABELS = {
+  'stock-measurement': 'Finished-stock measurement',
+  calibration: 'Water calibration',
+  'lotus-reference': 'Lotus reference estimate',
+} as const;
 
 export function LotusMassPreparationPanel({
   dropper,
@@ -38,6 +50,30 @@ export function LotusMassPreparationPanel({
   const [brewVolumeMl, setBrewVolumeMl] = useState(LOTUS_BREW_VOLUME_ML);
   const [volumeUnit, setVolumeUnit] = useState<'mL' | 'L' | 'Gal'>('mL');
   const [selectedRecipeId, setSelectedRecipeId] = useState('');
+  const [stockDropMeasurements, setStockDropMeasurements] = useState(
+    () => loadDiyConcentrateInputs().lotusStockDropMeasurements ?? {},
+  );
+  useEffect(() => {
+    const refreshMeasurements = () => {
+      setStockDropMeasurements(loadDiyConcentrateInputs().lotusStockDropMeasurements ?? {});
+    };
+    window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshMeasurements);
+    return () => window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, refreshMeasurements);
+  }, []);
+  const stockDropMeasurement: LotusStockDropMeasurement = stockDropMeasurements[dropper.id]
+    ?? { dropsInput: '', weightInput: '' };
+  const updateStockDropMeasurement = (field: keyof LotusStockDropMeasurement, value: string) => {
+    const nextMeasurements = {
+      ...stockDropMeasurements,
+      [dropper.id]: { ...stockDropMeasurement, [field]: value },
+    };
+    setStockDropMeasurements(nextMeasurements);
+    saveDiyConcentrateInputs({
+      ...loadDiyConcentrateInputs(),
+      lotusStockDropMeasurements: nextMeasurements,
+    });
+  };
+  const measuredStockDropMassG = lotusMeasuredStockDropMassG(stockDropMeasurement);
   const measuredDropsPerMl = lotusMeasuredDropsPerMl(calibration);
   const isCalibrated = measuredDropsPerMl !== null;
   const referencePlan = lotusStockPlan(dropper, style, LOTUS_BOTTLE_VOLUME_ML, fallbackStraightDropsPerMl);
@@ -56,7 +92,7 @@ export function LotusMassPreparationPanel({
   const volumeText = `${Number(displayedVolume.toFixed(precision))} ${volumeUnit}`;
   const selectedRecipe = LOTUS_RECIPES.find(recipe => recipe.id === selectedRecipeId);
   const recipeDosePlan = selectedRecipe
-    ? calculateLotusDiyRecipeDoses(selectedRecipe, style, brewVolumeMl, calibration)
+    ? calculateLotusDiyRecipeDoses(selectedRecipe, style, brewVolumeMl, calibration, stockDropMeasurements)
     : null;
   const referenceScale = LOTUS_BREW_VOLUME_ML / brewVolumeMl;
   const sourceIonPpm = referencePlan.lotusReferenceIonPpmPerDrop * referenceScale;
@@ -229,6 +265,59 @@ export function LotusMassPreparationPanel({
             </div>
           </>
         )}
+        <div
+          className="rounded-xl border border-cyan-300/20 bg-cyan-400/[0.04] p-3"
+          data-testid="lotus-stock-drop-measurement"
+        >
+          <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-100/80">
+            Measure this finished stock
+          </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-slate-400">
+            Weigh drops from this {dropper.label} stock, not plain water. Saved separately for each stock.
+          </p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2">
+              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Measured drops</span>
+              <input
+                inputMode="decimal"
+                value={stockDropMeasurement.dropsInput}
+                onChange={event => updateStockDropMeasurement('dropsInput', event.target.value)}
+                aria-label={`${dropper.label} stock measured drops`}
+                data-testid="lotus-stock-measured-drops"
+                placeholder="e.g. 20"
+                className="mt-1 min-h-9 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+              />
+            </label>
+            <label className="rounded-lg border border-slate-700/60 bg-slate-950/35 px-3 py-2">
+              <span className="block text-[9px] font-semibold uppercase tracking-wider text-slate-500">Weight of those drops</span>
+              <span className="mt-1 flex items-center gap-2">
+                <input
+                  inputMode="decimal"
+                  value={stockDropMeasurement.weightInput}
+                  onChange={event => updateStockDropMeasurement('weightInput', event.target.value)}
+                  aria-label={`${dropper.label} stock measured weight in grams`}
+                  data-testid="lotus-stock-measured-weight"
+                  placeholder="e.g. 1"
+                  className="min-h-9 w-full bg-transparent text-sm font-semibold tabular-nums text-slate-100 outline-none"
+                />
+                <span className="text-xs text-slate-400">g</span>
+              </span>
+            </label>
+          </div>
+          {measuredStockDropMassG !== null ? (
+            <p className="mt-2 text-[10px] font-medium text-emerald-200" data-testid="lotus-stock-measurement-status">
+              Using finished-stock measurement · {measuredStockDropMassG.toFixed(4)} g/drop
+            </p>
+          ) : (stockDropMeasurement.dropsInput || stockDropMeasurement.weightInput) ? (
+            <p role="alert" className="mt-2 text-[10px] text-amber-200">
+              Enter a positive drop count and weight; recipe doses will use the fallback until both are valid.
+            </p>
+          ) : (
+            <p className="mt-2 text-[10px] text-slate-500" data-testid="lotus-stock-measurement-status">
+              Recipe doses use the active fallback basis until measured.
+            </p>
+          )}
+        </div>
       </section>
       <details
         className="rounded-2xl border border-fuchsia-300/20 bg-gradient-to-br from-fuchsia-400/[0.06] via-slate-800/75 to-violet-400/[0.045] p-4 shadow-xl sm:p-5"
@@ -276,21 +365,27 @@ export function LotusMassPreparationPanel({
                     data-testid={`lotus-recipe-dose-row-${dropper.id}`}
                   >
                     <span className="text-xs font-medium text-slate-300">{dropper.label}</span>
-                    <strong
-                      className="text-sm font-semibold tabular-nums text-white"
-                      data-testid={`lotus-recipe-dose-count-${dropper.id}`}
-                    >
-                      {recipeDosePlan.counts[dropper.id as 'magnesium' | 'calcium' | 'potassium' | 'sodium']} drops
-                    </strong>
+                    <div className="text-right">
+                      <strong
+                        className="block text-sm font-semibold tabular-nums text-white"
+                        data-testid={`lotus-recipe-dose-count-${dropper.id}`}
+                      >
+                        {recipeDosePlan.counts[dropper.id as 'magnesium' | 'calcium' | 'potassium' | 'sodium']} drops
+                      </strong>
+                      <span
+                        className="block text-[9px] text-slate-500"
+                        data-testid={`lotus-recipe-dose-basis-${dropper.id}`}
+                      >
+                        {DROP_MASS_SOURCE_LABELS[recipeDosePlan.stockDropMassSources[dropper.id as 'magnesium' | 'calcium' | 'potassium' | 'sodium']]}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
               <p className="text-[10px] leading-relaxed text-slate-400">
                 Watermancer estimate for DIY stocks, not Lotus’s unpublished commercial concentrates.
                 {' '}
-                {recipeDosePlan.dropMassSource === 'calibration'
-                  ? 'Using your calibration.'
-                  : 'Lotus reference estimate.'}
+                Basis is shown for each stock; unfinished or invalid stock measurements use the active fallback.
                 {' '}
                 <a
                   className="font-semibold text-cyan-200 underline decoration-cyan-300/40 underline-offset-2 hover:text-cyan-100"

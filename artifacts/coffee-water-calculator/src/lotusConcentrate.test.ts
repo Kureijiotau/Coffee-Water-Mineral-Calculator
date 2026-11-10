@@ -491,11 +491,69 @@ describe('DIY Lotus published-recipe doses', () => {
     expect(straight).toEqual({
       counts: { magnesium: 2, calcium: 2, potassium: 1, sodium: 1 },
       dropMassSource: 'calibration',
+      stockDropMassSources: {
+        magnesium: 'calibration',
+        calcium: 'calibration',
+        potassium: 'calibration',
+        sodium: 'calibration',
+      },
     });
     expect(round).toEqual({
       counts: { magnesium: 2, calcium: 3, potassium: 1, sodium: 2 },
       dropMassSource: 'calibration',
+      stockDropMassSources: {
+        magnesium: 'calibration',
+        calcium: 'calibration',
+        potassium: 'calibration',
+        sodium: 'calibration',
+      },
     });
+  });
+
+  it('uses each valid finished-stock measurement only for that stock dose', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+    const plan = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, {
+      dropsInput: '100',
+      weightInput: '5',
+      style: 'straight',
+    }, {
+      magnesium: { dropsInput: '10', weightInput: '2' },
+    });
+
+    expect(plan.counts).toEqual({
+      magnesium: 1,
+      calcium: 5,
+      potassium: 2,
+      sodium: 4,
+    });
+    expect(plan.dropMassSource).toBe('mixed');
+    expect(plan.stockDropMassSources).toEqual({
+      magnesium: 'stock-measurement',
+      calcium: 'calibration',
+      potassium: 'calibration',
+      sodium: 'calibration',
+    });
+  });
+
+  it('falls back to water calibration for incomplete finished-stock measurements', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
+    const calibration = { dropsInput: '100', weightInput: '5', style: 'straight' as const };
+    const fallback = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration);
+    const incomplete = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration, {
+      magnesium: { dropsInput: '10', weightInput: '' },
+    });
+
+    expect(incomplete).toEqual(fallback);
+  });
+
+  it('shows a valid stock measurement as active even when that recipe needs zero drops', () => {
+    const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-light-and-bright')!;
+    const plan = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, undefined, {
+      magnesium: { dropsInput: '10', weightInput: '2' },
+    });
+
+    expect(plan.counts.magnesium).toBe(0);
+    expect(plan.stockDropMassSources.magnesium).toBe('stock-measurement');
   });
 
   it('uses Lotus reference weights when calibration is missing or incomplete', () => {
