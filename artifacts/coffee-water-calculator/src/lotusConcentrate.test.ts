@@ -569,10 +569,16 @@ describe('DIY Lotus published-recipe doses', () => {
     ).counts.calcium).toBe(1);
   });
 
-  it('falls back to water calibration for incomplete or invalid finished-stock measurements', () => {
+  it('falls back to water calibration for invalid measurements on every finished stock', () => {
     const recipe = LOTUS_RECIPES.find(item => item.id === 'lotus-simple-and-sweet')!;
     const calibration = { dropsInput: '100', weightInput: '5', style: 'straight' as const };
-    const fallback = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration);
+    const stockIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
+    const validMeasurements = {
+      magnesium: { dropsInput: '10', weightInput: '2' },
+      calcium: { dropsInput: '10', weightInput: '2' },
+      potassium: { dropsInput: '10', weightInput: '2' },
+      sodium: { dropsInput: '10', weightInput: '2' },
+    };
     const invalidMeasurements = [
       { dropsInput: '', weightInput: '2' },
       { dropsInput: '0', weightInput: '2' },
@@ -588,20 +594,35 @@ describe('DIY Lotus published-recipe doses', () => {
       { dropsInput: '10', weightInput: '-Infinity' },
     ];
 
-    expect(fallback.dropMassSource).toBe('calibration');
-    expect(fallback.stockDropMassSources).toEqual({
-      magnesium: 'calibration',
-      calcium: 'calibration',
-      potassium: 'calibration',
-      sodium: 'calibration',
-    });
+    for (const stockId of stockIds) {
+      const measurementsWithoutStock = Object.fromEntries(
+        stockIds
+          .filter(id => id !== stockId)
+          .map(id => [id, validMeasurements[id]]),
+      );
+      const expectedCounts = calculateLotusDiyRecipeDoses(
+        recipe,
+        'straight',
+        450,
+        calibration,
+        measurementsWithoutStock,
+      ).counts;
 
-    for (const measurement of invalidMeasurements) {
-      const plan = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration, {
-        magnesium: measurement,
-      });
+      for (const measurement of invalidMeasurements) {
+        const plan = calculateLotusDiyRecipeDoses(recipe, 'straight', 450, calibration, {
+          ...validMeasurements,
+          [stockId]: measurement,
+        });
 
-      expect(plan).toEqual(fallback);
+        expect(plan.counts).toEqual(expectedCounts);
+        expect(plan.dropMassSource).toBe('mixed');
+        expect(plan.stockDropMassSources).toEqual({
+          magnesium: stockId === 'magnesium' ? 'calibration' : 'stock-measurement',
+          calcium: stockId === 'calcium' ? 'calibration' : 'stock-measurement',
+          potassium: stockId === 'potassium' ? 'calibration' : 'stock-measurement',
+          sodium: stockId === 'sodium' ? 'calibration' : 'stock-measurement',
+        });
+      }
     }
   });
 
