@@ -448,6 +448,104 @@ test('keeps published Lotus recipe counts unchanged with Round tips when finishe
   }
 });
 
+test('scales every published Lotus recipe with a fixed Round-tip calibration', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Round');
+
+  const tipGroup = page.getByRole('group', { name: 'Lotus dropper tip style' });
+  const roundStyle = tipGroup.getByRole('button', { name: 'Round', exact: true });
+  const roundDrops = page.getByRole('textbox', { name: 'Round tip measured drops' });
+  const roundWeight = page.getByRole('textbox', { name: 'Round tip water weight in grams' });
+  await roundDrops.fill('60');
+  await roundWeight.fill('5');
+  await expect(page.getByTestId('lotus-selected-calibration-status')).toContainText('Round calibrated');
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  const recipeSelector = panel.getByRole('combobox', { name: 'Published Lotus recipe' });
+  const recipeIds = await recipeSelector.locator('option').evaluateAll(options =>
+    options.map(option => (option as HTMLOptionElement).value).filter(Boolean),
+  );
+  const expectedCounts: Record<string, { baseline: readonly string[]; doubled: readonly string[] }> = {
+    'lotus-light-and-bright': {
+      baseline: ['0 drops', '3 drops', '2 drops', '0 drops'],
+      doubled: ['0 drops', '6 drops', '5 drops', '0 drops'],
+    },
+    'lotus-simple-and-sweet': {
+      baseline: ['1 drops', '3 drops', '1 drops', '2 drops'],
+      doubled: ['3 drops', '6 drops', '3 drops', '5 drops'],
+    },
+    'lotus-light-and-bright-espresso': {
+      baseline: ['1 drops', '0 drops', '4 drops', '0 drops'],
+      doubled: ['2 drops', '0 drops', '9 drops', '0 drops'],
+    },
+    'lotus-simple-and-sweet-espresso': {
+      baseline: ['1 drops', '0 drops', '0 drops', '5 drops'],
+      doubled: ['2 drops', '0 drops', '0 drops', '11 drops'],
+    },
+    'lotus-bright-and-juicy': {
+      baseline: ['2 drops', '2 drops', '1 drops', '1 drops'],
+      doubled: ['3 drops', '3 drops', '2 drops', '2 drops'],
+    },
+    'lotus-raos-recipe': {
+      baseline: ['2 drops', '2 drops', '1 drops', '1 drops'],
+      doubled: ['3 drops', '4 drops', '2 drops', '2 drops'],
+    },
+    'lotus-ultra-light': {
+      baseline: ['1 drops', '1 drops', '1 drops', '0 drops'],
+      doubled: ['1 drops', '2 drops', '2 drops', '0 drops'],
+    },
+  };
+  expect(recipeIds, 'the test should cover every published Lotus recipe')
+    .toEqual(Object.keys(expectedCounts));
+
+  const volumeSlider = page.getByRole('slider', { name: 'Final brewing water volume' });
+  const doseCountIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
+
+  for (const recipeId of recipeIds) {
+    await recipeSelector.selectOption(recipeId);
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText('450 mL');
+    for (const id of doseCountIds) {
+      await expect(page.getByTestId(`lotus-recipe-dose-basis-${id}`))
+        .toHaveText('Water calibration');
+    }
+    const baseline = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+    expect(baseline, `${recipeId} Round-tip counts at 450 mL`)
+      .toEqual(expectedCounts[recipeId].baseline);
+
+    await volumeSlider.evaluate((element: HTMLInputElement) => {
+      const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      setValue?.call(element, '900');
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText('900 mL');
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+    for (const id of doseCountIds) {
+      await expect(page.getByTestId(`lotus-recipe-dose-basis-${id}`))
+        .toHaveText('Water calibration');
+    }
+    const doubled = await Promise.all(doseCountIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+    expect(doubled, `${recipeId} Round-tip counts at 900 mL`)
+      .toEqual(expectedCounts[recipeId].doubled);
+
+    await page.getByRole('button', { name: 'Reset brew volume' }).click();
+    await expect(page.getByTestId('lotus-brew-volume-value')).toHaveText('450 mL');
+    await expect(roundStyle).toHaveAttribute('aria-pressed', 'true');
+    await expect(roundDrops).toHaveValue('60');
+    await expect(roundWeight).toHaveValue('5');
+  }
+});
+
 test('uses and restores a separate finished-stock drop measurement for each stock', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
   await selectStyle(page, 'Straight');
