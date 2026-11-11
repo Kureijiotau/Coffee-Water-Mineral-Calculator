@@ -558,9 +558,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
 }) {
   const [massInput, setMassInput] = useState(String(state.totalStockMassG));
   const [strengthInput, setStrengthInput] = useState(String(state.strength));
-  const initialDoseGramsPerLiter = state.totalStockMassG / strength;
-  const [doseGramsPerLiterInput, setDoseGramsPerLiterInput] = useState(
-    Number.isFinite(initialDoseGramsPerLiter) && initialDoseGramsPerLiter > 0 ? String(initialDoseGramsPerLiter) : '',
+  const initialDoseMassG = state.totalStockMassG / strength * finalWaterMassKg;
+  const [doseMassInput, setDoseMassInput] = useState(
+    Number.isFinite(initialDoseMassG) && initialDoseMassG > 0 ? String(initialDoseMassG) : '',
   );
   const [dropsInput, setDropsInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.drops) : '');
   const [weighedInput, setWeighedInput] = useState(state.calibration?.basis === 'stock' ? String(state.calibration.massG) : '');
@@ -583,10 +583,11 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   useEffect(() => {
     if (!Number.isFinite(state.totalStockMassG) || state.totalStockMassG <= 0 || !Number.isFinite(strength) || strength <= 0) return;
     const doseGramsPerLiter = state.totalStockMassG / strength;
-    if (Number.isFinite(doseGramsPerLiter) && doseGramsPerLiter > 0) {
-      setDoseGramsPerLiterInput(n(doseGramsPerLiter, 6));
+    const doseMassG = doseGramsPerLiter * finalWaterMassKg;
+    if (Number.isFinite(doseMassG) && doseMassG > 0) {
+      setDoseMassInput(n(doseMassG, 6));
     }
-  }, [state.totalStockMassG, strength]);
+  }, [state.totalStockMassG, strength, finalWaterMassKg]);
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
   const compositionKey = stockCompositionKey(salts, state.totalStockMassG, forms);
@@ -604,7 +605,10 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
     saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
     gramsPerDrop: measured.gramsPerDrop ?? waterEstimate.massG / waterEstimate.drops,
   });
-  const parsedDoseGramsPerLiter = doseGramsPerLiterInput.trim() === '' ? Number.NaN : Number(doseGramsPerLiterInput);
+  const parsedDoseMassG = doseMassInput.trim() === '' ? Number.NaN : Number(doseMassInput);
+  const parsedDoseGramsPerLiter = Number.isFinite(finalWaterMassKg) && finalWaterMassKg > 0
+    ? parsedDoseMassG / finalWaterMassKg
+    : Number.NaN;
   const requestedDoseStrength = computeRecipeMassStrengthForDose({
     totalStockMassG: state.totalStockMassG,
     doseGramsPerLiter: parsedDoseGramsPerLiter,
@@ -854,7 +858,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
                     if (editableRecipeDose && !state.physicalSaltPpmPerDrop && !state.caCo3PpmPerDrop) {
                       const next = computeRecipeMassStrengthForDose({
                         totalStockMassG,
-                        doseGramsPerLiter: doseGramsPerLiterInput.trim() === '' ? Number.NaN : Number(doseGramsPerLiterInput),
+                        doseGramsPerLiter: parsedDoseGramsPerLiter,
                       });
                       if (next.valid) patch.strength = next.strength;
                     }
@@ -955,21 +959,24 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
             }`}
           >
             {editableRecipeDose && <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-2 font-medium text-emerald-100">
+              <label className="flex flex-wrap items-baseline gap-x-1.5 font-medium text-emerald-100">
                 <span>Dose</span>
                 <input
-                  aria-label={`${name} dose in grams per liter`}
-                  data-testid={`recipe-dose-per-liter-${state.id}`}
-                  size={Math.max(2, doseGramsPerLiterInput.length)}
-                  className="min-w-[2ch] border-0 bg-transparent p-0 text-right text-lg font-bold tabular-nums text-emerald-100 outline-none focus-visible:underline focus-visible:decoration-emerald-200 focus-visible:underline-offset-4"
+                  aria-label={`${name} dose in grams`}
+                  data-testid={`recipe-dose-grams-${state.id}`}
+                  size={Math.max(1, doseMassInput.length)}
+                  className="min-w-[1ch] border-0 bg-transparent p-0 text-right text-lg font-bold tabular-nums text-emerald-200 outline-none focus-visible:underline focus-visible:decoration-emerald-200 focus-visible:underline-offset-4"
                   inputMode="decimal"
-                  value={doseGramsPerLiterInput}
+                  value={doseMassInput}
                   onChange={event => {
                     const value = event.target.value;
-                    setDoseGramsPerLiterInput(value);
+                    setDoseMassInput(value);
+                    const requestedDoseMassG = value.trim() === '' ? Number.NaN : Number(value);
                     const next = computeRecipeMassStrengthForDose({
                       totalStockMassG: state.totalStockMassG,
-                      doseGramsPerLiter: value.trim() === '' ? Number.NaN : Number(value),
+                      doseGramsPerLiter: Number.isFinite(finalWaterMassKg) && finalWaterMassKg > 0
+                        ? requestedDoseMassG / finalWaterMassKg
+                        : Number.NaN,
                     });
                     if (next.valid) {
                       onUpdate({
@@ -982,11 +989,8 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
                     }
                   }}
                 />
-                <span className="text-slate-400">g/L stock</span>
+                <span>g stock for {n(finalLiters)} L brewing water.</span>
               </label>
-              {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <span className="text-slate-200">
-                · <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water
-              </span>}
             </div>}
             {editableRecipeDose && !requestedDoseStrength.valid && <p role="alert" data-testid="recipe-dose-input-error" className="mt-2 text-xs text-red-200">
               Enter a positive, finite dose in g/L. The last valid stock strength remains in use.

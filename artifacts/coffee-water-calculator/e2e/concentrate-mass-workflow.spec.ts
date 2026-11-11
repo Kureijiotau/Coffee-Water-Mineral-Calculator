@@ -154,13 +154,13 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   const sodium = page.getByTestId('mass-stock-card').filter({ has: page.getByRole('heading', { name: 'Sodium Bicarbonate concentrate', exact: true }) });
   await magnesium.getByLabel('Magnesium Sulfate concentrate target stock weight in grams').fill('150');
   await expect(sodium.getByLabel('Sodium Bicarbonate concentrate target stock weight in grams')).toHaveValue('100');
-  await expect(magnesium).toContainText('5 g stock');
+  await expect(magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams')).toHaveValue('5');
   await page.getByLabel('Stock arrangement', { exact: true }).selectOption('all-in-one');
   const combined = page.getByTestId('mass-stock-card');
   await expect(combined).toHaveCount(1);
   await combined.getByLabel('All-in-one concentrate target stock weight in grams').fill('100');
   await combined.getByLabel('All-in-one concentrate recipe strength').fill('20');
-  await expect(combined).toContainText('5 g stock');
+  await expect(combined.getByLabel('All-in-one concentrate dose in grams')).toHaveValue('5');
   await page.getByRole('button', { name: 'Open concentrate recipe steps', exact: true }).click();
   await expect(combined).toContainText('total contents weigh');
   await combined.getByRole('button', { name: 'Set strength from drop target' }).click();
@@ -170,7 +170,7 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await expect.poll(async () => Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue())).toBeCloseTo(pinnedStrength * 2, 6);
 });
 
-test('sets recipe stock dose in grams per liter and preserves the recipe target', async ({ page }) => {
+test('edits the displayed recipe stock grams and preserves the recipe target', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
@@ -179,10 +179,11 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   const magnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
   const doseResult = magnesium.getByTestId('recipe-dose-result');
-  const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams per liter');
+  const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams');
   const strengthInput = magnesium.getByLabel('Magnesium Sulfate concentrate recipe strength');
   const stockWeightInput = magnesium.getByLabel('Magnesium Sulfate concentrate target stock weight in grams');
-  await expect(doseResult.getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('5');
+  await expect(doseResult.getByLabel('Magnesium Sulfate concentrate dose in grams')).toHaveValue('5');
+  await expect(doseResult).not.toContainText('g/L stock');
   await expect(doseInput).toHaveValue('5');
   await expect(doseInput).toHaveCSS('border-top-width', '0px');
   await expect(doseInput).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
@@ -196,7 +197,8 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   await doseInput.fill('10');
 
   await expect(strengthInput).toHaveValue('10');
-  await expect(doseResult).toContainText('10 g stock for 1 L brewing water');
+  await expect(doseResult).toContainText('g stock for 1 L brewing water');
+  await expect(doseInput).toHaveValue('10');
   await expect(magnesium).not.toContainText('Pinned target');
 
   await stockWeightInput.fill('');
@@ -205,11 +207,14 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   await stockWeightInput.fill('200');
   await expect(doseInput).toHaveValue('10');
   await expect(strengthInput).toHaveValue('20');
-  await expect(doseResult).toContainText('10 g stock for 1 L brewing water');
+  await expect(doseResult).toContainText('g stock for 1 L brewing water');
 
   await page.getByLabel('Final brewing water').fill('2');
-  await expect(doseInput).toHaveValue('10');
-  await expect(doseResult).toContainText('20 g stock for 2 L brewing water');
+  await expect(doseInput).toHaveValue('20');
+  await expect(doseResult).toContainText('g stock for 2 L brewing water');
+  await doseInput.fill('30');
+  await expect(strengthInput).toHaveValue('13.333333333333334');
+  await expect(doseInput).toHaveValue('30');
 });
 
 test('warns when a recipe dose implies unsafe strength and suggests a safer dose', async ({ page }) => {
@@ -220,13 +225,13 @@ test('warns when a recipe dose implies unsafe strength and suggests a safer dose
 
   const magnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
-  await magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams per liter').fill('0.01');
+  await magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams').fill('0.01');
 
   const safety = magnesium.getByTestId('recipe-dose-safety');
   await expect(safety).toBeVisible();
   await expect(safety).toContainText('too concentrated');
   await expect(magnesium.getByTestId('recipe-dose-result')
-    .getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('0.01');
+    .getByLabel('Magnesium Sulfate concentrate dose in grams')).toHaveValue('0.01');
   const safeDoseText = await safety.textContent();
   const safeDoseMatch = safeDoseText?.match(/Use at least\s+([\d,.]+)\s+g\/L/);
   expect(safeDoseMatch, `expected a numeric safe dose recommendation in: ${safeDoseText}`).not.toBeNull();
@@ -243,7 +248,7 @@ test('saves and restores the editable recipe dose without a stale per-drop pin',
 
   const magnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
-  const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams per liter');
+  const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams');
   await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
   await doseInput.fill('10');
   await expect(magnesium).not.toContainText('Pinned target');
@@ -265,7 +270,7 @@ test('saves and restores the editable recipe dose without a stale per-drop pin',
   await expect(page.getByTestId('tab-concentrates')).toHaveAttribute('aria-selected', 'true');
   const restoredMagnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
-  await expect(restoredMagnesium.getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('10');
+  await expect(restoredMagnesium.getByLabel('Magnesium Sulfate concentrate dose in grams')).toHaveValue('10');
   await expect(restoredMagnesium.getByLabel('Magnesium Sulfate concentrate recipe strength')).toHaveValue('10');
   await expect(restoredMagnesium).not.toContainText('Pinned target');
 });
@@ -273,9 +278,9 @@ test('saves and restores the editable recipe dose without a stale per-drop pin',
 test('keeps the editable recipe dose out of DIY and Lotus concentrate workflows', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
-  await expect(page.locator('[data-testid^="recipe-dose-per-liter-"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="recipe-dose-grams-"]')).toHaveCount(0);
   await page.getByRole('tab', { name: 'DIY Lotus Drops', exact: true }).click();
-  await expect(page.locator('[data-testid^="recipe-dose-per-liter-"]')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="recipe-dose-grams-"]')).toHaveCount(0);
 });
 
 test('shows recipe stock controls beside preparation on desktop and stacks them on phones', async ({ page }) => {
