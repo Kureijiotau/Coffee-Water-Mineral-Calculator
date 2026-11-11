@@ -131,6 +131,11 @@ import {
 import { ROBERT_ASAMI_RECIPES, type ExternalRecipe } from './externalRecipes';
 import { WATERING_HOLE_WATER_RECIPES, type WateringHoleWaterRecipe } from './wateringHoleWaterRecipes';
 import { LOTUS_RECIPES, type LotusRecipe, lotusIonTargetsForWatermancer } from './lotusRecipes';
+import {
+  getPeakKitchenSilicaTargetPpm,
+  PEAK_KITCHEN_RECIPE_PICKER_GROUP,
+  PEAK_KITCHEN_SALT_RECIPES,
+} from './peakKitchenRecipes';
 import { buildBrewerSaltGroups, type BrewerSaltGroupId } from './brewerSaltGroups';
 import { LotusInlineStockPreparation } from './LotusInlineStockPreparation';
 import {
@@ -278,7 +283,11 @@ import {
 } from './watermancerSilica';
 
 const Week1Guide = lazy(() => import('./Week1Guide'));
-const BUILT_IN_SALT_RECIPES = [...RECIPES, ...ROBERT_ASAMI_WEEK1_SALT_RECIPES];
+const BUILT_IN_SALT_RECIPES = [
+  ...RECIPES,
+  ...ROBERT_ASAMI_WEEK1_SALT_RECIPES,
+  ...PEAK_KITCHEN_SALT_RECIPES,
+];
 
 const WatermancerGuide = lazy(() => import('./WatermancerGuide'));
 const WaterMixer = lazy(() => import('./WaterMixer'));
@@ -3310,6 +3319,14 @@ function App() {
     setWatermancerTargetOverride(null);
     setWatermancerImportedRecipeName(null);
     setWatermancerTargetSource(source);
+    if (source.startsWith('recipe:')) {
+      const silicaTargetPpm = getPeakKitchenSilicaTargetPpm(source.slice('recipe:'.length));
+      if (silicaTargetPpm !== undefined) {
+        setWatermancerSilicaTargetPpmInput(String(silicaTargetPpm));
+        setWatermancerSilicaTargetEnabled(true);
+        setWatermancerSilicaDrops(watermancerSilicaDropsForTarget(silicaTargetPpm, L));
+      }
+    }
   };
   const handleWatermancerTargetOverrideChange = (targets: IonicTargetValues | null) => {
     enterWatermancerManualMode();
@@ -4916,6 +4933,11 @@ function App() {
       label: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.label,
       accent: 'amber',
       options: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.options,
+    },
+    {
+      label: PEAK_KITCHEN_RECIPE_PICKER_GROUP.label,
+      accent: 'violet',
+      options: PEAK_KITCHEN_RECIPE_PICKER_GROUP.options,
     },
     {
       label: 'Watering Hole · Filter',
@@ -9035,6 +9057,7 @@ function App() {
           batchMl={batchMl}
           suggestedSaltTargets={recipeStepsSuggestedSaltTargets}
           watermancerSilicaDrops={showWatermancer ? watermancerSilicaDrops : 0}
+          recipeSilicaTargetPpm={getPeakKitchenSilicaTargetPpm(activeRecipeId)}
           nerdLevel={nerdLevel}
            tdsTarget={showBrewer ? tdsSalt : tdsForRecipeSteps}
            dropsPerMl={brewerDropsPerMl}
@@ -13958,6 +13981,11 @@ function WatermancerIonProfileCard({
       options: ROBERT_ASAMI_WEEK1_RECIPE_PICKER_GROUP.options,
     },
     {
+      label: PEAK_KITCHEN_RECIPE_PICKER_GROUP.label,
+      accent: 'violet',
+      options: PEAK_KITCHEN_RECIPE_PICKER_GROUP.options,
+    },
+    {
       label: 'Empirical Water Profiles',
       accent: 'cyan',
       options: profiles
@@ -17114,6 +17142,7 @@ function BrewerRecipeStepsModal({
   batchMl,
   suggestedSaltTargets,
   watermancerSilicaDrops,
+  recipeSilicaTargetPpm,
   nerdLevel,
   tdsTarget,
   dropsPerMl,
@@ -17136,6 +17165,7 @@ function BrewerRecipeStepsModal({
   batchMl: number;
   suggestedSaltTargets: Record<string, number>;
   watermancerSilicaDrops: number;
+  recipeSilicaTargetPpm?: number;
   nerdLevel: NerdLevel;
   tdsTarget: number;
   dropsPerMl: number;
@@ -17217,7 +17247,11 @@ function BrewerRecipeStepsModal({
   const recipeCardLactatePpm = computeSupplementalIonTotals(stepSaltTargets).lactate;
   const stepSalts = SALTS.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0);
   const dosedStepSaltCount = stepSalts.filter(salt => (stepSaltTargets[salt.id] ?? 0) > 0).length;
-  const silicaDrops = nerdLevel === 'watermancer' ? Math.max(0, Math.floor(watermancerSilicaDrops)) : 0;
+  const silicaDrops = nerdLevel === 'watermancer'
+    ? Math.max(0, Math.floor(watermancerSilicaDrops))
+    : recipeSilicaTargetPpm === undefined
+      ? 0
+      : watermancerSilicaDropsForTarget(recipeSilicaTargetPpm, liters);
   const silicaDoseMg = watermancerSilicaDoseMg(silicaDrops);
   const silicaConcentrationPpm = calculateWatermancerSilicaPpm(silicaDrops, liters);
   // Keep recipe cards in the same canonical order as the main salt table.
@@ -17651,7 +17685,7 @@ function BrewerRecipeStepsModal({
                     {silicaDrops > 0 && (
                       <div
                         className="rounded-lg border border-violet-300/35 bg-violet-500/[0.08] px-2 py-1.5"
-                        data-testid="watermancer-silica-recipe-step"
+                        data-testid="recipe-silica-step"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
