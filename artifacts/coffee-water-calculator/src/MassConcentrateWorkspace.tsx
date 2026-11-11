@@ -964,8 +964,8 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
                 <input
                   aria-label={`${name} dose in grams`}
                   data-testid={`recipe-dose-grams-${state.id}`}
-                  size={Math.max(1, doseMassInput.length)}
                   className="min-w-[1ch] border-0 bg-transparent p-0 text-right text-lg font-bold tabular-nums text-emerald-200 outline-none focus-visible:underline focus-visible:decoration-emerald-200 focus-visible:underline-offset-4"
+                  style={{ width: `${Math.max(1, doseMassInput.length)}ch` }}
                   inputMode="decimal"
                   value={doseMassInput}
                   onChange={event => {

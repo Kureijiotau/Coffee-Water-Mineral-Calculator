@@ -187,6 +187,13 @@ test('edits the displayed recipe stock grams and preserves the recipe target', a
   await expect(doseInput).toHaveValue('5');
   await expect(doseInput).toHaveCSS('border-top-width', '0px');
   await expect(doseInput).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  const doseLabel = doseResult.getByText('Dose', { exact: true });
+  const doseGapPx = await doseLabel.evaluate((label, input) =>
+    input.getBoundingClientRect().left - label.getBoundingClientRect().right,
+  await doseInput.elementHandle());
+  expect(doseGapPx).toBeLessThanOrEqual(6);
+  const doseInputWidthPx = await doseInput.evaluate(input => input.getBoundingClientRect().width);
+  expect(doseInputWidthPx).toBeLessThanOrEqual(20);
   await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
   const appliedStrength = await strengthInput.inputValue();
   for (const invalidDose of ['', '0', '-1', 'NaN', 'Infinity']) {
