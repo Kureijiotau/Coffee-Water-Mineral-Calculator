@@ -960,7 +960,8 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
                 <input
                   aria-label={`${name} dose in grams per liter`}
                   data-testid={`recipe-dose-per-liter-${state.id}`}
-                  className="w-20 rounded-lg border border-emerald-200/25 bg-slate-950/50 px-2 py-1.5 text-right text-lg font-bold tabular-nums text-emerald-100 outline-none focus:border-emerald-200/60"
+                  size={Math.max(2, doseGramsPerLiterInput.length)}
+                  className="min-w-[2ch] border-0 bg-transparent p-0 text-right text-lg font-bold tabular-nums text-emerald-100 outline-none focus-visible:underline focus-visible:decoration-emerald-200 focus-visible:underline-offset-4"
                   inputMode="decimal"
                   value={doseGramsPerLiterInput}
                   onChange={event => {

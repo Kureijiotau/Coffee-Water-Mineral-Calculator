@@ -184,6 +184,8 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   const stockWeightInput = magnesium.getByLabel('Magnesium Sulfate concentrate target stock weight in grams');
   await expect(doseResult.getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('5');
   await expect(doseInput).toHaveValue('5');
+  await expect(doseInput).toHaveCSS('border-top-width', '0px');
+  await expect(doseInput).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
   const appliedStrength = await strengthInput.inputValue();
   for (const invalidDose of ['', '0', '-1', 'NaN', 'Infinity']) {
