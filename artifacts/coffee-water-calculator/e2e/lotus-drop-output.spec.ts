@@ -489,3 +489,61 @@ test('uses and restores a separate finished-stock drop measurement for each stoc
   await expect(page.getByTestId('lotus-recipe-dose-basis-magnesium'))
     .toHaveText('Finished-stock measurement');
 });
+
+test('uses each measured stock drop mass across all published Lotus recipes', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+  await selectStyle(page, 'Straight');
+
+  const measurements = [
+    { id: 'magnesium', drops: '100', weight: '1' },
+    { id: 'calcium', drops: '100', weight: '2' },
+    { id: 'potassium', drops: '100', weight: '3' },
+    { id: 'sodium', drops: '100', weight: '4' },
+  ] as const;
+  for (const measurement of measurements) {
+    await page.getByRole('combobox', { name: 'Dropper to prepare' }).selectOption(measurement.id);
+    await page.getByRole('textbox', { name: `${measurement.id[0].toUpperCase()}${measurement.id.slice(1)} stock measured drops` })
+      .fill(measurement.drops);
+    await page.getByRole('textbox', { name: `${measurement.id[0].toUpperCase()}${measurement.id.slice(1)} stock measured weight in grams` })
+      .fill(measurement.weight);
+  }
+
+  const measurementsBeforeRecipeChanges = await page.evaluate(() =>
+    localStorage.getItem('coffee-water-diy-concentrate-inputs'),
+  );
+  expect(measurementsBeforeRecipeChanges).not.toBeNull();
+
+  const panel = page.getByTestId('lotus-recipe-dose-panel');
+  await panel.locator('summary').click();
+  const recipeSelector = panel.getByRole('combobox', { name: 'Published Lotus recipe' });
+  const recipeIds = await recipeSelector.locator('option').evaluateAll(options =>
+    options.map(option => (option as HTMLOptionElement).value).filter(Boolean),
+  );
+  const expectedCounts: Record<string, readonly [string, string, string, string]> = {
+    'lotus-light-and-bright': ['0 drops', '12 drops', '7 drops', '0 drops'],
+    'lotus-simple-and-sweet': ['12 drops', '12 drops', '4 drops', '5 drops'],
+    'lotus-light-and-bright-espresso': ['8 drops', '0 drops', '12 drops', '0 drops'],
+    'lotus-simple-and-sweet-espresso': ['8 drops', '0 drops', '0 drops', '11 drops'],
+    'lotus-bright-and-juicy': ['14 drops', '7 drops', '2 drops', '2 drops'],
+    'lotus-raos-recipe': ['13 drops', '8 drops', '2 drops', '2 drops'],
+    'lotus-ultra-light': ['6 drops', '4 drops', '3 drops', '0 drops'],
+  };
+  expect(recipeIds, 'the fixture should cover every published Lotus recipe')
+    .toEqual(Object.keys(expectedCounts));
+  const stockIds = ['magnesium', 'calcium', 'potassium', 'sodium'] as const;
+  for (const recipeId of recipeIds) {
+    await recipeSelector.selectOption(recipeId);
+    await expect.poll(() => page.evaluate(() =>
+      localStorage.getItem('coffee-water-diy-concentrate-inputs'),
+    )).toBe(measurementsBeforeRecipeChanges);
+    for (const id of stockIds) {
+      await expect(page.getByTestId(`lotus-recipe-dose-basis-${id}`))
+        .toHaveText('Finished-stock measurement');
+    }
+    const counts = await Promise.all(stockIds.map(id =>
+      page.getByTestId(`lotus-recipe-dose-count-${id}`).innerText(),
+    ));
+    expect(counts, `${recipeId} should use each stock's own measured drop mass`)
+      .toEqual(expectedCounts[recipeId]);
+  }
+});
