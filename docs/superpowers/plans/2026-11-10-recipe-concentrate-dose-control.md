@@ -4,7 +4,7 @@
 
 **Goal:** Let users set stock grams per liter of brew water while preserving recipe targets and warning when the implied stock strength is above the existing modeled safe recommendation.
 
-**Architecture:** Add a tested inverse of the current mass-dose equation in `concentrateMass.ts`. In recipe mode, expose the inverse as an editable g/L value in the existing dose card; derive its conservative safe alternative from the current mass-concentrate safety model. Keep DIY and Lotus-only cards unchanged.
+**Architecture:** Add a tested inverse of the current mass-dose equation in `concentrateMass.ts`. In recipe mode, expose the inverse as an editable g/L value inline in the dose result, alongside the calculated total stock grams for the selected brew volume. Derive its conservative safe alternative from the current mass-concentrate safety model. Keep DIY and Lotus-only cards unchanged.
 
 **Tech Stack:** TypeScript, React, Vitest, Playwright.
 
@@ -49,7 +49,7 @@
 - [ ] **Step 4: Run the focused unit test** and confirm all mass calculation tests pass.
 - [ ] **Step 5: Write failing browser tests** that verify the recipe dose field starts from current strength, editing 5 to 10 g/L changes the recipe strength to ×10 and preparation/dose outputs, brew-water changes scale total dose, and an unsafe dose shows the conservative safe g/L recommendation. Verify DIY and Lotus views do not gain this field.
 - [ ] **Step 6: Run the focused browser test** with `pnpm --filter @workspace/coffee-water-calculator exec playwright test --config playwright.config.ts --project=chromium --workers=1 e2e/concentrate-mass-workflow.spec.ts`; confirm the new assertions fail before implementation.
-- [ ] **Step 7: Implement the recipe-only dose input** in the non-DIY branch of `MassStockCard`. Initialize g/L from the current stock mass and strength; on valid edits update strength, reset batch scaling, and clear conflicting per-drop pins. When stock mass changes with no pin active, retain g/L and recalculate strength. Preserve existing per-drop-pin behavior until the dose input is explicitly edited. Leave invalid drafts unapplied.
+- [ ] **Step 7: Implement the recipe-only dose input** in the non-DIY branch of `MassStockCard`, inline in the result row beside the calculated total dose for the selected brew volume. Initialize g/L from the current stock mass and strength; on valid edits update strength, reset batch scaling, and clear conflicting per-drop pins. When stock mass changes with no pin active, retain g/L and recalculate strength. Preserve existing per-drop-pin behavior until the dose input is explicitly edited. Leave invalid drafts unapplied.
 - [ ] **Step 8: Add the safety warning and recommendation** outside the blocked-result-only branch. When current strength exceeds `recommendedStrength`, show the maximum conservative strength and `totalStockMassG / recommendedStrength` grams per liter required to preserve the target. If no recommendation is available for the setup, say so without inventing a dose.
 - [ ] **Step 9: Run the focused browser test** and confirm normal edits, safety guidance, and unchanged DIY/Lotus paths pass.
 - [ ] **Step 10: Run full verification**: calculator unit tests, typecheck, production build, `check:unused-live`, and the focused browser test. Restart the configured calculator web workflow once and check that it serves cleanly.

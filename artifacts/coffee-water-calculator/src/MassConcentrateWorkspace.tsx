@@ -946,57 +946,69 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
             Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.
           </p>}
           {(!Number.isFinite(doseMassG) || doseMassG <= 0) && <p role="alert" className="mt-3 text-xs text-red-200">Enter a positive, finite salt dose and brewing-water amount.</p>}
-          {editableRecipeDose && <label className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-emerald-200/20 bg-slate-950/25 px-3 py-2.5 text-xs">
-            <span className="font-medium text-emerald-100">Stock dose per 1 L brew water</span>
-            <span className="flex items-center gap-2">
-              <input
-                aria-label={`${name} dose in grams per liter`}
-                data-testid={`recipe-dose-per-liter-${state.id}`}
-                className="w-24 rounded-lg border border-emerald-200/25 bg-slate-950/50 px-2 py-1.5 text-right text-base font-semibold tabular-nums text-emerald-100 outline-none focus:border-emerald-200/60"
-                inputMode="decimal"
-                value={doseGramsPerLiterInput}
-                onChange={event => {
-                  const value = event.target.value;
-                  setDoseGramsPerLiterInput(value);
-                  const next = computeRecipeMassStrengthForDose({
-                    totalStockMassG: state.totalStockMassG,
-                    doseGramsPerLiter: value.trim() === '' ? Number.NaN : Number(value),
-                  });
-                  if (next.valid) {
-                    onUpdate({
-                      strength: next.strength,
-                      batchScale: 1,
-                      physicalSaltPpmPerDrop: undefined,
-                      caCo3PpmPerDrop: undefined,
+          {(editableRecipeDose || (!blocked && Number.isFinite(doseMassG) && doseMassG > 0)) && <div
+            data-testid={editableRecipeDose ? 'recipe-dose-result' : undefined}
+            className={`mt-3 rounded-xl border p-4 text-sm ${
+              doseExceedsSafeRecommendation
+                ? 'border-amber-300/30 bg-amber-400/[0.08]'
+                : 'border-emerald-400/30 bg-emerald-400/10'
+            }`}
+          >
+            {editableRecipeDose && <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-2 font-medium text-emerald-100">
+                <span>Dose</span>
+                <input
+                  aria-label={`${name} dose in grams per liter`}
+                  data-testid={`recipe-dose-per-liter-${state.id}`}
+                  className="w-20 rounded-lg border border-emerald-200/25 bg-slate-950/50 px-2 py-1.5 text-right text-lg font-bold tabular-nums text-emerald-100 outline-none focus:border-emerald-200/60"
+                  inputMode="decimal"
+                  value={doseGramsPerLiterInput}
+                  onChange={event => {
+                    const value = event.target.value;
+                    setDoseGramsPerLiterInput(value);
+                    const next = computeRecipeMassStrengthForDose({
+                      totalStockMassG: state.totalStockMassG,
+                      doseGramsPerLiter: value.trim() === '' ? Number.NaN : Number(value),
                     });
-                    setCalibrationError('');
-                  }
-                }}
-              />
-              <span className="text-slate-400">g/L</span>
-            </span>
-          </label>}
-          {editableRecipeDose && !requestedDoseStrength.valid && <p role="alert" data-testid="recipe-dose-input-error" className="mt-2 text-xs text-red-200">
-            Enter a positive, finite dose in g/L. The last valid stock strength remains in use.
-          </p>}
-          {doseExceedsSafeRecommendation && <div role="alert" data-testid="recipe-dose-safety" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/[0.08] p-3 text-xs text-amber-100">
-            <p>This dose makes the stock too concentrated for the conservative modeled safety recommendation.</p>
-            {safeDoseGramsPerLiter !== null
-              ? <p className="mt-1">Use at least <strong>{n(safeDoseGramsPerLiter, 5)} g/L</strong> (about {n(safeDoseGramsPerLiter * finalWaterMassKg, 5)} g for this brew) at up to ×{n(recommendedStrength!)} strength to preserve the recipe target.</p>
-              : <p className="mt-1">No safe grams-per-liter recommendation is available for this stock weight and recipe. Increase the stock weight or revise the recipe.</p>}
-          </div>}
-          {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <div className="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-400/10 p-4 text-sm">
-            <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>
-            {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}
-            <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
-            <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
-              <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
-              {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
-              {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-400">Rounded-drop ions: {recipeDeliveredIons}</p>}
-              {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
-              {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.</p>}
-            </details>
-            {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+                    if (next.valid) {
+                      onUpdate({
+                        strength: next.strength,
+                        batchScale: 1,
+                        physicalSaltPpmPerDrop: undefined,
+                        caCo3PpmPerDrop: undefined,
+                      });
+                      setCalibrationError('');
+                    }
+                  }}
+                />
+                <span className="text-slate-400">g/L stock</span>
+              </label>
+              {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <span className="text-slate-200">
+                · <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water
+              </span>}
+            </div>}
+            {editableRecipeDose && !requestedDoseStrength.valid && <p role="alert" data-testid="recipe-dose-input-error" className="mt-2 text-xs text-red-200">
+              Enter a positive, finite dose in g/L. The last valid stock strength remains in use.
+            </p>}
+            {doseExceedsSafeRecommendation && <div role="alert" data-testid="recipe-dose-safety" className="mt-3 rounded-xl border border-amber-300/30 bg-amber-400/[0.08] p-3 text-xs text-amber-100">
+              <p>This dose makes the stock too concentrated for the conservative modeled safety recommendation.</p>
+              {safeDoseGramsPerLiter !== null
+                ? <p className="mt-1">Use at least <strong>{n(safeDoseGramsPerLiter, 5)} g/L</strong> (about {n(safeDoseGramsPerLiter * finalWaterMassKg, 5)} g for this brew) at up to ×{n(recommendedStrength!)} strength to preserve the recipe target.</p>
+                : <p className="mt-1">No safe grams-per-liter recommendation is available for this stock weight and recipe. Increase the stock weight or revise the recipe.</p>}
+            </div>}
+            {!blocked && Number.isFinite(doseMassG) && doseMassG > 0 && <>
+              {!editableRecipeDose && <p>Dose <strong className="text-lg text-emerald-200">{n(doseMassG, 5)} g stock</strong> for {n(finalLiters)} L brewing water.</p>}
+              {doseMassG > state.totalStockMassG && <p className="mt-2 text-xs text-amber-200">This dose needs more than one prepared bottle. Prepare enough stock at the same mass fraction.</p>}
+              <p className="mt-2 text-xs">{measured.basis === 'stock' ? 'Measured finished-stock calibration' : 'Water-based planning estimate — not measured finished stock'}.</p>
+              <details className="mt-2 rounded-lg border border-emerald-200/15 bg-slate-950/20 px-3 py-2" data-testid={`mass-stock-dose-details-${state.id}`}>
+                <summary className="cursor-pointer text-xs text-emerald-100/80">Dose details</summary>
+                {Number.isFinite(exactDrops) && <p className="mt-2 text-xs">Exact: {n(exactDrops)} drops · Rounded: {roundedDrops} drops → {n(physicalDeliveredMg)} mg physical salt ({n(physicalDeliveredMg / finalWaterMassKg)} mg/L).</p>}
+                {recipeDeliveredIons && <p className="mt-1 text-xs text-slate-400">Rounded-drop ions: {recipeDeliveredIons}</p>}
+                {diySingleSalt && equivalentFactor > 0 && result.totalSaltMgPerDrop !== null && <p className="mt-1 text-xs text-slate-400">DIY spreadsheet basis: {n(result.totalSaltMgPerDrop * equivalentFactor / finalWaterMassKg)} ppm CaCO₃-equivalent per drop. This equivalent is not an additional ion or an independent GH/KH target.</p>}
+                {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-1 text-xs text-amber-100">Pinned planning target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop. Stock weight, final-water amount, and water-tip estimate update the planned strength. Verify the newly prepared stock before relying on drops.</p>}
+              </details>
+              {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
+            </>}
           </div>}
           {strengthMessage && <p role="status" className="mt-2 text-xs text-amber-200">{strengthMessage}</p>}
         </section>

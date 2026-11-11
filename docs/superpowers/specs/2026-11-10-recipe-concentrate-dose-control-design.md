@@ -9,8 +9,10 @@ recommend a dose that keeps the target while using a safer, weaker stock.
 
 ## Scope and interaction
 
-- Add the editable control only to the recipe-concentrate dose card. Keep DIY
-  single-salt and Lotus-specific workflows unchanged.
+- Add the editable control inline in the recipe-concentrate dose result card.
+  Show the selected stock dose per liter beside the calculated total grams for
+  the current brew-water amount. Keep DIY single-salt and Lotus-specific
+  workflows unchanged.
 - Label the control as stock grams per 1 L of brew water. Initialize it from the
   current stock strength and total finished stock mass.
 - A valid positive edit recalculates recipe strength from the requested

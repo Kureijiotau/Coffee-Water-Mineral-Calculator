@@ -178,9 +178,11 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
 
   const magnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
+  const doseResult = magnesium.getByTestId('recipe-dose-result');
   const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams per liter');
   const strengthInput = magnesium.getByLabel('Magnesium Sulfate concentrate recipe strength');
   const stockWeightInput = magnesium.getByLabel('Magnesium Sulfate concentrate target stock weight in grams');
+  await expect(doseResult.getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('5');
   await expect(doseInput).toHaveValue('5');
   await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
   const appliedStrength = await strengthInput.inputValue();
@@ -192,7 +194,7 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   await doseInput.fill('10');
 
   await expect(strengthInput).toHaveValue('10');
-  await expect(magnesium).toContainText('Dose 10 g stock for 1 L brewing water.');
+  await expect(doseResult).toContainText('10 g stock for 1 L brewing water');
   await expect(magnesium).not.toContainText('Pinned target');
 
   await stockWeightInput.fill('');
@@ -201,11 +203,11 @@ test('sets recipe stock dose in grams per liter and preserves the recipe target'
   await stockWeightInput.fill('200');
   await expect(doseInput).toHaveValue('10');
   await expect(strengthInput).toHaveValue('20');
-  await expect(magnesium).toContainText('Dose 10 g stock for 1 L brewing water.');
+  await expect(doseResult).toContainText('10 g stock for 1 L brewing water');
 
   await page.getByLabel('Final brewing water').fill('2');
   await expect(doseInput).toHaveValue('10');
-  await expect(magnesium).toContainText('Dose 20 g stock for 2 L brewing water.');
+  await expect(doseResult).toContainText('20 g stock for 2 L brewing water');
 });
 
 test('warns when a recipe dose implies unsafe strength and suggests a safer dose', async ({ page }) => {
@@ -221,6 +223,8 @@ test('warns when a recipe dose implies unsafe strength and suggests a safer dose
   const safety = magnesium.getByTestId('recipe-dose-safety');
   await expect(safety).toBeVisible();
   await expect(safety).toContainText('too concentrated');
+  await expect(magnesium.getByTestId('recipe-dose-result')
+    .getByLabel('Magnesium Sulfate concentrate dose in grams per liter')).toHaveValue('0.01');
   const safeDoseText = await safety.textContent();
   const safeDoseMatch = safeDoseText?.match(/Use at least\s+([\d,.]+)\s+g\/L/);
   expect(safeDoseMatch, `expected a numeric safe dose recommendation in: ${safeDoseText}`).not.toBeNull();
