@@ -48,6 +48,37 @@ test('groups Lotus dropper selection, tip style, and calibration into one setup 
   await expect(page.getByRole('button', { name: 'Open concentrate recipe steps' })).toHaveCount(0);
 });
 
+test('restores each Lotus tip calibration and active status when switching styles', async ({ page }) => {
+  await openLotusDropsWithoutSavedCalibration(page);
+
+  const status = page.getByTestId('lotus-selected-calibration-status');
+  const straightDrops = page.getByRole('textbox', { name: 'Straight tip measured drops' });
+  const straightWeight = page.getByRole('textbox', { name: 'Straight tip water weight in grams' });
+  const roundDrops = page.getByRole('textbox', { name: 'Round tip measured drops' });
+  const roundWeight = page.getByRole('textbox', { name: 'Round tip water weight in grams' });
+
+  await selectStyle(page, 'Straight');
+  await straightDrops.fill('100');
+  await straightWeight.fill('4');
+  await expect(status).toHaveText('Straight calibrated');
+
+  await selectStyle(page, 'Round');
+  await expect(status).toHaveText('Not calibrated');
+  await roundDrops.fill('60');
+  await roundWeight.fill('5');
+  await expect(status).toHaveText('Round calibrated');
+
+  await selectStyle(page, 'Straight');
+  await expect(straightDrops).toHaveValue('100');
+  await expect(straightWeight).toHaveValue('4');
+  await expect(status).toHaveText('Straight calibrated');
+
+  await selectStyle(page, 'Round');
+  await expect(roundDrops).toHaveValue('60');
+  await expect(roundWeight).toHaveValue('5');
+  await expect(status).toHaveText('Round calibrated');
+});
+
 test('selects one dropper and gates mass preparation on its tip calibration', async ({ page }) => {
   await openLotusDropsWithoutSavedCalibration(page);
 
