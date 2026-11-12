@@ -173,25 +173,27 @@ export function LotusMassPreparationPanel({
           <span className="text-cyan-100/65">Changes ppm per drop</span>
           <span>2 L</span>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2" data-testid={`lotus-per-drop-summary-${dropper.id}`}>
-          <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5" data-testid="lotus-fixed-reference">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
-              {dropper.isBonus ? 'Optional Epsom reference · not Lotus' : 'Lotus source reference'}
+        <div data-testid="lotus-per-drop-summary">
+          <div className="grid gap-2 sm:grid-cols-2" data-testid={`lotus-per-drop-summary-${dropper.id}`}>
+            <div className="rounded-lg border border-slate-700/70 bg-slate-950/35 p-2.5" data-testid="lotus-fixed-reference">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                {dropper.isBonus ? 'Optional Epsom reference · not Lotus' : 'Lotus source reference'}
+              </div>
+              <div className="mt-1 text-sm font-semibold tabular-nums text-slate-100">
+                +{sourceIonPpm.toFixed(3)} ppm {ionLabel} / drop
+              </div>
+              <div className="mt-0.5 text-[9px] text-slate-500">Published source model · {volumeText} final water</div>
             </div>
-            <div className="mt-1 text-sm font-semibold tabular-nums text-slate-100">
-              +{sourceIonPpm.toFixed(3)} ppm {ionLabel} / drop
-            </div>
-            <div className="mt-0.5 text-[9px] text-slate-500">Published source model · {volumeText} final water</div>
-          </div>
-          <div className="rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] p-2.5" data-testid="lotus-calibrated-ppm-per-drop">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/75">
-              Your {style} dropper · {isCalibrated ? 'calibrated' : 'estimate'}
-            </div>
-            <div className="mt-1 text-sm font-semibold tabular-nums text-cyan-100">
-              +{calibratedIonPpm.toFixed(3)} ppm {ionLabel} / drop
-            </div>
-            <div className="mt-0.5 text-[9px] text-slate-500">
-              {calibratedPlan.dropsPerMl.toFixed(1)} drops/mL · {volumeText} final water
+            <div className="rounded-lg border border-cyan-300/25 bg-cyan-400/[0.06] p-2.5" data-testid="lotus-calibrated-ppm-per-drop">
+              <div className="text-[9px] font-semibold uppercase tracking-wider text-cyan-200/75">
+                Your {style} dropper · {isCalibrated ? 'calibrated' : 'estimate'}
+              </div>
+              <div className="mt-1 text-sm font-semibold tabular-nums text-cyan-100">
+                +{calibratedIonPpm.toFixed(3)} ppm {ionLabel} / drop
+              </div>
+              <div className="mt-0.5 text-[9px] text-slate-500">
+                {calibratedPlan.dropsPerMl.toFixed(1)} drops/mL · {volumeText} final water
+              </div>
             </div>
           </div>
         </div>

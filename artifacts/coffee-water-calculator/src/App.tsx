@@ -6640,6 +6640,7 @@ function App() {
             onToggleVolumeUnit={() => setVolumeUnit(unit => unit === 'liters' ? 'gallons' : 'liters')}
             recipeHandoff={concentrateWorkspaceTab === 'recipe' ? concentrateRecipeHandoff : null}
             onClearRecipeHandoff={() => setConcentrateRecipeHandoff(null)}
+            onNavigateToCalculator={() => setAppTab('calculator')}
             dropsPerMl={brewerDropsPerMl}
             diySaltTargets={dosingSaltTargets}
             diySaltForms={concentrateDiySaltForms}

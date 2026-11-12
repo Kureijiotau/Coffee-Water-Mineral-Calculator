@@ -9,6 +9,12 @@ import { ConcentratePreparationSteps, buildConcentratePreparationSteps, WATER_MA
 import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type MassConcentratePlanSnapshot } from './concentrateStockStorage';
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
 import { HelpTip } from './HelpTip';
+import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
+import {
+  getConcentrateTourSteps,
+  hasSeenConcentrateTour,
+  rememberConcentrateTour,
+} from './concentrateGuidedTour';
 import { LotusMassPreparationPanel } from './LotusMassPreparationPanel';
 import { lotusMassStockPlan, LOTUS_DROPPER_DEFINITIONS, getDiyDropperRateForStyle, hasAnyDiyDropperCalibration, lotusMeasuredDropsPerMl, type LotusDropperCalibration, type LotusDropperId, type LotusDropperStyle, type LotusStyleCalibrationInputs } from './lotusConcentrate';
 import type { WaterPlanConcentrateSnapshot } from './waterPlans';
@@ -27,6 +33,7 @@ type Props = {
   onSnapshotChange: (snapshot: WaterPlanConcentrateSnapshot) => void;
   onSaveSnapshot: () => void;
   onClearRecipeHandoff: () => void;
+  onNavigateToCalculator?: () => void;
   dropsPerMl: number;
   diySaltTargets: Record<string, number>;
   diySaltForms: Record<string, number>;
@@ -85,7 +92,11 @@ function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selec
           const drops = Number(calibration?.dropsInput ?? 0);
           const weightG = Number(calibration?.weightInput ?? 0);
           const rate = dropperRates[style];
-          return <fieldset key={style} className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5">
+          return <fieldset
+            key={style}
+            data-testid={style === selectedStyle ? 'mass-shared-calibration-fields' : undefined}
+            className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5"
+          >
             <legend className="px-1 text-xs font-semibold capitalize text-slate-200">{style} tip</legend>
             <label className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               {style === 'straight' ? 'Straight' : 'Round'} tip measured drops
@@ -174,6 +185,11 @@ export function MassConcentrateWorkspace(props: Props) {
   const [restoreError, setRestoreError] = useState(() => initial.kind === 'invalid' ? initial.reason : '');
   const [exportError, setExportError] = useState('');
   const [showSteps, setShowSteps] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
+  const tourTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const workspaceHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const tourReturnFocusRef = useRef<'heading' | 'trigger'>('heading');
+  const automaticTourAttemptedRef = useRef(false);
   const cardsRef = useRef<HTMLDivElement>(null);
   const snapshotRef = useRef(props.initialSnapshot);
   const salt = SALTS.find(s => s.id === saltId) ?? SALTS[0];
@@ -189,6 +205,31 @@ export function MassConcentrateWorkspace(props: Props) {
   };
   const toggleMassVolumeUnit = () => props.onToggleVolumeUnit();
   const isRecipe = props.workspaceMode === 'recipe';
+  const tourBranch = isRecipe ? 'recipe' : toolMode === 'lotus' ? 'lotus' : 'stock-builder';
+  const tourSteps = getConcentrateTourSteps(tourBranch, Boolean(props.recipeHandoff));
+  const restoreTourFocus = () => {
+    window.requestAnimationFrame(() => {
+      const target = tourReturnFocusRef.current === 'trigger'
+        ? tourTriggerRef.current
+        : workspaceHeadingRef.current;
+      target?.focus({ preventScroll: true });
+    });
+  };
+  const closeTour = (reason: ConcentrateTourCloseReason) => {
+    if (reason === 'skip') rememberConcentrateTour();
+    setTourOpen(false);
+    restoreTourFocus();
+  };
+  const finishTour = () => {
+    rememberConcentrateTour();
+    setTourOpen(false);
+    restoreTourFocus();
+  };
+  const navigateToCalculatorFromTour = () => {
+    rememberConcentrateTour();
+    setTourOpen(false);
+    props.onNavigateToCalculator?.();
+  };
   const recipeTargets = isRecipe
     ? Object.fromEntries(Object.entries(props.recipeHandoff?.salts ?? {}).filter(([, entry]) => Number(entry.target) > 0).map(([id, entry]) => [id, Number(entry.target)]))
     : { [salt.id]: Number(targetInput) };
@@ -335,30 +376,69 @@ export function MassConcentrateWorkspace(props: Props) {
     window.addEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, sync);
     return () => window.removeEventListener(ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, sync);
   }, [isRecipe]);
+  useEffect(() => {
+    if (automaticTourAttemptedRef.current) return;
+    automaticTourAttemptedRef.current = true;
+    if (hasSeenConcentrateTour()) return;
+    tourReturnFocusRef.current = 'heading';
+    setTourOpen(true);
+  }, []);
 
-  if (isRecipe && !props.recipeHandoff) return <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6">
-    <h2 className="text-base font-semibold text-fuchsia-100">No recipe concentrate loaded</h2>
-    <p className="mt-2 text-sm text-slate-400">Send a recipe from Calculator to prepare its stocks by weight.</p>
-  </section>;
+  if (isRecipe && !props.recipeHandoff) return <>
+    <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6" data-testid="concentrate-empty-state">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 ref={workspaceHeadingRef} tabIndex={-1} data-testid="concentrate-workspace-heading" className="text-base font-semibold text-fuchsia-100">
+            No recipe concentrate loaded
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">Send a recipe from Calculator to prepare its stocks by weight.</p>
+        </div>
+        <button
+          ref={tourTriggerRef}
+          type="button"
+          data-testid="concentrate-tour-trigger"
+          onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
+          className={`${buttonClass} min-h-11`}
+        >
+          Tour
+        </button>
+      </div>
+    </section>
+    {tourOpen && <ConcentrateGuidedTour
+      steps={tourSteps}
+      onClose={closeTour}
+      onFinish={finishTour}
+      onNavigateToCalculator={navigateToCalculatorFromTour}
+    />}
+  </>;
   return <div className={`concentrate-workspace ${!isRecipe && toolMode === 'lotus' ? 'space-y-3 sm:space-y-4' : 'space-y-4'}`}>
     <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-2">
           <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" aria-hidden="true" />
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+            <h2 ref={workspaceHeadingRef} tabIndex={-1} data-testid="concentrate-workspace-heading" className="text-xs font-semibold uppercase tracking-wider text-slate-300">
               {isRecipe ? 'Recipe concentrate workspace' : toolMode === 'lotus' ? 'DIY concentrate workspace' : 'Concentrates / DIY stock'}
-            </div>
+            </h2>
             <div className="mt-0.5 text-xs text-slate-500">
               {isRecipe
                 ? 'Build and calibrate the concentrate for the imported calculator recipe.'
                 : toolMode === 'lotus'
                   ? 'Prepare one Lotus-style mineral stock at a time.'
-                  : <h2 className="block text-lg font-semibold tracking-tight text-slate-50">Build a single-salt stock</h2>}
+                  : <span className="block text-lg font-semibold tracking-tight text-slate-50">Build a single-salt stock</span>}
             </div>
           </div>
         </div>
         <div data-testid="concentrate-header-actions" className="flex w-full items-center justify-end gap-2 sm:w-auto">
+          <button
+            ref={tourTriggerRef}
+            type="button"
+            data-testid="concentrate-tour-trigger"
+            onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
+            className={`${buttonClass} min-h-11`}
+          >
+            Tour
+          </button>
           {!isRecipe && <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
             <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode('recipe')}
               className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode !== 'lotus' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
@@ -443,7 +523,7 @@ export function MassConcentrateWorkspace(props: Props) {
         onCalibrationChange={updateSharedCalibration}
       />
     </section>}
-    {isRecipe ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6">
+    {isRecipe ? <section className="app-panel app-panel--quiet app-card space-y-4 rounded-2xl border px-4 py-4 shadow-xl backdrop-blur-xl sm:px-6" data-testid="concentrate-recipe-overview">
       {isRecipe && <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="text-sm font-semibold text-fuchsia-100">{props.recipeHandoff?.name}</div>
@@ -547,6 +627,12 @@ export function MassConcentrateWorkspace(props: Props) {
       }}>Download plan image</button>}
       {exportError && <p role="alert" className="text-sm text-amber-200">{exportError}</p>}
     </div>}
+    {tourOpen && <ConcentrateGuidedTour
+      steps={tourSteps}
+      onClose={closeTour}
+      onFinish={finishTour}
+      onNavigateToCalculator={navigateToCalculatorFromTour}
+    />}
   </div>;
 }
 
@@ -846,7 +932,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
         <section className="rounded-2xl border border-slate-700/60 bg-slate-800/70 p-4 shadow-xl sm:p-5">
           <h3 className="font-semibold text-fuchsia-100">{name}</h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <label className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
+            <label data-testid="mass-recipe-stock-weight" className="rounded-xl border border-slate-700/60 bg-slate-950/25 px-3 py-2.5 text-xs">
               <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400">Concentrate weight</span>
               <span className="mt-1 flex items-center gap-2">
                 <input aria-label={`${name} target stock weight in grams`} className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal" placeholder="e.g. 100" value={massInput}
@@ -1020,7 +1106,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
       </div>
 
       <div className="space-y-4" data-testid={`mass-recipe-preparation-${state.id}`}>
-        <section ref={preparationCardRef} className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5">
+        <section ref={preparationCardRef} className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5" data-testid="mass-recipe-preparation-card">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-200/75">
               <ListChecks className="h-4 w-4 text-emerald-200/80" aria-hidden="true" />
