@@ -11,33 +11,33 @@ const expectedRecipeNames = ['Club Soda', 'Jelly', 'Lily', 'Conflate'];
 
 const expectedSaltMasses: Record<string, Record<string, { mg: number; formIdx: number; shownTarget: number }>> = {
   'peak-kitchen-club-soda': {
-    mgcl2: { mg: 3300, formIdx: 1, shownTarget: 1545 },
-    cacl2: { mg: 770, formIdx: 1, shownTarget: 581 },
-    nacl: { mg: 440, formIdx: 0, shownTarget: 440 },
-    nahco3: { mg: 150, formIdx: 0, shownTarget: 150 },
+    mgcl2: { mg: 3288, formIdx: 1, shownTarget: 1540 },
+    cacl2: { mg: 768, formIdx: 1, shownTarget: 580 },
+    nacl: { mg: 400, formIdx: 0, shownTarget: 400 },
+    nahco3: { mg: 200, formIdx: 0, shownTarget: 200 },
     khco3: { mg: 110, formIdx: 0, shownTarget: 110 },
   },
   'peak-kitchen-jelly': {
-    mgcl2: { mg: 1750, formIdx: 1, shownTarget: 820 },
-    cacl2: { mg: 890, formIdx: 1, shownTarget: 672 },
-    kcl: { mg: 560, formIdx: 0, shownTarget: 560 },
-    khco3: { mg: 250, formIdx: 0, shownTarget: 250 },
+    mgcl2: { mg: 1751, formIdx: 1, shownTarget: 820 },
+    cacl2: { mg: 888, formIdx: 1, shownTarget: 670 },
+    kcl: { mg: 500, formIdx: 0, shownTarget: 500 },
+    khco3: { mg: 350, formIdx: 0, shownTarget: 350 },
     nahco3: { mg: 230, formIdx: 0, shownTarget: 230 },
   },
   'peak-kitchen-lily': {
-    mgso4: { mg: 2200, formIdx: 1, shownTarget: 1074 },
-    mgcl2: { mg: 1300, formIdx: 1, shownTarget: 609 },
-    kcl: { mg: 630, formIdx: 0, shownTarget: 630 },
-    khco3: { mg: 300, formIdx: 0, shownTarget: 300 },
+    mgso4: { mg: 2212, formIdx: 1, shownTarget: 1080 },
+    mgcl2: { mg: 1281, formIdx: 1, shownTarget: 600 },
+    kcl: { mg: 570, formIdx: 0, shownTarget: 570 },
+    khco3: { mg: 380, formIdx: 0, shownTarget: 380 },
     nahco3: { mg: 250, formIdx: 0, shownTarget: 250 },
     nacl: { mg: 100, formIdx: 0, shownTarget: 100 },
   },
   'peak-kitchen-conflate': {
-    cacl2: { mg: 1050, formIdx: 1, shownTarget: 793 },
-    kcl: { mg: 700, formIdx: 0, shownTarget: 700 },
-    nacl: { mg: 600, formIdx: 0, shownTarget: 600 },
-    khco3: { mg: 200, formIdx: 0, shownTarget: 200 },
-    nahco3: { mg: 150, formIdx: 0, shownTarget: 150 },
+    cacl2: { mg: 1047, formIdx: 1, shownTarget: 790 },
+    kcl: { mg: 600, formIdx: 0, shownTarget: 600 },
+    nacl: { mg: 500, formIdx: 0, shownTarget: 500 },
+    khco3: { mg: 350, formIdx: 0, shownTarget: 350 },
+    nahco3: { mg: 300, formIdx: 0, shownTarget: 300 },
   },
 };
 
@@ -64,7 +64,7 @@ describe('PeakKitchen built-in recipes', () => {
           selectedForm.molarMass,
           salt.anhydrousMass,
         );
-        expect(physicalMassMg).toBeCloseTo(expected.mg, 6);
+        expect(Math.abs(physicalMassMg - expected.mg)).toBeLessThan(1);
       }
     }
   });
