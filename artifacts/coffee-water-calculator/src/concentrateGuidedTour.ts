@@ -31,7 +31,16 @@ const RECIPE_STEPS: ConcentrateTourStep[] = [
   {
     targetTestId: 'concentrate-recipe-overview',
     title: 'Your recipe',
-    description: 'This recipe came from Calculator. Choose how to split its stocks and set the brewing-water amount here.',
+    description: 'This recipe came from Calculator. Set the brewing-water amount and review its stock plan here.',
+  },
+  {
+    targetTestId: 'mass-recipe-stock-arrangement',
+    title: 'Choose a stock arrangement',
+    description: [
+      'Separate salts — one stock per active salt; more control, more bottles.',
+      'GH + KH — compatible salts are grouped into hardness, alkalinity, and citrate stocks. Only groups used by this recipe appear.',
+      'All-in-one — all active salts share one stock, keeping recipe proportions together for simpler dosing; safe strength may be lower.',
+    ].join('\n'),
   },
   {
     targetTestId: 'mass-recipe-stock-weight',

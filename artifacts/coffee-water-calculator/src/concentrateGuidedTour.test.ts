@@ -7,11 +7,25 @@ describe('getConcentrateTourSteps', () => {
 
     expect(steps.map(step => step.targetTestId)).toEqual([
       'concentrate-recipe-overview',
+      'mass-recipe-stock-arrangement',
       'mass-recipe-stock-weight',
       'recipe-dose-result',
       'mass-recipe-preparation-card',
     ]);
     expect(steps.every(step => step.action === undefined)).toBe(true);
+  });
+
+  it('explains every recipe stock arrangement in its own step', () => {
+    const step = getConcentrateTourSteps('recipe', true).find(
+      item => item.targetTestId === 'mass-recipe-stock-arrangement',
+    );
+
+    expect(step).toMatchObject({
+      title: 'Choose a stock arrangement',
+      description: expect.stringContaining('Separate salts'),
+    });
+    expect(step?.description).toContain('GH + KH');
+    expect(step?.description).toContain('All-in-one');
   });
 
   it('keeps Stock Builder guidance on visible stock sections', () => {

@@ -145,6 +145,7 @@ test('uses the recipe branch and leaves recipe and calibration values unchanged'
   const before = await readValues();
   const expectedTargets = [
     'concentrate-recipe-overview',
+    'mass-recipe-stock-arrangement',
     'mass-recipe-stock-weight',
     'recipe-dose-result',
     'mass-recipe-preparation-card',
@@ -152,6 +153,11 @@ test('uses the recipe branch and leaves recipe and calibration values unchanged'
   for (let index = 0; index < expectedTargets.length; index += 1) {
     await expect(page.getByTestId('concentrate-guided-tour-spotlight'))
       .toHaveAttribute('data-target-testid', expectedTargets[index]);
+    if (expectedTargets[index] === 'mass-recipe-stock-arrangement') {
+      await expect(tourDialog(page)).toContainText('Separate salts');
+      await expect(tourDialog(page)).toContainText('GH + KH');
+      await expect(tourDialog(page)).toContainText('All-in-one');
+    }
     if (index < expectedTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }

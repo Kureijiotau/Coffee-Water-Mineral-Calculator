@@ -529,7 +529,7 @@ export function MassConcentrateWorkspace(props: Props) {
           <div className="text-sm font-semibold text-fuchsia-100">{props.recipeHandoff?.name}</div>
           <p className="mt-1 text-xs text-slate-400">Recipe stocks are prepared by weight. Target stock weight includes salt + water, not the bottle.</p>
         </div>
-        <label className="min-w-40 text-xs">Stock arrangement<select aria-label="Stock arrangement" className={inputClass} value={strategy} onChange={e => setStrategy(e.target.value as typeof strategy)}>
+        <label className="min-w-40 text-xs">Stock arrangement<select data-testid="mass-recipe-stock-arrangement" aria-label="Stock arrangement" className={inputClass} value={strategy} onChange={e => setStrategy(e.target.value as typeof strategy)}>
           <option value="individual">Separate salts</option><option value="gh-kh">GH + KH groups</option><option value="all-in-one">All-in-one</option></select></label>
       </div>}
       <div className="grid gap-3 sm:grid-cols-2">
