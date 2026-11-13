@@ -30,13 +30,14 @@ describe('calculator guided tours', () => {
     ]);
   });
 
-  it('includes Alchemist source-water and ion-check guidance', () => {
+  it('includes Alchemist source-water, ion-check, and recipe-step guidance', () => {
     expect(getCalculatorTourSteps('alchemist').map(step => step.targetTestId)).toEqual([
       'alchemist-batch-volume',
       'alchemist-mineral-water-base',
       'alchemist-mineral-recipe',
       'alchemist-ion-watch',
       'alchemist-salt-summary',
+      'alchemist-recipe-steps',
     ]);
   });
 
@@ -48,7 +49,12 @@ describe('calculator guided tours', () => {
       'watermancer-salts',
       'watermancer-auto-match',
       'watermancer-final-mixture',
+      'watermancer-recipe-steps',
     ]);
+    expect(getCalculatorTourSteps('watermancer')[0].description)
+      .toContain('add water and salts first');
+    expect(getCalculatorTourSteps('watermancer')[0].description)
+      .toContain('new profile');
   });
 
   it('remembers first visits independently for all calculator modes', () => {

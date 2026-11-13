@@ -9013,7 +9013,7 @@ function App() {
        {(showRecipeMode || showWatermancer) && (
         <button
           type="button"
-           data-testid={showBrewer ? 'brewer-recipe-steps' : showAlchemist ? 'alchemist-recipe-steps' : undefined}
+           data-testid={showBrewer ? 'brewer-recipe-steps' : showAlchemist ? 'alchemist-recipe-steps' : showWatermancer ? 'watermancer-recipe-steps' : undefined}
           onClick={() => {
             setRecipeStepsPromptDismissed(true);
             setShowBrewerSteps('dry');

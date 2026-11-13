@@ -57,13 +57,18 @@ const ALCHEMIST_STEPS: GuidedTourStep[] = [
     title: 'Review the salt-only summary',
     description: 'This shows GH, KH, and TDS from salts. Mineral-water contributions are accounted for separately.',
   },
+  {
+    targetTestId: 'alchemist-recipe-steps',
+    title: 'Open Recipe steps',
+    description: 'Review the preparation instructions for this recipe, then save the steps as an image if you want.',
+  },
 ];
 
 const WATERMANCER_STEPS: GuidedTourStep[] = [
   {
     targetTestId: 'watermancer-ion-targets',
     title: 'Choose your ion targets',
-    description: 'Select a saved profile or adjust individual ion goals. Watermancer uses these as the final-water targets.',
+    description: 'Start with a saved profile or set ion goals directly. You can also work backwards: add water and salts first, then save these ion targets in a new profile.',
   },
   {
     targetTestId: 'watermancer-batch-volume',
@@ -89,6 +94,11 @@ const WATERMANCER_STEPS: GuidedTourStep[] = [
     targetTestId: 'watermancer-final-mixture',
     title: 'Review the final mixture',
     description: 'Compare the modeled final ions and summary with your target profile before preparing the water.',
+  },
+  {
+    targetTestId: 'watermancer-recipe-steps',
+    title: 'Open Recipe steps',
+    description: 'Review the water and salt amounts for the current plan, along with its preparation steps.',
   },
 ];
 

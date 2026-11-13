@@ -13,7 +13,7 @@ test('opens each recipe-mode tour once independently and allows replay', async (
   await openFreshCalculator(page);
 
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();
-  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 5');
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 6');
   await expect(page.getByTestId('calculator-guided-tour-spotlight')).toHaveAttribute(
     'data-target-testid',
     'alchemist-batch-volume',
@@ -49,7 +49,7 @@ test('starts the Watermancer tour once and offers replay', async ({ page }) => {
 
   await page.getByTestId('mode-watermancer').click();
   await expect(tourDialog(page, 'Watermancer')).toBeVisible();
-  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 6');
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 7');
   await expect(page.getByTestId('calculator-guided-tour-spotlight')).toHaveAttribute(
     'data-target-testid',
     'watermancer-ion-targets',
@@ -76,6 +76,7 @@ test('follows the Watermancer tour from targets through the final mixture', asyn
     'watermancer-salts',
     'watermancer-auto-match',
     'watermancer-final-mixture',
+    'watermancer-recipe-steps',
   ];
   for (const [index, target] of targets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
@@ -96,6 +97,7 @@ test('follows the approved visible step order in both calculator modes', async (
     'alchemist-mineral-recipe',
     'alchemist-ion-watch',
     'alchemist-salt-summary',
+    'alchemist-recipe-steps',
   ];
   for (const [index, target] of alchemistTargets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
