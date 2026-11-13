@@ -31,6 +31,17 @@ test('opens each recipe-mode tour once independently and allows replay', async (
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();
 });
 
+test('keeps the guided-tour spotlight outline compact', async ({ page }) => {
+  await openFreshCalculator(page);
+
+  const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
+  await expect(spotlight).toBeVisible();
+  await expect.poll(() => spotlight.evaluate(element => getComputedStyle(element).borderTopWidth))
+    .toBe('1px');
+  await expect.poll(() => spotlight.evaluate(element => getComputedStyle(element).boxShadow))
+    .toContain('2px');
+});
+
 test('follows the approved visible step order in both calculator modes', async ({ page }) => {
   await openFreshCalculator(page);
 

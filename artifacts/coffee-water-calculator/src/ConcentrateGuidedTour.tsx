@@ -23,7 +23,7 @@ type TourLayout = {
 
 const EDGE_GAP = 16;
 const TARGET_GAP = 12;
-const SPOTLIGHT_PAD = 6;
+const SPOTLIGHT_PAD = 4;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), Math.max(min, max));
@@ -199,7 +199,7 @@ export function ConcentrateGuidedTour({
       <div aria-hidden="true" className="fixed inset-x-0 bottom-0 z-[90] bg-slate-950/75" style={{ top: top + height }} />
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed z-[91] rounded-xl border-2 border-cyan-200 shadow-[0_0_0_4px_rgba(34,211,238,0.18)] transition-shadow duration-150 motion-reduce:duration-0"
+        className="pointer-events-none fixed z-[91] rounded-xl border border-cyan-200 shadow-[0_0_0_2px_rgba(34,211,238,0.18)] transition-shadow duration-150 motion-reduce:duration-0"
         data-testid={`${testIdPrefix}-spotlight`}
         data-target-testid={layout.targetTestId}
         style={{ top, left, width, height }}
