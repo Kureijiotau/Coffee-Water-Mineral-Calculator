@@ -10,6 +10,8 @@ type Props = {
   onClose: (reason: ConcentrateTourCloseReason) => void;
   onFinish: () => void;
   onNavigateToCalculator?: () => void;
+  tourTitle?: string;
+  testIdPrefix?: string;
 };
 
 type Rect = { top: number; left: number; width: number; height: number };
@@ -72,10 +74,13 @@ export function ConcentrateGuidedTour({
   onClose,
   onFinish,
   onNavigateToCalculator,
+  tourTitle = 'Concentrates tour',
+  testIdPrefix = 'concentrate-guided-tour',
 }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [layout, setLayout] = useState<TourLayout | null>(null);
   const currentStep = steps[stepIndex];
+  const descriptionId = `${testIdPrefix}-description`;
   const targetRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
@@ -195,7 +200,7 @@ export function ConcentrateGuidedTour({
       <div
         aria-hidden="true"
         className="pointer-events-none fixed z-[91] rounded-xl border-2 border-cyan-200 shadow-[0_0_0_4px_rgba(34,211,238,0.18)] transition-shadow duration-150 motion-reduce:duration-0"
-        data-testid="concentrate-guided-tour-spotlight"
+        data-testid={`${testIdPrefix}-spotlight`}
         data-target-testid={layout.targetTestId}
         style={{ top, left, width, height }}
       />
@@ -203,26 +208,26 @@ export function ConcentrateGuidedTour({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Concentrates tour"
-        aria-describedby="concentrate-guided-tour-description"
+        aria-label={tourTitle}
+        aria-describedby={descriptionId}
         tabIndex={-1}
         className="fixed z-[92] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-cyan-200/25 bg-slate-900/95 p-4 text-slate-100 shadow-2xl shadow-black/50 backdrop-blur-xl outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
-        data-testid="concentrate-guided-tour-dialog"
+        data-testid={`${testIdPrefix}-dialog`}
         style={{ top: layout.dialog.top, left: layout.dialog.left, width: layout.dialog.width }}
       >
         <header className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">Concentrates tour</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">{tourTitle}</p>
             <h2 aria-live="polite" className="mt-1 text-base font-semibold text-white">{currentStep.title}</h2>
           </div>
           <span
             className="shrink-0 rounded-full border border-cyan-200/20 bg-cyan-200/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-cyan-100"
-            data-testid="concentrate-guided-tour-progress"
+            data-testid={`${testIdPrefix}-progress`}
           >
             {stepIndex + 1} of {steps.length}
           </span>
         </header>
-        <p id="concentrate-guided-tour-description" className="mt-2 text-sm leading-relaxed text-slate-300">
+        <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-slate-300">
           {currentStep.description}
         </p>
         {currentStep.action === 'calculator' && (

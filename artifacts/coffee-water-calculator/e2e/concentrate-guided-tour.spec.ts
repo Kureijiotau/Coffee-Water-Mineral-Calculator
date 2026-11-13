@@ -3,6 +3,10 @@ import { expect, test, type Page } from '@playwright/test';
 const tourDialog = (page: Page) => page.getByRole('dialog', { name: 'Concentrates tour' });
 
 async function openFreshConcentratesTour(page: Page, width = 1280, height = 900) {
+  await page.addInitScript(() => {
+    localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+  });
   await page.setViewportSize({ width, height });
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
@@ -104,6 +108,8 @@ test('remembers Finish after completing the tour', async ({ page }) => {
 test('keeps the How it works shortcut beside the title in both concentrate views', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+    localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
   });
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
@@ -145,6 +151,10 @@ test('uses only Lotus Drops targets and keeps each step visible on a small scree
 });
 
 test('uses the recipe branch and leaves recipe and calibration values unchanged', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+  });
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();

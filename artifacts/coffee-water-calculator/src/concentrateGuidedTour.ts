@@ -1,11 +1,8 @@
 export type ConcentrateTourBranch = 'recipe' | 'stock-builder' | 'lotus';
 
-export type ConcentrateTourStep = {
-  targetTestId: string;
-  title: string;
-  description: string;
-  action?: 'calculator';
-};
+import type { GuidedTourStep } from './guidedTour';
+
+export type ConcentrateTourStep = GuidedTourStep;
 
 export const CONCENTRATE_TOUR_STORAGE_KEY = 'watermancer.concentrates-tour.v1';
 

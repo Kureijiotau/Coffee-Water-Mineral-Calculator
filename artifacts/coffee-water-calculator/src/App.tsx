@@ -9,7 +9,7 @@ import watermancerHeaderImage from '@assets/watermancer-header-256.webp';
 import robertAsamiLogo from '@assets/robert-asami-logo-transparent.png';
 import kappMemeGif from '@assets/Kapp_1787058386404.gif';
 import kappMemeLastFrame from '@assets/Kapp_1787058386404_last.png';
-import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, Pencil, ScanLine } from 'lucide-react';
+import { Droplet, FlaskConical, Gauge, Info, AlertTriangle, Scale, Download, Check, Save, Share2, Upload, Import, Trash2, Layers, X, RotateCcw, Plus, Minus, ListChecks, Sparkles, Pin, PinOff, BottleWine, Beaker, Pipette, Ruler, Calculator as CalculatorIcon, Coffee, ChevronDown, ChevronLeft, Pencil, ScanLine, CircleHelp } from 'lucide-react';
 import { GiSaltShaker } from 'react-icons/gi';
 import { SiDiscord } from 'react-icons/si';
 import {
@@ -31,6 +31,13 @@ import BrewerPrepMethodSelector, { type BrewerPrepMethod } from './BrewerPrepMet
 import { DeferredPanelBoundary, DeferredPanelFallback } from './components/DeferredPanelBoundary';
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
+import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
+import {
+  getCalculatorTourSteps,
+  hasSeenCalculatorTour,
+  rememberCalculatorTour,
+  type CalculatorTourMode,
+} from './calculatorGuidedTour';
 import MilligramTooltip, { MilligramTooltipText, formatMilligramsAsGrams } from './MilligramTooltip';
 import WatermancerIonCrafting from './WatermancerIonCrafting';
 import {
@@ -2978,6 +2985,9 @@ function App() {
   const [recipeStepsPromptDismissed, setRecipeStepsPromptDismissed] = useState(false);
   const [appTab, setAppTab] = useState<AppTab>('calculator');
   const [calculatorMode, setCalculatorMode] = useState<CalculatorMode>(() => loadCalculatorMode());
+  const [calculatorTourMode, setCalculatorTourMode] = useState<CalculatorTourMode | null>(null);
+  const calculatorTourTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const attemptedCalculatorToursRef = useRef(new Set<CalculatorTourMode>());
   const [concentrateWorkspaceTab, setConcentrateWorkspaceTab] = useState<ConcentrateWorkspaceTab>('diy');
   const [ionRatioSeedDraft, setIonRatioSeedDraft] = useState<IonRatioDraft | null>(null);
   const [prepMethod, setPrepMethod] = useState<BrewerPrepMethod>('dropper');
@@ -3151,6 +3161,19 @@ function App() {
   const showAlchemist = calculatorMode === 'alchemist';
   const showWatermancer = calculatorMode === 'watermancer';
   const showRecipeMode = showBrewer || showAlchemist;
+  const currentCalculatorTourMode: CalculatorTourMode | null = showBrewer
+    ? 'brewer'
+    : showAlchemist
+      ? 'alchemist'
+      : null;
+  useEffect(() => {
+    if (appTab !== 'calculator' || !currentCalculatorTourMode) return;
+    if (attemptedCalculatorToursRef.current.has(currentCalculatorTourMode)) return;
+    attemptedCalculatorToursRef.current.add(currentCalculatorTourMode);
+    if (!hasSeenCalculatorTour(currentCalculatorTourMode)) {
+      setCalculatorTourMode(currentCalculatorTourMode);
+    }
+  }, [appTab, currentCalculatorTourMode]);
   const saltTableEntries = useMemo(() => {
     type SaltTableEntry =
       | { kind: 'group'; id: BrewerSaltGroupId; label: string }
@@ -3275,6 +3298,18 @@ function App() {
     handleNerdLevelChange(mode === 'watermancer' ? 'watermancer' : 'alchemist');
     setCalculatorMode(mode);
     setAppTab('calculator');
+  };
+  const closeCalculatorTour = (reason: ConcentrateTourCloseReason) => {
+    if (reason === 'skip' && calculatorTourMode) {
+      rememberCalculatorTour(calculatorTourMode);
+    }
+    setCalculatorTourMode(null);
+    window.requestAnimationFrame(() => calculatorTourTriggerRef.current?.focus({ preventScroll: true }));
+  };
+  const finishCalculatorTour = () => {
+    if (calculatorTourMode) rememberCalculatorTour(calculatorTourMode);
+    setCalculatorTourMode(null);
+    window.requestAnimationFrame(() => calculatorTourTriggerRef.current?.focus({ preventScroll: true }));
   };
   // Persist on changes
   useDebouncedPersistence(() => {
@@ -6771,6 +6806,22 @@ function App() {
                       ? 'A source-water and ion-balance workspace for refining the final mixture.'
                       : 'Choose how much detail to show for your water recipe.'}
                 </div>
+                {currentCalculatorTourMode && (
+                  <button
+                    ref={calculatorTourTriggerRef}
+                    type="button"
+                    onClick={() => setCalculatorTourMode(currentCalculatorTourMode)}
+                    aria-haspopup="dialog"
+                    aria-expanded={calculatorTourMode !== null}
+                    aria-label={`Open ${currentCalculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} tour`}
+                    title={`Learn the ${currentCalculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} workflow`}
+                    data-testid="calculator-guided-tour-trigger"
+                    className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/[0.07] px-3 py-1 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+                  >
+                    <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                    How it works
+                  </button>
+                )}
               </div>
             </div>
             {renderCalculatorModeTabs(calculatorMode)}
@@ -6858,7 +6909,10 @@ function App() {
           </div>
          )}
          {/* Mineral Table */}
-           {showRecipeMode && <div className="app-card app-panel-surface order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden">
+            {showRecipeMode && <div
+              data-testid={showBrewer ? 'brewer-mineral-recipe' : 'alchemist-mineral-recipe'}
+              className="app-card app-panel-surface order-2 bg-slate-800/70 backdrop-blur rounded-2xl shadow-2xl shadow-emerald-950/20 border border-emerald-400/25 overflow-hidden"
+            >
             <div className="app-section-header flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 border-b border-slate-700/40 bg-gradient-to-r from-sky-500/10 via-transparent to-indigo-500/10 text-slate-300">
             <div className="flex items-center gap-2">
                 <GiSaltShaker className="h-4 w-4 text-cyan-300" aria-hidden="true" />
@@ -7228,10 +7282,12 @@ function App() {
            })}
             </>
               {showAlchemist && (
-               <IonWatchDisclosure
-                 ions={saltOnlyIons}
-                 activeProfile={activeProfile}
-               />
+                <div data-testid="alchemist-ion-watch">
+                  <IonWatchDisclosure
+                    ions={saltOnlyIons}
+                    activeProfile={activeProfile}
+                  />
+                </div>
              )}
              <div className="flex items-center justify-start">
                <MemeSaltToggle
@@ -7245,7 +7301,12 @@ function App() {
              </div>
             </div>}
          {/* Water amount + Concentrate */}
-              {(showRecipeMode || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface ${showRecipeMode ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showRecipeMode ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}>
+              {(showRecipeMode || showWatermancer) && <div
+                data-testid={showBrewer ? 'brewer-batch-volume' : showAlchemist ? 'alchemist-batch-volume' : undefined}
+                data-watermancer-stage={showWatermancer ? 'waters' : undefined}
+                tabIndex={showWatermancer ? -1 : undefined}
+                className={`app-card app-panel-surface ${showRecipeMode ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showRecipeMode ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}
+              >
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/[0.08] via-sky-500/[0.025] to-blue-500/[0.08]" />
            <div className="relative z-10">
            <SharedSectionHeader
@@ -7480,7 +7541,10 @@ function App() {
            </div>}
 
         {/* GH / KH Summary */}
-        {showRecipeMode && <div className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden">
+        {showRecipeMode && <div
+          data-testid={showBrewer ? 'brewer-salt-summary' : 'alchemist-salt-summary'}
+          className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden"
+        >
           <SharedSectionHeader
             icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
              title={showBrewer ? 'Salt Recipe Summary (as CaCO₃)' : 'Base Salt Recipe Summary (as CaCO₃)'}
@@ -7504,7 +7568,12 @@ function App() {
         </div>}
 
         {/* Mineral Water Base */}
-          {(showAlchemist || showWatermancer) && <div data-watermancer-stage={showWatermancer ? 'waters' : undefined} tabIndex={showWatermancer ? -1 : undefined} className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border border-emerald-400/25 bg-slate-800/70 shadow-xl shadow-emerald-950/15 rounded-2xl' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}>
+          {(showAlchemist || showWatermancer) && <div
+            data-testid={showAlchemist ? 'alchemist-mineral-water-base' : undefined}
+            data-watermancer-stage={showWatermancer ? 'waters' : undefined}
+            tabIndex={showWatermancer ? -1 : undefined}
+            className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border border-emerald-400/25 bg-slate-800/70 shadow-xl shadow-emerald-950/15 rounded-2xl' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}
+          >
           <SharedSectionHeader
             icon={<MineralWaterBeaker active={hasMineralWater} />}
             title={showWatermancer ? '2. Add waters — Mineral water base' : 'Craft with mineral water as a base.'}
@@ -8941,6 +9010,7 @@ function App() {
        {(showRecipeMode || showWatermancer) && (
         <button
           type="button"
+           data-testid={showBrewer ? 'brewer-recipe-steps' : showAlchemist ? 'alchemist-recipe-steps' : undefined}
           onClick={() => {
             setRecipeStepsPromptDismissed(true);
             setShowBrewerSteps('dry');
@@ -8974,6 +9044,15 @@ function App() {
           )}
         </button>
       )}
+       {calculatorTourMode && (
+         <ConcentrateGuidedTour
+           steps={getCalculatorTourSteps(calculatorTourMode)}
+           tourTitle={`${calculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} tour`}
+           testIdPrefix="calculator-guided-tour"
+           onClose={closeCalculatorTour}
+           onFinish={finishCalculatorTour}
+         />
+       )}
       {/* Reset confirmation */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
