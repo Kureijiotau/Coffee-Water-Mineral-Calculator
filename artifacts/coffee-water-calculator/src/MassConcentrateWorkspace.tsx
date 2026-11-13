@@ -658,7 +658,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const [dropTargetInput, setDropTargetInput] = useState(String(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop ?? (canUseCaCo3Target ? 5 : 1)));
   const [dropBasis, setDropBasis] = useState<'salt-mg' | 'caco3'>(state.caCo3PpmPerDrop ? 'caco3' : state.physicalSaltPpmPerDrop ? 'salt-mg' : canUseCaCo3Target ? 'caco3' : 'salt-mg');
   const [calibrationError, setCalibrationError] = useState('');
-  const [strengthMessage, setStrengthMessage] = useState('');
+  const [dropTargetError, setDropTargetError] = useState('');
   const [jpgStatus, setJpgStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const preparationCardRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -703,7 +703,7 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           : canUseCaCo3Target ? 'caco3' : 'salt-mg',
     );
     setCalibrationError('');
-    setStrengthMessage('');
+    setDropTargetError('');
     setJpgStatus('idle');
   }, [state.id]);
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
@@ -747,6 +747,41 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
   const physicalDeliveredMg = result.valid && dropMass ? roundedDrops * dropMass * result.totalSaltMgPerStockG : NaN;
   const recipeDeliveredIons = result.valid && result.ionPpmPerDrop && Number.isFinite(roundedDrops)
     ? Object.entries(result.ionPpmPerDrop).map(([ion, ppm]) => `${ion}: ${n(ppm * roundedDrops)} mg/L`).join(' · ') : '';
+  const updateDropTarget = (value: string, basis: 'salt-mg' | 'caco3' = dropBasis) => {
+    setDropTargetInput(value);
+    const targetValue = value.trim() ? Number(value) : Number.NaN;
+    if (!Number.isFinite(targetValue) || targetValue <= 0) {
+      setDropTargetError('Enter a positive target per drop.');
+      return;
+    }
+
+    const physicalSaltPpmPerDrop = basis === 'caco3' && equivalentFactor > 0
+      ? targetValue / equivalentFactor
+      : targetValue;
+    const next = computeRecipeMassStrengthForPhysicalSaltPpm({
+      saltTargets,
+      formIdxBySaltId: forms,
+      totalStockMassG: state.totalStockMassG,
+      calibration: waterEstimate,
+      finalWaterMassKg,
+      compositionKey,
+      tipKey,
+      physicalSaltPpmPerDrop,
+    });
+    if (!next.valid) {
+      setDropTargetError(next.reason);
+      return;
+    }
+
+    onUpdate({
+      strength: next.strength,
+      batchScale: 1,
+      physicalSaltPpmPerDrop: basis === 'caco3' ? undefined : targetValue,
+      caCo3PpmPerDrop: basis === 'caco3' ? targetValue : undefined,
+    });
+    setDropTargetError('');
+    setCalibrationError('');
+  };
   const savePreparationJpg = async () => {
     const source = preparationCardRef.current;
     if (!source || jpgStatus === 'saving') return;
@@ -837,9 +872,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           inputMode="decimal" value={targetMgInput} onChange={e => { setTargetMgInput(e.target.value); onUpdate({ desiredSaltMassMg: e.target.value.trim() ? Number(e.target.value) : NaN }); }} />
       </label> : <>
         <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-cyan-200/15 bg-slate-950/30 p-1" role="group" aria-label="Drop target basis">
-          <button type="button" onClick={() => setDropBasis('caco3')} aria-pressed={dropBasis === 'caco3'} disabled={equivalentFactor <= 0}
+          <button type="button" onClick={() => { setDropBasis('caco3'); updateDropTarget(dropTargetInput, 'caco3'); }} aria-pressed={dropBasis === 'caco3'} disabled={equivalentFactor <= 0}
             className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'caco3' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'} disabled:cursor-not-allowed disabled:opacity-40`}>ppm as CaCO₃</button>
-          <button type="button" onClick={() => setDropBasis('salt-mg')} aria-pressed={dropBasis === 'salt-mg'}
+          <button type="button" onClick={() => { setDropBasis('salt-mg'); updateDropTarget(dropTargetInput, 'salt-mg'); }} aria-pressed={dropBasis === 'salt-mg'}
             className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'salt-mg' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>mg/L salt per drop</button>
         </div>
         <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
@@ -847,24 +882,16 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
             {dropBasis === 'caco3' ? 'Desired ppm as CaCO₃ per drop' : 'Desired physical salt (mg/L per drop)'}
           </span>
           <span className="mt-1 flex items-center gap-2">
-            <input aria-label={dropBasis === 'caco3' ? 'DIY CaCO3 ppm per drop' : 'DIY physical salt mg per L per drop'}
+            <input aria-label={dropBasis === 'caco3'
+              ? diySingleSalt ? 'DIY CaCO3 ppm per drop' : `${name} CaCO3 ppm per drop`
+              : diySingleSalt ? 'DIY physical salt mg per L per drop' : `${name} physical salt mg per L per drop`}
               className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal"
-              value={dropTargetInput} onChange={e => setDropTargetInput(e.target.value)} />
+              value={dropTargetInput} onChange={e => updateDropTarget(e.target.value)} />
             <span className="text-sm text-slate-400">{dropBasis === 'caco3' ? 'ppm' : 'mg/L'}</span>
           </span>
         </label>
-        <button type="button" className="mt-3 rounded-lg border border-cyan-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-200/55 hover:bg-cyan-400/10"
-          onClick={() => {
-            const target = dropBasis === 'caco3' && equivalentFactor > 0 ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput);
-            const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
-              calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: target });
-            if (next.valid) {
-              onUpdate({ strength: next.strength, batchScale: 1, physicalSaltPpmPerDrop: dropBasis === 'caco3' ? undefined : Number(dropTargetInput),
-                caCo3PpmPerDrop: dropBasis === 'caco3' ? Number(dropTargetInput) : undefined });
-              setStrengthMessage('Strength changed. Verify drops with the newly prepared finished stock.');
-              setCalibrationError('');
-            } else setStrengthMessage(next.reason);
-          }}>Set strength from drop target</button>
+        <p className="mt-2 text-xs text-cyan-100/65">Stock strength and preparation update automatically.</p>
+        {dropTargetError && <p role="alert" className="mt-2 text-xs text-amber-200">{dropTargetError}</p>}
       </>}
       {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-2 text-xs text-amber-100">
         Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.
@@ -893,7 +920,6 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
       </div>}
     </section>
 
-    {strengthMessage && <p role="status" className="text-xs text-amber-200">{strengthMessage}</p>}
     </div>
     <div className="space-y-4 lg:sticky lg:top-4" data-testid="mass-diy-preparation">
     <section ref={preparationCardRef} className="rounded-2xl border border-emerald-300/25 bg-gradient-to-br from-emerald-400/[0.08] via-slate-800/75 to-slate-800/70 p-4 shadow-xl sm:p-5" data-testid="mass-stock-preparation-card">
@@ -1035,9 +1061,9 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
           </label>}
           {!percentMode && <>
             <div className="mt-3 grid grid-cols-2 gap-1 rounded-lg border border-cyan-200/15 bg-slate-950/30 p-1" role="group" aria-label="Drop target basis">
-              <button type="button" onClick={() => setDropBasis('caco3')} aria-pressed={dropBasis === 'caco3'} disabled={equivalentFactor <= 0}
+              <button type="button" onClick={() => { setDropBasis('caco3'); updateDropTarget(dropTargetInput, 'caco3'); }} aria-pressed={dropBasis === 'caco3'} disabled={equivalentFactor <= 0}
                 className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'caco3' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'} disabled:cursor-not-allowed disabled:opacity-40`}>ppm as CaCO₃</button>
-              <button type="button" onClick={() => setDropBasis('salt-mg')} aria-pressed={dropBasis === 'salt-mg'}
+              <button type="button" onClick={() => { setDropBasis('salt-mg'); updateDropTarget(dropTargetInput, 'salt-mg'); }} aria-pressed={dropBasis === 'salt-mg'}
                 className={`rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${dropBasis === 'salt-mg' ? 'bg-cyan-400/15 text-cyan-100 shadow-sm' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}>mg/L salt per drop</button>
             </div>
             <label className="mt-3 block rounded-xl border border-cyan-200/20 bg-slate-950/25 px-3 py-2.5">
@@ -1045,24 +1071,16 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
                 {dropBasis === 'caco3' ? 'Desired ppm as CaCO₃ per drop' : 'Desired physical salt (mg/L per drop)'}
               </span>
               <span className="mt-1 flex items-center gap-2">
-                <input aria-label={dropBasis === 'caco3' ? 'DIY CaCO3 ppm per drop' : 'DIY physical salt mg per L per drop'}
+                <input aria-label={dropBasis === 'caco3'
+                  ? `${name} CaCO3 ppm per drop`
+                  : `${name} physical salt mg per L per drop`}
                   className="w-full bg-transparent text-xl font-semibold tabular-nums text-white outline-none" inputMode="decimal"
-                  value={dropTargetInput} onChange={e => setDropTargetInput(e.target.value)} />
+                  value={dropTargetInput} onChange={e => updateDropTarget(e.target.value)} />
                 <span className="text-sm text-slate-400">{dropBasis === 'caco3' ? 'ppm' : 'mg/L'}</span>
               </span>
             </label>
-            <button type="button" className="mt-3 rounded-lg border border-cyan-200/25 bg-slate-950/25 px-3 py-2 text-xs font-semibold text-cyan-100 hover:border-cyan-200/55 hover:bg-cyan-400/10"
-              onClick={() => {
-                const target = dropBasis === 'caco3' && equivalentFactor > 0 ? Number(dropTargetInput) / equivalentFactor : Number(dropTargetInput);
-                const next = computeRecipeMassStrengthForPhysicalSaltPpm({ saltTargets, formIdxBySaltId: forms, totalStockMassG: state.totalStockMassG,
-                  calibration: waterEstimate, finalWaterMassKg, compositionKey, tipKey, physicalSaltPpmPerDrop: target });
-                if (next.valid) {
-                  onUpdate({ strength: next.strength, batchScale: 1, physicalSaltPpmPerDrop: dropBasis === 'caco3' ? undefined : Number(dropTargetInput),
-                    caCo3PpmPerDrop: dropBasis === 'caco3' ? Number(dropTargetInput) : undefined });
-                  setStrengthMessage('Strength changed. Verify drops with the newly prepared finished stock.');
-                  setCalibrationError('');
-                } else setStrengthMessage(next.reason);
-              }}>Set strength from drop target</button>
+            <p className="mt-2 text-xs text-cyan-100/65">Stock strength and preparation update automatically.</p>
+            {dropTargetError && <p role="alert" className="mt-2 text-xs text-amber-200">{dropTargetError}</p>}
           </>}
           {(state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop) && <p className="mt-2 text-xs text-amber-100">
             Pinned target: {n(state.caCo3PpmPerDrop ?? state.physicalSaltPpmPerDrop!)} {state.caCo3PpmPerDrop ? 'ppm CaCO₃-equivalent' : 'mg/L physical salt'} per drop.
@@ -1133,7 +1151,6 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
               {state.calibration && measured.basis === 'unavailable' && <p className="mt-2 text-xs text-amber-200">The stock composition or tip changed. Recalibrate this finished stock before using measured drops.</p>}
             </>}
           </div>}
-          {strengthMessage && <p role="status" className="mt-2 text-xs text-amber-200">{strengthMessage}</p>}
         </section>
       </div>
 

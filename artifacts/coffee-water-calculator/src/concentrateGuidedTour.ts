@@ -78,7 +78,7 @@ const STOCK_BUILDER_STEPS: ConcentrateTourStep[] = [
   {
     targetTestId: 'mass-stock-dose',
     title: 'Choose the dose target',
-    description: 'Set a per-drop target in CaCO₃-equivalent ppm or salt mg/L, then apply it to calculate the stock strength.',
+    description: 'Set a per-drop target in CaCO₃-equivalent ppm or physical salt mg/L. Stock strength and preparation update automatically as you change it.',
   },
   {
     targetTestId: 'mass-stock-preparation-card',

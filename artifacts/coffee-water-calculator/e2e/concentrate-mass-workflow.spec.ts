@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
 
+async function disableFirstVisitConcentrateTour(page: import('@playwright/test').Page) {
+  await page.addInitScript(() => {
+    localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+  });
+}
+
 test('places DIY stock controls beside preparation on desktop and stacks them on phones', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
@@ -144,6 +150,7 @@ test('keeps DIY image export without a preparation text download button', async 
 });
 
 test('keeps separate recipe stocks independent and doses an all-in-one stock by mass', async ({ page }) => {
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
@@ -163,7 +170,11 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
   await expect(combined.getByLabel('All-in-one concentrate dose in grams')).toHaveValue('5');
   await page.getByRole('button', { name: 'Open concentrate recipe steps', exact: true }).click();
   await expect(combined).toContainText('total contents weigh');
-  await combined.getByRole('button', { name: 'Set strength from drop target' }).click();
+  const recipePreparation = combined.getByTestId('mass-recipe-preparation-card');
+  const previousPreparation = await recipePreparation.innerText();
+  await combined.getByLabel('All-in-one concentrate physical salt mg per L per drop').fill('0.5');
+  await expect(combined.getByRole('button', { name: 'Set strength from drop target' })).toHaveCount(0);
+  await expect.poll(() => recipePreparation.innerText()).not.toBe(previousPreparation);
   const pinnedStrength = Number(await combined.getByLabel('All-in-one concentrate recipe strength').inputValue());
   await combined.getByLabel('All-in-one concentrate target stock weight in grams').fill('200');
   await expect(combined).toContainText('Pinned target');
@@ -171,6 +182,7 @@ test('keeps separate recipe stocks independent and doses an all-in-one stock by 
 });
 
 test('edits the displayed recipe stock grams and preserves the recipe target', async ({ page }) => {
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
@@ -194,7 +206,7 @@ test('edits the displayed recipe stock grams and preserves the recipe target', a
   expect(doseGapPx).toBeLessThanOrEqual(6);
   const doseInputWidthPx = await doseInput.evaluate(input => input.getBoundingClientRect().width);
   expect(doseInputWidthPx).toBeLessThanOrEqual(20);
-  await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
+  await magnesium.getByLabel('Magnesium Sulfate concentrate CaCO3 ppm per drop').fill('5');
   const appliedStrength = await strengthInput.inputValue();
   for (const invalidDose of ['', '0', '-1', 'NaN', 'Infinity']) {
     await doseInput.fill(invalidDose);
@@ -225,6 +237,7 @@ test('edits the displayed recipe stock grams and preserves the recipe target', a
 });
 
 test('warns when a recipe dose implies unsafe strength and suggests a safer dose', async ({ page }) => {
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
@@ -248,6 +261,7 @@ test('warns when a recipe dose implies unsafe strength and suggests a safer dose
 
 test('saves and restores the editable recipe dose without a stale per-drop pin', async ({ page }) => {
   const planName = 'Editable dose pin regression';
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('mode-alchemist').click();
   await page.getByRole('textbox', { name: 'Magnesium Sulfate target ppm', exact: true }).fill('30');
@@ -256,7 +270,7 @@ test('saves and restores the editable recipe dose without a stale per-drop pin',
   const magnesium = page.getByTestId('mass-stock-card')
     .filter({ has: page.getByRole('heading', { name: 'Magnesium Sulfate concentrate', exact: true }) });
   const doseInput = magnesium.getByLabel('Magnesium Sulfate concentrate dose in grams');
-  await magnesium.getByRole('button', { name: 'Set strength from drop target' }).click();
+  await magnesium.getByLabel('Magnesium Sulfate concentrate CaCO3 ppm per drop').fill('5');
   await doseInput.fill('10');
   await expect(magnesium).not.toContainText('Pinned target');
   await expect(magnesium.getByLabel('Magnesium Sulfate concentrate recipe strength')).toHaveValue('10');
@@ -364,30 +378,44 @@ test('does not silently replace a malformed saved mass plan', async ({ page }) =
   expect(await page.evaluate(() => localStorage.getItem('coffee-water-diy-concentrate-inputs:recovery'))).toBe(original);
 });
 
-test('preserves DIY spreadsheet CaCO3-equivalent drop targets by weight', async ({ page }) => {
+test('automatically applies the DIY CaCO3 drop target to preparation and preserves it', async ({ page }) => {
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
   await page.getByRole('button', { name: 'ppm as CaCO₃', exact: true }).click();
-  await page.getByRole('button', { name: 'Set strength from drop target' }).click();
+  const preparation = page.getByTestId('mass-stock-preparation-card');
+  const previousPreparation = await preparation.innerText();
+  const targetInput = page.getByLabel('DIY CaCO3 ppm per drop');
+  await targetInput.fill('2');
+  await expect(page.getByRole('button', { name: 'Set strength from drop target' })).toHaveCount(0);
+  await expect(preparation).not.toHaveText(previousPreparation);
+  const updatedPreparation = await preparation.innerText();
+  await targetInput.fill('');
+  const targetError = page.getByText('Enter a positive target per drop.', { exact: true });
+  await expect(targetError).toBeVisible();
+  await expect.poll(() => preparation.innerText()).toBe(updatedPreparation);
+  await targetInput.fill('2');
+  await expect(targetError).toHaveCount(0);
   const doseDetails = page.locator('[data-testid^="mass-stock-dose-details-"]').first();
-  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(page.getByTestId('mass-stock-card')).toContainText('Pinned target: 2 ppm CaCO₃-equivalent per drop');
   await expect(doseDetails).not.toHaveAttribute('open', '');
   await doseDetails.locator('summary').click();
-  await expect(doseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(doseDetails).toContainText('Pinned planning target: 2 ppm CaCO₃-equivalent per drop');
   await expect(doseDetails).toContainText('not an additional ion or independent GH/KH target');
   await page.reload();
   await page.getByTestId('tab-concentrates').click();
   await expect(page.getByRole('button', { name: 'ppm as CaCO₃', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('DIY CaCO3 ppm per drop')).toHaveValue('2');
   const reloadedDoseDetails = page.locator('[data-testid^="mass-stock-dose-details-"]').first();
   await reloadedDoseDetails.locator('summary').click();
-  await expect(reloadedDoseDetails).toContainText('Pinned planning target: 5 ppm CaCO₃-equivalent per drop');
+  await expect(reloadedDoseDetails).toContainText('Pinned planning target: 2 ppm CaCO₃-equivalent per drop');
 });
 
 test('shows live DIY CaCO3-equivalent ppm per drop using finished-stock calibration when available', async ({ page }) => {
+  await disableFirstVisitConcentrateTour(page);
   await page.goto('/');
   await page.getByTestId('tab-concentrates').click();
   await page.getByRole('button', { name: 'ppm as CaCO₃', exact: true }).click();
-  await page.getByRole('button', { name: 'Set strength from drop target' }).click();
 
   const perDrop = page.getByTestId('mass-diy-per-drop-equivalent');
   await expect(perDrop).toBeVisible();
