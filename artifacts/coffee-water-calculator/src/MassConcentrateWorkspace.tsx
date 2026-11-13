@@ -607,7 +607,8 @@ export function MassConcentrateWorkspace(props: Props) {
               : state.physicalSaltPpmPerDrop! });
           strength = pinned.valid ? pinned.strength : NaN;
         }
-        return <MassStockCard key={g.id} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
+        const stockCardKey = !isRecipe && toolMode !== 'lotus' ? 'diy-single-salt' : g.id;
+        return <MassStockCard key={stockCardKey} name={g.name} state={state} saltTargets={targets} forms={groupForms} strength={strength}
           finalLiters={finalLiters} finalWaterMassKg={finalWaterMassKg} finalLitersInput={finalLitersInput} volumeUnit={props.volumeUnit}
           onFinalLitersChange={updateFinalLitersInput}
           onToggleVolumeUnit={toggleMassVolumeUnit} tipKey={tipKey} waterEstimate={waterEstimate} percentMode={lotus} editableRecipeDose={isRecipe}
@@ -674,6 +675,37 @@ function MassStockCard({ name, state, saltTargets, forms, strength, finalLiters,
       setDoseMassInput(n(doseMassG, 6));
     }
   }, [state.totalStockMassG, strength, finalWaterMassKg]);
+  useEffect(() => {
+    // Keep the shared DIY controls mounted as the selected salt changes, but
+    // restore this salt's own card inputs just as a keyed card previously did.
+    setMassInput(String(state.totalStockMassG));
+    setStrengthInput(String(
+      state.physicalSaltPpmPerDrop || state.caCo3PpmPerDrop ? strength : state.strength,
+    ));
+    setDoseMassInput(
+      Number.isFinite(initialDoseMassG) && initialDoseMassG > 0
+        ? String(initialDoseMassG)
+        : '',
+    );
+    setDropsInput(state.calibration?.basis === 'stock' ? String(state.calibration.drops) : '');
+    setWeighedInput(state.calibration?.basis === 'stock' ? String(state.calibration.massG) : '');
+    setTargetMgInput(String(state.desiredSaltMassMg ?? 40));
+    setDropTargetInput(String(
+      state.caCo3PpmPerDrop
+      ?? state.physicalSaltPpmPerDrop
+      ?? (canUseCaCo3Target ? 5 : 1),
+    ));
+    setDropBasis(
+      state.caCo3PpmPerDrop
+        ? 'caco3'
+        : state.physicalSaltPpmPerDrop
+          ? 'salt-mg'
+          : canUseCaCo3Target ? 'caco3' : 'salt-mg',
+    );
+    setCalibrationError('');
+    setStrengthMessage('');
+    setJpgStatus('idle');
+  }, [state.id]);
   const salts = recipeStockSaltMasses(saltTargets, forms, strength);
   const equivalentFactor = salts.length === 1 ? physicalSaltCaCo3EquivalentFactor(salts[0].saltId, forms[salts[0].saltId] ?? 0) : 0;
   const compositionKey = stockCompositionKey(salts, state.totalStockMassG, forms);
