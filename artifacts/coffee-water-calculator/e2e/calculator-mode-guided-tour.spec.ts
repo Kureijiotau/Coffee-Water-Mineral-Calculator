@@ -42,6 +42,50 @@ test('keeps the guided-tour spotlight outline compact', async ({ page }) => {
     .toContain('2px');
 });
 
+test('starts the Watermancer tour once and offers replay', async ({ page }) => {
+  await openFreshCalculator(page);
+  await expect(tourDialog(page, 'Alchemist')).toBeVisible();
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+
+  await page.getByTestId('mode-watermancer').click();
+  await expect(tourDialog(page, 'Watermancer')).toBeVisible();
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 6');
+  await expect(page.getByTestId('calculator-guided-tour-spotlight')).toHaveAttribute(
+    'data-target-testid',
+    'watermancer-ion-targets',
+  );
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+
+  await expect(page.getByTestId('calculator-guided-tour-trigger')).toHaveAccessibleName(
+    'Open Watermancer tour',
+  );
+  await page.getByTestId('calculator-guided-tour-trigger').click();
+  await expect(tourDialog(page, 'Watermancer')).toBeVisible();
+});
+
+test('follows the Watermancer tour from targets through the final mixture', async ({ page }) => {
+  await openFreshCalculator(page);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+
+  const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
+  const targets = [
+    'watermancer-ion-targets',
+    'watermancer-batch-volume',
+    'watermancer-water-sources',
+    'watermancer-salts',
+    'watermancer-auto-match',
+    'watermancer-final-mixture',
+  ];
+  for (const [index, target] of targets.entries()) {
+    await expect(spotlight).toHaveAttribute('data-target-testid', target);
+    if (index < targets.length - 1) {
+      await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+  }
+  await page.getByRole('button', { name: 'Finish', exact: true }).click();
+});
+
 test('follows the approved visible step order in both calculator modes', async ({ page }) => {
   await openFreshCalculator(page);
 
@@ -84,6 +128,22 @@ test('keeps the Alchemist tour dialog and highlighted sections on a phone screen
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();
   const dialog = await tourDialog(page, 'Alchemist').boundingBox();
   const target = await page.getByTestId('alchemist-batch-volume').boundingBox();
+  expect(dialog).not.toBeNull();
+  expect(target).not.toBeNull();
+  expect(dialog!.x).toBeGreaterThanOrEqual(0);
+  expect(dialog!.x + dialog!.width).toBeLessThanOrEqual(375);
+  expect(target!.x).toBeGreaterThanOrEqual(0);
+  expect(target!.x + target!.width).toBeLessThanOrEqual(375);
+});
+
+test('keeps the Watermancer tour target visible on a phone screen', async ({ page }) => {
+  await openFreshCalculator(page, 375, 812);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+
+  await expect(tourDialog(page, 'Watermancer')).toBeVisible();
+  const dialog = await tourDialog(page, 'Watermancer').boundingBox();
+  const target = await page.getByTestId('watermancer-ion-targets').boundingBox();
   expect(dialog).not.toBeNull();
   expect(target).not.toBeNull();
   expect(dialog!.x).toBeGreaterThanOrEqual(0);

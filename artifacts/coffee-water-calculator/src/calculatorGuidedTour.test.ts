@@ -40,13 +40,27 @@ describe('calculator guided tours', () => {
     ]);
   });
 
-  it('remembers first visits independently for Brewer and Alchemist', () => {
+  it('covers the Watermancer target-to-result workflow', () => {
+    expect(getCalculatorTourSteps('watermancer').map(step => step.targetTestId)).toEqual([
+      'watermancer-ion-targets',
+      'watermancer-batch-volume',
+      'watermancer-water-sources',
+      'watermancer-salts',
+      'watermancer-auto-match',
+      'watermancer-final-mixture',
+    ]);
+  });
+
+  it('remembers first visits independently for all calculator modes', () => {
     expect(hasSeenCalculatorTour('brewer')).toBe(false);
     expect(hasSeenCalculatorTour('alchemist')).toBe(false);
+    expect(hasSeenCalculatorTour('watermancer')).toBe(false);
 
     rememberCalculatorTour('brewer');
+    rememberCalculatorTour('watermancer');
 
     expect(hasSeenCalculatorTour('brewer')).toBe(true);
     expect(hasSeenCalculatorTour('alchemist')).toBe(false);
+    expect(hasSeenCalculatorTour('watermancer')).toBe(true);
   });
 });

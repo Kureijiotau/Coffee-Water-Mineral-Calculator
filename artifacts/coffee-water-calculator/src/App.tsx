@@ -34,6 +34,7 @@ import { StableNumberInput } from './components/StableNumberInput';
 import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
 import {
   getCalculatorTourSteps,
+  getCalculatorTourLabel,
   hasSeenCalculatorTour,
   rememberCalculatorTour,
   type CalculatorTourMode,
@@ -3165,7 +3166,9 @@ function App() {
     ? 'brewer'
     : showAlchemist
       ? 'alchemist'
-      : null;
+      : showWatermancer
+        ? 'watermancer'
+        : null;
   useEffect(() => {
     if (appTab !== 'calculator' || !currentCalculatorTourMode) return;
     if (attemptedCalculatorToursRef.current.has(currentCalculatorTourMode)) return;
@@ -6813,8 +6816,8 @@ function App() {
                     onClick={() => setCalculatorTourMode(currentCalculatorTourMode)}
                     aria-haspopup="dialog"
                     aria-expanded={calculatorTourMode !== null}
-                    aria-label={`Open ${currentCalculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} tour`}
-                    title={`Learn the ${currentCalculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} workflow`}
+                    aria-label={`Open ${getCalculatorTourLabel(currentCalculatorTourMode)} tour`}
+                    title={`Learn the ${getCalculatorTourLabel(currentCalculatorTourMode)} workflow`}
                     data-testid="calculator-guided-tour-trigger"
                     className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/[0.07] px-3 py-1 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
                   >
@@ -6829,7 +6832,7 @@ function App() {
         </div>
 
           {showWatermancer && (
-           <div className="order-1 scroll-mt-4 outline-none" data-watermancer-stage="target" tabIndex={-1}>
+            <div className="order-1 scroll-mt-4 outline-none" data-testid="watermancer-ion-targets" data-watermancer-stage="target" tabIndex={-1}>
              {SHOW_WATERMANCER_RATIO_CONTROLS && <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-400/25 bg-indigo-950/20 px-3 py-2.5">
                <div>
                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-indigo-200">Matching mode</div>
@@ -7302,7 +7305,7 @@ function App() {
             </div>}
          {/* Water amount + Concentrate */}
               {(showRecipeMode || showWatermancer) && <div
-                data-testid={showBrewer ? 'brewer-batch-volume' : showAlchemist ? 'alchemist-batch-volume' : undefined}
+                data-testid={showBrewer ? 'brewer-batch-volume' : showAlchemist ? 'alchemist-batch-volume' : showWatermancer ? 'watermancer-batch-volume' : undefined}
                 data-watermancer-stage={showWatermancer ? 'waters' : undefined}
                 tabIndex={showWatermancer ? -1 : undefined}
                 className={`app-card app-panel-surface ${showRecipeMode ? 'order-1' : 'order-2'} relative scroll-mt-4 overflow-hidden rounded-2xl border outline-none ${showRecipeMode ? 'border-emerald-400/25 shadow-emerald-950/15' : 'border-indigo-400/25 shadow-indigo-950/15'} bg-slate-800/75 shadow-xl backdrop-blur`}
@@ -7569,7 +7572,7 @@ function App() {
 
         {/* Mineral Water Base */}
           {(showAlchemist || showWatermancer) && <div
-            data-testid={showAlchemist ? 'alchemist-mineral-water-base' : undefined}
+            data-testid={showAlchemist ? 'alchemist-mineral-water-base' : showWatermancer ? 'watermancer-water-sources' : undefined}
             data-watermancer-stage={showWatermancer ? 'waters' : undefined}
             tabIndex={showWatermancer ? -1 : undefined}
             className={`app-card app-panel-surface scroll-mt-4 outline-none ${showAlchemist ? 'order-1 border border-emerald-400/25 bg-slate-800/70 shadow-xl shadow-emerald-950/15 rounded-2xl' : 'order-2 border-indigo-400/25 bg-slate-800/70 rounded-2xl shadow-xl'} overflow-hidden`}
@@ -8066,7 +8069,7 @@ function App() {
         )}
 
          {showWatermancer && activeWatermancerRoute && (
-             <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="final-mixture" tabIndex={-1}>
+             <div className="app-card app-panel-surface order-5 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-testid="watermancer-final-mixture" data-watermancer-stage="final-mixture" tabIndex={-1}>
               <SharedSectionHeader icon={<Droplet className="w-4 h-4" />} title="4. Review match — Final mixture" />
             <div className="border-b border-slate-700/40 px-4 pt-3 text-xs text-slate-400 sm:px-6">
                The active route's modeled final mixture at the selected batch volume, including visible dose overrides.
@@ -8224,7 +8227,7 @@ function App() {
 
         {/* Mineral Water Addition */}
         {showWatermancer && batchMl > 0 && (
-           <div className="app-card app-panel-surface order-3 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-watermancer-stage="salts" tabIndex={-1}>
+           <div className="app-card app-panel-surface order-3 scroll-mt-4 outline-none bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-indigo-400/25 overflow-hidden" data-testid="watermancer-salts" data-watermancer-stage="salts" tabIndex={-1}>
             <SharedSectionHeader
               icon={<GiSaltShaker className="w-4 h-4" />}
              title="3. Choose salts"
@@ -8540,7 +8543,7 @@ function App() {
         )}
 
          {showWatermancer && watermancerLiveResult && (
-            <div className="precision-match-card app-card app-panel-surface order-4 scroll-mt-4 outline-none overflow-hidden rounded-2xl border bg-slate-800/70 backdrop-blur" data-watermancer-stage="match" tabIndex={-1}>
+            <div className="precision-match-card app-card app-panel-surface order-4 scroll-mt-4 outline-none overflow-hidden rounded-2xl border bg-slate-800/70 backdrop-blur" data-testid="watermancer-auto-match" data-watermancer-stage="match" tabIndex={-1}>
              <SharedSectionHeader
                 icon={<Sparkles className="h-4 w-4 text-cyan-300" />}
                  after={(
@@ -9047,7 +9050,7 @@ function App() {
        {calculatorTourMode && (
          <ConcentrateGuidedTour
            steps={getCalculatorTourSteps(calculatorTourMode)}
-           tourTitle={`${calculatorTourMode === 'brewer' ? 'Brewer' : 'Alchemist'} tour`}
+           tourTitle={`${getCalculatorTourLabel(calculatorTourMode)} tour`}
            testIdPrefix="calculator-guided-tour"
            onClose={closeCalculatorTour}
            onFinish={finishCalculatorTour}

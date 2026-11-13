@@ -1,10 +1,11 @@
 import type { GuidedTourStep } from './guidedTour';
 
-export type CalculatorTourMode = 'brewer' | 'alchemist';
+export type CalculatorTourMode = 'brewer' | 'alchemist' | 'watermancer';
 
 const TOUR_STORAGE_KEYS: Record<CalculatorTourMode, string> = {
   brewer: 'watermancer.brewer-tour.v1',
   alchemist: 'watermancer.alchemist-tour.v1',
+  watermancer: 'watermancer.watermancer-tour.v1',
 };
 
 const BREWER_STEPS: GuidedTourStep[] = [
@@ -58,8 +59,47 @@ const ALCHEMIST_STEPS: GuidedTourStep[] = [
   },
 ];
 
+const WATERMANCER_STEPS: GuidedTourStep[] = [
+  {
+    targetTestId: 'watermancer-ion-targets',
+    title: 'Choose your ion targets',
+    description: 'Select a saved profile or adjust individual ion goals. Watermancer uses these as the final-water targets.',
+  },
+  {
+    targetTestId: 'watermancer-batch-volume',
+    title: 'Set your finished volume',
+    description: 'Choose how much water you want to make. Water amounts and salt doses are based on this batch size.',
+  },
+  {
+    targetTestId: 'watermancer-water-sources',
+    title: 'Add source waters',
+    description: 'Optionally add bottled or mineral water. Its modeled ions count toward your final targets.',
+  },
+  {
+    targetTestId: 'watermancer-salts',
+    title: 'Choose salts and doses',
+    description: 'Select which salts Watermancer may use. Editing a dose holds it fixed while the match adjusts the other selected salts.',
+  },
+  {
+    targetTestId: 'watermancer-auto-match',
+    title: 'Run Precision Auto-match',
+    description: 'Use Find the best match to apply the best available salt and water plan for your selected targets.',
+  },
+  {
+    targetTestId: 'watermancer-final-mixture',
+    title: 'Review the final mixture',
+    description: 'Compare the modeled final ions and summary with your target profile before preparing the water.',
+  },
+];
+
 export function getCalculatorTourSteps(mode: CalculatorTourMode): GuidedTourStep[] {
-  return mode === 'brewer' ? BREWER_STEPS : ALCHEMIST_STEPS;
+  if (mode === 'brewer') return BREWER_STEPS;
+  if (mode === 'alchemist') return ALCHEMIST_STEPS;
+  return WATERMANCER_STEPS;
+}
+
+export function getCalculatorTourLabel(mode: CalculatorTourMode): string {
+  return mode === 'brewer' ? 'Brewer' : mode === 'alchemist' ? 'Alchemist' : 'Watermancer';
 }
 
 export function hasSeenCalculatorTour(mode: CalculatorTourMode): boolean {
