@@ -101,6 +101,23 @@ test('remembers Finish after completing the tour', async ({ page }) => {
   await expect(tourDialog(page)).toBeHidden();
 });
 
+test('keeps the How it works shortcut beside the title in both concentrate views', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+  });
+  await page.goto('/');
+  await page.getByTestId('tab-concentrates').click();
+
+  const titleGroup = page.getByTestId('concentrate-title-group');
+  await expect(titleGroup.getByRole('button', { name: 'How it works', exact: true })).toBeVisible();
+  await expect(page.getByTestId('concentrate-header-actions').getByTestId('concentrate-tour-trigger')).toHaveCount(0);
+
+  await page.getByTestId('concentrate-workspace-recipe').click();
+  await expect(page.getByRole('heading', { name: 'No recipe concentrate loaded' })).toBeVisible();
+  const emptyStateTitle = page.getByTestId('concentrate-empty-state').getByTestId('concentrate-title-group');
+  await expect(emptyStateTitle.getByRole('button', { name: 'How it works', exact: true })).toBeVisible();
+});
+
 test('uses only Lotus Drops targets and keeps each step visible on a small screen', async ({ page }) => {
   await openFreshConcentratesTour(page, 375, 667);
 

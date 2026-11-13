@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertTriangle, Beaker, Check, ChevronDown, Droplet, FlaskConical, ListChecks, Pipette } from 'lucide-react';
+import { AlertTriangle, Beaker, Check, ChevronDown, CircleHelp, Droplet, FlaskConical, ListChecks, Pipette } from 'lucide-react';
 import { SALTS, getSaltColorTokens, getSaltSolubilityLimitGPer100Ml, splitIntoStockGroups, type SaltRecipeEntry } from './waterData';
 import { computeRecipeMassDropEquivalents, recipeStockSaltMasses, stockCompositionKey,
   waterLitersToEquivalentMassKg,
@@ -45,6 +45,7 @@ type Group = MassConcentratePlanSnapshot['groups'][number];
 const n = (value: number, digits = 3) => Number(value.toFixed(digits)).toString();
 const inputClass = 'mt-1 w-full rounded-lg border border-slate-600/70 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 outline-none focus:border-fuchsia-300';
 const buttonClass = 'rounded-lg border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-2 text-xs font-semibold text-fuchsia-100 hover:bg-fuchsia-500/20 disabled:opacity-40';
+const tourButtonClass = 'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-cyan-200/25 bg-cyan-300/[0.07] px-3 py-2 text-xs font-semibold text-cyan-100 shadow-sm shadow-cyan-950/20 transition-colors hover:border-cyan-200/45 hover:bg-cyan-300/[0.12] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/70';
 const emptyGroup = (id: string): Group => ({ id, totalStockMassG: 100, strength: 20, saltIds: [], calibration: null });
 
 function SharedDropperCalibrationPanel({ dropperRates, sharedCalibrations, selectedStyle, onCalibrationChange, footer }: {
@@ -386,8 +387,8 @@ export function MassConcentrateWorkspace(props: Props) {
 
   if (isRecipe && !props.recipeHandoff) return <>
     <section className="rounded-2xl border border-fuchsia-400/25 bg-gradient-to-br from-fuchsia-500/10 via-slate-800/70 to-violet-500/10 p-5 shadow-xl sm:p-6" data-testid="concentrate-empty-state">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div data-testid="concentrate-title-group" className="flex flex-wrap items-start gap-x-3 gap-y-2">
+        <div className="min-w-0">
           <h2 ref={workspaceHeadingRef} tabIndex={-1} data-testid="concentrate-workspace-heading" className="text-base font-semibold text-fuchsia-100">
             No recipe concentrate loaded
           </h2>
@@ -397,10 +398,12 @@ export function MassConcentrateWorkspace(props: Props) {
           ref={tourTriggerRef}
           type="button"
           data-testid="concentrate-tour-trigger"
+          aria-label="How it works"
           onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
-          className={`${buttonClass} min-h-11`}
+          className={tourButtonClass}
         >
-          Tour
+          <CircleHelp className="h-4 w-4" aria-hidden="true" />
+          <span>How it works</span>
         </button>
       </div>
     </section>
@@ -414,31 +417,35 @@ export function MassConcentrateWorkspace(props: Props) {
   return <div className={`concentrate-workspace ${!isRecipe && toolMode === 'lotus' ? 'space-y-3 sm:space-y-4' : 'space-y-4'}`}>
     <div className="app-panel app-panel--quiet app-card rounded-2xl border px-4 py-3 shadow-xl backdrop-blur-xl sm:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-2">
-          <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" aria-hidden="true" />
-          <div>
-            <h2 ref={workspaceHeadingRef} tabIndex={-1} data-testid="concentrate-workspace-heading" className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-              {isRecipe ? 'Recipe concentrate workspace' : toolMode === 'lotus' ? 'DIY concentrate workspace' : 'Concentrates / DIY stock'}
-            </h2>
-            <div className="mt-0.5 text-xs text-slate-500">
-              {isRecipe
-                ? 'Build and calibrate the concentrate for the imported calculator recipe.'
-                : toolMode === 'lotus'
-                  ? 'Prepare one Lotus-style mineral stock at a time.'
-                  : <span className="block text-lg font-semibold tracking-tight text-slate-50">Build a single-salt stock</span>}
+        <div data-testid="concentrate-title-group" className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-fuchsia-300" aria-hidden="true" />
+            <div className="min-w-0">
+              <h2 ref={workspaceHeadingRef} tabIndex={-1} data-testid="concentrate-workspace-heading" className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                {isRecipe ? 'Recipe concentrate workspace' : toolMode === 'lotus' ? 'DIY concentrate workspace' : 'Concentrates / DIY stock'}
+              </h2>
+              <div className="mt-0.5 text-xs text-slate-500">
+                {isRecipe
+                  ? 'Build and calibrate the concentrate for the imported calculator recipe.'
+                  : toolMode === 'lotus'
+                    ? 'Prepare one Lotus-style mineral stock at a time.'
+                    : <span className="block text-lg font-semibold tracking-tight text-slate-50">Build a single-salt stock</span>}
+              </div>
             </div>
           </div>
-        </div>
-        <div data-testid="concentrate-header-actions" className="flex w-full items-center justify-end gap-2 sm:w-auto">
           <button
             ref={tourTriggerRef}
             type="button"
             data-testid="concentrate-tour-trigger"
+            aria-label="How it works"
             onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
-            className={`${buttonClass} min-h-11`}
+            className={tourButtonClass}
           >
-            Tour
+            <CircleHelp className="h-4 w-4" aria-hidden="true" />
+            <span>How it works</span>
           </button>
+        </div>
+        <div data-testid="concentrate-header-actions" className="flex w-full items-center justify-end gap-2 sm:w-auto">
           {!isRecipe && <div role="tablist" aria-label="DIY concentrate workspace" className="grid grid-cols-2 gap-1 rounded-xl border border-slate-700/60 bg-slate-900/40 p-1">
             <button type="button" role="tab" aria-selected={toolMode !== 'lotus'} onClick={() => setToolMode('recipe')}
               className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${toolMode !== 'lotus' ? 'border border-fuchsia-400/40 bg-fuchsia-500/15 text-fuchsia-200 shadow-sm' : 'border border-transparent text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'}`}>
