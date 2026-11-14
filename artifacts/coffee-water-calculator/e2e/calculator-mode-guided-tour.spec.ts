@@ -46,6 +46,44 @@ test('keeps the guided-tour spotlight outline compact', async ({ page }) => {
     .toContain('2px');
 });
 
+test('announces calculator tour steps without exposing diagrams and traps keyboard focus', async ({ page }) => {
+  await openFreshCalculator(page);
+
+  const dialog = tourDialog(page, 'Alchemist');
+  const title = dialog.getByRole('heading', { level: 2 });
+  const description = page.locator('#calculator-guided-tour-description');
+  const visual = page.getByTestId('calculator-guided-tour-visual');
+
+  await expect(title).toHaveText('Set your batch volume');
+  await expect(title).toHaveAttribute('aria-live', 'polite');
+  await expect(description).toHaveText(
+    'Choose the final amount you want to make. Salt targets and direct doses use this batch size.',
+  );
+  await expect(description).toHaveAttribute('aria-live', 'polite');
+  await expect(description).toHaveAttribute('aria-atomic', 'true');
+  await expect(visual).toHaveAttribute('aria-hidden', 'true');
+  expect(await dialog.ariaSnapshot()).not.toContain('Finished batch');
+
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(title).toHaveText('Add mineral water if needed');
+  await expect(description).toHaveText(
+    'This optional, collapsed section lets you count bottled or mineral water toward the finished recipe.',
+  );
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(title).toHaveText('Set your batch volume');
+  await expect(description).toHaveText(
+    'Choose the final amount you want to make. Salt targets and direct doses use this batch size.',
+  );
+
+  await expect(dialog).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Skip', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('button', { name: 'Next', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Skip', exact: true })).toBeFocused();
+});
+
 test('starts the Watermancer tour once and offers replay', async ({ page }) => {
   await openFreshCalculator(page);
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();

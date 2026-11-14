@@ -95,6 +95,46 @@ test('opens automatically on the first visit and supports Back, Next, and Skip',
   await expect(page.getByTestId('concentrate-workspace-heading')).toBeFocused();
 });
 
+test('announces Concentrates tour steps without exposing diagrams and traps keyboard focus', async ({ page }) => {
+  await openFreshConcentratesTour(page);
+
+  const dialog = tourDialog(page);
+  const title = dialog.getByRole('heading', { level: 2 });
+  const description = page.locator('#concentrate-guided-tour-description');
+  const visual = page.getByTestId('concentrate-guided-tour-visual');
+
+  await expect(title).toHaveText('Choose a mineral');
+  await expect(title).toHaveAttribute('aria-live', 'polite');
+  await expect(description).toHaveText(
+    'Select one salt and its hydration form. The form changes the amount to weigh.',
+  );
+  await expect(description).toHaveAttribute('aria-live', 'polite');
+  await expect(description).toHaveAttribute('aria-atomic', 'true');
+  await expect(visual).toHaveAttribute('aria-hidden', 'true');
+  const accessibleDialog = await dialog.ariaSnapshot();
+  expect(accessibleDialog.match(/Select one salt/g)).toHaveLength(1);
+  expect(accessibleDialog).not.toContain('Hydration');
+
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(title).toHaveText('Calibrate the dropper');
+  await expect(description).toHaveText(
+    'Measure plain-water drops for each tip style. The selected style is used for the dose estimate.',
+  );
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
+  await expect(title).toHaveText('Choose a mineral');
+  await expect(description).toHaveText(
+    'Select one salt and its hydration form. The form changes the amount to weigh.',
+  );
+
+  await expect(dialog).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Skip', exact: true })).toBeFocused();
+  await page.keyboard.press('Shift+Tab');
+  await expect(dialog.getByRole('button', { name: 'Next', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(dialog.getByRole('button', { name: 'Skip', exact: true })).toBeFocused();
+});
+
 test('remembers Skip, offers replay, and Escape restores focus to the Tour button', async ({ page }) => {
   await openFreshConcentratesTour(page);
 

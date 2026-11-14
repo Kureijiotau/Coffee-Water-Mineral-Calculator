@@ -311,7 +311,7 @@ export function ConcentrateGuidedTour({
               </div>
             </div>
           )}
-          <p id={descriptionId} className={renderStepVisual
+          <p id={descriptionId} aria-live="polite" aria-atomic="true" className={renderStepVisual
             ? 'text-sm leading-relaxed text-slate-300'
             : 'mt-2 text-sm leading-relaxed text-slate-300'}>
             {currentStep.description}
