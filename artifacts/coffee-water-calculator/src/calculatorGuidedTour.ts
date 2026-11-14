@@ -13,21 +13,25 @@ const BREWER_STEPS: GuidedTourStep[] = [
     targetTestId: 'brewer-batch-volume',
     title: 'Set your batch volume',
     description: 'Choose how much finished water you’re making. The recipe doses are calculated for this amount.',
+    illustrationKey: 'brewer-batch-volume',
   },
   {
     targetTestId: 'brewer-mineral-recipe',
     title: 'Build the mineral recipe',
     description: 'Set each mineral target here. Brewer groups GH and KH contributors and updates the direct salt amounts in milligrams.',
+    illustrationKey: 'brewer-mineral-recipe',
   },
   {
     targetTestId: 'brewer-salt-summary',
     title: 'Check the recipe summary',
     description: 'GH, KH, TDS, and their ratio give you a quick check of the salt recipe.',
+    illustrationKey: 'brewer-salt-summary',
   },
   {
     targetTestId: 'brewer-recipe-steps',
     title: 'Follow the dosing steps',
     description: 'Open the checklist to weigh salts or dose calibrated concentrate into RO or distilled water.',
+    illustrationKey: 'brewer-recipe-steps',
   },
 ];
 
@@ -36,31 +40,37 @@ const ALCHEMIST_STEPS: GuidedTourStep[] = [
     targetTestId: 'alchemist-batch-volume',
     title: 'Set your batch volume',
     description: 'Choose the final amount you want to make. Salt targets and direct doses use this batch size.',
+    illustrationKey: 'alchemist-batch-volume',
   },
   {
     targetTestId: 'alchemist-mineral-water-base',
     title: 'Add mineral water if needed',
     description: 'This optional, collapsed section lets you count bottled or mineral water toward the finished recipe.',
+    illustrationKey: 'alchemist-mineral-water-base',
   },
   {
     targetTestId: 'alchemist-mineral-recipe',
     title: 'Create or choose a recipe',
     description: 'Choose, save, share, or import a mineral recipe. Adjust salt targets and hydration forms, or send it to Concentrates.',
+    illustrationKey: 'alchemist-mineral-recipe',
   },
   {
     targetTestId: 'alchemist-ion-watch',
     title: 'Review the ion check',
     description: 'Aiki’s check shows whether modeled ions are within the selected profile’s ranges. It does not change your recipe.',
+    illustrationKey: 'alchemist-ion-watch',
   },
   {
     targetTestId: 'alchemist-salt-summary',
     title: 'Review the salt-only summary',
     description: 'This shows GH, KH, and TDS from salts. Mineral-water contributions are accounted for separately.',
+    illustrationKey: 'alchemist-salt-summary',
   },
   {
     targetTestId: 'alchemist-recipe-steps',
     title: 'Open Recipe steps',
     description: 'Review the preparation instructions for this recipe, then save the steps as an image if you want.',
+    illustrationKey: 'alchemist-recipe-steps',
   },
 ];
 

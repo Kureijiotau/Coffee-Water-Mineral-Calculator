@@ -60,17 +60,36 @@ async function expectSpotlightPlacement(page: Page) {
 test('opens automatically on the first visit and supports Back, Next, and Skip', async ({ page }) => {
   await openFreshConcentratesTour(page);
 
-  await expect(page.getByTestId('concentrate-guided-tour-visual')).toHaveCount(0);
+  await expect(page.getByTestId('concentrate-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'stock-builder-mineral');
   await expect(page.getByTestId('concentrate-guided-tour-progress')).toHaveText('1 of 5');
   await expect(page.getByTestId('mass-stock-composition')).toBeVisible();
   await expectSpotlightPlacement(page);
 
   await page.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(page.getByTestId('concentrate-guided-tour-progress')).toHaveText('2 of 5');
+  await expect(page.getByTestId('concentrate-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'stock-builder-calibration');
   await expect(tourDialog(page)).toBeFocused();
   await page.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(page.getByTestId('concentrate-guided-tour-progress')).toHaveText('1 of 5');
 
+  const stockBuilder = [
+    ['mass-stock-composition', 'stock-builder-mineral'],
+    ['mass-shared-calibration-fields', 'stock-builder-calibration'],
+    ['mass-stock-setup', 'stock-builder-setup'],
+    ['mass-stock-dose', 'stock-builder-dose'],
+    ['mass-stock-preparation-card', 'stock-builder-preparation'],
+  ];
+  for (let step = 0; step < stockBuilder.length; step += 1) {
+    await expect(page.getByTestId('concentrate-guided-tour-spotlight'))
+      .toHaveAttribute('data-target-testid', stockBuilder[step][0]);
+    await expect(page.getByTestId('concentrate-guided-tour-visual'))
+      .toHaveAttribute('data-illustration-key', stockBuilder[step][1]);
+    if (step < stockBuilder.length - 1) {
+      await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+  }
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
   await expect(tourDialog(page)).toBeHidden();
   await expect(page.getByTestId('concentrate-workspace-heading')).toBeFocused();
@@ -133,15 +152,17 @@ test('uses only Lotus Drops targets and keeps each step visible on a small scree
   await page.getByTestId('concentrate-tour-trigger').click();
 
   const expectedTargets = [
-    'lotus-dropper-field',
-    'mass-shared-calibration-fields',
-    'lotus-brew-volume-section',
-    'lotus-per-drop-summary',
-    'lotus-finished-stock-mass',
+    ['lotus-dropper-field', 'lotus-dropper'],
+    ['mass-shared-calibration-fields', 'lotus-calibration'],
+    ['lotus-brew-volume-section', 'lotus-volume'],
+    ['lotus-per-drop-summary', 'lotus-per-drop'],
+    ['lotus-finished-stock-mass', 'lotus-stock-preparation'],
   ];
   for (let index = 0; index < expectedTargets.length; index += 1) {
     const spotlight = page.getByTestId('concentrate-guided-tour-spotlight');
-    await expect(spotlight).toHaveAttribute('data-target-testid', expectedTargets[index]);
+    await expect(spotlight).toHaveAttribute('data-target-testid', expectedTargets[index][0]);
+    await expect(page.getByTestId('concentrate-guided-tour-visual'))
+      .toHaveAttribute('data-illustration-key', expectedTargets[index][1]);
     await expectSpotlightPlacement(page);
     if (index < expectedTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -172,16 +193,18 @@ test('uses the recipe branch and leaves recipe and calibration values unchanged'
   ).map(element => [element.getAttribute('aria-label') ?? element.textContent ?? '', element.value]));
   const before = await readValues();
   const expectedTargets = [
-    'concentrate-recipe-overview',
-    'mass-recipe-stock-arrangement',
-    'mass-recipe-stock-weight',
-    'recipe-dose-result',
-    'mass-recipe-preparation-card',
+    ['concentrate-recipe-overview', 'recipe-concentrate-overview'],
+    ['mass-recipe-stock-arrangement', 'recipe-stock-arrangement'],
+    ['mass-recipe-stock-weight', 'recipe-stock-weight'],
+    ['recipe-dose-result', 'recipe-dose-result'],
+    ['mass-recipe-preparation-card', 'recipe-preparation'],
   ];
   for (let index = 0; index < expectedTargets.length; index += 1) {
     await expect(page.getByTestId('concentrate-guided-tour-spotlight'))
-      .toHaveAttribute('data-target-testid', expectedTargets[index]);
-    if (expectedTargets[index] === 'mass-recipe-stock-arrangement') {
+      .toHaveAttribute('data-target-testid', expectedTargets[index][0]);
+    await expect(page.getByTestId('concentrate-guided-tour-visual'))
+      .toHaveAttribute('data-illustration-key', expectedTargets[index][1]);
+    if (expectedTargets[index][0] === 'mass-recipe-stock-arrangement') {
       await expect(tourDialog(page)).toContainText('Separate salts');
       await expect(tourDialog(page)).toContainText('GH + KH');
       await expect(tourDialog(page)).toContainText('All-in-one');
@@ -205,6 +228,8 @@ test('offers a Calculator route when Recipe Concentrate has no recipe loaded', a
   await expect(tourDialog(page)).toContainText('Start with a recipe');
   await expect(page.getByTestId('concentrate-guided-tour-spotlight'))
     .toHaveAttribute('data-target-testid', 'concentrate-empty-state');
+  await expect(page.getByTestId('concentrate-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'recipe-concentrate-empty');
   await page.getByRole('button', { name: 'Open Calculator', exact: true }).click();
   await expect(tourDialog(page)).toBeHidden();
   await expect(page.getByRole('tab', { name: 'Calculator', exact: true })).toHaveAttribute('aria-selected', 'true');

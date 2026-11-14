@@ -10,6 +10,7 @@ import { readConcentrateStockRecord, readStandaloneMassSnapshot, isRecord, type 
 import { ACCOUNT_SYNC_REMOTE_CHANGE_EVENT, loadDiyConcentrateInputs, loadDiyConcentrateStockState, archiveDiyConcentrateInputsForRecovery, saveDiyConcentrateInputs } from './accountSyncStorage';
 import { HelpTip } from './HelpTip';
 import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
+import { GuidedTourIllustration } from './GuidedTourIllustration';
 import {
   getConcentrateTourSteps,
   hasSeenConcentrateTour,
@@ -412,6 +413,10 @@ export function MassConcentrateWorkspace(props: Props) {
       onClose={closeTour}
       onFinish={finishTour}
       onNavigateToCalculator={navigateToCalculatorFromTour}
+      mobileDialogMaxHeightVh={42}
+      renderStepVisual={step => step.illustrationKey
+        ? <GuidedTourIllustration illustrationKey={step.illustrationKey} />
+        : null}
     />}
   </>;
   return <div className={`concentrate-workspace ${!isRecipe && toolMode === 'lotus' ? 'space-y-3 sm:space-y-4' : 'space-y-4'}`}>
@@ -640,6 +645,10 @@ export function MassConcentrateWorkspace(props: Props) {
       onClose={closeTour}
       onFinish={finishTour}
       onNavigateToCalculator={navigateToCalculatorFromTour}
+      mobileDialogMaxHeightVh={42}
+      renderStepVisual={step => step.illustrationKey
+        ? <GuidedTourIllustration illustrationKey={step.illustrationKey} />
+        : null}
     />}
   </div>;
 }

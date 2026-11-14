@@ -13,6 +13,7 @@ type Props = {
   tourTitle?: string;
   testIdPrefix?: string;
   renderStepVisual?: (step: ConcentrateTourStep) => ReactNode;
+  mobileDialogMaxHeightVh?: number;
 };
 
 type Rect = { top: number; left: number; width: number; height: number };
@@ -132,6 +133,7 @@ export function ConcentrateGuidedTour({
   tourTitle = 'Concentrates tour',
   testIdPrefix = 'concentrate-guided-tour',
   renderStepVisual,
+  mobileDialogMaxHeightVh = 48,
 }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [layout, setLayout] = useState<TourLayout | null>(null);
@@ -170,7 +172,7 @@ export function ConcentrateGuidedTour({
       }
       const targetRect = target.getBoundingClientRect();
       const estimatedDialogHeight = hasStepVisual
-        ? Math.min(window.innerWidth < 640 ? Math.min(420, window.innerHeight * 0.48) : 420, window.innerHeight - EDGE_GAP * 2)
+        ? Math.min(window.innerWidth < 640 ? Math.min(420, window.innerHeight * mobileDialogMaxHeightVh / 100) : 420, window.innerHeight - EDGE_GAP * 2)
         : 260;
       const dialogHeight = Math.min(
         dialogRef.current?.getBoundingClientRect().height ?? estimatedDialogHeight,
@@ -196,7 +198,7 @@ export function ConcentrateGuidedTour({
       window.removeEventListener('resize', scheduleMeasure);
       if (targetRef.current === target) targetRef.current = null;
     };
-  }, [currentStep?.targetTestId, hasStepVisual]);
+  }, [currentStep?.targetTestId, hasStepVisual, mobileDialogMaxHeightVh]);
 
   useEffect(() => {
     if (!layout) return;
@@ -277,7 +279,9 @@ export function ConcentrateGuidedTour({
           top: layout.dialog.top,
           left: layout.dialog.left,
           width: layout.dialog.width,
-          ...(renderStepVisual && window.innerWidth < 640 ? { maxHeight: 'min(48dvh, 420px)' } : {}),
+          ...(renderStepVisual && window.innerWidth < 640
+            ? { maxHeight: `min(${mobileDialogMaxHeightVh}dvh, 420px)` }
+            : {}),
         }}
       >
         <header className="flex items-start justify-between gap-3">
@@ -297,7 +301,14 @@ export function ConcentrateGuidedTour({
           : ''}>
           {renderStepVisual && (
             <div className="min-w-0">
+              <div
+                aria-hidden="true"
+                className="rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5"
+                data-testid={`${testIdPrefix}-visual`}
+                data-illustration-key={currentStep.illustrationKey}
+              >
               {renderStepVisual(currentStep)}
+              </div>
             </div>
           )}
           <p id={descriptionId} className={renderStepVisual

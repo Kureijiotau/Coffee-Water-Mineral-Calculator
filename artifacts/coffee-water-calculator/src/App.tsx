@@ -32,7 +32,7 @@ import { DeferredPanelBoundary, DeferredPanelFallback } from './components/Defer
 import { SectionHeader as SharedSectionHeader } from './components/SectionHeader';
 import { StableNumberInput } from './components/StableNumberInput';
 import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
-import { WatermancerTourIllustration } from './WatermancerTourIllustration';
+import { GuidedTourIllustration } from './GuidedTourIllustration';
 import {
   getCalculatorTourSteps,
   getCalculatorTourLabel,
@@ -9053,11 +9053,9 @@ function App() {
            steps={getCalculatorTourSteps(calculatorTourMode)}
            tourTitle={`${getCalculatorTourLabel(calculatorTourMode)} tour`}
            testIdPrefix="calculator-guided-tour"
-           renderStepVisual={calculatorTourMode === 'watermancer'
-             ? step => step.illustrationKey
-               ? <WatermancerTourIllustration illustrationKey={step.illustrationKey} />
-               : null
-             : undefined}
+            renderStepVisual={step => step.illustrationKey
+              ? <GuidedTourIllustration illustrationKey={step.illustrationKey} />
+              : null}
            onClose={closeCalculatorTour}
            onFinish={finishCalculatorTour}
          />

@@ -22,3 +22,9 @@ For guided tours, use an approachable illustrated-instruction treatment: framed 
 **How to apply:** Prefer visual-only refinements to shared surfaces, hierarchy, focus states, and active controls before introducing new colors, layouts, or component patterns. For GH, KH, and ion mentions, use the established scheme for the associated values, formulas, labels, and indicators.
 
 **How to apply:** In tutorials, explain the currently highlighted live control with a compact visual example and short copy; keep the established step-through and skip interactions.
+
+For illustrated Concentrates tours on phones, use a 42dvh guide-card cap: 48dvh can overlap tall spotlight targets, while 36dvh can clip navigation controls.
+
+**Why:** Browser checks found the 48dvh card overlapping a tall Lotus section and the 36dvh card clipping its controls; 42dvh kept both in view.
+
+**How to apply:** When adjusting mobile tour sizing, verify both a short 375×667 viewport and a 375×812 viewport, checking target separation and visible navigation.

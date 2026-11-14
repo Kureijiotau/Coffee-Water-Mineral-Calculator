@@ -18,11 +18,15 @@ test('opens each recipe-mode tour once independently and allows replay', async (
     'data-target-testid',
     'alchemist-batch-volume',
   );
+  await expect(page.getByTestId('calculator-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'alchemist-batch-volume');
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
 
   await page.getByTestId('mode-brewer').click();
   await expect(tourDialog(page, 'Brewer')).toBeVisible();
   await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 4');
+  await expect(page.getByTestId('calculator-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'brewer-batch-volume');
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
 
   await page.getByTestId('mode-alchemist').click();
@@ -102,17 +106,18 @@ test('follows the approved visible step order in both calculator modes', async (
   await openFreshCalculator(page);
 
   const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
-  await expect(page.getByTestId('calculator-guided-tour-visual')).toHaveCount(0);
   const alchemistTargets = [
-    'alchemist-batch-volume',
-    'alchemist-mineral-water-base',
-    'alchemist-mineral-recipe',
-    'alchemist-ion-watch',
-    'alchemist-salt-summary',
-    'alchemist-recipe-steps',
+    ['alchemist-batch-volume', 'alchemist-batch-volume'],
+    ['alchemist-mineral-water-base', 'alchemist-mineral-water-base'],
+    ['alchemist-mineral-recipe', 'alchemist-mineral-recipe'],
+    ['alchemist-ion-watch', 'alchemist-ion-watch'],
+    ['alchemist-salt-summary', 'alchemist-salt-summary'],
+    ['alchemist-recipe-steps', 'alchemist-recipe-steps'],
   ];
-  for (const [index, target] of alchemistTargets.entries()) {
+  for (const [index, [target, illustration]] of alchemistTargets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
+    await expect(page.getByTestId('calculator-guided-tour-visual'))
+      .toHaveAttribute('data-illustration-key', illustration);
     if (index < alchemistTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
@@ -121,15 +126,16 @@ test('follows the approved visible step order in both calculator modes', async (
 
   await page.getByTestId('mode-brewer').click();
   await expect(tourDialog(page, 'Brewer')).toBeVisible();
-  await expect(page.getByTestId('calculator-guided-tour-visual')).toHaveCount(0);
   const brewerTargets = [
-    'brewer-batch-volume',
-    'brewer-mineral-recipe',
-    'brewer-salt-summary',
-    'brewer-recipe-steps',
+    ['brewer-batch-volume', 'brewer-batch-volume'],
+    ['brewer-mineral-recipe', 'brewer-mineral-recipe'],
+    ['brewer-salt-summary', 'brewer-salt-summary'],
+    ['brewer-recipe-steps', 'brewer-recipe-steps'],
   ];
-  for (const [index, target] of brewerTargets.entries()) {
+  for (const [index, [target, illustration]] of brewerTargets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
+    await expect(page.getByTestId('calculator-guided-tour-visual'))
+      .toHaveAttribute('data-illustration-key', illustration);
     if (index < brewerTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
@@ -149,6 +155,41 @@ test('keeps the Alchemist tour dialog and highlighted sections on a phone screen
   expect(dialog!.x + dialog!.width).toBeLessThanOrEqual(375);
   expect(target!.x).toBeGreaterThanOrEqual(0);
   expect(target!.x + target!.width).toBeLessThanOrEqual(375);
+});
+
+test('keeps illustrated Brewer and Alchemist tour cards within a phone viewport', async ({ page }) => {
+  await openFreshCalculator(page, 375, 812);
+
+  const dialog = tourDialog(page, 'Alchemist');
+  const visual = page.getByTestId('calculator-guided-tour-visual');
+  const checkBounds = async () => {
+    const dialogBox = await dialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(375);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(812);
+    await expect(visual).toBeVisible();
+  };
+
+  for (let step = 0; step < 6; step += 1) {
+    await checkBounds();
+    if (step < 5) await page.getByRole('button', { name: 'Next', exact: true }).click();
+  }
+  await page.getByRole('button', { name: 'Finish', exact: true }).click();
+
+  await page.getByTestId('mode-brewer').click();
+  const brewerDialog = tourDialog(page, 'Brewer');
+  for (let step = 0; step < 4; step += 1) {
+    const dialogBox = await brewerDialog.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(375);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(812);
+    await expect(visual).toBeVisible();
+    if (step < 3) await page.getByRole('button', { name: 'Next', exact: true }).click();
+  }
 });
 
 test('keeps the Watermancer tour target visible on a phone screen', async ({ page }) => {

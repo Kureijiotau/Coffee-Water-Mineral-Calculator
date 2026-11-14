@@ -180,12 +180,7 @@ function RecipeStepsDiagram() {
 
 export function WatermancerTourIllustration({ illustrationKey }: Props) {
   return (
-    <div
-      aria-hidden="true"
-      className="rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5"
-      data-testid="calculator-guided-tour-visual"
-      data-illustration-key={illustrationKey}
-    >
+    <>
       {illustrationKey === 'ion-targets' && <IonTargetsDiagram />}
       {illustrationKey === 'batch-volume' && <BatchVolumeDiagram />}
       {illustrationKey === 'source-waters' && <SourceWatersDiagram />}
@@ -193,6 +188,6 @@ export function WatermancerTourIllustration({ illustrationKey }: Props) {
       {illustrationKey === 'auto-match' && <AutoMatchDiagram />}
       {illustrationKey === 'final-mixture' && <FinalMixtureDiagram />}
       {illustrationKey === 'recipe-steps' && <RecipeStepsDiagram />}
-    </div>
+    </>
   );
 }
