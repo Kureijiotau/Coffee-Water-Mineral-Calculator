@@ -24,5 +24,8 @@ export const modules: ModuleMap = {
   "./components/mockups/water-tasting/WaterTastingTab.tsx": () => import("../components/mockups/water-tasting/WaterTastingTab.tsx"),
   "./components/mockups/watermancer-readings/Compact.tsx": () => import("../components/mockups/watermancer-readings/Compact.tsx"),
   "./components/mockups/watermancer-readings/Current.tsx": () => import("../components/mockups/watermancer-readings/Current.tsx"),
+  "./components/mockups/watermancer-tour/ConcentrateGuidedTour.tsx": () => import("../components/mockups/watermancer-tour/ConcentrateGuidedTour.tsx"),
+  "./components/mockups/watermancer-tour/Current.tsx": () => import("../components/mockups/watermancer-tour/Current.tsx"),
+  "./components/mockups/watermancer-tour/WatermancerIllustrated.tsx": () => import("../components/mockups/watermancer-tour/WatermancerIllustrated.tsx"),
   "./components/mockups/workframe/WorkframeProfileBuilder.tsx": () => import("../components/mockups/workframe/WorkframeProfileBuilder.tsx")
 };
