@@ -78,8 +78,19 @@ test('follows the Watermancer tour from targets through the final mixture', asyn
     'watermancer-final-mixture',
     'watermancer-recipe-steps',
   ];
+  const illustrations = [
+    'ion-targets',
+    'batch-volume',
+    'source-waters',
+    'salts',
+    'auto-match',
+    'final-mixture',
+    'recipe-steps',
+  ];
+  const visual = page.getByTestId('calculator-guided-tour-visual');
   for (const [index, target] of targets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
+    await expect(visual).toHaveAttribute('data-illustration-key', illustrations[index]);
     if (index < targets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
@@ -91,6 +102,7 @@ test('follows the approved visible step order in both calculator modes', async (
   await openFreshCalculator(page);
 
   const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
+  await expect(page.getByTestId('calculator-guided-tour-visual')).toHaveCount(0);
   const alchemistTargets = [
     'alchemist-batch-volume',
     'alchemist-mineral-water-base',
@@ -109,6 +121,7 @@ test('follows the approved visible step order in both calculator modes', async (
 
   await page.getByTestId('mode-brewer').click();
   await expect(tourDialog(page, 'Brewer')).toBeVisible();
+  await expect(page.getByTestId('calculator-guided-tour-visual')).toHaveCount(0);
   const brewerTargets = [
     'brewer-batch-volume',
     'brewer-mineral-recipe',
@@ -152,4 +165,85 @@ test('keeps the Watermancer tour target visible on a phone screen', async ({ pag
   expect(dialog!.x + dialog!.width).toBeLessThanOrEqual(375);
   expect(target!.x).toBeGreaterThanOrEqual(0);
   expect(target!.x + target!.width).toBeLessThanOrEqual(375);
+});
+
+test('keeps the illustrated spotlight and guide card in view on a phone', async ({ page }) => {
+  await openFreshCalculator(page, 375, 812);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+
+  const dialog = tourDialog(page, 'Watermancer');
+  const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
+  for (const target of [
+    'watermancer-ion-targets',
+    'watermancer-batch-volume',
+    'watermancer-water-sources',
+    'watermancer-salts',
+    'watermancer-auto-match',
+    'watermancer-final-mixture',
+    'watermancer-recipe-steps',
+  ]) {
+    await expect(spotlight).toHaveAttribute('data-target-testid', target);
+    const dialogBox = await dialog.boundingBox();
+    const spotlightBox = await spotlight.boundingBox();
+    expect(dialogBox).not.toBeNull();
+    expect(spotlightBox).not.toBeNull();
+    expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
+    expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(375);
+    expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(812);
+    const overlaps = dialogBox!.x < spotlightBox!.x + spotlightBox!.width
+      && dialogBox!.x + dialogBox!.width > spotlightBox!.x
+      && dialogBox!.y < spotlightBox!.y + spotlightBox!.height
+      && dialogBox!.y + dialogBox!.height > spotlightBox!.y;
+    expect(overlaps).toBe(false);
+    if (target !== 'watermancer-recipe-steps') {
+      await page.getByRole('button', { name: 'Next', exact: true }).click();
+    }
+  }
+});
+
+test('navigates the Watermancer tour by keyboard and restores focus on Escape', async ({ page }) => {
+  await openFreshCalculator(page);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+
+  await expect(page.getByTestId('calculator-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'ion-targets');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('2 of 7');
+  await expect(page.getByTestId('calculator-guided-tour-visual'))
+    .toHaveAttribute('data-illustration-key', 'batch-volume');
+
+  await page.keyboard.press('Escape');
+  await expect(tourDialog(page, 'Watermancer')).toBeHidden();
+  await expect(page.getByTestId('calculator-guided-tour-trigger')).toBeFocused();
+});
+
+test('closes a Watermancer tour with a missing target without marking it seen', async ({ page }) => {
+  await openFreshCalculator(page);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+  await page.getByTestId('watermancer-ion-targets').evaluate(element => element.remove());
+
+  await expect(tourDialog(page, 'Watermancer')).toBeHidden();
+  expect(await page.evaluate(() => localStorage.getItem('watermancer.watermancer-tour.v1'))).toBeNull();
+
+  await page.reload();
+  await page.getByTestId('mode-watermancer').click();
+  await expect(tourDialog(page, 'Watermancer')).toBeVisible();
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 7');
+});
+
+test('keeps Watermancer diagrams static with reduced motion enabled', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFreshCalculator(page);
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+
+  const visual = page.getByTestId('calculator-guided-tour-visual');
+  await expect(visual).toHaveAttribute('data-illustration-key', 'ion-targets');
+  await expect.poll(() => visual.evaluate(element => getComputedStyle(element).animationName)).toBe('none');
 });

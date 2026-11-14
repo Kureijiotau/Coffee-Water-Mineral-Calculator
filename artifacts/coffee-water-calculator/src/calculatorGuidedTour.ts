@@ -69,36 +69,43 @@ const WATERMANCER_STEPS: GuidedTourStep[] = [
     targetTestId: 'watermancer-ion-targets',
     title: 'Choose your ion targets',
     description: 'Start with a saved profile or set ion goals directly. You can also work backwards: add water and salts first, then save these ion targets in a new profile.',
+    illustrationKey: 'ion-targets',
   },
   {
     targetTestId: 'watermancer-batch-volume',
     title: 'Set your finished volume',
     description: 'Choose how much water you want to make. Water amounts and salt doses are based on this batch size.',
+    illustrationKey: 'batch-volume',
   },
   {
     targetTestId: 'watermancer-water-sources',
     title: 'Add source waters',
     description: 'Optionally add bottled or mineral water. Its modeled ions count toward your final targets.',
+    illustrationKey: 'source-waters',
   },
   {
     targetTestId: 'watermancer-salts',
     title: 'Choose salts and doses',
     description: 'Select which salts Watermancer may use. Editing a dose holds it fixed while the match adjusts the other selected salts.',
+    illustrationKey: 'salts',
   },
   {
     targetTestId: 'watermancer-auto-match',
     title: 'Run Precision Auto-match',
     description: 'Use Find the best match to apply the best available salt and water plan for your selected targets.',
+    illustrationKey: 'auto-match',
   },
   {
     targetTestId: 'watermancer-final-mixture',
     title: 'Review the final mixture',
     description: 'Compare the modeled final ions and summary with your target profile before preparing the water.',
+    illustrationKey: 'final-mixture',
   },
   {
     targetTestId: 'watermancer-recipe-steps',
     title: 'Open Recipe steps',
     description: 'Review the water and salt amounts for the current plan, along with its preparation steps.',
+    illustrationKey: 'recipe-steps',
   },
 ];
 

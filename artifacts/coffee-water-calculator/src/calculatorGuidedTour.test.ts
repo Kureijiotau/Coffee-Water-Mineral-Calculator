@@ -57,6 +57,23 @@ describe('calculator guided tours', () => {
       .toContain('new profile');
   });
 
+  it('maps all seven Watermancer steps to distinct illustrations only', () => {
+    expect(getCalculatorTourSteps('watermancer').map(step => [
+      step.targetTestId,
+      step.illustrationKey,
+    ])).toEqual([
+      ['watermancer-ion-targets', 'ion-targets'],
+      ['watermancer-batch-volume', 'batch-volume'],
+      ['watermancer-water-sources', 'source-waters'],
+      ['watermancer-salts', 'salts'],
+      ['watermancer-auto-match', 'auto-match'],
+      ['watermancer-final-mixture', 'final-mixture'],
+      ['watermancer-recipe-steps', 'recipe-steps'],
+    ]);
+    expect(getCalculatorTourSteps('brewer').every(step => step.illustrationKey === undefined)).toBe(true);
+    expect(getCalculatorTourSteps('alchemist').every(step => step.illustrationKey === undefined)).toBe(true);
+  });
+
   it('remembers first visits independently for all calculator modes', () => {
     expect(hasSeenCalculatorTour('brewer')).toBe(false);
     expect(hasSeenCalculatorTour('alchemist')).toBe(false);
@@ -68,5 +85,17 @@ describe('calculator guided tours', () => {
     expect(hasSeenCalculatorTour('brewer')).toBe(true);
     expect(hasSeenCalculatorTour('alchemist')).toBe(false);
     expect(hasSeenCalculatorTour('watermancer')).toBe(true);
+  });
+
+  it('keeps tour state usable when local storage is unavailable', () => {
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: () => { throw new Error('storage unavailable'); },
+        setItem: () => { throw new Error('storage unavailable'); },
+      },
+    });
+
+    expect(hasSeenCalculatorTour('watermancer')).toBe(false);
+    expect(() => rememberCalculatorTour('watermancer')).not.toThrow();
   });
 });

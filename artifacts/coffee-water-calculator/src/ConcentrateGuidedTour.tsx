@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import type { ConcentrateTourStep } from './concentrateGuidedTour';
@@ -12,6 +12,7 @@ type Props = {
   onNavigateToCalculator?: () => void;
   tourTitle?: string;
   testIdPrefix?: string;
+  renderStepVisual?: (step: ConcentrateTourStep) => ReactNode;
 };
 
 type Rect = { top: number; left: number; width: number; height: number };
@@ -29,14 +30,68 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), Math.max(min, max));
 }
 
-function getTourLayout(targetTestId: string, target: DOMRect, dialogHeight: number): TourLayout {
+function getTourLayout(
+  targetTestId: string,
+  target: DOMRect,
+  dialogHeight: number,
+  illustrated: boolean,
+): TourLayout {
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const dialogWidth = Math.min(420, viewportWidth - EDGE_GAP * 2);
+  const dialogWidth = Math.min(illustrated ? 560 : 420, viewportWidth - EDGE_GAP * 2);
   const spotlightLeft = clamp(target.left - SPOTLIGHT_PAD, EDGE_GAP, viewportWidth - EDGE_GAP);
   const spotlightTop = clamp(target.top - SPOTLIGHT_PAD, EDGE_GAP, viewportHeight - EDGE_GAP);
   const spotlightRight = clamp(target.right + SPOTLIGHT_PAD, spotlightLeft, viewportWidth - EDGE_GAP);
   const spotlightBottom = clamp(target.bottom + SPOTLIGHT_PAD, spotlightTop, viewportHeight - EDGE_GAP);
+  const rightSpace = viewportWidth - target.right - TARGET_GAP - EDGE_GAP;
+  const leftSpace = target.left - TARGET_GAP - EDGE_GAP;
+
+  if (illustrated && viewportWidth < 640) {
+    const dialogTop = target.top >= viewportHeight - dialogHeight - EDGE_GAP
+      ? EDGE_GAP
+      : clamp(viewportHeight - dialogHeight - EDGE_GAP, EDGE_GAP, viewportHeight - EDGE_GAP);
+    const dialogBottom = dialogTop + dialogHeight;
+    const targetStartsBelowCard = target.top >= dialogBottom + TARGET_GAP;
+    const visibleSpotlightTop = targetStartsBelowCard
+      ? Math.max(spotlightTop, dialogBottom + TARGET_GAP)
+      : spotlightTop;
+    const visibleSpotlightBottom = targetStartsBelowCard
+      ? spotlightBottom
+      : Math.min(spotlightBottom, dialogTop - TARGET_GAP);
+    return {
+      targetTestId,
+      spotlight: {
+        top: visibleSpotlightTop,
+        left: spotlightLeft,
+        width: spotlightRight - spotlightLeft,
+        height: Math.max(0, visibleSpotlightBottom - visibleSpotlightTop),
+      },
+      dialog: {
+        top: dialogTop,
+        left: EDGE_GAP,
+        width: dialogWidth,
+      },
+    };
+  }
+
+  if (illustrated && Math.max(leftSpace, rightSpace) >= 360) {
+    const placeRight = rightSpace >= leftSpace;
+    const sideWidth = Math.min(560, placeRight ? rightSpace : leftSpace);
+    return {
+      targetTestId,
+      spotlight: {
+        top: spotlightTop,
+        left: spotlightLeft,
+        width: spotlightRight - spotlightLeft,
+        height: spotlightBottom - spotlightTop,
+      },
+      dialog: {
+        top: clamp(target.top + (target.height - dialogHeight) / 2, EDGE_GAP, viewportHeight - dialogHeight - EDGE_GAP),
+        left: placeRight ? target.right + TARGET_GAP : target.left - TARGET_GAP - sideWidth,
+        width: sideWidth,
+      },
+    };
+  }
 
   const belowTop = spotlightBottom + TARGET_GAP;
   const aboveTop = spotlightTop - dialogHeight - TARGET_GAP;
@@ -76,10 +131,12 @@ export function ConcentrateGuidedTour({
   onNavigateToCalculator,
   tourTitle = 'Concentrates tour',
   testIdPrefix = 'concentrate-guided-tour',
+  renderStepVisual,
 }: Props) {
   const [stepIndex, setStepIndex] = useState(0);
   const [layout, setLayout] = useState<TourLayout | null>(null);
   const currentStep = steps[stepIndex];
+  const hasStepVisual = Boolean(renderStepVisual);
   const descriptionId = `${testIdPrefix}-description`;
   const targetRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLElement | null>(null);
@@ -112,11 +169,14 @@ export function ConcentrateGuidedTour({
         return;
       }
       const targetRect = target.getBoundingClientRect();
+      const estimatedDialogHeight = hasStepVisual
+        ? Math.min(window.innerWidth < 640 ? Math.min(420, window.innerHeight * 0.48) : 420, window.innerHeight - EDGE_GAP * 2)
+        : 260;
       const dialogHeight = Math.min(
-        dialogRef.current?.getBoundingClientRect().height ?? 260,
+        dialogRef.current?.getBoundingClientRect().height ?? estimatedDialogHeight,
         window.innerHeight - EDGE_GAP * 2,
       );
-      setLayout(getTourLayout(currentStep.targetTestId, targetRect, dialogHeight));
+      setLayout(getTourLayout(currentStep.targetTestId, targetRect, dialogHeight, hasStepVisual));
     };
     measureRef.current = measure;
     const scheduleMeasure = () => {
@@ -136,7 +196,7 @@ export function ConcentrateGuidedTour({
       window.removeEventListener('resize', scheduleMeasure);
       if (targetRef.current === target) targetRef.current = null;
     };
-  }, [currentStep?.targetTestId]);
+  }, [currentStep?.targetTestId, hasStepVisual]);
 
   useEffect(() => {
     if (!layout) return;
@@ -213,7 +273,12 @@ export function ConcentrateGuidedTour({
         tabIndex={-1}
         className="fixed z-[92] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-cyan-200/25 bg-slate-900/95 p-4 text-slate-100 shadow-2xl shadow-black/50 backdrop-blur-xl outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
         data-testid={`${testIdPrefix}-dialog`}
-        style={{ top: layout.dialog.top, left: layout.dialog.left, width: layout.dialog.width }}
+        style={{
+          top: layout.dialog.top,
+          left: layout.dialog.left,
+          width: layout.dialog.width,
+          ...(renderStepVisual && window.innerWidth < 640 ? { maxHeight: 'min(48dvh, 420px)' } : {}),
+        }}
       >
         <header className="flex items-start justify-between gap-3">
           <div>
@@ -227,9 +292,20 @@ export function ConcentrateGuidedTour({
             {stepIndex + 1} of {steps.length}
           </span>
         </header>
-        <p id={descriptionId} className="mt-2 text-sm leading-relaxed text-slate-300">
-          {currentStep.description}
-        </p>
+        <div className={renderStepVisual
+          ? 'mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.85fr)] sm:items-center'
+          : ''}>
+          {renderStepVisual && (
+            <div className="min-w-0">
+              {renderStepVisual(currentStep)}
+            </div>
+          )}
+          <p id={descriptionId} className={renderStepVisual
+            ? 'text-sm leading-relaxed text-slate-300'
+            : 'mt-2 text-sm leading-relaxed text-slate-300'}>
+            {currentStep.description}
+          </p>
+        </div>
         {currentStep.action === 'calculator' && (
           <button
             type="button"

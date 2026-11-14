@@ -60,6 +60,7 @@ async function expectSpotlightPlacement(page: Page) {
 test('opens automatically on the first visit and supports Back, Next, and Skip', async ({ page }) => {
   await openFreshConcentratesTour(page);
 
+  await expect(page.getByTestId('concentrate-guided-tour-visual')).toHaveCount(0);
   await expect(page.getByTestId('concentrate-guided-tour-progress')).toHaveText('1 of 5');
   await expect(page.getByTestId('mass-stock-composition')).toBeVisible();
   await expectSpotlightPlacement(page);
