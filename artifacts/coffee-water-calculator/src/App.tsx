@@ -33,6 +33,8 @@ import { SectionHeader as SharedSectionHeader } from './components/SectionHeader
 import { StableNumberInput } from './components/StableNumberInput';
 import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
 import { GuidedTourIllustration } from './GuidedTourIllustration';
+import SaltUnitsExplainer from './SaltUnitsExplainer';
+import { calculateSaltUnitsBreakdown } from './saltUnitsExplainer';
 import {
   getCalculatorTourSteps,
   getCalculatorTourLabel,
@@ -4592,6 +4594,21 @@ function App() {
     const recipeIons = computeIonTotals(saltTargets, {}, 1);
     return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
   }, [saltTargets]);
+  const saltFormIndexById = useMemo<Record<string, number>>(() => {
+    const indexes: Record<string, number> = {};
+    SALTS.forEach((salt, index) => {
+      indexes[salt.id] = safeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0;
+    });
+    return indexes;
+  }, [safeRows]);
+  const saltUnitsBreakdown = useMemo(
+    () => calculateSaltUnitsBreakdown({
+      saltTargets,
+      formIndexBySaltId: saltFormIndexById,
+      liters: L,
+    }),
+    [saltTargets, saltFormIndexById, L],
+  );
   const finalSaltIons = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, {}, 1),
     [effectiveSuggestedSaltTargets],
@@ -7545,31 +7562,41 @@ function App() {
            </div>}
 
         {/* GH / KH Summary */}
-        {showRecipeMode && <div
-          data-testid={showBrewer ? 'brewer-salt-summary' : 'alchemist-salt-summary'}
-          className="app-card app-panel-surface order-4 bg-slate-800/70 backdrop-blur rounded-2xl shadow-xl border border-slate-700/60 overflow-hidden"
-        >
-          <SharedSectionHeader
-            icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
-             title={showBrewer ? 'Salt Recipe Summary (as CaCO₃)' : 'Base Salt Recipe Summary (as CaCO₃)'}
-          />
-           <div className="app-card-body grid grid-cols-1 sm:grid-cols-3 gap-4">
-             <SharedSimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
-             <SharedSimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
-             <SharedSimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
-            <div className="sm:col-span-3 flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3">
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
-              <span className="h-4 w-px bg-slate-700" />
-              {baseSaltKh > 0 && baseSaltGh >= 0 && Number.isFinite(baseSaltGh / baseSaltKh) ? (
-                <span className="text-lg font-semibold text-sky-300 tabular-nums">
-                  {(baseSaltGh / baseSaltKh).toFixed(1)}<span className="text-slate-400 font-normal text-sm mx-1">:</span>1
-                </span>
-              ) : (
-                <span className="text-lg font-semibold text-slate-500">—</span>
+        {showRecipeMode && (
+          <div
+            data-testid={showBrewer ? 'brewer-salt-summary' : 'alchemist-salt-summary'}
+            className="app-card app-panel-surface order-4 overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/70 shadow-xl backdrop-blur"
+          >
+            <SaltUnitsExplainer breakdown={saltUnitsBreakdown} liters={L}>
+              {({ trigger, panel }) => (
+                <>
+                  <SharedSectionHeader
+                    icon={<HardnessBalanceScale gh={baseSaltGh} kh={baseSaltKh} />}
+                    title={showBrewer ? 'Salt Recipe Summary (as CaCO₃)' : 'Base Salt Recipe Summary (as CaCO₃)'}
+                    after={trigger}
+                  />
+                  <div className="app-card-body grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    {panel && <div className="sm:col-span-3">{panel}</div>}
+                    <SharedSimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
+                    <SharedSimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
+                    <SharedSimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />
+                    <div className="flex items-center justify-center gap-3 rounded-xl border border-slate-700/60 bg-slate-900/40 px-4 py-3 sm:col-span-3">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">GH : KH Ratio</span>
+                      <span className="h-4 w-px bg-slate-700" />
+                      {baseSaltKh > 0 && baseSaltGh >= 0 && Number.isFinite(baseSaltGh / baseSaltKh) ? (
+                        <span className="text-lg font-semibold tabular-nums text-sky-300">
+                          {(baseSaltGh / baseSaltKh).toFixed(1)}<span className="mx-1 text-sm font-normal text-slate-400">:</span>1
+                        </span>
+                      ) : (
+                        <span className="text-lg font-semibold text-slate-500">—</span>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
-            </div>
+            </SaltUnitsExplainer>
           </div>
-        </div>}
+        )}
 
         {/* Mineral Water Base */}
           {(showAlchemist || showWatermancer) && <div

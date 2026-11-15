@@ -21,6 +21,7 @@ describe('calculateSaltUnitsBreakdown', () => {
     expect(breakdown.available).toBe(true);
     expect(magnesiumChloride).toMatchObject({
       targetPpm: 40,
+      hydrationFormLabel: 'Hexahydrate',
       weighedMassMg: expect.closeTo(85.4161, 3),
       ionPpm: {
         magnesium: expect.closeTo(10.21165, 4),

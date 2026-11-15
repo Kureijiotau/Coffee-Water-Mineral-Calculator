@@ -16,6 +16,7 @@ export type SaltUnitsInput = {
 export type SaltUnitsContribution = {
   saltId: string;
   saltName: string;
+  hydrationFormLabel: string;
   targetPpm: number;
   weighedMassMg: number;
   ionPpm: Partial<Record<IonId, number>>;
@@ -74,6 +75,7 @@ export function calculateSaltUnitsBreakdown(input: SaltUnitsInput): SaltUnitsBre
     contributions.push({
       saltId: salt.id,
       saltName: salt.name,
+      hydrationFormLabel: hydrationForm.label,
       targetPpm,
       weighedMassMg: computeSaltMg(
         targetPpm,
