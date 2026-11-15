@@ -108,6 +108,40 @@ test('refreshes the open guide when target, hydration, and batch volume change',
   await expect(guide.getByTestId('salt-units-total-gh')).toContainText('52.56 ppm CaCO₃');
 });
 
+test('tracks recipe changes while open and starts fresh after switching modes', async ({ page }) => {
+  await openRecipeMode(page, 'alchemist');
+  const picker = page.getByRole('button', { name: 'Select mineral recipe' });
+  const recipeDialog = page.getByRole('dialog', { name: 'Mineral recipes' });
+
+  await picker.click();
+  await recipeDialog.getByRole('option', { name: 'Club Soda', exact: true }).click();
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  const target = guide.getByTestId('salt-units-target-mgcl2');
+  const mass = guide.getByTestId('salt-units-mass-mgcl2');
+  const initialTarget = await target.innerText();
+  const initialMass = await mass.innerText();
+
+  await picker.click();
+  await recipeDialog.getByRole('option', { name: 'Jelly', exact: true }).click();
+  await expect(target).not.toHaveText(initialTarget);
+  await expect(mass).not.toHaveText(initialMass);
+  const updatedTarget = await target.innerText();
+  const updatedMass = await mass.innerText();
+
+  await page.getByTestId('mode-watermancer').click();
+  await expect(guide).toHaveCount(0);
+  await page.getByTestId('mode-alchemist').click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('1 of 4');
+  await expect(guide.getByTestId('salt-units-target-mgcl2')).toHaveText(updatedTarget);
+  await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText(updatedMass);
+});
+
 test('keeps the guide within a narrow phone viewport', async ({ page }) => {
   await openRecipeMode(page, 'brewer');
   await page.getByLabel('Magnesium Chloride target ppm').fill('40');
