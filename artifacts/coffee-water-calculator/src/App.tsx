@@ -7576,7 +7576,7 @@ function App() {
                     after={trigger}
                   />
                   <div className="app-card-body grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    {panel && <div className="sm:col-span-3">{panel}</div>}
+                    {panel}
                     <SharedSimpleMetricCard label="General Hardness (GH)" value={baseSaltGh} unit="ppm CaCO₃" tone="hardness" />
                     <SharedSimpleMetricCard label="Carbonate Hardness (KH)" value={baseSaltKh} unit="ppm CaCO₃" tone="buffer" />
                     <SharedSimpleMetricCard label="Total Dissolved Solids (TDS)" value={tdsSalt} unit="mg/L" tone="tds" />

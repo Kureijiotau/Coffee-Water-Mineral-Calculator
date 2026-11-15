@@ -47,13 +47,32 @@ test('explains live salt, ion, and hardness values without changing the recipe',
   const guide = page.getByTestId('salt-units-explainer-dialog');
   const title = guide.getByRole('heading', { level: 3 });
   await expect(guide).toBeVisible();
-  await expect(guide).toHaveAttribute('aria-modal', 'false');
+  await expect(guide).toHaveAttribute('aria-modal', 'true');
+  const overlay = page.getByTestId('salt-units-explainer-overlay');
+  await expect(overlay).toBeVisible();
+  await expect(overlay).toHaveCSS('background-color', 'rgba(2, 6, 23, 0.75)');
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('1 of 4');
   await expect(title).toHaveText('Salt target vs weighed mass');
   await expect(title).toHaveAttribute('aria-live', 'polite');
   await expect(guide.getByTestId('salt-units-target-mgcl2')).toHaveText('40 ppm');
   await expect(guide.getByTestId('salt-units-form-mgcl2')).toHaveText('Hexahydrate');
   await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText('85.42 mg');
+  await expect(guide.getByTestId('salt-units-salt-name-mgcl2')).toHaveCSS('color', 'rgb(253, 224, 71)');
+  await expect(guide.getByTestId('salt-units-salt-card-mgcl2')).toHaveCSS(
+    'border-color',
+    'rgba(253, 224, 71, 0.42)',
+  );
+  await expect(guide.getByTestId('salt-units-salt-card-mgcl2')).toHaveCSS(
+    'background-image',
+    /linear-gradient/,
+  );
+
+  const closeButton = guide.getByRole('button', { name: 'Close salt units explainer' });
+  await closeButton.focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(guide.getByRole('button', { name: 'Next', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(closeButton).toBeFocused();
 
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(title).toHaveText('A salt separates into ions');
@@ -78,7 +97,7 @@ test('explains live salt, ion, and hardness values without changing the recipe',
   await expect(targetInput).toHaveValue('40');
 });
 
-test('refreshes the open guide when target, hydration, and batch volume change', async ({ page }) => {
+test('shows updated target, hydration, and batch volume after reopening', async ({ page }) => {
   await openRecipeMode(page, 'alchemist');
   await page.getByRole('textbox', { name: 'Final batch volume in liters' }).fill('1');
   await page.getByRole('button', { name: 'Advanced: hydration forms' }).click();
@@ -90,14 +109,13 @@ test('refreshes the open guide when target, hydration, and batch volume change',
   const guide = page.getByTestId('salt-units-explainer-dialog');
   await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText('85.42 mg');
 
+  await page.keyboard.press('Escape');
+  await expect(guide).toHaveCount(0);
   await page.getByLabel('Magnesium Chloride target ppm').fill('50');
-  await expect(guide.getByTestId('salt-units-target-mgcl2')).toHaveText('50 ppm');
-  await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText('106.77 mg');
-
   await page.getByLabel('Magnesium Chloride hydration form').selectOption('0');
-  await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText('50 mg');
-
   await page.getByRole('textbox', { name: 'Final batch volume in liters' }).fill('2');
+  await page.getByTestId('salt-units-explainer-trigger').click();
+  await expect(guide.getByTestId('salt-units-target-mgcl2')).toHaveText('50 ppm');
   await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText('100 mg');
 
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
@@ -108,7 +126,7 @@ test('refreshes the open guide when target, hydration, and batch volume change',
   await expect(guide.getByTestId('salt-units-total-gh')).toContainText('52.56 ppm CaCO₃');
 });
 
-test('tracks recipe changes while open and starts fresh after switching modes', async ({ page }) => {
+test('shows the selected recipe after reopening and starts fresh after switching modes', async ({ page }) => {
   await openRecipeMode(page, 'alchemist');
   const picker = page.getByRole('button', { name: 'Select mineral recipe' });
   const recipeDialog = page.getByRole('dialog', { name: 'Mineral recipes' });
@@ -125,13 +143,17 @@ test('tracks recipe changes while open and starts fresh after switching modes', 
   const initialTarget = await target.innerText();
   const initialMass = await mass.innerText();
 
+  await page.keyboard.press('Escape');
+  await expect(guide).toHaveCount(0);
   await picker.click();
   await recipeDialog.getByRole('option', { name: 'Jelly', exact: true }).click();
+  await trigger.click();
   await expect(target).not.toHaveText(initialTarget);
   await expect(mass).not.toHaveText(initialMass);
   const updatedTarget = await target.innerText();
   const updatedMass = await mass.innerText();
 
+  await page.keyboard.press('Escape');
   await page.getByTestId('mode-watermancer').click();
   await expect(guide).toHaveCount(0);
   await page.getByTestId('mode-alchemist').click();
@@ -142,10 +164,24 @@ test('tracks recipe changes while open and starts fresh after switching modes', 
   await expect(guide.getByTestId('salt-units-mass-mgcl2')).toHaveText(updatedMass);
 });
 
+test('closes the modal when the dimmed backdrop is clicked', async ({ page }) => {
+  await openRecipeMode(page, 'alchemist');
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  const overlay = page.getByTestId('salt-units-explainer-overlay');
+  await expect(guide).toBeVisible();
+  await overlay.click({ position: { x: 2, y: 2 } });
+  await expect(guide).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+});
+
 test('keeps the guide within a narrow phone viewport', async ({ page }) => {
   await openRecipeMode(page, 'brewer');
   await page.getByLabel('Magnesium Chloride target ppm').fill('40');
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 375, height: 844 });
   const trigger = page.getByTestId('salt-units-explainer-trigger');
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
@@ -155,10 +191,19 @@ test('keeps the guide within a narrow phone viewport', async ({ page }) => {
   const bounds = await guide.boundingBox();
   expect(bounds).not.toBeNull();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
-  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
+  expect(Math.abs(bounds!.x + bounds!.width / 2 - 187.5)).toBeLessThan(2);
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('2 of 4');
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(guide.getByTestId('salt-units-total-gh')).toBeVisible();
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  const landscapeBounds = await guide.boundingBox();
+  expect(landscapeBounds).not.toBeNull();
+  expect(landscapeBounds!.x).toBeGreaterThanOrEqual(0);
+  expect(landscapeBounds!.x + landscapeBounds!.width).toBeLessThanOrEqual(844);
+  expect(landscapeBounds!.y).toBeGreaterThanOrEqual(0);
+  expect(landscapeBounds!.y + landscapeBounds!.height).toBeLessThanOrEqual(390);
 });

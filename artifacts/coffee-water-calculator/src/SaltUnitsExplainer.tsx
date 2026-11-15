@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { ArrowLeft, ArrowRight, CircleHelp, X } from 'lucide-react';
-import { ION_MAP } from './waterData';
-import type { IonId } from './waterData';
+import { getSaltColorTokens, ION_MAP, SALTS, type IonId } from './waterData';
 import type { SaltUnitsBreakdown } from './saltUnitsExplainer';
 
 type Props = {
@@ -34,37 +34,59 @@ function formatAmount(value: number) {
   return String(Number(value.toFixed(precision)));
 }
 
+function getSaltAccent(saltId: string) {
+  const salt = SALTS.find(candidate => candidate.id === saltId);
+  if (!salt) return undefined;
+  const colors = getSaltColorTokens(salt);
+  return {
+    nameStyle: { color: colors.primary },
+    cardStyle: {
+      borderColor: colors.border,
+      backgroundImage: `linear-gradient(110deg, ${colors.primarySoft}, ${colors.secondarySoft})`,
+    },
+  };
+}
+
 function MassToDoseDiagram({ breakdown }: { breakdown: SaltUnitsBreakdown }) {
   return (
     <div className="space-y-2">
-      {breakdown.contributions.map(contribution => (
-        <div
-          key={contribution.saltId}
-          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2"
-        >
-          <div className="min-w-0 truncate text-xs font-semibold text-slate-200">
-            {contribution.saltName}
-            <span
-              data-testid={`salt-units-form-${contribution.saltId}`}
-              className="mt-0.5 block text-[10px] font-normal text-slate-400"
+      {breakdown.contributions.map(contribution => {
+        const accent = getSaltAccent(contribution.saltId);
+        return (
+          <div
+            key={contribution.saltId}
+            data-testid={`salt-units-salt-card-${contribution.saltId}`}
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2"
+            style={accent?.cardStyle}
+          >
+            <div
+              data-testid={`salt-units-salt-name-${contribution.saltId}`}
+              className="min-w-0 truncate text-xs font-semibold text-slate-200"
+              style={accent?.nameStyle}
             >
-              {contribution.hydrationFormLabel}
+              {contribution.saltName}
+              <span
+                data-testid={`salt-units-form-${contribution.saltId}`}
+                className="mt-0.5 block text-[10px] font-normal text-slate-400"
+              >
+                {contribution.hydrationFormLabel}
+              </span>
+            </div>
+            <span className="text-right text-xs text-cyan-100">
+              <span data-testid={`salt-units-target-${contribution.saltId}`}>
+                {formatAmount(contribution.targetPpm)} ppm
+              </span>
+              <span className="mx-1.5 text-slate-600" aria-hidden="true">→</span>
+              <span data-testid={`salt-units-mass-${contribution.saltId}`} className="font-semibold text-emerald-200">
+                {formatAmount(contribution.weighedMassMg)} mg
+              </span>
+            </span>
+            <span className="col-span-2 text-[10px] uppercase tracking-wide text-slate-500">
+              anhydrous-equivalent target <span aria-hidden="true">·</span> physical mass to weigh
             </span>
           </div>
-          <span className="text-right text-xs text-cyan-100">
-            <span data-testid={`salt-units-target-${contribution.saltId}`}>
-              {formatAmount(contribution.targetPpm)} ppm
-            </span>
-            <span className="mx-1.5 text-slate-600" aria-hidden="true">→</span>
-            <span data-testid={`salt-units-mass-${contribution.saltId}`} className="font-semibold text-emerald-200">
-              {formatAmount(contribution.weighedMassMg)} mg
-            </span>
-          </span>
-          <span className="col-span-2 text-[10px] uppercase tracking-wide text-slate-500">
-            anhydrous-equivalent target <span aria-hidden="true">·</span> physical mass to weigh
-          </span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -74,12 +96,21 @@ function SaltIonDiagram({ breakdown }: { breakdown: SaltUnitsBreakdown }) {
     <div className="space-y-2">
       {breakdown.contributions.map(contribution => {
         const ions = Object.entries(contribution.ionPpm) as [IonId, number][];
+        const accent = getSaltAccent(contribution.saltId);
         return (
           <div
             key={contribution.saltId}
+            data-testid={`salt-units-salt-card-${contribution.saltId}`}
             className="rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2"
+            style={accent?.cardStyle}
           >
-            <div className="text-xs font-semibold text-slate-200">{contribution.saltName}</div>
+            <div
+              data-testid={`salt-units-salt-name-${contribution.saltId}`}
+              className="text-xs font-semibold text-slate-200"
+              style={accent?.nameStyle}
+            >
+              {contribution.saltName}
+            </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {ions.map(([ionId, ppm]) => (
                 <span
@@ -137,28 +168,37 @@ function HardnessDiagram({ breakdown }: { breakdown: SaltUnitsBreakdown }) {
         <Metric label="TDS · modeled ions" value={breakdown.totalTdsMgL} testId="salt-units-total-tds" tone="slate" unit="mg/L" />
       </div>
       <div className="space-y-1.5">
-        {breakdown.contributions.map(contribution => (
-          <div
-            key={contribution.saltId}
-            className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-[11px]"
-          >
-            <span className="basis-full truncate font-medium text-slate-200 sm:min-w-0 sm:flex-1 sm:basis-auto">
-              {contribution.saltName}
-            </span>
-            <span
-              data-testid={`salt-units-gh-${contribution.saltId}`}
-              className="whitespace-nowrap text-cyan-100"
+        {breakdown.contributions.map(contribution => {
+          const accent = getSaltAccent(contribution.saltId);
+          return (
+            <div
+              key={contribution.saltId}
+              data-testid={`salt-units-salt-card-${contribution.saltId}`}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-[11px]"
+              style={accent?.cardStyle}
             >
-              GH {formatAmount(contribution.ghCaCo3Ppm)} ppm CaCO₃
-            </span>
-            <span
-              data-testid={`salt-units-kh-${contribution.saltId}`}
-              className="whitespace-nowrap text-violet-100"
-            >
-              KH {formatAmount(contribution.khCaCo3Ppm)} ppm CaCO₃
-            </span>
-          </div>
-        ))}
+              <span
+                data-testid={`salt-units-salt-name-${contribution.saltId}`}
+                className="basis-full truncate font-medium text-slate-200 sm:min-w-0 sm:flex-1 sm:basis-auto"
+                style={accent?.nameStyle}
+              >
+                {contribution.saltName}
+              </span>
+              <span
+                data-testid={`salt-units-gh-${contribution.saltId}`}
+                className="whitespace-nowrap text-cyan-100"
+              >
+                GH {formatAmount(contribution.ghCaCo3Ppm)} ppm CaCO₃
+              </span>
+              <span
+                data-testid={`salt-units-kh-${contribution.saltId}`}
+                className="whitespace-nowrap text-violet-100"
+              >
+                KH {formatAmount(contribution.khCaCo3Ppm)} ppm CaCO₃
+              </span>
+            </div>
+          );
+        })}
       </div>
       <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
         Chloride and sulfate add dissolved ions, but not GH or KH. TDS is the modeled ion total—not GH + KH.
@@ -198,30 +238,8 @@ function Metric({
 export default function SaltUnitsExplainer({ breakdown, liters, children }: Props) {
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const guideRef = useRef<HTMLElement>(null);
   const currentStep = STEPS[stepIndex];
   const descriptionId = 'salt-units-explainer-description';
-
-  const close = () => {
-    setOpen(false);
-    setStepIndex(0);
-    window.requestAnimationFrame(() => triggerRef.current?.focus());
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    guideRef.current?.scrollIntoView({ block: 'center' });
-    guideRef.current?.focus({ preventScroll: true });
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      event.stopPropagation();
-      close();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open]);
 
   const stepVisual = stepIndex === 0
     ? <MassToDoseDiagram breakdown={breakdown} />
@@ -232,50 +250,47 @@ export default function SaltUnitsExplainer({ breakdown, liters, children }: Prop
         : <HardnessDiagram breakdown={breakdown} />;
 
   const trigger = (
-    <button
-        ref={triggerRef}
-        type="button"
-        data-testid="salt-units-explainer-trigger"
-        aria-label="How it works: salt targets, GH, and KH"
-        aria-expanded={open}
-        aria-controls="salt-units-explainer-dialog"
-        onClick={() => {
-          if (open) close();
-          else {
-            setStepIndex(0);
-            setOpen(true);
-          }
-        }}
-        className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/[0.07] px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
-      >
-        <CircleHelp className="h-4 w-4" aria-hidden="true" />
-        How it works
-    </button>
+    <DialogPrimitive.Trigger asChild>
+      <button
+          type="button"
+          data-testid="salt-units-explainer-trigger"
+          aria-label="How it works: salt targets, GH, and KH"
+          aria-controls="salt-units-explainer-dialog"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/[0.07] px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
+        >
+          <CircleHelp className="h-4 w-4" aria-hidden="true" />
+          How it works
+      </button>
+    </DialogPrimitive.Trigger>
   );
 
   const panel = open ? (
-    <section
-          ref={guideRef}
-          id="salt-units-explainer-dialog"
-          role="dialog"
-          aria-modal="false"
-          aria-label="Salt units and hardness explainer"
-          aria-describedby={descriptionId}
-          tabIndex={-1}
-          data-testid="salt-units-explainer-dialog"
-          className="max-h-[min(60vh,36rem)] overflow-y-auto rounded-xl border border-cyan-200/25 bg-slate-950/40 p-3 text-slate-100 shadow-inner outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-4"
-        >
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay
+        data-testid="salt-units-explainer-overlay"
+        className="fixed inset-0 z-[90] bg-slate-950/75 backdrop-blur-[2px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none"
+      />
+      <DialogPrimitive.Content
+        id="salt-units-explainer-dialog"
+        aria-label="Salt units and hardness explainer"
+        aria-modal="true"
+        aria-describedby={descriptionId}
+        data-testid="salt-units-explainer-dialog"
+        className="fixed left-1/2 top-1/2 z-[91] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
+      >
           <header className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
                 Salt recipe guide
               </p>
-              <h3
-                aria-live="polite"
-                className="mt-1 text-base font-semibold text-white sm:text-lg"
-              >
-                {currentStep.title}
-              </h3>
+              <DialogPrimitive.Title asChild>
+                <h3
+                  aria-live="polite"
+                  className="mt-1 text-base font-semibold text-white sm:text-lg"
+                >
+                  {currentStep.title}
+                </h3>
+              </DialogPrimitive.Title>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span
@@ -284,14 +299,15 @@ export default function SaltUnitsExplainer({ breakdown, liters, children }: Prop
               >
                 {stepIndex + 1} of {STEPS.length}
               </span>
-              <button
-                type="button"
-                aria-label="Close salt units explainer"
-                onClick={close}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+              <DialogPrimitive.Close asChild>
+                <button
+                  type="button"
+                  aria-label="Close salt units explainer"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </DialogPrimitive.Close>
             </div>
           </header>
           <p
@@ -310,13 +326,14 @@ export default function SaltUnitsExplainer({ breakdown, liters, children }: Prop
             )}
           </div>
           <footer className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-3">
-            <button
-              type="button"
-              onClick={close}
-              className="min-h-10 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-            >
-              Close
-            </button>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                className="min-h-10 rounded-lg px-3 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+              >
+                Close
+              </button>
+            </DialogPrimitive.Close>
             <div className="flex items-center gap-2">
               {stepIndex > 0 && (
                 <button
@@ -328,21 +345,40 @@ export default function SaltUnitsExplainer({ breakdown, liters, children }: Prop
                   Back
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => {
-                  if (stepIndex === STEPS.length - 1) close();
-                  else setStepIndex(index => Math.min(STEPS.length - 1, index + 1));
-                }}
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
-              >
-                {stepIndex === STEPS.length - 1 ? 'Done' : 'Next'}
-                {stepIndex < STEPS.length - 1 && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
-              </button>
+              {stepIndex === STEPS.length - 1 ? (
+                <DialogPrimitive.Close asChild>
+                  <button
+                    type="button"
+                    className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                  >
+                    Done
+                  </button>
+                </DialogPrimitive.Close>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStepIndex(index => Math.min(STEPS.length - 1, index + 1))}
+                  className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                >
+                  Next
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
           </footer>
-    </section>
+      </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
   ) : null;
 
-  return children({ trigger, panel });
+  return (
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={nextOpen => {
+        setOpen(nextOpen);
+        setStepIndex(0);
+      }}
+    >
+      {children({ trigger, panel })}
+    </DialogPrimitive.Root>
+  );
 }
