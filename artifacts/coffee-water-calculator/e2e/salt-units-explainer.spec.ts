@@ -7,6 +7,7 @@ async function openCalculator(page: Page) {
     localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
     localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
     localStorage.setItem('watermancer.watermancer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
   });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
@@ -52,8 +53,9 @@ test('shows a static rounded chemistry guide without changing the recipe', async
   await expect(overlay).toBeVisible();
   await expect(overlay).toHaveCSS('background-color', 'rgba(2, 6, 23, 0.75)');
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('1 of 3');
-  await expect(title).toHaveText('A salt dissolves into ions');
+  await expect(title).toHaveText('Salt splits into tiny pieces');
   await expect(title).toHaveAttribute('aria-live', 'polite');
+  await expect(guide).toContainText('When salt dissolves, it splits into tiny charged pieces called ions.');
   await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L');
   await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
   await expect(guide.getByTestId('salt-units-example-chloride-mgcl2')).toContainText('≈ 30 mg/L');
@@ -77,18 +79,19 @@ test('shows a static rounded chemistry guide without changing the recipe', async
   await expect(closeButton).toBeFocused();
 
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(title).toHaveText('GH and KH count different ions');
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('≈ 40 ppm CaCO₃');
-  await expect(guide.getByTestId('salt-units-kh-example')).toContainText('≈ 15 ppm CaCO₃');
+  await expect(title).toHaveText('GH and KH measure different things');
+  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 10 mg/L magnesium gives about 40 ppm GH');
+  await expect(guide.getByTestId('salt-units-kh-example')).toContainText('about 18 mg/L bicarbonate gives about 15 ppm KH');
   await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText('Chloride');
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(title).toHaveText('mg, mg/L, and ppm are different units');
-  await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('Mass');
-  await expect(guide.getByTestId('salt-units-unit-mg-l')).toContainText('each liter');
-  await expect(guide.getByTestId('salt-units-unit-ppm')).toContainText('approximately the same number as mg/L');
+  await expect(title).toHaveText('What do mg, mg/L, and ppm mean?');
+  await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('Amount');
+  await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('How much salt you weigh.');
+  await expect(guide.getByTestId('salt-units-unit-mg-l')).toContainText('How much is in 1 L of water.');
+  await expect(guide.getByTestId('salt-units-unit-ppm')).toContainText('In water, ppm is about the same as mg/L.');
 
   await guide.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(title).toHaveText('GH and KH count different ions');
+  await expect(title).toHaveText('GH and KH measure different things');
   await expect(targetInput).toHaveValue('40');
   await page.keyboard.press('Escape');
   await expect(guide).toHaveCount(0);
@@ -118,7 +121,7 @@ test('keeps the same rounded example after recipe inputs change', async ({ page 
   await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L');
   await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('≈ 40 ppm CaCO₃');
+  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 40 ppm GH');
 });
 
 test('keeps the fixed examples after switching recipes and modes', async ({ page }) => {

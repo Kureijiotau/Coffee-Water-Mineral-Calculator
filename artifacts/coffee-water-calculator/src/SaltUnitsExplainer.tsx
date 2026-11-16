@@ -35,16 +35,16 @@ const OTHER_IONS = (Object.keys(ION_MAP) as IonId[]).filter(
 
 const STEPS = [
   {
-    title: 'A salt dissolves into ions',
-    description: 'A salt is a package of ions. When it dissolves, each part contributes its own concentration to the water.',
+    title: 'Salt splits into tiny pieces',
+    description: 'When salt dissolves, it splits into tiny charged pieces called ions. Different salts make different pieces.',
   },
   {
-    title: 'GH and KH count different ions',
-    description: 'GH tracks calcium and magnesium. KH tracks bicarbonate and carbonate. The other ions still matter to the water, but do not add to either hardness value.',
+    title: 'GH and KH measure different things',
+    description: 'Calcium and magnesium make GH. Bicarbonate and carbonate make KH. Other ions affect the water too, but they do not count toward GH or KH.',
   },
   {
-    title: 'mg, mg/L, and ppm are different units',
-    description: 'Mass tells you how much material there is. Concentration tells you how much is in each liter. Hardness uses a separate CaCO₃-equivalent scale.',
+    title: 'What do mg, mg/L, and ppm mean?',
+    description: 'mg is how much you weigh. mg/L is how much is in one liter of water. In water, ppm is about the same as mg/L. GH and KH use a comparison scale called CaCO₃.',
   },
 ] as const;
 
@@ -136,7 +136,7 @@ function SaltDissociationDiagram() {
         })}
       </div>
       <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
-        Rounded examples for 1 L. Hydrated crystals weigh more than their anhydrous-equivalent salt target because they include water in the crystal.
+        Rounded examples for 1 L. Some salts have water inside their crystals, so you may need to weigh more of them.
       </p>
     </div>
   );
@@ -165,13 +165,13 @@ function HardnessDiagram() {
         <div data-testid="salt-units-gh-example" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
           <div className="text-xs font-semibold text-cyan-100">GH · general hardness</div>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Calcium + magnesium. In the magnesium chloride example, ≈ 10 mg/L magnesium contributes ≈ 40 ppm CaCO₃-equivalent GH.
+            Calcium and magnesium make GH. Here, about 10 mg/L magnesium gives about 40 ppm GH.
           </p>
         </div>
         <div data-testid="salt-units-kh-example" className="rounded-xl border border-violet-300/25 bg-violet-400/[0.07] p-3">
           <div className="text-xs font-semibold text-violet-100">KH · carbonate hardness</div>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Bicarbonate + carbonate. ≈ 18 mg/L bicarbonate contributes ≈ 15 ppm CaCO₃-equivalent KH.
+            Bicarbonate and carbonate make KH. Here, about 18 mg/L bicarbonate gives about 15 ppm KH.
           </p>
         </div>
       </div>
@@ -183,7 +183,7 @@ function HardnessDiagram() {
         </div>
       </div>
       <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
-        Sodium, potassium, chloride, sulfate, and the other listed ions can affect the water, but they do not add to GH or KH.
+        Sodium, potassium, chloride, and sulfate affect the water, but do not count toward GH or KH.
       </p>
     </div>
   );
@@ -191,10 +191,10 @@ function HardnessDiagram() {
 
 function UnitsDiagram() {
   const units = [
-    { id: 'mg', label: 'mg', value: 'Mass', detail: 'How much salt you weigh.' },
-    { id: 'mg-l', label: 'mg/L', value: 'Concentration', detail: 'How much is present in each liter.' },
-    { id: 'ppm', label: 'ppm', value: 'Parts per million', detail: 'In dilute water, approximately the same number as mg/L.' },
-    { id: 'caco3', label: 'ppm CaCO₃', value: 'Hardness equivalent', detail: 'A comparison scale for GH or KH—not salt mass or literal CaCO₃ added.' },
+    { id: 'mg', label: 'mg', value: 'Amount', detail: 'How much salt you weigh.' },
+    { id: 'mg-l', label: 'mg/L', value: 'In one liter', detail: 'How much is in 1 L of water.' },
+    { id: 'ppm', label: 'ppm', value: 'About the same as mg/L', detail: 'In water, ppm is about the same as mg/L.' },
+    { id: 'caco3', label: 'ppm CaCO₃', value: 'GH/KH scale', detail: 'A comparison scale for GH and KH. You do not add CaCO₃.' },
   ];
   return (
     <div className="space-y-3">
@@ -214,7 +214,7 @@ function UnitsDiagram() {
         ))}
       </div>
       <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs leading-relaxed text-amber-100/90">
-        Example: 40 mg/L of magnesium chloride is not 40 ppm GH. Only its magnesium portion adds GH; chloride adds neither GH nor KH.
+        Example: 40 mg/L magnesium chloride does not mean 40 ppm GH. Only its magnesium counts toward GH. Chloride counts toward neither GH nor KH.
       </p>
     </div>
   );
@@ -263,7 +263,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-              Salt chemistry · rounded examples
+              Simple salt examples · 1 L
             </p>
             <DialogPrimitive.Title asChild>
               <h3 aria-live="polite" className="mt-1 text-base font-semibold text-white sm:text-lg">
