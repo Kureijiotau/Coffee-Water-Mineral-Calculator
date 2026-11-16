@@ -34,7 +34,6 @@ import { StableNumberInput } from './components/StableNumberInput';
 import { ConcentrateGuidedTour, type ConcentrateTourCloseReason } from './ConcentrateGuidedTour';
 import { GuidedTourIllustration } from './GuidedTourIllustration';
 import SaltUnitsExplainer from './SaltUnitsExplainer';
-import { calculateSaltUnitsBreakdown } from './saltUnitsExplainer';
 import {
   getCalculatorTourSteps,
   getCalculatorTourLabel,
@@ -4594,21 +4593,6 @@ function App() {
     const recipeIons = computeIonTotals(saltTargets, {}, 1);
     return Object.values(recipeIons).reduce((total, ppm) => total + ppm, 0);
   }, [saltTargets]);
-  const saltFormIndexById = useMemo<Record<string, number>>(() => {
-    const indexes: Record<string, number> = {};
-    SALTS.forEach((salt, index) => {
-      indexes[salt.id] = safeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0;
-    });
-    return indexes;
-  }, [safeRows]);
-  const saltUnitsBreakdown = useMemo(
-    () => calculateSaltUnitsBreakdown({
-      saltTargets,
-      formIndexBySaltId: saltFormIndexById,
-      liters: L,
-    }),
-    [saltTargets, saltFormIndexById, L],
-  );
   const finalSaltIons = useMemo(
     () => computeIonTotals(effectiveSuggestedSaltTargets, {}, 1),
     [effectiveSuggestedSaltTargets],
@@ -7567,7 +7551,7 @@ function App() {
             data-testid={showBrewer ? 'brewer-salt-summary' : 'alchemist-salt-summary'}
             className="app-card app-panel-surface order-4 overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/70 shadow-xl backdrop-blur"
           >
-            <SaltUnitsExplainer breakdown={saltUnitsBreakdown} liters={L}>
+            <SaltUnitsExplainer>
               {({ trigger, panel }) => (
                 <>
                   <SharedSectionHeader
