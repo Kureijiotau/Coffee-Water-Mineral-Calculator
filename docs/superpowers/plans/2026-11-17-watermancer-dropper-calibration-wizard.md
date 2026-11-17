@@ -74,7 +74,7 @@ Expected: FAIL with the missing module/function.
 - [ ] **Step 1: Add failing browser tests before UI implementation.** Cover choosing and preselecting tips, three-run save reflected in the existing card, saving with optional runs skipped, Start over reset, >5% warning, required photo alt text and tip caption on each relevant page, phone Next visibility on every page, and desktop no-scroll plus identical Next position across pages.
 - [ ] **Step 2: Run the new browser spec and confirm it fails because the wizard entry point is absent.**
 
-Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide-calibration-wizard.spec.ts`
+Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser e2e/watermancer-guide-calibration-wizard.spec.ts`
 
 Expected: FAIL on missing guided-calibration controls.
 
@@ -83,7 +83,7 @@ Expected: FAIL on missing guided-calibration controls.
 - [ ] **Step 5: Keep the existing cards intact and synchronize the newly saved calibration into the matching card draft only.** Verify the other style’s saved value and any unrelated card draft are preserved.
 - [ ] **Step 6: Run the new browser spec and existing Guide calibration unit test.**
 
-Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide-calibration-wizard.spec.ts`
+Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser e2e/watermancer-guide-calibration-wizard.spec.ts`
 
 Run: `pnpm --filter @workspace/coffee-water-calculator exec vitest run --config vitest.config.ts src/watermancerGuideCalibration.test.ts src/watermancerGuideCalibrationMath.test.ts`
 
@@ -111,7 +111,7 @@ Expected: PASS.
 
 - [ ] **Step 3: Run the Watermancer Guide and calibration browser coverage.**
 
-Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser -- e2e/watermancer-guide.spec.ts e2e/watermancer-guide-calibration-wizard.spec.ts`
+Run: `pnpm --filter @workspace/coffee-water-calculator run test:browser e2e/watermancer-guide.spec.ts e2e/watermancer-guide-calibration-wizard.spec.ts`
 
 Expected: PASS, including all required wizard interactions and viewport checks.
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react';
 import straightTipPhoto from '@assets/4_1792294122444.jpg';
 import roundTipPhoto from '@assets/5_1792294122444.jpg';
@@ -29,6 +29,7 @@ import WatermancerGuideStep5Intro from './WatermancerGuideStep5Intro';
 import { WatermancerGuideStockPreparation } from './WatermancerGuideStockPreparation';
 import { MilligramTooltipText } from './MilligramTooltip';
 import { WatermancerGuideSaltProductPreview } from './WatermancerGuideSaltProductPreview';
+import { WatermancerGuideCalibrationWizard } from './WatermancerGuideCalibrationWizard';
 
 type WatermancerGuideProps = {
   onOpenWatermancer: () => void;
@@ -127,6 +128,29 @@ export function WatermancerGuideCalibrationCards({
       },
     ])) as Partial<Record<LotusDropperStyle, LotusDropperCalibration>>,
   );
+  const previousCalibrations = useRef(calibrations);
+
+  useEffect(() => {
+    const changedStyles = TIP_CALIBRATION_CARDS
+      .filter(({ style }) => (
+        previousCalibrations.current[style]?.dropsInput !== calibrations[style]?.dropsInput
+        || previousCalibrations.current[style]?.weightInput !== calibrations[style]?.weightInput
+      ))
+      .map(({ style }) => style);
+
+    if (changedStyles.length > 0) {
+      setDrafts(previous => {
+        const next = { ...previous };
+        for (const style of changedStyles) {
+          next[style] = calibrations[style]
+            ? { ...calibrations[style]!, style }
+            : { dropsInput: '', weightInput: '', style };
+        }
+        return next;
+      });
+    }
+    previousCalibrations.current = calibrations;
+  }, [calibrations]);
 
   const updateDraft = (
     style: LotusDropperStyle,
@@ -362,10 +386,18 @@ export default function WatermancerGuide({ onOpenWatermancer }: WatermancerGuide
             )}
 
             {step.id === 'calibrate' && (
-              <WatermancerGuideCalibrationCards
-                calibrations={savedCalibrations}
-                onUse={useCalibration}
-              />
+              <>
+                <div className="mt-4 flex justify-end">
+                  <WatermancerGuideCalibrationWizard
+                    calibrations={savedCalibrations}
+                    onSave={useCalibration}
+                  />
+                </div>
+                <WatermancerGuideCalibrationCards
+                  calibrations={savedCalibrations}
+                  onUse={useCalibration}
+                />
+              </>
             )}
 
             {step.id === 'supplies' && (

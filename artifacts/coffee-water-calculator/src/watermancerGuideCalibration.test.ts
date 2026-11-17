@@ -8,6 +8,11 @@ type CalibrationCardsProps = {
   onUse: (style: LotusDropperStyle, calibration: LotusDropperCalibration) => void;
 };
 
+type CalibrationWizardProps = {
+  calibrations: Partial<Record<LotusDropperStyle, LotusDropperCalibration>>;
+  onSave: (style: LotusDropperStyle, calibration: LotusDropperCalibration) => void;
+};
+
 describe('Watermancer Guide dropper calibration cards', () => {
   it('tells users to apply the measured values to both DIY tools', async () => {
     const content = await import('./watermancerGuideContent');
@@ -38,5 +43,23 @@ describe('Watermancer Guide dropper calibration cards', () => {
     expect(html).toContain('aria-label="Round water weight in grams"');
     expect(html).toContain('aria-label="Use straight tip calibration"');
     expect(html).toContain('aria-label="Use round tip calibration"');
+  });
+
+  it('renders a guided calibration entry point without replacing the existing cards', async () => {
+    const wizard = await import('./WatermancerGuideCalibrationWizard');
+    const Wizard = Reflect.get(wizard, 'WatermancerGuideCalibrationWizard') as
+      | ComponentType<CalibrationWizardProps>
+      | undefined;
+
+    expect(typeof Wizard).toBe('function');
+    if (!Wizard) return;
+
+    const html = renderToStaticMarkup(createElement(Wizard, {
+      calibrations: {},
+      onSave: () => undefined,
+    }));
+
+    expect(html).toContain('data-testid="button-guided-calibration"');
+    expect(html).toContain('Guided calibration');
   });
 });
