@@ -29,9 +29,7 @@ const SALT_EXAMPLES: SaltExample[] = [
 
 const GH_IONS: IonId[] = ['calcium', 'magnesium'];
 const KH_IONS: IonId[] = ['bicarbonate', 'carbonate'];
-const OTHER_IONS = (Object.keys(ION_MAP) as IonId[]).filter(
-  ionId => !GH_IONS.includes(ionId) && !KH_IONS.includes(ionId),
-);
+const OTHER_IONS: IonId[] = ['sodium', 'potassium', 'chloride', 'sulfate'];
 
 const STEPS = [
   {
@@ -40,7 +38,7 @@ const STEPS = [
   },
   {
     title: 'GH and KH measure different things',
-    description: 'Calcium and magnesium make GH. Bicarbonate and carbonate make KH. Other ions affect the water too, but they do not count toward GH or KH.',
+    description: 'The colors below show which ions count toward each value.',
   },
   {
     title: 'What do mg, mg/L, and ppm mean?',
@@ -112,6 +110,9 @@ function SaltDissociationDiagram() {
                 </span>
                 <SaltAccent saltId={example.saltId} />
               </div>
+              {['mgcl2', 'cacl2', 'mgso4'].includes(example.saltId) && (
+                <div className="mt-1 text-[10px] text-slate-400">dry (anhydrous) form</div>
+              )}
               <div className="mt-1 text-[11px] text-slate-400">
                 {example.saltMgL} mg/L salt
               </div>
@@ -136,7 +137,7 @@ function SaltDissociationDiagram() {
         })}
       </div>
       <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
-        Rounded examples for 1 L. Some salts have water inside their crystals, so you may need to weigh more of them.
+        Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.
       </p>
     </div>
   );
@@ -165,7 +166,7 @@ function HardnessDiagram() {
         <div data-testid="salt-units-gh-example" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
           <div className="text-xs font-semibold text-cyan-100">GH · general hardness</div>
           <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Calcium and magnesium make GH. Here, about 10 mg/L magnesium gives about 40 ppm GH.
+            Calcium and magnesium make GH. Here, about 10 mg/L magnesium gives about 41 ppm GH.
           </p>
         </div>
         <div data-testid="salt-units-kh-example" className="rounded-xl border border-violet-300/25 bg-violet-400/[0.07] p-3">
@@ -214,7 +215,7 @@ function UnitsDiagram() {
         ))}
       </div>
       <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs leading-relaxed text-amber-100/90">
-        Example: 40 mg/L magnesium chloride does not mean 40 ppm GH. Only its magnesium counts toward GH. Chloride counts toward neither GH nor KH.
+        25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.
       </p>
     </div>
   );
@@ -258,7 +259,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
         aria-modal="true"
         aria-describedby={descriptionId}
         data-testid="salt-units-explainer-dialog"
-        className="fixed left-1/2 top-1/2 z-[91] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
+        className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
       >
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -289,13 +290,15 @@ export default function SaltUnitsExplainer({ children }: Props) {
             </DialogPrimitive.Close>
           </div>
         </header>
-        <p id={descriptionId} aria-live="polite" aria-atomic="true" className="mt-2 text-sm leading-relaxed text-slate-300">
-          {currentStep.description}
-        </p>
-        <div className="mt-3 rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5 sm:p-3">
-          {stepVisual}
+        <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
+          <p id={descriptionId} aria-live="polite" aria-atomic="true" className="text-sm leading-relaxed text-slate-300">
+            {currentStep.description}
+          </p>
+          <div className="mt-3 rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5 sm:p-3">
+            {stepVisual}
+          </div>
         </div>
-        <footer className="mt-3 flex items-center justify-between gap-2 border-t border-white/10 pt-3">
+        <footer className="mt-3 flex shrink-0 items-center justify-between gap-2 border-t border-white/10 pt-3">
           <DialogPrimitive.Close asChild>
             <button
               type="button"
@@ -319,7 +322,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
               <DialogPrimitive.Close asChild>
                 <button
                   type="button"
-                  className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                  className="inline-flex min-h-10 w-24 items-center justify-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
                 >
                   Done
                 </button>
@@ -328,7 +331,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
               <button
                 type="button"
                 onClick={() => setStepIndex(index => Math.min(STEPS.length - 1, index + 1))}
-                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+                className="inline-flex min-h-10 w-24 items-center justify-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
               >
                 Next
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />

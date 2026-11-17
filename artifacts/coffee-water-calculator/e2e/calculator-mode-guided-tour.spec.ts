@@ -1,11 +1,15 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 type RecipeMode = 'Brewer' | 'Alchemist';
 const tourDialog = (page: Page, mode: RecipeMode) => page.getByRole('dialog', { name: `${mode} tour` });
 
 async function openFreshCalculator(page: Page, width = 1280, height = 900) {
   await page.setViewportSize({ width, height });
-  await page.addInitScript(() => localStorage.clear());
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('watermancer.test.initialized') === 'true') return;
+    localStorage.clear();
+    sessionStorage.setItem('watermancer.test.initialized', 'true');
+  });
   await page.goto('/');
 }
 
@@ -246,6 +250,32 @@ test('keeps the Watermancer tour target visible on a phone screen', async ({ pag
   expect(target!.x + target!.width).toBeLessThanOrEqual(375);
 });
 
+test('shows the header of tall Alchemist and Watermancer tour sections', async ({ page }) => {
+  await openFreshCalculator(page, 1280, 800);
+  const tour = tourDialog(page, 'Alchemist');
+  const spotlight = page.getByTestId('calculator-guided-tour-spotlight');
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(spotlight).toHaveAttribute('data-target-testid', 'alchemist-mineral-recipe');
+
+  const assertHeaderVisible = async (header: Locator) => {
+    await expect.poll(async () => {
+      const bounds = await header.boundingBox();
+      return bounds !== null && bounds.y >= 0 && bounds.y + bounds.height <= 800;
+    }).toBe(true);
+  };
+
+  await assertHeaderVisible(page.getByTestId('alchemist-mineral-recipe').locator('h2'));
+  await page.getByRole('button', { name: 'Skip', exact: true }).click();
+  await page.getByTestId('mode-watermancer').click();
+  const watermancerTour = tourDialog(page, 'Watermancer');
+  for (let step = 0; step < 3; step += 1) {
+    await watermancerTour.getByRole('button', { name: 'Next', exact: true }).click();
+  }
+  await expect(spotlight).toHaveAttribute('data-target-testid', 'watermancer-salts');
+  await assertHeaderVisible(page.getByTestId('watermancer-salts').locator('h2'));
+});
+
 test('keeps the illustrated spotlight and guide card in view on a phone', async ({ page }) => {
   await openFreshCalculator(page, 375, 812);
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
@@ -310,8 +340,8 @@ test('closes a Watermancer tour with a missing target without marking it seen', 
   await expect(tourDialog(page, 'Watermancer')).toBeHidden();
   expect(await page.evaluate(() => localStorage.getItem('watermancer.watermancer-tour.v1'))).toBeNull();
 
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('cwm.calculatorMode'))).toBe('watermancer');
   await page.reload();
-  await page.getByTestId('mode-watermancer').click();
   await expect(tourDialog(page, 'Watermancer')).toBeVisible();
   await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 7');
 });

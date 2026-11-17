@@ -158,9 +158,10 @@ export function ConcentrateGuidedTour({
     }
     targetRef.current = target;
 
+    const targetIsTallerThanViewport = target.getBoundingClientRect().height > window.innerHeight - EDGE_GAP * 2;
     target.scrollIntoView({
       behavior: 'auto',
-      block: window.innerWidth < 640 ? 'start' : 'center',
+      block: window.innerWidth < 640 || targetIsTallerThanViewport ? 'start' : 'center',
       inline: 'nearest',
     });
 

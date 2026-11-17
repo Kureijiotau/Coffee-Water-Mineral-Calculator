@@ -61,6 +61,12 @@ test('shows a static rounded chemistry guide without changing the recipe', async
   await expect(guide.getByTestId('salt-units-example-chloride-mgcl2')).toContainText('≈ 30 mg/L');
   await expect(guide.getByTestId('salt-units-example-mgso4')).toContainText('Magnesium Sulfate');
   await expect(guide.getByTestId('salt-units-example-nahco3')).toContainText('Sodium Bicarbonate');
+  for (const saltId of ['mgcl2', 'cacl2', 'mgso4']) {
+    await expect(guide.getByTestId(`salt-units-example-${saltId}`)).toContainText('dry (anhydrous) form');
+  }
+  await expect(guide).toContainText(
+    'Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.',
+  );
   await expect(guide.getByTestId('salt-units-salt-name-mgcl2')).toHaveCSS('color', 'rgb(253, 224, 71)');
   await expect(guide.getByTestId('salt-units-example-mgcl2')).toHaveCSS(
     'border-color',
@@ -80,15 +86,25 @@ test('shows a static rounded chemistry guide without changing the recipe', async
 
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(title).toHaveText('GH and KH measure different things');
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 10 mg/L magnesium gives about 40 ppm GH');
+  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 10 mg/L magnesium gives about 41 ppm GH');
   await expect(guide.getByTestId('salt-units-kh-example')).toContainText('about 18 mg/L bicarbonate gives about 15 ppm KH');
+  await expect(guide.getByText('Calcium and magnesium make GH', { exact: false })).toHaveCount(1);
+  await expect(guide.getByText('Bicarbonate and carbonate make KH', { exact: false })).toHaveCount(1);
   await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText('Chloride');
+  const otherIonChips = guide.getByTestId('salt-units-no-hardness-ions').locator('[data-testid^="salt-units-ion-key-"]');
+  await expect(otherIonChips).toHaveCount(4);
+  for (const ionName of ['Sodium', 'Potassium', 'Chloride', 'Sulfate']) {
+    await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText(ionName);
+  }
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(title).toHaveText('What do mg, mg/L, and ppm mean?');
   await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('Amount');
   await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('How much salt you weigh.');
   await expect(guide.getByTestId('salt-units-unit-mg-l')).toContainText('How much is in 1 L of water.');
   await expect(guide.getByTestId('salt-units-unit-ppm')).toContainText('In water, ppm is about the same as mg/L.');
+  await expect(guide).toContainText(
+    '25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.',
+  );
 
   await guide.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(title).toHaveText('GH and KH measure different things');
@@ -121,7 +137,7 @@ test('keeps the same rounded example after recipe inputs change', async ({ page 
   await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L');
   await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 40 ppm GH');
+  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 41 ppm GH');
 });
 
 test('keeps the fixed examples after switching recipes and modes', async ({ page }) => {
@@ -196,4 +212,56 @@ test('keeps the guide within a narrow phone viewport', async ({ page }) => {
   expect(landscapeBounds!.x + landscapeBounds!.width).toBeLessThanOrEqual(844);
   expect(landscapeBounds!.y).toBeGreaterThanOrEqual(0);
   expect(landscapeBounds!.y + landscapeBounds!.height).toBeLessThanOrEqual(390);
+});
+
+test('keeps the guide footer visible on phone pages without scrolling', async ({ page }) => {
+  await openRecipeMode(page, 'brewer');
+  await page.setViewportSize({ width: 375, height: 812 });
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  const initialPageScrollY = await page.evaluate(() => window.scrollY);
+  const assertFooterVisible = async () => {
+    const footer = guide.locator('footer');
+    await expect(footer).toBeVisible();
+    const bounds = await footer.boundingBox();
+    expect(bounds).not.toBeNull();
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(812);
+    expect(await page.evaluate(() => window.scrollY)).toBe(initialPageScrollY);
+  };
+
+  await assertFooterVisible();
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  await assertFooterVisible();
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(guide.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+  await assertFooterVisible();
+});
+
+test('keeps the guide action button in the same desktop position on all pages', async ({ page }) => {
+  await openRecipeMode(page, 'brewer');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  const positions = [];
+  for (let step = 0; step < 3; step += 1) {
+    const action = guide.getByRole('button', { name: /^(Next|Done)$/ });
+    const bounds = await action.boundingBox();
+    expect(bounds).not.toBeNull();
+    positions.push(bounds!);
+    if (step < 2) await action.click();
+  }
+
+  for (const position of positions.slice(1)) {
+    expect(position.x).toBeCloseTo(positions[0].x, 0);
+    expect(position.y).toBeCloseTo(positions[0].y, 0);
+    expect(position.width).toBeCloseTo(positions[0].width, 0);
+    expect(position.height).toBeCloseTo(positions[0].height, 0);
+  }
 });
