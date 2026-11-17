@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+    localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+  });
+});
+
 const saltProductPhotos = [
   {
     label: 'Nigari',
