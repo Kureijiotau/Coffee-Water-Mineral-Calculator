@@ -5,6 +5,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
     localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
     localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+    localStorage.setItem('watermancer.watermancer-tour.v1', 'seen');
   });
 });
 
@@ -438,6 +439,12 @@ test('opens a product preview when tapped on a touch screen', async ({ browser, 
   });
 
   try {
+    await context.addInitScript(() => {
+      localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+      localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+      localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+      localStorage.setItem('watermancer.watermancer-tour.v1', 'seen');
+    });
     const page = await context.newPage();
     await openWatermancerSuppliesStep(page);
     const trigger = page.getByRole('button', { name: 'Vera Salt', exact: true });

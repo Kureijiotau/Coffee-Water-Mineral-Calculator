@@ -2,6 +2,10 @@ import { expect, test } from '@playwright/test';
 
 test('edits the shared tip calibration in Stock Builder and reuses it in the Guide and DIY Lotus Drops', async ({ page }) => {
   await page.addInitScript(() => {
+    localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
+    localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
+    localStorage.setItem('watermancer.alchemist-tour.v1', 'seen');
+    localStorage.setItem('watermancer.watermancer-tour.v1', 'seen');
     const key = 'coffee-water-diy-concentrate-inputs';
     if (localStorage.getItem(key) !== null) return;
     localStorage.setItem(key, JSON.stringify({

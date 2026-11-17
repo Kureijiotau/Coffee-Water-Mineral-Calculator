@@ -241,7 +241,7 @@ test('keeps the guide footer visible on phone pages without scrolling', async ({
   await assertFooterVisible();
 });
 
-test('keeps the guide action button in the same desktop position on all pages', async ({ page }) => {
+test('keeps every desktop page unscrolled, its footnote visible, and the action in the same position', async ({ page }) => {
   await openRecipeMode(page, 'brewer');
   await page.setViewportSize({ width: 1280, height: 800 });
   const trigger = page.getByTestId('salt-units-explainer-trigger');
@@ -251,6 +251,12 @@ test('keeps the guide action button in the same desktop position on all pages', 
   const guide = page.getByTestId('salt-units-explainer-dialog');
   const positions = [];
   for (let step = 0; step < 3; step += 1) {
+    const body = guide.locator('header + div');
+    const bodySize = await body.evaluate(element => ({
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+    }));
+    expect(bodySize.scrollHeight, `page ${step + 1} should fit without scrolling`).toBeLessThanOrEqual(bodySize.clientHeight);
     const action = guide.getByRole('button', { name: /^(Next|Done)$/ });
     const bounds = await action.boundingBox();
     expect(bounds).not.toBeNull();
@@ -261,10 +267,11 @@ test('keeps the guide action button in the same desktop position on all pages', 
         { exact: true },
       );
       const footnoteBounds = await footnote.boundingBox();
-      const footerBounds = await guide.locator('footer').boundingBox();
+      const bodyBounds = await body.boundingBox();
       expect(footnoteBounds).not.toBeNull();
-      expect(footerBounds).not.toBeNull();
-      expect(footnoteBounds!.y + footnoteBounds!.height).toBeLessThanOrEqual(footerBounds!.y);
+      expect(bodyBounds).not.toBeNull();
+      expect(footnoteBounds!.y).toBeGreaterThanOrEqual(bodyBounds!.y);
+      expect(footnoteBounds!.y + footnoteBounds!.height).toBeLessThanOrEqual(bodyBounds!.y + bodyBounds!.height);
     }
     if (step < 2) await action.click();
   }
@@ -297,5 +304,5 @@ test('keeps the page-three content close to the footer on desktop', async ({ pag
   expect(contentBounds).not.toBeNull();
   expect(footerBounds).not.toBeNull();
   const gap = footerBounds!.y - (contentBounds!.y + contentBounds!.height);
-  expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(80);
+  expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(100);
 });

@@ -3,6 +3,12 @@ name: Browser smoke harness
 description: Reliable interactive and automated browser checks in this headless Replit workspace
 ---
 
+For browser tests unrelated to onboarding, mark the relevant first-visit tours as seen in the test setup, including any manually created touch/mobile browser contexts. Keep dedicated tour tests exercising real first-visit behavior.
+
+**Why:** First-visit spotlight overlays intentionally intercept clicks outside the highlighted section. They can make otherwise healthy Guide and calibration tests time out; a page fixture's setup does not automatically apply to a separately created browser context.
+
+**How to apply:** Seed only tour-completion flags in each relevant context before navigation. Never disable tours in application code or use forced clicks to get around their overlays.
+
 Use an explicit Chromium CDP endpoint for interactive checks, and make sure the browser is running in or bridged to the workspace; enabling remote debugging on the user's separate local browser does not expose it to this isolated environment. For automated Playwright checks, keep the runner version, browser build, and Node runtime aligned. Prefer the workspace-matched browser bundle when available, and enable only projects with installed executables.
 
 **Why:** Interactive auto-attachment can fail despite a healthy Chromium process, and the user's local browser may not be reachable from the isolated workspace at all. Separately, mismatched Playwright/browser protocols may launch successfully but fail while creating a context; older runners have also hung under a newer Node runtime before reporting tests.

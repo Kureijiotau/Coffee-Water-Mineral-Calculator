@@ -260,7 +260,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
         aria-modal="true"
         aria-describedby={descriptionId}
         data-testid="salt-units-explainer-dialog"
-        className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:h-[min(580px,calc(100dvh-1.5rem))] sm:p-5"
+        className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:h-[min(625px,calc(100dvh-1.5rem))] sm:p-5"
       >
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
