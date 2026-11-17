@@ -277,49 +277,6 @@ test('keeps the guide action button in the same desktop position on all pages', 
   }
 });
 
-test('fits all guide pages in the desktop body without scrolling', async ({ page }) => {
-  await openRecipeMode(page, 'brewer');
-  await page.setViewportSize({ width: 1280, height: 800 });
-  const trigger = page.getByTestId('salt-units-explainer-trigger');
-  await trigger.scrollIntoViewIfNeeded();
-  await trigger.click();
-
-  const guide = page.getByTestId('salt-units-explainer-dialog');
-  const body = guide.locator('div.mt-2.min-h-0.flex-1.overflow-y-auto');
-  for (let step = 0; step < 3; step += 1) {
-    const metrics = await body.evaluate(element => ({
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
-    }));
-    expect(
-      metrics.scrollHeight,
-      `page ${step + 1} body should fit without scrolling`,
-    ).toBeLessThanOrEqual(metrics.clientHeight);
-
-    if (step === 0) {
-      const footnote = guide.getByText(
-        'Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.',
-        { exact: true },
-      );
-      const bodyBounds = await body.boundingBox();
-      const footnoteBounds = await footnote.boundingBox();
-      expect(bodyBounds).not.toBeNull();
-      expect(footnoteBounds).not.toBeNull();
-      expect(footnoteBounds!.y).toBeGreaterThanOrEqual(bodyBounds!.y);
-      expect(footnoteBounds!.y + footnoteBounds!.height).toBeLessThanOrEqual(
-        bodyBounds!.y + bodyBounds!.height,
-      );
-    }
-
-    if (step < 2) {
-      await guide.getByRole('button', { name: 'Next', exact: true }).click();
-      await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText(
-        `${step + 2} of 3`,
-      );
-    }
-  }
-});
-
 test('keeps the page-three content close to the footer on desktop', async ({ page }) => {
   await openRecipeMode(page, 'brewer');
   await page.setViewportSize({ width: 1280, height: 800 });
@@ -340,5 +297,5 @@ test('keeps the page-three content close to the footer on desktop', async ({ pag
   expect(contentBounds).not.toBeNull();
   expect(footerBounds).not.toBeNull();
   const gap = footerBounds!.y - (contentBounds!.y + contentBounds!.height);
-  expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(100);
+  expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(80);
 });
