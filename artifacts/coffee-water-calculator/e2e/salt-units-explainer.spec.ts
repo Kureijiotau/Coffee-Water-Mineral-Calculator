@@ -255,6 +255,17 @@ test('keeps the guide action button in the same desktop position on all pages', 
     const bounds = await action.boundingBox();
     expect(bounds).not.toBeNull();
     positions.push(bounds!);
+    if (step === 0) {
+      const footnote = guide.getByText(
+        'Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.',
+        { exact: true },
+      );
+      const footnoteBounds = await footnote.boundingBox();
+      const footerBounds = await guide.locator('footer').boundingBox();
+      expect(footnoteBounds).not.toBeNull();
+      expect(footerBounds).not.toBeNull();
+      expect(footnoteBounds!.y + footnoteBounds!.height).toBeLessThanOrEqual(footerBounds!.y);
+    }
     if (step < 2) await action.click();
   }
 
@@ -264,4 +275,27 @@ test('keeps the guide action button in the same desktop position on all pages', 
     expect(position.width).toBeCloseTo(positions[0].width, 0);
     expect(position.height).toBeCloseTo(positions[0].height, 0);
   }
+});
+
+test('keeps the page-three content close to the footer on desktop', async ({ page }) => {
+  await openRecipeMode(page, 'brewer');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+
+  const lastContentBlock = guide.getByText(
+    '25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.',
+    { exact: true },
+  );
+  const contentBounds = await lastContentBlock.boundingBox();
+  const footerBounds = await guide.locator('footer').boundingBox();
+  expect(contentBounds).not.toBeNull();
+  expect(footerBounds).not.toBeNull();
+  const gap = footerBounds!.y - (contentBounds!.y + contentBounds!.height);
+  expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(80);
 });

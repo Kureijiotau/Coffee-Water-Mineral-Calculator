@@ -83,8 +83,8 @@ function IonChip({ ionId }: { ionId: IonId }) {
 
 function SaltDissociationDiagram() {
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className="space-y-3 sm:space-y-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-y-1">
         {SALT_EXAMPLES.map(example => {
           const salt = saltForExample(example.saltId);
           if (!salt) return null;
@@ -259,7 +259,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
         aria-modal="true"
         aria-describedby={descriptionId}
         data-testid="salt-units-explainer-dialog"
-        className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:p-5"
+        className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:h-[min(580px,calc(100dvh-1.5rem))] sm:p-5"
       >
         <header className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -290,7 +290,7 @@ export default function SaltUnitsExplainer({ children }: Props) {
             </DialogPrimitive.Close>
           </div>
         </header>
-        <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className={`mt-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:flex sm:flex-col sm:justify-center ${stepIndex === 2 ? 'sm:pt-4' : ''}`}>
           <p id={descriptionId} aria-live="polite" aria-atomic="true" className="text-sm leading-relaxed text-slate-300">
             {currentStep.description}
           </p>
