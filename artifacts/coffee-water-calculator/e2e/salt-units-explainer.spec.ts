@@ -92,6 +92,9 @@ test('shows the rounded fallback guide when no mineral recipe is selected', asyn
   await expect(guide.getByTestId('salt-units-kh-value')).toContainText('ppm as CaCO₃');
   await expect(guide.getByTestId('salt-units-unit-legend')).toContainText('mg = what you weigh.');
   await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText('SO₄²⁻');
+  for (const ionId of ['calcium', 'magnesium', 'bicarbonate', 'carbonate', 'sodium', 'potassium', 'chloride', 'sulfate']) {
+    await expect(guide.getByTestId(`salt-units-group-ion-${ionId}`)).toContainText(/(?:≈ )?\d+(?:\.\d)? mg\/L/);
+  }
 
   await guide.getByRole('button', { name: 'Back', exact: true }).click();
   await expect(title).toHaveText('Crystal water adds weight, not minerals');
@@ -296,6 +299,9 @@ test('uses the selected recipe name and its live salts as the worked example', a
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(guide.getByTestId('salt-units-gh-value')).toBeVisible();
   await expect(guide.getByTestId('salt-units-kh-value')).toBeVisible();
+  for (const ionId of ['calcium', 'magnesium', 'bicarbonate', 'carbonate', 'sodium', 'potassium', 'chloride', 'sulfate']) {
+    await expect(guide.getByTestId(`salt-units-group-ion-${ionId}`)).toContainText(/\d+(?:\.\d)? mg\/L/);
+  }
 });
 
 test('uses the rounded six-salt fallback when no recipe is selected', async ({ page }) => {

@@ -301,7 +301,17 @@ function HydrationComparison({ model }: { model: SaltUnitsExplainerModel }) {
   );
 }
 
-function IonGroup({ title, ionIds }: { title: string; ionIds: IonId[] }) {
+function IonGroup({
+  title,
+  ionIds,
+  values,
+  approximate = false,
+}: {
+  title: string;
+  ionIds: IonId[];
+  values: Record<IonId, number>;
+  approximate?: boolean;
+}) {
   return (
     <div className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-2.5">
       <div className="text-[11px] font-semibold text-slate-200">{title}</div>
@@ -309,14 +319,18 @@ function IonGroup({ title, ionIds }: { title: string; ionIds: IonId[] }) {
         {ionIds.map(ionId => (
           <span
             key={ionId}
-            className="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold"
+            data-testid={`salt-units-group-ion-${ionId}`}
+            title={ION_MAP[ionId].name}
+            aria-label={`${ION_MAP[ionId].name}: ${formatMg(values[ionId], approximate)}`}
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-1 text-[10px] font-semibold tabular-nums"
             style={{
               color: ION_MAP[ionId].color.foreground,
               borderColor: ION_MAP[ionId].color.border,
               backgroundColor: ION_MAP[ionId].color.soft,
             }}
           >
-            {ION_MAP[ionId].formula}
+            <span>{ION_MAP[ionId].formula}</span>
+            <span>{formatMg(values[ionId], approximate)}</span>
           </span>
         ))}
       </div>
@@ -346,10 +360,10 @@ function GhKhReadout({ model }: { model: SaltUnitsExplainerModel }) {
         mg = what you weigh. mg/L = what is in 1 L. ppm ~ mg/L. ppm as CaCO₃ is the GH/KH scale.
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <IonGroup title="Counts toward GH" ionIds={GH_IONS} />
-        <IonGroup title="Counts toward KH" ionIds={KH_IONS} />
+        <IonGroup title="Counts toward GH" ionIds={GH_IONS} values={model.totalIons} approximate={model.isFallback} />
+        <IonGroup title="Counts toward KH" ionIds={KH_IONS} values={model.totalIons} approximate={model.isFallback} />
         <div data-testid="salt-units-no-hardness-ions">
-          <IonGroup title="Other ions" ionIds={OTHER_IONS} />
+          <IonGroup title="Other ions" ionIds={OTHER_IONS} values={model.totalIons} approximate={model.isFallback} />
         </div>
       </div>
     </div>
