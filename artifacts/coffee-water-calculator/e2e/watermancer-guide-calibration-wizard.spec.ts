@@ -71,8 +71,8 @@ test('saves only the required first run when later runs are skipped', async ({ p
   await page.getByTestId('guided-calibration-next').click();
   await page.getByTestId('guided-calibration-next').click();
   await enterFirstRun(page);
-  await expect(page.getByTestId('guided-calibration-run-2-drops')).toHaveValue('');
-  await expect(page.getByTestId('guided-calibration-run-3-drops')).toHaveValue('');
+  await expect(page.getByTestId('guided-calibration-run-2-drops')).toHaveValue('50');
+  await expect(page.getByTestId('guided-calibration-run-3-drops')).toHaveValue('50');
   await page.getByTestId('guided-calibration-next').click();
   await page.getByTestId('guided-calibration-save').click();
 
@@ -127,6 +127,20 @@ test('shows the required photo alternatives and tip posture caption on each rele
   await expect(lineupImage).toHaveAttribute('loading', 'lazy');
 });
 
+test('prefills optional run drops from run one without counting missing weights', async ({ page }) => {
+  await openCalibrationWizard(page);
+  await page.getByTestId('guided-calibration-next').click();
+  await page.getByTestId('guided-calibration-next').click();
+  await page.getByTestId('guided-calibration-run-1-drops').fill('75');
+  await page.getByTestId('guided-calibration-run-1-weight').fill('2');
+  await page.getByTestId('guided-calibration-next').click();
+
+  await expect(page.getByTestId('guided-calibration-run-2-drops')).toHaveValue('75');
+  await expect(page.getByTestId('guided-calibration-run-3-drops')).toHaveValue('75');
+  await expect(page.getByTestId('guided-calibration-run-2-weight')).toHaveValue('');
+  await expect(page.getByTestId('guided-calibration-live-result')).toContainText('1 valid run');
+});
+
 test('Start over returns to tip selection and resets the measurement runs', async ({ page }) => {
   await openCalibrationWizard(page);
   await page.getByTestId('guided-calibration-tip-round').click();
@@ -156,6 +170,11 @@ test('keeps the primary action visible on every page at 375 by 812', async ({ pa
     if (!bounds) throw new Error(`${testId} should have a visible bounding box`);
     expect(bounds.y).toBeGreaterThanOrEqual(0);
     expect(bounds.y + bounds.height).toBeLessThanOrEqual(812);
+    const widths = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth,
+      viewport: window.innerWidth,
+    }));
+    expect(widths.document).toBeLessThanOrEqual(widths.viewport);
   };
 
   await assertPrimaryVisible('guided-calibration-next');
@@ -179,6 +198,17 @@ test('keeps the desktop dialog body from scrolling and the primary action in one
 
   for (let pageIndex = 1; pageIndex <= 5; pageIndex += 1) {
     const body = dialog.getByTestId('guided-calibration-scroll-body');
+    const pageContent = dialog.getByTestId(`guided-calibration-page-${pageIndex}`);
+    const pageTitle = dialog.getByTestId('guided-calibration-title');
+    const firstBodyLine = pageContent.locator('p').first();
+    const [titleBounds, firstLineBounds] = await Promise.all([
+      pageTitle.boundingBox(),
+      firstBodyLine.boundingBox(),
+    ]);
+    if (!titleBounds || !firstLineBounds) throw new Error(`Page ${pageIndex} title and intro should be visible`);
+    const titleGap = firstLineBounds.y - (titleBounds.y + titleBounds.height);
+    expect(titleGap, `page ${pageIndex} title-to-content gap was ${titleGap}px`).toBeLessThanOrEqual(40);
+
     const dimensions = await body.evaluate(element => ({
       clientHeight: element.clientHeight,
       scrollHeight: element.scrollHeight,
@@ -189,6 +219,24 @@ test('keeps the desktop dialog body from scrolling and the primary action in one
     const bounds = await action.boundingBox();
     if (!bounds) throw new Error(`Page ${pageIndex} primary action should be visible`);
     positions.push({ x: bounds.x, y: bounds.y });
+
+    if (pageIndex === 1) {
+      for (const style of ['straight', 'round'] as const) {
+        const photoBounds = await page.getByTestId(`guided-calibration-tip-${style}`).getByRole('img').boundingBox();
+        expect(photoBounds, `${style} tip photo should be visible`).not.toBeNull();
+        expect(photoBounds!.height, `${style} tip photo was ${photoBounds!.height}px tall`).toBeGreaterThanOrEqual(140);
+      }
+    }
+    if (pageIndex === 2) {
+      const scaleBounds = await page.getByRole('img', { name: 'Milligram scale with a weighing pan.' }).boundingBox();
+      expect(scaleBounds, 'scale photo should be visible').not.toBeNull();
+      expect(scaleBounds!.height).toBeGreaterThanOrEqual(190);
+    }
+    if (pageIndex === 5) {
+      const bannerBounds = await page.getByRole('img', { name: 'Labelled dropper bottles, one salt per bottle.' }).boundingBox();
+      expect(bannerBounds, 'dropper bottle labels should be visible').not.toBeNull();
+      expect(bannerBounds!.height).toBeGreaterThanOrEqual(120);
+    }
 
     if (pageIndex === 3) {
       await page.getByTestId('guided-calibration-run-1-drops').fill('50');

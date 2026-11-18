@@ -271,7 +271,7 @@ export function WatermancerGuideCalibrationWizard({
 
             <div
               data-testid="guided-calibration-scroll-body"
-              className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:flex sm:flex-col sm:justify-center"
+              className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:flex sm:flex-col sm:justify-start"
             >
               <section
                 data-testid={`guided-calibration-page-${pageIndex + 1}`}
@@ -298,7 +298,11 @@ export function WatermancerGuideCalibrationWizard({
                             onClick={() => setSelectedStyle(option.style)}
                             className={`min-w-0 overflow-hidden rounded-xl border p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 ${tone}`}
                           >
-                            <TipPhoto option={option} loading="eager" className="h-20 w-full object-contain sm:h-24" />
+                            <TipPhoto
+                              option={option}
+                              loading="eager"
+                              className="h-32 w-full object-cover object-[80%_72%] sm:h-40"
+                            />
                             <span className="mt-2 flex items-center gap-2 text-xs font-semibold sm:text-sm">
                               {selected && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
                               {option.title}
@@ -323,7 +327,7 @@ export function WatermancerGuideCalibrationWizard({
                         height={1024}
                         loading="lazy"
                         decoding="async"
-                        className="mx-auto h-28 w-full max-w-[220px] object-contain sm:h-32"
+                        className="mx-auto h-36 w-full max-w-[320px] object-contain sm:h-[200px]"
                       />
                     </figure>
                     <p className="rounded-lg border border-amber-200/20 bg-amber-200/[0.06] px-3 py-2 text-xs leading-relaxed text-amber-100/90">
@@ -405,7 +409,8 @@ export function WatermancerGuideCalibrationWizard({
                         height={719}
                         loading="lazy"
                         decoding="async"
-                        className="h-20 w-full object-cover sm:h-24"
+                        data-testid="guided-calibration-lineup-banner"
+                        className="h-24 w-full object-cover object-[50%_60%] sm:h-[130px]"
                       />
                     </figure>
                     <div className="grid grid-cols-3 gap-2">
@@ -496,7 +501,16 @@ export function WatermancerGuideCalibrationWizard({
                   <button
                     type="button"
                     data-testid="guided-calibration-next"
-                    onClick={() => setPageIndex(index => Math.min(WIZARD_PAGES.length - 1, index + 1))}
+                    onClick={() => {
+                      if (pageIndex === 2) {
+                        setRuns(previous => previous.map((run, index) => (
+                          index > 0 && run.dropsInput === ''
+                            ? { ...run, dropsInput: previous[0].dropsInput }
+                            : run
+                        )));
+                      }
+                      setPageIndex(index => Math.min(WIZARD_PAGES.length - 1, index + 1));
+                    }}
                     disabled={pageIndex === 2 && !firstRunValid}
                     className="inline-flex min-h-10 w-24 items-center justify-center gap-1 rounded-lg border border-cyan-200/35 bg-cyan-300/15 px-3 py-2 text-sm font-semibold text-cyan-50 transition hover:bg-cyan-300/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 disabled:cursor-not-allowed disabled:opacity-45"
                   >
