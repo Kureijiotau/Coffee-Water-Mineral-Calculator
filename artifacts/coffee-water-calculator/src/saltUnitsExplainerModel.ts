@@ -42,6 +42,8 @@ export type SaltUnitsSaltRow = {
 
 export type SaltUnitsHydrationForm = {
   index: number;
+  saltFormIdx: number;
+  isDryReference: boolean;
   label: string;
   weighedMgPerL: number;
   multiplier: number;
@@ -72,14 +74,13 @@ export type SaltUnitsExplainerModel = {
 const FALLBACK_EXAMPLES: Array<{
   saltId: string;
   saltMgL: number;
-  ions: SaltUnitsIonAmount[];
 }> = [
-  { saltId: 'mgcl2', saltMgL: 40, ions: [{ ionId: 'magnesium', mgPerL: 10 }, { ionId: 'chloride', mgPerL: 30 }] },
-  { saltId: 'cacl2', saltMgL: 40, ions: [{ ionId: 'calcium', mgPerL: 14 }, { ionId: 'chloride', mgPerL: 26 }] },
-  { saltId: 'mgso4', saltMgL: 40, ions: [{ ionId: 'magnesium', mgPerL: 8 }, { ionId: 'sulfate', mgPerL: 32 }] },
-  { saltId: 'nahco3', saltMgL: 25, ions: [{ ionId: 'sodium', mgPerL: 7 }, { ionId: 'bicarbonate', mgPerL: 18 }] },
-  { saltId: 'khco3', saltMgL: 25, ions: [{ ionId: 'potassium', mgPerL: 10 }, { ionId: 'bicarbonate', mgPerL: 15 }] },
-  { saltId: 'nacl', saltMgL: 20, ions: [{ ionId: 'sodium', mgPerL: 8 }, { ionId: 'chloride', mgPerL: 12 }] },
+  { saltId: 'mgcl2', saltMgL: 40 },
+  { saltId: 'cacl2', saltMgL: 40 },
+  { saltId: 'mgso4', saltMgL: 40 },
+  { saltId: 'nahco3', saltMgL: 25 },
+  { saltId: 'khco3', saltMgL: 25 },
+  { saltId: 'nacl', saltMgL: 20 },
 ];
 
 const DISPLAY_LIMIT = 4;
@@ -87,21 +88,47 @@ const DISPLAY_LIMIT = 4;
 function roundedFallbackRows(): SaltUnitsSaltRow[] {
   return FALLBACK_EXAMPLES.flatMap(example => {
     const salt = SALTS.find(item => item.id === example.saltId);
-    const form = salt?.hydrationForms[0];
-    if (!salt || !form) return [];
+    const formIdx = salt?.defaultFormIdx ?? 0;
+    const sourceForm = salt?.hydrationForms[formIdx] ?? salt?.hydrationForms[0];
+    if (!salt || !sourceForm) return [];
+    const exactWeighedMgPerL = computeSaltMg(
+      example.saltMgL,
+      1,
+      sourceForm.molarMass,
+      salt.anhydrousMass,
+    );
+    const weighedMgPerL = Math.round(exactWeighedMgPerL);
+    const ionTotals = computeIonTotals({ [salt.id]: example.saltMgL }, {}, 1);
+    const ions = salt.ions
+      .map(({ ionId }) => ({ ionId, mgPerL: ionTotals[ionId] ?? 0 }))
+      .filter(ion => ion.mgPerL > 0);
+    const supplementalIons = (salt.supplementalIons ?? []).map(contribution => ({
+      name: SUPPLEMENTAL_IONS.find(item => item.id === contribution.ionId)?.name ?? contribution.ionId,
+      mgPerL: example.saltMgL * contribution.fraction,
+    }));
+    const form = {
+      ...sourceForm,
+      label: formIdx === 0 ? 'Dry form' : sourceForm.label,
+    };
+    const crystalWaterMgPerL = Math.max(
+      0,
+      weighedMgPerL
+        - ions.reduce((sum, ion) => sum + ion.mgPerL, 0)
+        - supplementalIons.reduce((sum, ion) => sum + ion.mgPerL, 0),
+    );
     return [{
       saltId: salt.id,
       saltName: salt.name,
       formula: salt.formula,
       targetPpm: example.saltMgL,
-      formIdx: 0,
+      formIdx,
       form,
-      weighedMgPerL: example.saltMgL,
-      ions: example.ions,
-      supplementalIons: [],
+      weighedMgPerL,
+      ions,
+      supplementalIons,
       otherSaltMassMgPerL: 0,
       reactionUptakeMgPerL: 0,
-      crystalWaterMgPerL: 0,
+      crystalWaterMgPerL,
       dryExample: true,
     }];
   });
@@ -163,33 +190,60 @@ function buildHydrationComparison(
   rows: SaltUnitsSaltRow[],
   recipeRowsBySaltId: Map<string, SaltUnitsSaltRow>,
 ): SaltUnitsExplainerModel['hydration'] {
-  const hydrated = rows.find(row => {
+  const hasHydrationOptions = (row: SaltUnitsSaltRow) => {
     const salt = SALTS.find(item => item.id === row.saltId);
     return (salt?.hydrationForms.length ?? 0) > 1;
-  });
+  };
+  const hydrated = rows.find(row => row.formIdx > 0 && hasHydrationOptions(row))
+    ?? rows.find(hasHydrationOptions);
   const comparisonSalt = hydrated
     ? SALTS.find(item => item.id === hydrated.saltId)!
     : SALTS.find(item => item.id === 'mgcl2')!;
   const selectedEntry = recipeRowsBySaltId.get(comparisonSalt.id);
   const targetPpm = hydrated?.targetPpm ?? selectedEntry?.targetPpm ?? 40;
   const roundedExample = rows.find(row => row.saltId === comparisonSalt.id && row.dryExample);
-  const forms = comparisonSalt.hydrationForms.slice(0, 3).map((form, index) => {
+  const selectedFormIdx = roundedExample?.formIdx
+    ?? hydrated?.formIdx
+    ?? selectedEntry?.formIdx
+    ?? comparisonSalt.defaultFormIdx
+    ?? 0;
+  const hydratedFormIndices = comparisonSalt.hydrationForms
+    .map((_, index) => index)
+    .filter(index => index > 0);
+  const formIndices = [
+    selectedFormIdx,
+    ...hydratedFormIndices.filter(index => index !== selectedFormIdx),
+    ...(selectedFormIdx === 0 ? [] : [0]),
+  ];
+  const forms = formIndices.map((saltFormIdx, index) => {
+    const form = comparisonSalt.hydrationForms[saltFormIdx];
+    if (!form) return null;
+    const isDryReference = saltFormIdx === 0 && selectedFormIdx !== 0;
     const ionTotals = computeIonTotals({ [comparisonSalt.id]: targetPpm }, {}, 1);
     const ions = roundedExample?.ions ?? comparisonSalt.ions
       .map(({ ionId }) => ({ ionId, mgPerL: ionTotals[ionId] ?? 0 }))
       .filter(ion => ion.mgPerL > 0);
     const supplementalMassMgPerL = (comparisonSalt.supplementalIons ?? [])
       .reduce((sum, ion) => sum + targetPpm * ion.fraction, 0);
-    const weighedMgPerL = computeSaltMg(targetPpm, 1, form.molarMass, comparisonSalt.anhydrousMass);
+    const exactWeighedMgPerL = computeSaltMg(targetPpm, 1, form.molarMass, comparisonSalt.anhydrousMass);
+    const weighedMgPerL = roundedExample
+      ? (saltFormIdx === roundedExample.formIdx
+        ? roundedExample.weighedMgPerL
+        : Math.round(exactWeighedMgPerL))
+      : exactWeighedMgPerL;
     const representedDryMass = ions.reduce((sum, ion) => sum + ion.mgPerL, 0) + supplementalMassMgPerL;
     const otherSaltMassMgPerL = Math.max(0, targetPpm - representedDryMass);
     const reactionUptakeMgPerL = Math.max(0, representedDryMass - targetPpm);
     const crystalWaterMgPerL = roundedExample
-      ? Math.max(0, weighedMgPerL - ions.reduce((sum, ion) => sum + ion.mgPerL, 0))
+      ? Math.max(0, weighedMgPerL
+        - ions.reduce((sum, ion) => sum + ion.mgPerL, 0)
+        - supplementalMassMgPerL)
       : targetPpm * (form.molarMass - comparisonSalt.anhydrousMass) / comparisonSalt.anhydrousMass;
     return {
       index,
-      label: form.label,
+      saltFormIdx,
+      isDryReference,
+      label: isDryReference ? 'Dry reference (rarely sold)' : form.label,
       weighedMgPerL,
       multiplier: form.molarMass / comparisonSalt.anhydrousMass,
       ions,
@@ -198,7 +252,7 @@ function buildHydrationComparison(
       reactionUptakeMgPerL,
       crystalWaterMgPerL,
     };
-  });
+  }).filter((form): form is NonNullable<typeof form> => form !== null);
   return {
     saltId: comparisonSalt.id,
     saltName: comparisonSalt.name,

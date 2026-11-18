@@ -19,15 +19,15 @@ type IonTokenStyle = CSSProperties & Record<`--ion-${string}`, string>;
 
 const STEPS = [
   {
-    title: 'Salts are loot. Ions are the stats.',
-    description: 'Each salt you weigh unpacks into ions. Ions are what your water actually gets.',
+    title: 'What your salts turn into',
+    description: 'Each salt you weigh dissolves into ions. Ions are what your water actually gets.',
   },
   {
-    title: 'Crystal water is dead weight.',
-    description: 'Same ions, heavier crystal. The water adds weight but no stats. Weigh the form on your jar.',
+    title: 'Crystal water adds weight, not minerals',
+    description: 'Same ions, heavier crystal. The water inside the crystal adds weight but no minerals. Weigh the form on your jar.',
   },
   {
-    title: 'The scoreboard counts only some ions.',
+    title: 'What counts toward GH and KH',
     description: 'GH counts calcium and magnesium. KH counts bicarbonate and carbonate. Sodium, potassium, chloride and sulfate count for neither.',
   },
 ] as const;
@@ -92,7 +92,7 @@ function CrystalWaterToken({ mgPerL, approximate = false }: { mgPerL: number; ap
   );
 }
 
-function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallback?: boolean }) {
+function SaltRecipeRow({ row }: { row: SaltUnitsSaltRow }) {
   const salt = saltFor(row.saltId);
   const colors = salt ? getSaltColorTokens(salt) : null;
   const ionTokens = (
@@ -124,7 +124,9 @@ function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallbac
           reaction uptake · +{formatMg(row.reactionUptakeMgPerL)}
         </span>
       )}
-      <CrystalWaterToken mgPerL={row.crystalWaterMgPerL} approximate={row.dryExample} />
+      {(!row.dryExample || row.crystalWaterMgPerL > 0.01) && (
+        <CrystalWaterToken mgPerL={row.crystalWaterMgPerL} approximate={row.dryExample} />
+      )}
     </>
   );
 
@@ -143,7 +145,7 @@ function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallbac
           <div className="min-w-0">
             <div className="truncate text-xs font-semibold text-slate-100">{row.saltName}</div>
             <div className="truncate text-[10px] text-slate-400">
-              {fallback ? 'dry (anhydrous) form' : row.form.label}
+              {row.form.label}
             </div>
           </div>
         </div>
@@ -154,7 +156,7 @@ function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallbac
       <div className="mt-2 flex min-w-0 items-center gap-1.5">
         <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
         <div
-          data-testid={fallback ? `salt-units-fallback-example-${row.saltId}` : undefined}
+          data-testid={row.dryExample ? `salt-units-fallback-example-${row.saltId}` : undefined}
           className="flex min-w-0 flex-wrap gap-1"
         >
           {ionTokens}
@@ -164,11 +166,11 @@ function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallbac
   );
 }
 
-function RecipeLoot({ model }: { model: SaltUnitsExplainerModel }) {
+function RecipeBreakdown({ model }: { model: SaltUnitsExplainerModel }) {
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {model.rows.map(row => <SaltLootRow key={row.saltId} row={row} fallback={model.isFallback} />)}
+        {model.rows.map(row => <SaltRecipeRow key={row.saltId} row={row} />)}
       </div>
       {model.hiddenSaltCount > 0 && (
         <p data-testid="salt-units-hidden-count" className="text-right text-[11px] font-semibold text-slate-400">
@@ -180,32 +182,39 @@ function RecipeLoot({ model }: { model: SaltUnitsExplainerModel }) {
           data-testid="salt-units-fallback-note"
           className="rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs text-slate-300"
         >
-          Pick a recipe to see this with your own salts.
+          Rounded examples for 1 L, using the common crystal forms.
         </p>
       )}
     </div>
   );
 }
 
-function FormBar({ form, maxMass }: {
+function FormBar({ form, maxMass, approximate = false }: {
   form: SaltUnitsExplainerModel['hydration']['forms'][number];
   maxMass: number;
+  approximate?: boolean;
 }) {
   return (
     <div
       data-testid={`salt-units-hydration-form-${form.index}`}
-      className="rounded-xl border border-slate-700/60 bg-slate-950/35 p-2.5"
+      data-is-dry-reference={form.isDryReference ? 'true' : undefined}
+      className={`rounded-xl border border-slate-700/60 bg-slate-950/35 p-2.5 ${form.isDryReference ? 'opacity-80' : ''}`}
     >
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-xs font-semibold text-slate-100">{form.label}</span>
+        <span
+          data-testid={form.isDryReference ? 'salt-units-dry-reference' : undefined}
+          className={`font-semibold text-slate-100 ${form.isDryReference ? 'text-[10px]' : 'text-xs'}`}
+        >
+          {form.label}
+        </span>
         <span className="text-[11px] font-semibold tabular-nums text-slate-300">
-          {formatMg(form.weighedMgPerL)} · x{form.multiplier.toFixed(1)}
+          {formatMg(form.weighedMgPerL, approximate)} · x{form.multiplier.toFixed(1)}
         </span>
       </div>
       <div
         role="img"
-        aria-label={`${form.label}: ${formatMg(form.weighedMgPerL)} total`}
-        className="flex h-5 overflow-hidden rounded-full bg-slate-800"
+        aria-label={`${form.label}: ${formatMg(form.weighedMgPerL, approximate)} total`}
+        className={`flex overflow-hidden rounded-full bg-slate-800 ${form.isDryReference ? 'h-3' : 'h-5'}`}
       >
         {form.ions.map((ion: SaltUnitsIonAmount) => {
           const ionInfo = ION_MAP[ion.ionId];
@@ -240,25 +249,31 @@ function FormBar({ form, maxMass }: {
   );
 }
 
-function HydrationLoot({ model }: { model: SaltUnitsExplainerModel }) {
+function HydrationComparison({ model }: { model: SaltUnitsExplainerModel }) {
   const maxMass = Math.max(...model.hydration.forms.map(form => form.weighedMgPerL), 1);
   const salt = saltFor(model.hydration.saltId);
   return (
     <div data-testid="salt-units-hydration-comparison" className="space-y-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
         <span className="font-semibold text-slate-100">{model.hydration.saltName}</span>
-        <span>Same ion payload</span>
+        <span>Same ion amount</span>
         {model.hydration.forms[0]?.ions.map(ion => (
           <IonToken
             key={ion.ionId}
             ionId={ion.ionId}
             mgPerL={ion.mgPerL}
+            approximate={model.isFallback}
           />
         ))}
       </div>
       <div className="space-y-2">
         {model.hydration.forms.map(form => (
-          <FormBar key={`${model.hydration.saltId}-${form.index}`} form={form} maxMass={maxMass} />
+          <FormBar
+            key={`${model.hydration.saltId}-${form.index}`}
+            form={form}
+            maxMass={maxMass}
+            approximate={model.isFallback}
+          />
         ))}
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -309,17 +324,17 @@ function IonGroup({ title, ionIds }: { title: string; ionIds: IonId[] }) {
   );
 }
 
-function Scoreboard({ model }: { model: SaltUnitsExplainerModel }) {
+function GhKhReadout({ model }: { model: SaltUnitsExplainerModel }) {
   return (
-    <div className="space-y-3 sm:flex sm:h-full sm:flex-col sm:justify-between">
+    <div role="group" aria-label="GH and KH readout" className="space-y-3 sm:flex sm:h-full sm:flex-col sm:justify-between">
       <div className="grid grid-cols-2 gap-2">
-        <div data-testid="salt-units-gh-score" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100">GH · hardness stat</div>
+        <div data-testid="salt-units-gh-value" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100">GH · general hardness</div>
           <div className="mt-1 text-xl font-bold tabular-nums text-white">{model.gh.toFixed(1)}</div>
           <div className="text-[10px] text-slate-400">ppm as CaCO₃</div>
         </div>
-        <div data-testid="salt-units-kh-score" className="rounded-xl border border-teal-300/25 bg-teal-400/[0.07] p-3">
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-teal-100">KH · buffer stat</div>
+        <div data-testid="salt-units-kh-value" className="rounded-xl border border-teal-300/25 bg-teal-400/[0.07] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-teal-100">KH · carbonate hardness</div>
           <div className="mt-1 text-xl font-bold tabular-nums text-white">{model.kh.toFixed(1)}</div>
           <div className="text-[10px] text-slate-400">ppm as CaCO₃</div>
         </div>
@@ -348,10 +363,10 @@ export default function SaltUnitsExplainer({ children, recipe }: Props) {
   const currentStep = STEPS[stepIndex];
   const descriptionId = 'salt-units-explainer-description';
   const stepVisual = stepIndex === 0
-    ? <RecipeLoot model={model} />
+    ? <RecipeBreakdown model={model} />
     : stepIndex === 1
-      ? <HydrationLoot model={model} />
-      : <Scoreboard model={model} />;
+      ? <HydrationComparison model={model} />
+      : <GhKhReadout model={model} />;
 
   const trigger = (
     <DialogPrimitive.Trigger asChild>
