@@ -5017,6 +5017,14 @@ function App() {
     : undefined;
   const publishedTargetLabel = publishedTargetRecipe ? 'Published target' : 'Mineral target (ppm)';
   const displayedRecipeName = selectedSourceRecipe?.name ?? activeRecipe?.name ?? 'Custom';
+  const selectedRecipeSaltOrder = Object.keys(
+    selectedExternalRecipe?.salts ?? activeRecipe?.salts ?? {},
+  );
+  const selectedRecipeSaltIds = new Set(selectedRecipeSaltOrder);
+  const saltUnitsRecipeOrder = [
+    ...SALTS.filter(salt => selectedRecipeSaltIds.has(salt.id)),
+    ...SALTS.filter(salt => !selectedRecipeSaltIds.has(salt.id)),
+  ];
   const autoFillTargets = showAlchemist && hasSaltRecipeTargets
     ? saltOnlyIons
     : noRecipeSelected
@@ -7551,7 +7559,19 @@ function App() {
             data-testid={showBrewer ? 'brewer-salt-summary' : 'alchemist-salt-summary'}
             className="app-card app-panel-surface order-4 overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/70 shadow-xl backdrop-blur"
           >
-            <SaltUnitsExplainer>
+            <SaltUnitsExplainer
+              recipe={noRecipeSelected ? null : {
+                name: displayedRecipeName,
+                salts: saltUnitsRecipeOrder.map(salt => {
+                  const index = SALTS.findIndex(item => item.id === salt.id);
+                  return {
+                    saltId: salt.id,
+                    targetPpm: saltTargets[salt.id] ?? 0,
+                    formIdx: safeRows[index]?.formIdx ?? salt.defaultFormIdx ?? 0,
+                  };
+                }),
+              }}
+            >
               {({ trigger, panel }) => (
                 <>
                   <SharedSectionHeader

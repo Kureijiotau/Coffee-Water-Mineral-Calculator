@@ -1,237 +1,357 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { ArrowLeft, ArrowRight, CircleHelp, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CircleHelp, Droplets, X } from 'lucide-react';
 import { getSaltColorTokens, ION_MAP, SALTS, type IonId } from './waterData';
+import {
+  buildSaltUnitsExplainerModel,
+  type SaltUnitsExplainerModel,
+  type SaltUnitsIonAmount,
+  type SaltUnitsRecipeInput,
+  type SaltUnitsSaltRow,
+} from './saltUnitsExplainerModel';
 
 type Props = {
   children: (slots: { trigger: ReactNode; panel: ReactNode }) => ReactNode;
+  recipe: SaltUnitsRecipeInput | null;
 };
 
-type ExampleIon = {
-  ionId: IonId;
-  roundedMgL: number;
-};
+type IonTokenStyle = CSSProperties & Record<`--ion-${string}`, string>;
 
-type SaltExample = {
-  saltId: string;
-  saltMgL: number;
-  ions: ExampleIon[];
-};
-
-const SALT_EXAMPLES: SaltExample[] = [
-  { saltId: 'mgcl2', saltMgL: 40, ions: [{ ionId: 'magnesium', roundedMgL: 10 }, { ionId: 'chloride', roundedMgL: 30 }] },
-  { saltId: 'cacl2', saltMgL: 40, ions: [{ ionId: 'calcium', roundedMgL: 14 }, { ionId: 'chloride', roundedMgL: 26 }] },
-  { saltId: 'mgso4', saltMgL: 40, ions: [{ ionId: 'magnesium', roundedMgL: 8 }, { ionId: 'sulfate', roundedMgL: 32 }] },
-  { saltId: 'nahco3', saltMgL: 25, ions: [{ ionId: 'sodium', roundedMgL: 7 }, { ionId: 'bicarbonate', roundedMgL: 18 }] },
-  { saltId: 'khco3', saltMgL: 25, ions: [{ ionId: 'potassium', roundedMgL: 10 }, { ionId: 'bicarbonate', roundedMgL: 15 }] },
-  { saltId: 'nacl', saltMgL: 20, ions: [{ ionId: 'sodium', roundedMgL: 8 }, { ionId: 'chloride', roundedMgL: 12 }] },
-];
+const STEPS = [
+  {
+    title: 'Salts are loot. Ions are the stats.',
+    description: 'Each salt you weigh unpacks into ions. Ions are what your water actually gets.',
+  },
+  {
+    title: 'Crystal water is dead weight.',
+    description: 'Same ions, heavier crystal. The water adds weight but no stats. Weigh the form on your jar.',
+  },
+  {
+    title: 'The scoreboard counts only some ions.',
+    description: 'GH counts calcium and magnesium. KH counts bicarbonate and carbonate. Sodium, potassium, chloride and sulfate count for neither.',
+  },
+] as const;
 
 const GH_IONS: IonId[] = ['calcium', 'magnesium'];
 const KH_IONS: IonId[] = ['bicarbonate', 'carbonate'];
 const OTHER_IONS: IonId[] = ['sodium', 'potassium', 'chloride', 'sulfate'];
 
-const STEPS = [
-  {
-    title: 'Salt splits into tiny pieces',
-    description: 'When salt dissolves, it splits into tiny charged pieces called ions. Different salts make different pieces.',
-  },
-  {
-    title: 'GH and KH measure different things',
-    description: 'The colors below show which ions count toward each value.',
-  },
-  {
-    title: 'What do mg, mg/L, and ppm mean?',
-    description: 'mg is how much you weigh. mg/L is how much is in one liter of water. In water, ppm is about the same as mg/L. GH and KH use a comparison scale called CaCO₃.',
-  },
-] as const;
-
-function saltForExample(saltId: string) {
-  return SALTS.find(salt => salt.id === saltId);
+function formatMg(value: number, approximate = false): string {
+  const formatted = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return `${approximate ? '≈ ' : ''}${formatted} mg/L`;
 }
 
-function SaltAccent({ saltId }: { saltId: string }) {
-  const salt = saltForExample(saltId);
+function saltFor(id: string) {
+  return SALTS.find(salt => salt.id === id);
+}
+
+function SaltIcon({ saltId }: { saltId: string }) {
+  const salt = saltFor(saltId);
   if (!salt) return null;
   const colors = getSaltColorTokens(salt);
   return (
     <span
       aria-hidden="true"
-      className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full"
+      className="h-2.5 w-2.5 shrink-0 rounded-full"
       style={{ background: `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})` }}
     />
   );
 }
 
-function IonChip({ ionId }: { ionId: IonId }) {
+function IonToken({ ionId, mgPerL, testId, approximate = false }: {
+  ionId: IonId;
+  mgPerL: number;
+  testId?: string;
+  approximate?: boolean;
+}) {
   const ion = ION_MAP[ionId];
   return (
     <span
-      data-testid={`salt-units-ion-key-${ionId}`}
-      aria-label={`${ion.name}, ${ion.formula}`}
-      className="inline-flex items-center rounded-full border px-2 py-1 text-[11px] font-semibold"
+      data-testid={testId}
+      title={ion.name}
+      aria-label={`${ion.name}: ${formatMg(mgPerL, approximate)}`}
+      className="inline-flex items-center gap-1 rounded-full border border-[color:var(--ion-border)] bg-[color:var(--ion-soft)] px-2 py-1 text-[10px] font-semibold tabular-nums text-[color:var(--ion-fg)]"
       style={{
-        color: ion.color.foreground,
-        borderColor: ion.color.border,
-        backgroundColor: ion.color.soft,
-      }}
+        '--ion-fg': ion.color.foreground,
+        '--ion-border': ion.color.border,
+        '--ion-soft': ion.color.soft,
+      } as IonTokenStyle}
     >
-      {ion.name} · {ion.formula}
+      <span>{ion.formula}</span>
+      <span>{formatMg(mgPerL, approximate)}</span>
     </span>
   );
 }
 
-function SaltDissociationDiagram() {
+function CrystalWaterToken({ mgPerL, approximate = false }: { mgPerL: number; approximate?: boolean }) {
   return (
-    <div className="space-y-3 sm:space-y-2">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-y-1">
-        {SALT_EXAMPLES.map(example => {
-          const salt = saltForExample(example.saltId);
-          if (!salt) return null;
-          const colors = getSaltColorTokens(salt);
-          return (
-            <div
-              key={example.saltId}
-              data-testid={`salt-units-example-${example.saltId}`}
-              data-salt-units-salt-card={example.saltId}
-              className="rounded-xl border bg-slate-950/35 p-3"
-              style={{
-                borderColor: colors.border,
-                backgroundImage: `linear-gradient(110deg, ${colors.primarySoft}, ${colors.secondarySoft})`,
-              }}
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  data-testid={`salt-units-salt-name-${example.saltId}`}
-                  className="text-xs font-semibold"
-                  style={{ color: colors.primary }}
-                >
-                  {salt.name}
-                </span>
-                <SaltAccent saltId={example.saltId} />
-              </div>
-              {['mgcl2', 'cacl2', 'mgso4'].includes(example.saltId) && (
-                <div className="mt-1 text-[10px] text-slate-400">dry (anhydrous) form</div>
-              )}
-              <div className="mt-1 text-[11px] text-slate-400">
-                {example.saltMgL} mg/L salt
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {example.ions.map(({ ionId, roundedMgL }) => (
-                  <span
-                    key={ionId}
-                    data-testid={`salt-units-example-${ION_MAP[ionId].name.toLowerCase()}-${example.saltId}`}
-                    className="rounded-full border px-2 py-1 text-[11px]"
-                    style={{
-                      color: ION_MAP[ionId].color.foreground,
-                      borderColor: ION_MAP[ionId].color.border,
-                      backgroundColor: ION_MAP[ionId].color.soft,
-                    }}
-                  >
-                    {ION_MAP[ionId].formula} ≈ {roundedMgL} mg/L
-                  </span>
-                ))}
-              </div>
+    <span className="inline-flex items-center gap-1 rounded-full border border-slate-500/50 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold tabular-nums text-slate-200">
+      <Droplets className="h-3 w-3 text-slate-300" aria-hidden="true" />
+      <span>crystal water · {formatMg(mgPerL, approximate)}</span>
+    </span>
+  );
+}
+
+function SaltLootRow({ row, fallback = false }: { row: SaltUnitsSaltRow; fallback?: boolean }) {
+  const salt = saltFor(row.saltId);
+  const colors = salt ? getSaltColorTokens(salt) : null;
+  const ionTokens = (
+    <>
+      {row.ions.map(ion => (
+        <IonToken
+          key={ion.ionId}
+          ionId={ion.ionId}
+          mgPerL={ion.mgPerL}
+          approximate={row.dryExample}
+          testId={`salt-units-ion-${ion.ionId}-${row.saltId}`}
+        />
+      ))}
+      {row.supplementalIons.map(ion => (
+        <span
+          key={ion.name}
+          className="inline-flex items-center rounded-full border border-slate-500/50 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold tabular-nums text-slate-200"
+        >
+          {ion.name} · {formatMg(ion.mgPerL)}
+        </span>
+      ))}
+      {row.otherSaltMassMgPerL > 0.01 && (
+        <span className="inline-flex items-center rounded-full border border-slate-500/50 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold tabular-nums text-slate-200">
+          other salt mass · {formatMg(row.otherSaltMassMgPerL)}
+        </span>
+      )}
+      {row.reactionUptakeMgPerL > 0.01 && (
+        <span className="inline-flex items-center rounded-full border border-slate-500/50 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold tabular-nums text-slate-200">
+          reaction uptake · +{formatMg(row.reactionUptakeMgPerL)}
+        </span>
+      )}
+      <CrystalWaterToken mgPerL={row.crystalWaterMgPerL} approximate={row.dryExample} />
+    </>
+  );
+
+  return (
+    <article
+      data-testid={`salt-units-row-${row.saltId}`}
+      className="min-w-0 rounded-xl border border-slate-700/70 bg-slate-950/40 p-2.5"
+      style={colors ? {
+        borderColor: colors.border,
+        backgroundImage: `linear-gradient(110deg, ${colors.primarySoft}, ${colors.secondarySoft})`,
+      } : undefined}
+    >
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <SaltIcon saltId={row.saltId} />
+          <div className="min-w-0">
+            <div className="truncate text-xs font-semibold text-slate-100">{row.saltName}</div>
+            <div className="truncate text-[10px] text-slate-400">
+              {fallback ? 'dry (anhydrous) form' : row.form.label}
             </div>
+          </div>
+        </div>
+        <span className="shrink-0 text-right text-[11px] font-bold tabular-nums text-white">
+          {formatMg(row.weighedMgPerL, row.dryExample)} <span className="font-medium text-slate-400">weigh</span>
+        </span>
+      </div>
+      <div className="mt-2 flex min-w-0 items-center gap-1.5">
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+        <div
+          data-testid={fallback ? `salt-units-fallback-example-${row.saltId}` : undefined}
+          className="flex min-w-0 flex-wrap gap-1"
+        >
+          {ionTokens}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RecipeLoot({ model }: { model: SaltUnitsExplainerModel }) {
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {model.rows.map(row => <SaltLootRow key={row.saltId} row={row} fallback={model.isFallback} />)}
+      </div>
+      {model.hiddenSaltCount > 0 && (
+        <p data-testid="salt-units-hidden-count" className="text-right text-[11px] font-semibold text-slate-400">
+          +{model.hiddenSaltCount} more
+        </p>
+      )}
+      {model.isFallback && (
+        <p
+          data-testid="salt-units-fallback-note"
+          className="rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-xs text-slate-300"
+        >
+          Pick a recipe to see this with your own salts.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function FormBar({ form, maxMass }: {
+  form: SaltUnitsExplainerModel['hydration']['forms'][number];
+  maxMass: number;
+}) {
+  return (
+    <div
+      data-testid={`salt-units-hydration-form-${form.index}`}
+      className="rounded-xl border border-slate-700/60 bg-slate-950/35 p-2.5"
+    >
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="text-xs font-semibold text-slate-100">{form.label}</span>
+        <span className="text-[11px] font-semibold tabular-nums text-slate-300">
+          {formatMg(form.weighedMgPerL)} · x{form.multiplier.toFixed(1)}
+        </span>
+      </div>
+      <div
+        role="img"
+        aria-label={`${form.label}: ${formatMg(form.weighedMgPerL)} total`}
+        className="flex h-5 overflow-hidden rounded-full bg-slate-800"
+      >
+        {form.ions.map((ion: SaltUnitsIonAmount) => {
+          const ionInfo = ION_MAP[ion.ionId];
+          const width = Math.max(0, (ion.mgPerL / maxMass) * 100);
+          return (
+            <span
+              key={ion.ionId}
+              aria-hidden="true"
+              className="h-full min-w-0"
+              style={{ width: `${width}%`, backgroundColor: ionInfo.color.bar }}
+            />
           );
         })}
-      </div>
-      <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
-        Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.
-      </p>
-    </div>
-  );
-}
-
-function IonGroup({ title, ionIds, tone }: { title: string; ionIds: IonId[]; tone: 'cyan' | 'violet' | 'slate' }) {
-  const tones = {
-    cyan: 'border-cyan-300/25 bg-cyan-400/[0.07] text-cyan-100',
-    violet: 'border-violet-300/25 bg-violet-400/[0.07] text-violet-100',
-    slate: 'border-slate-600/60 bg-slate-950/35 text-slate-200',
-  };
-  return (
-    <div className={`rounded-xl border p-3 ${tones[tone]}`}>
-      <div className="text-xs font-semibold">{title}</div>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {ionIds.map(ionId => <IonChip key={ionId} ionId={ionId} />)}
+        {form.supplementalMassMgPerL + form.otherSaltMassMgPerL > 0 && (
+          <span
+            aria-hidden="true"
+            className="h-full bg-slate-600/80"
+            style={{
+              width: `${Math.max(0, ((form.supplementalMassMgPerL + form.otherSaltMassMgPerL) / maxMass) * 100)}%`,
+            }}
+          />
+        )}
+        {form.crystalWaterMgPerL > 0 && (
+          <span
+            aria-hidden="true"
+            className="h-full bg-slate-500/70"
+            style={{ width: `${Math.max(0, (form.crystalWaterMgPerL / maxMass) * 100)}%` }}
+          />
+        )}
       </div>
     </div>
   );
 }
 
-function HardnessDiagram() {
+function HydrationLoot({ model }: { model: SaltUnitsExplainerModel }) {
+  const maxMass = Math.max(...model.hydration.forms.map(form => form.weighedMgPerL), 1);
+  const salt = saltFor(model.hydration.saltId);
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div data-testid="salt-units-gh-example" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
-          <div className="text-xs font-semibold text-cyan-100">GH · general hardness</div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Calcium and magnesium make GH. Here, about 10 mg/L magnesium gives about 41 ppm GH.
-          </p>
-        </div>
-        <div data-testid="salt-units-kh-example" className="rounded-xl border border-violet-300/25 bg-violet-400/[0.07] p-3">
-          <div className="text-xs font-semibold text-violet-100">KH · carbonate hardness</div>
-          <p className="mt-1 text-xs leading-relaxed text-slate-300">
-            Bicarbonate and carbonate make KH. Here, about 18 mg/L bicarbonate gives about 15 ppm KH.
-          </p>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <IonGroup title="Count toward GH" ionIds={GH_IONS} tone="cyan" />
-        <IonGroup title="Count toward KH" ionIds={KH_IONS} tone="violet" />
-        <div data-testid="salt-units-no-hardness-ions">
-          <IonGroup title="Other ions" ionIds={OTHER_IONS} tone="slate" />
-        </div>
-      </div>
-      <p className="rounded-lg border border-slate-700/60 bg-slate-950/30 px-3 py-2 text-xs leading-relaxed text-slate-300">
-        Sodium, potassium, chloride, and sulfate affect the water, but do not count toward GH or KH.
-      </p>
-    </div>
-  );
-}
-
-function UnitsDiagram() {
-  const units = [
-    { id: 'mg', label: 'mg', value: 'Amount', detail: 'How much salt you weigh.' },
-    { id: 'mg-l', label: 'mg/L', value: 'In one liter', detail: 'How much is in 1 L of water.' },
-    { id: 'ppm', label: 'ppm', value: 'About the same as mg/L', detail: 'In water, ppm is about the same as mg/L.' },
-    { id: 'caco3', label: 'ppm CaCO₃', value: 'GH/KH scale', detail: 'A comparison scale for GH and KH. You do not add CaCO₃.' },
-  ];
-  return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {units.map(unit => (
-          <div
-            key={unit.id}
-            data-testid={`salt-units-unit-${unit.id}`}
-            className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-3"
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-sm font-bold text-cyan-100">{unit.label}</span>
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{unit.value}</span>
-            </div>
-            <p className="mt-1 text-xs leading-relaxed text-slate-300">{unit.detail}</p>
-          </div>
+    <div data-testid="salt-units-hydration-comparison" className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+        <span className="font-semibold text-slate-100">{model.hydration.saltName}</span>
+        <span>Same ion payload</span>
+        {model.hydration.forms[0]?.ions.map(ion => (
+          <IonToken
+            key={ion.ionId}
+            ionId={ion.ionId}
+            mgPerL={ion.mgPerL}
+          />
         ))}
       </div>
-      <p className="rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs leading-relaxed text-amber-100/90">
-        25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.
-      </p>
+      <div className="space-y-2">
+        {model.hydration.forms.map(form => (
+          <FormBar key={`${model.hydration.saltId}-${form.index}`} form={form} maxMass={maxMass} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {salt?.ions.map(({ ionId }) => (
+          <span
+            key={ionId}
+            title={ION_MAP[ionId].name}
+            aria-label={ION_MAP[ionId].name}
+            className="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold"
+            style={{
+              color: ION_MAP[ionId].color.foreground,
+              borderColor: ION_MAP[ionId].color.border,
+              backgroundColor: ION_MAP[ionId].color.soft,
+            }}
+          >
+            {ION_MAP[ionId].formula} stays the same
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-1 rounded-full border border-slate-500/50 bg-slate-700/60 px-2 py-1 text-[10px] font-semibold text-slate-200">
+          <Droplets className="h-3 w-3" aria-hidden="true" />
+          crystal water
+        </span>
+      </div>
     </div>
   );
 }
 
-export default function SaltUnitsExplainer({ children }: Props) {
+function IonGroup({ title, ionIds }: { title: string; ionIds: IonId[] }) {
+  return (
+    <div className="rounded-xl border border-slate-700/70 bg-slate-950/35 p-2.5">
+      <div className="text-[11px] font-semibold text-slate-200">{title}</div>
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {ionIds.map(ionId => (
+          <span
+            key={ionId}
+            className="inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-semibold"
+            style={{
+              color: ION_MAP[ionId].color.foreground,
+              borderColor: ION_MAP[ionId].color.border,
+              backgroundColor: ION_MAP[ionId].color.soft,
+            }}
+          >
+            {ION_MAP[ionId].formula}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Scoreboard({ model }: { model: SaltUnitsExplainerModel }) {
+  return (
+    <div className="space-y-3 sm:flex sm:h-full sm:flex-col sm:justify-between">
+      <div className="grid grid-cols-2 gap-2">
+        <div data-testid="salt-units-gh-score" className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-100">GH · hardness stat</div>
+          <div className="mt-1 text-xl font-bold tabular-nums text-white">{model.gh.toFixed(1)}</div>
+          <div className="text-[10px] text-slate-400">ppm as CaCO₃</div>
+        </div>
+        <div data-testid="salt-units-kh-score" className="rounded-xl border border-teal-300/25 bg-teal-400/[0.07] p-3">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-teal-100">KH · buffer stat</div>
+          <div className="mt-1 text-xl font-bold tabular-nums text-white">{model.kh.toFixed(1)}</div>
+          <div className="text-[10px] text-slate-400">ppm as CaCO₃</div>
+        </div>
+      </div>
+      <p
+        data-testid="salt-units-unit-legend"
+        className="rounded-lg border border-slate-700/70 bg-slate-950/35 px-3 py-2 text-[11px] leading-relaxed text-slate-300"
+      >
+        mg = what you weigh. mg/L = what is in 1 L. ppm ~ mg/L. ppm as CaCO₃ is the GH/KH scale.
+      </p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <IonGroup title="Counts toward GH" ionIds={GH_IONS} />
+        <IonGroup title="Counts toward KH" ionIds={KH_IONS} />
+        <div data-testid="salt-units-no-hardness-ions">
+          <IonGroup title="Other ions" ionIds={OTHER_IONS} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SaltUnitsExplainer({ children, recipe }: Props) {
   const [open, setOpen] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
+  const model = useMemo(() => buildSaltUnitsExplainerModel(recipe), [recipe]);
   const currentStep = STEPS[stepIndex];
   const descriptionId = 'salt-units-explainer-description';
-
   const stepVisual = stepIndex === 0
-    ? <SaltDissociationDiagram />
+    ? <RecipeLoot model={model} />
     : stepIndex === 1
-      ? <HardnessDiagram />
-      : <UnitsDiagram />;
+      ? <HydrationLoot model={model} />
+      : <Scoreboard model={model} />;
 
   const trigger = (
     <DialogPrimitive.Trigger asChild>
@@ -262,10 +382,15 @@ export default function SaltUnitsExplainer({ children }: Props) {
         data-testid="salt-units-explainer-dialog"
         className="fixed left-1/2 top-1/2 z-[91] flex h-[min(720px,calc(100dvh-1.5rem))] max-h-[calc(100dvh-1.5rem)] w-[calc(100vw-1.5rem)] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-900 p-3 text-slate-100 shadow-2xl shadow-black/60 outline-none focus-visible:ring-2 focus-visible:ring-cyan-200/80 sm:h-[min(625px,calc(100dvh-1.5rem))] sm:p-5"
       >
-        <header className="flex items-start justify-between gap-3">
+        <header className="flex shrink-0 items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-              Simple salt examples · 1 L
+            <p
+              data-testid="salt-units-recipe-eyebrow"
+              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80"
+            >
+              {model.isFallback
+                ? 'ROUNDED EXAMPLE · 1 L'
+                : `YOUR RECIPE · ${model.recipeName} · 1 L`}
             </p>
             <DialogPrimitive.Title asChild>
               <h3 aria-live="polite" className="mt-1 text-base font-semibold text-white sm:text-lg">
@@ -291,11 +416,11 @@ export default function SaltUnitsExplainer({ children }: Props) {
             </DialogPrimitive.Close>
           </div>
         </header>
-        <div className={`mt-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:flex sm:flex-col sm:justify-center ${stepIndex === 2 ? 'sm:pt-4' : ''}`}>
-          <p id={descriptionId} aria-live="polite" aria-atomic="true" className="text-sm leading-relaxed text-slate-300">
+        <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1 sm:flex sm:flex-col">
+          <p id={descriptionId} data-testid="salt-units-page-copy" aria-live="polite" aria-atomic="true" className="text-sm leading-relaxed text-slate-300">
             {currentStep.description}
           </p>
-          <div className="mt-3 rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5 sm:p-3">
+          <div className={`mt-3 rounded-xl border border-cyan-200/15 bg-slate-950/45 p-2.5 sm:p-3 ${stepIndex === 2 ? 'sm:min-h-0 sm:flex-1' : ''}`}>
             {stepVisual}
           </div>
         </div>

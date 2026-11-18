@@ -33,14 +33,8 @@ test('shows the explainer only in Brewer and Alchemist summaries', async ({ page
   await expect(page.getByTestId('salt-units-explainer-dialog')).toHaveCount(0);
 });
 
-test('shows a static rounded chemistry guide without changing the recipe', async ({ page }) => {
+test('shows the rounded fallback guide when no mineral recipe is selected', async ({ page }) => {
   await openRecipeMode(page, 'alchemist');
-  await page.getByRole('textbox', { name: 'Final batch volume in liters' }).fill('1');
-  await page.getByRole('button', { name: 'Advanced: hydration forms' }).click();
-  await page.getByLabel('Magnesium Chloride target ppm').fill('40');
-  await page.getByLabel('Magnesium Chloride hydration form').selectOption('1');
-
-  const targetInput = page.getByLabel('Magnesium Chloride target ppm');
   const trigger = page.getByTestId('salt-units-explainer-trigger');
   await trigger.scrollIntoViewIfNeeded();
   await trigger.click();
@@ -53,29 +47,20 @@ test('shows a static rounded chemistry guide without changing the recipe', async
   await expect(overlay).toBeVisible();
   await expect(overlay).toHaveCSS('background-color', 'rgba(2, 6, 23, 0.75)');
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('1 of 3');
-  await expect(title).toHaveText('Salt splits into tiny pieces');
+  await expect(title).toHaveText('Salts are loot. Ions are the stats.');
   await expect(title).toHaveAttribute('aria-live', 'polite');
-  await expect(guide).toContainText('When salt dissolves, it splits into tiny charged pieces called ions.');
-  await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L');
-  await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
-  await expect(guide.getByTestId('salt-units-example-chloride-mgcl2')).toContainText('≈ 30 mg/L');
-  await expect(guide.getByTestId('salt-units-example-mgso4')).toContainText('Magnesium Sulfate');
-  await expect(guide.getByTestId('salt-units-example-nahco3')).toContainText('Sodium Bicarbonate');
+  await expect(guide.getByTestId('salt-units-page-copy'))
+    .toHaveText('Each salt you weigh unpacks into ions. Ions are what your water actually gets.');
+  await expect(guide.getByTestId('salt-units-recipe-eyebrow')).toHaveText('ROUNDED EXAMPLE · 1 L');
+  await expect(guide.getByTestId('salt-units-fallback-note'))
+    .toHaveText('Pick a recipe to see this with your own salts.');
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('40 mg');
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('crystal water');
+  await expect(guide.getByTestId('salt-units-fallback-example-mgcl2')).toContainText('≈ 10 mg/L');
   for (const saltId of ['mgcl2', 'cacl2', 'mgso4']) {
-    await expect(guide.getByTestId(`salt-units-example-${saltId}`)).toContainText('dry (anhydrous) form');
+    await expect(guide.getByTestId(`salt-units-row-${saltId}`)).toContainText('dry (anhydrous) form');
   }
-  await expect(guide).toContainText(
-    'Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.',
-  );
-  await expect(guide.getByTestId('salt-units-salt-name-mgcl2')).toHaveCSS('color', 'rgb(253, 224, 71)');
-  await expect(guide.getByTestId('salt-units-example-mgcl2')).toHaveCSS(
-    'border-color',
-    'rgba(253, 224, 71, 0.42)',
-  );
-  await expect(guide.getByTestId('salt-units-example-mgcl2')).toHaveCSS(
-    'background-image',
-    /linear-gradient/,
-  );
+  await expect(guide.getByTestId('salt-units-ion-magnesium-mgcl2')).toHaveCSS('color', 'rgb(253, 224, 71)');
 
   const closeButton = guide.getByRole('button', { name: 'Close salt units explainer' });
   await closeButton.focus();
@@ -85,62 +70,30 @@ test('shows a static rounded chemistry guide without changing the recipe', async
   await expect(closeButton).toBeFocused();
 
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(title).toHaveText('GH and KH measure different things');
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 10 mg/L magnesium gives about 41 ppm GH');
-  await expect(guide.getByTestId('salt-units-kh-example')).toContainText('about 18 mg/L bicarbonate gives about 15 ppm KH');
-  await expect(guide.getByText('Calcium and magnesium make GH', { exact: false })).toHaveCount(1);
-  await expect(guide.getByText('Bicarbonate and carbonate make KH', { exact: false })).toHaveCount(1);
-  await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText('Chloride');
-  const otherIonChips = guide.getByTestId('salt-units-no-hardness-ions').locator('[data-testid^="salt-units-ion-key-"]');
-  await expect(otherIonChips).toHaveCount(4);
-  for (const ionName of ['Sodium', 'Potassium', 'Chloride', 'Sulfate']) {
-    await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText(ionName);
-  }
+  await expect(title).toHaveText('Crystal water is dead weight.');
+  await expect(guide.getByTestId('salt-units-page-copy'))
+    .toHaveText('Same ions, heavier crystal. The water adds weight but no stats. Weigh the form on your jar.');
+  await expect(guide.getByTestId('salt-units-hydration-comparison')).toBeVisible();
+  await expect(guide.getByTestId('salt-units-hydration-form-1')).toContainText('x2.1');
+
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(title).toHaveText('What do mg, mg/L, and ppm mean?');
-  await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('Amount');
-  await expect(guide.getByTestId('salt-units-unit-mg')).toContainText('How much salt you weigh.');
-  await expect(guide.getByTestId('salt-units-unit-mg-l')).toContainText('How much is in 1 L of water.');
-  await expect(guide.getByTestId('salt-units-unit-ppm')).toContainText('In water, ppm is about the same as mg/L.');
-  await expect(guide).toContainText(
-    '25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.',
-  );
+  await expect(title).toHaveText('The scoreboard counts only some ions.');
+  await expect(guide.getByTestId('salt-units-page-copy'))
+    .toHaveText('GH counts calcium and magnesium. KH counts bicarbonate and carbonate. Sodium, potassium, chloride and sulfate count for neither.');
+  await expect(guide.getByTestId('salt-units-gh-score')).toContainText('ppm as CaCO₃');
+  await expect(guide.getByTestId('salt-units-kh-score')).toContainText('ppm as CaCO₃');
+  await expect(guide.getByTestId('salt-units-unit-legend')).toContainText('mg = what you weigh.');
+  await expect(guide.getByTestId('salt-units-no-hardness-ions')).toContainText('SO₄²⁻');
 
   await guide.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(title).toHaveText('GH and KH measure different things');
-  await expect(targetInput).toHaveValue('40');
+  await expect(title).toHaveText('Crystal water is dead weight.');
   await page.keyboard.press('Escape');
   await expect(guide).toHaveCount(0);
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await expect(trigger).toBeFocused();
-  await expect(targetInput).toHaveValue('40');
 });
 
-test('keeps the same rounded example after recipe inputs change', async ({ page }) => {
-  await openRecipeMode(page, 'alchemist');
-  await page.getByRole('textbox', { name: 'Final batch volume in liters' }).fill('1');
-  await page.getByRole('button', { name: 'Advanced: hydration forms' }).click();
-  await page.getByLabel('Magnesium Chloride target ppm').fill('40');
-  await page.getByLabel('Magnesium Chloride hydration form').selectOption('1');
-  await page.getByTestId('salt-units-explainer-trigger').scrollIntoViewIfNeeded();
-  await page.getByTestId('salt-units-explainer-trigger').click();
-
-  const guide = page.getByTestId('salt-units-explainer-dialog');
-  await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
-
-  await page.keyboard.press('Escape');
-  await expect(guide).toHaveCount(0);
-  await page.getByLabel('Magnesium Chloride target ppm').fill('50');
-  await page.getByLabel('Magnesium Chloride hydration form').selectOption('0');
-  await page.getByRole('textbox', { name: 'Final batch volume in liters' }).fill('2');
-  await page.getByTestId('salt-units-explainer-trigger').click();
-  await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L');
-  await expect(guide.getByTestId('salt-units-example-magnesium-mgcl2')).toContainText('≈ 10 mg/L');
-  await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(guide.getByTestId('salt-units-gh-example')).toContainText('about 41 ppm GH');
-});
-
-test('keeps the fixed examples after switching recipes and modes', async ({ page }) => {
+test('changes the worked example when switching recipes and keeps the dialog scoped to recipe modes', async ({ page }) => {
   await openRecipeMode(page, 'alchemist');
   const picker = page.getByRole('button', { name: 'Select mineral recipe' });
   const recipeDialog = page.getByRole('dialog', { name: 'Mineral recipes' });
@@ -152,14 +105,14 @@ test('keeps the fixed examples after switching recipes and modes', async ({ page
   await trigger.click();
 
   const guide = page.getByTestId('salt-units-explainer-dialog');
-  const example = guide.getByTestId('salt-units-example-mgcl2');
+  const example = guide.getByTestId('salt-units-row-mgcl2');
   await page.keyboard.press('Escape');
   await expect(guide).toHaveCount(0);
   await picker.click();
   await recipeDialog.getByRole('option', { name: 'Jelly', exact: true }).click();
   await trigger.click();
-  await expect(example).toContainText('40 mg/L salt');
-  await expect(example).toContainText('≈ 10 mg/L');
+  await expect(guide.getByTestId('salt-units-recipe-eyebrow')).toContainText('Jelly');
+  await expect(example).toBeVisible();
 
   await page.keyboard.press('Escape');
   await page.getByTestId('mode-watermancer').click();
@@ -168,7 +121,7 @@ test('keeps the fixed examples after switching recipes and modes', async ({ page
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
   await trigger.click();
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('1 of 3');
-  await expect(guide.getByTestId('salt-units-example-mgcl2')).toContainText('40 mg/L salt');
+  await expect(guide.getByTestId('salt-units-recipe-eyebrow')).toContainText('Jelly');
 });
 
 test('closes the modal when the dimmed backdrop is clicked', async ({ page }) => {
@@ -200,10 +153,12 @@ test('keeps the guide within a narrow phone viewport', async ({ page }) => {
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(375);
   expect(Math.abs(bounds!.x + bounds!.width / 2 - 187.5)).toBeLessThan(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  expect(await guide.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual(bounds!.width);
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(guide.getByTestId('salt-units-explainer-progress')).toHaveText('2 of 3');
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(guide.getByTestId('salt-units-unit-ppm')).toBeVisible();
+  await expect(guide.getByTestId('salt-units-gh-score')).toBeVisible();
 
   await page.setViewportSize({ width: 844, height: 390 });
   const landscapeBounds = await guide.boundingBox();
@@ -241,7 +196,7 @@ test('keeps the guide footer visible on phone pages without scrolling', async ({
   await assertFooterVisible();
 });
 
-test('keeps every desktop page unscrolled, its footnote visible, and the action in the same position', async ({ page }) => {
+test('keeps every desktop page unscrolled, its fallback note visible, and the action in the same position', async ({ page }) => {
   await openRecipeMode(page, 'brewer');
   await page.setViewportSize({ width: 1280, height: 800 });
   const trigger = page.getByTestId('salt-units-explainer-trigger');
@@ -257,15 +212,18 @@ test('keeps every desktop page unscrolled, its footnote visible, and the action 
       clientHeight: element.clientHeight,
     }));
     expect(bodySize.scrollHeight, `page ${step + 1} should fit without scrolling`).toBeLessThanOrEqual(bodySize.clientHeight);
+    const titleBounds = await guide.getByRole('heading', { level: 3 }).boundingBox();
+    const copyBounds = await guide.getByTestId('salt-units-page-copy').boundingBox();
+    expect(titleBounds).not.toBeNull();
+    expect(copyBounds).not.toBeNull();
+    const titleToCopyGap = copyBounds!.y - (titleBounds!.y + titleBounds!.height);
+    expect(titleToCopyGap, `page ${step + 1} title-to-copy gap was ${titleToCopyGap}px`).toBeLessThanOrEqual(40);
     const action = guide.getByRole('button', { name: /^(Next|Done)$/ });
     const bounds = await action.boundingBox();
     expect(bounds).not.toBeNull();
     positions.push(bounds!);
     if (step === 0) {
-      const footnote = guide.getByText(
-        'Rounded examples for 1 L, using dry salts. The common crystal forms hold water, so you weigh more for the same ions: about 2.1x for magnesium chloride hexahydrate, 2.0x for Epsom salt, 1.3x for calcium chloride dihydrate. The calculator does this for you.',
-        { exact: true },
-      );
+      const footnote = guide.getByTestId('salt-units-fallback-note');
       const footnoteBounds = await footnote.boundingBox();
       const bodyBounds = await body.boundingBox();
       expect(footnoteBounds).not.toBeNull();
@@ -295,14 +253,76 @@ test('keeps the page-three content close to the footer on desktop', async ({ pag
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
   await guide.getByRole('button', { name: 'Next', exact: true }).click();
 
-  const lastContentBlock = guide.getByText(
-    '25 mg/L sodium bicarbonate does not mean 25 ppm KH. Its bicarbonate (about 18 mg/L) gives about 15 ppm KH. Sodium counts toward neither GH nor KH.',
-    { exact: true },
-  );
+  const lastContentBlock = guide.getByTestId('salt-units-no-hardness-ions');
   const contentBounds = await lastContentBlock.boundingBox();
   const footerBounds = await guide.locator('footer').boundingBox();
   expect(contentBounds).not.toBeNull();
   expect(footerBounds).not.toBeNull();
   const gap = footerBounds!.y - (contentBounds!.y + contentBounds!.height);
   expect(gap, `page 3 content-to-footer gap was ${gap}px`).toBeLessThan(100);
+});
+
+test('uses the selected recipe name and its live salts as the worked example', async ({ page }) => {
+  await openRecipeMode(page, 'alchemist');
+  const picker = page.getByRole('button', { name: 'Select mineral recipe' });
+  await picker.click();
+  await page.getByRole('dialog', { name: 'Mineral recipes' })
+    .getByRole('option', { name: 'Club Soda', exact: true }).click();
+
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+
+  await expect(guide.getByTestId('salt-units-recipe-eyebrow')).toHaveText('YOUR RECIPE · Club Soda · 1 L');
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('Magnesium Chloride');
+  await expect(guide.getByTestId('salt-units-row-cacl2')).toBeVisible();
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('Hexahydrate');
+  await expect(guide.getByTestId('salt-units-ion-magnesium-mgcl2')).toContainText('mg/L');
+  await expect(guide.getByTestId('salt-units-hidden-count')).toHaveText('+1 more');
+
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(guide.getByTestId('salt-units-hydration-comparison')).toBeVisible();
+  await expect(guide.getByTestId('salt-units-hydration-form-1')).toContainText('x2.1');
+
+  await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  await expect(guide.getByTestId('salt-units-gh-score')).toBeVisible();
+  await expect(guide.getByTestId('salt-units-kh-score')).toBeVisible();
+});
+
+test('uses the rounded six-salt fallback when no recipe is selected', async ({ page }) => {
+  await openRecipeMode(page, 'alchemist');
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+
+  await expect(guide.getByTestId('salt-units-fallback-note'))
+    .toHaveText('Pick a recipe to see this with your own salts.');
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('40 mg');
+  await expect(guide.getByTestId('salt-units-row-mgcl2')).toContainText('crystal water');
+  await expect(guide.getByTestId('salt-units-fallback-example-mgcl2')).toContainText('≈ 10 mg/L');
+});
+
+test('reuses calculator ion colours and keeps each page explanation within its word budget', async ({ page }) => {
+  await openRecipeMode(page, 'brewer');
+  const trigger = page.getByTestId('salt-units-explainer-trigger');
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+  const guide = page.getByTestId('salt-units-explainer-dialog');
+  const calculatorIon = page.getByTestId('brewer-salt-row-gh-mgcl2')
+    .locator('[aria-label="Ions in Magnesium Chloride"] [title="Magnesium"] span');
+  const explainerIon = guide.getByTestId('salt-units-ion-magnesium-mgcl2');
+  await expect(explainerIon).toHaveCSS(
+    '--ion-fg',
+    await calculatorIon.evaluate(element => getComputedStyle(element).getPropertyValue('--ion-fg').trim()),
+  );
+
+  const wordBudgets = [25, 30, 30];
+  for (let pageIndex = 0; pageIndex < wordBudgets.length; pageIndex += 1) {
+    const copy = guide.getByTestId('salt-units-page-copy');
+    const words = (await copy.innerText()).trim().split(/\s+/);
+    expect(words.length, `page ${pageIndex + 1} body copy`).toBeLessThanOrEqual(wordBudgets[pageIndex]);
+    if (pageIndex < 2) await guide.getByRole('button', { name: 'Next', exact: true }).click();
+  }
 });
