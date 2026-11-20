@@ -29,6 +29,7 @@ describe('calculator guided tours', () => {
       ['brewer-batch-volume', 'brewer-batch-volume'],
       ['brewer-mineral-recipe', 'brewer-mineral-recipe'],
       ['brewer-salt-summary', 'brewer-salt-summary'],
+      ['salt-units-explainer-trigger', 'brewer-salt-summary'],
       ['brewer-recipe-steps', 'brewer-recipe-steps'],
     ]);
   });
@@ -43,6 +44,7 @@ describe('calculator guided tours', () => {
       ['alchemist-mineral-recipe', 'alchemist-mineral-recipe'],
       ['alchemist-ion-watch', 'alchemist-ion-watch'],
       ['alchemist-salt-summary', 'alchemist-salt-summary'],
+      ['salt-units-explainer-trigger', 'alchemist-salt-summary'],
       ['alchemist-recipe-steps', 'alchemist-recipe-steps'],
     ]);
   });

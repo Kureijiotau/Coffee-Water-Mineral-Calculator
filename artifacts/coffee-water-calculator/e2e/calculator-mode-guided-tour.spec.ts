@@ -17,7 +17,7 @@ test('opens each recipe-mode tour once independently and allows replay', async (
   await openFreshCalculator(page);
 
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();
-  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 6');
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 7');
   await expect(page.getByTestId('calculator-guided-tour-spotlight')).toHaveAttribute(
     'data-target-testid',
     'alchemist-batch-volume',
@@ -28,7 +28,7 @@ test('opens each recipe-mode tour once independently and allows replay', async (
 
   await page.getByTestId('mode-brewer').click();
   await expect(tourDialog(page, 'Brewer')).toBeVisible();
-  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 4');
+  await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 5');
   await expect(page.getByTestId('calculator-guided-tour-visual'))
     .toHaveAttribute('data-illustration-key', 'brewer-batch-volume');
   await page.getByRole('button', { name: 'Skip', exact: true }).click();
@@ -154,12 +154,18 @@ test('follows the approved visible step order in both calculator modes', async (
     ['alchemist-mineral-recipe', 'alchemist-mineral-recipe'],
     ['alchemist-ion-watch', 'alchemist-ion-watch'],
     ['alchemist-salt-summary', 'alchemist-salt-summary'],
+    ['salt-units-explainer-trigger', 'alchemist-salt-summary'],
     ['alchemist-recipe-steps', 'alchemist-recipe-steps'],
   ];
   for (const [index, [target, illustration]] of alchemistTargets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
     await expect(page.getByTestId('calculator-guided-tour-visual'))
       .toHaveAttribute('data-illustration-key', illustration);
+    if (target === 'salt-units-explainer-trigger') {
+      await expect(page.getByRole('heading', { name: 'See how salts break down' })).toBeVisible();
+      await expect(page.locator('#calculator-guided-tour-description'))
+        .toHaveText('After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
+    }
     if (index < alchemistTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
@@ -172,12 +178,18 @@ test('follows the approved visible step order in both calculator modes', async (
     ['brewer-batch-volume', 'brewer-batch-volume'],
     ['brewer-mineral-recipe', 'brewer-mineral-recipe'],
     ['brewer-salt-summary', 'brewer-salt-summary'],
+    ['salt-units-explainer-trigger', 'brewer-salt-summary'],
     ['brewer-recipe-steps', 'brewer-recipe-steps'],
   ];
   for (const [index, [target, illustration]] of brewerTargets.entries()) {
     await expect(spotlight).toHaveAttribute('data-target-testid', target);
     await expect(page.getByTestId('calculator-guided-tour-visual'))
       .toHaveAttribute('data-illustration-key', illustration);
+    if (target === 'salt-units-explainer-trigger') {
+      await expect(page.getByRole('heading', { name: 'See how salts break down' })).toBeVisible();
+      await expect(page.locator('#calculator-guided-tour-description'))
+        .toHaveText('After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
+    }
     if (index < brewerTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
@@ -214,15 +226,15 @@ test('keeps illustrated Brewer and Alchemist tour cards within a phone viewport'
     await expect(visual).toBeVisible();
   };
 
-  for (let step = 0; step < 6; step += 1) {
+  for (let step = 0; step < 7; step += 1) {
     await checkBounds();
-    if (step < 5) await page.getByRole('button', { name: 'Next', exact: true }).click();
+    if (step < 6) await page.getByRole('button', { name: 'Next', exact: true }).click();
   }
   await page.getByRole('button', { name: 'Finish', exact: true }).click();
 
   await page.getByTestId('mode-brewer').click();
   const brewerDialog = tourDialog(page, 'Brewer');
-  for (let step = 0; step < 4; step += 1) {
+  for (let step = 0; step < 5; step += 1) {
     const dialogBox = await brewerDialog.boundingBox();
     expect(dialogBox).not.toBeNull();
     expect(dialogBox!.x).toBeGreaterThanOrEqual(0);
@@ -230,7 +242,7 @@ test('keeps illustrated Brewer and Alchemist tour cards within a phone viewport'
     expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(375);
     expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(812);
     await expect(visual).toBeVisible();
-    if (step < 3) await page.getByRole('button', { name: 'Next', exact: true }).click();
+    if (step < 4) await page.getByRole('button', { name: 'Next', exact: true }).click();
   }
 });
 

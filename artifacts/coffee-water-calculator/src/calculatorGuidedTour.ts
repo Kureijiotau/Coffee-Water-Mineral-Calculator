@@ -28,6 +28,12 @@ const BREWER_STEPS: GuidedTourStep[] = [
     illustrationKey: 'brewer-salt-summary',
   },
   {
+    targetTestId: 'salt-units-explainer-trigger',
+    title: 'See how salts break down',
+    description: 'After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
+    illustrationKey: 'brewer-salt-summary',
+  },
+  {
     targetTestId: 'brewer-recipe-steps',
     title: 'Follow the dosing steps',
     description: 'Open the checklist to weigh salts or dose calibrated concentrate into RO or distilled water.',
@@ -64,6 +70,12 @@ const ALCHEMIST_STEPS: GuidedTourStep[] = [
     targetTestId: 'alchemist-salt-summary',
     title: 'Review the salt-only summary',
     description: 'This shows GH, KH, and TDS from salts. Mineral-water contributions are accounted for separately.',
+    illustrationKey: 'alchemist-salt-summary',
+  },
+  {
+    targetTestId: 'salt-units-explainer-trigger',
+    title: 'See how salts break down',
+    description: 'After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
     illustrationKey: 'alchemist-salt-summary',
   },
   {
