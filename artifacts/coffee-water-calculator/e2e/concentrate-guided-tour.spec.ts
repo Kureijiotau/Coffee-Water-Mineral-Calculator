@@ -165,7 +165,7 @@ test('remembers Finish after completing the tour', async ({ page }) => {
   await expect(tourDialog(page)).toBeHidden();
 });
 
-test('keeps the How it works shortcut beside the title in both concentrate views', async ({ page }) => {
+test('labels both concentrate help buttons as guided tours', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('watermancer.concentrates-tour.v1', 'seen');
     localStorage.setItem('watermancer.brewer-tour.v1', 'seen');
@@ -175,13 +175,17 @@ test('keeps the How it works shortcut beside the title in both concentrate views
   await page.getByTestId('tab-concentrates').click();
 
   const titleGroup = page.getByTestId('concentrate-title-group');
-  await expect(titleGroup.getByRole('button', { name: 'How it works', exact: true })).toBeVisible();
+  const stockBuilderTour = titleGroup.getByRole('button', { name: 'Open Concentrates tour', exact: true });
+  await expect(stockBuilderTour).toBeVisible();
+  await expect(stockBuilderTour).toContainText('Concentrates tour');
   await expect(page.getByTestId('concentrate-header-actions').getByTestId('concentrate-tour-trigger')).toHaveCount(0);
 
   await page.getByTestId('concentrate-workspace-recipe').click();
   await expect(page.getByRole('heading', { name: 'No recipe concentrate loaded' })).toBeVisible();
   const emptyStateTitle = page.getByTestId('concentrate-empty-state').getByTestId('concentrate-title-group');
-  await expect(emptyStateTitle.getByRole('button', { name: 'How it works', exact: true })).toBeVisible();
+  const recipeConcentrateTour = emptyStateTitle.getByRole('button', { name: 'Open Concentrates tour', exact: true });
+  await expect(recipeConcentrateTour).toBeVisible();
+  await expect(recipeConcentrateTour).toContainText('Concentrates tour');
 });
 
 test('uses only Lotus Drops targets and keeps each step visible on a small screen', async ({ page }) => {

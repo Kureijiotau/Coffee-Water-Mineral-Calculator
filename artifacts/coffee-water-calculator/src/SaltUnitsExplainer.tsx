@@ -387,12 +387,12 @@ export default function SaltUnitsExplainer({ children, recipe }: Props) {
       <button
         type="button"
         data-testid="salt-units-explainer-trigger"
-        aria-label="How it works: salt targets, GH, and KH"
+        aria-label="Salt & ion guide: GH, KH, and salt units"
         aria-controls="salt-units-explainer-dialog"
         className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-400/[0.07] px-3 py-1.5 text-xs font-semibold text-cyan-100 transition hover:border-cyan-200/50 hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/70"
       >
         <CircleHelp className="h-4 w-4" aria-hidden="true" />
-        How it works
+        Salt &amp; ion guide
       </button>
     </DialogPrimitive.Trigger>
   );

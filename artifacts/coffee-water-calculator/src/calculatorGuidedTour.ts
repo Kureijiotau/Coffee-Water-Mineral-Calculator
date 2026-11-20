@@ -30,7 +30,7 @@ const BREWER_STEPS: GuidedTourStep[] = [
   {
     targetTestId: 'salt-units-explainer-trigger',
     title: 'See how salts break down',
-    description: 'After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
+    description: 'After the tour, open the Salt & ion guide to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
     illustrationKey: 'brewer-salt-summary',
   },
   {
@@ -75,7 +75,7 @@ const ALCHEMIST_STEPS: GuidedTourStep[] = [
   {
     targetTestId: 'salt-units-explainer-trigger',
     title: 'See how salts break down',
-    description: 'After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
+    description: 'After the tour, open the Salt & ion guide to see how each salt breaks down into ions and how those ions contribute to GH and KH.',
     illustrationKey: 'alchemist-salt-summary',
   },
   {

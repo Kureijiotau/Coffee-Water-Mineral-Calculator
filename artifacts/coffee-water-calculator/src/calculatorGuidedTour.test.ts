@@ -22,7 +22,8 @@ afterEach(() => {
 
 describe('calculator guided tours', () => {
   it('keeps Brewer guidance focused on its recipe workflow', () => {
-    expect(getCalculatorTourSteps('brewer').map(step => [
+    const steps = getCalculatorTourSteps('brewer');
+    expect(steps.map(step => [
       step.targetTestId,
       step.illustrationKey,
     ])).toEqual([
@@ -32,10 +33,12 @@ describe('calculator guided tours', () => {
       ['salt-units-explainer-trigger', 'brewer-salt-summary'],
       ['brewer-recipe-steps', 'brewer-recipe-steps'],
     ]);
+    expect(steps[3].description).toContain('Salt & ion guide');
   });
 
   it('includes Alchemist source-water, ion-check, and recipe-step guidance', () => {
-    expect(getCalculatorTourSteps('alchemist').map(step => [
+    const steps = getCalculatorTourSteps('alchemist');
+    expect(steps.map(step => [
       step.targetTestId,
       step.illustrationKey,
     ])).toEqual([
@@ -47,6 +50,7 @@ describe('calculator guided tours', () => {
       ['salt-units-explainer-trigger', 'alchemist-salt-summary'],
       ['alchemist-recipe-steps', 'alchemist-recipe-steps'],
     ]);
+    expect(steps[5].description).toContain('Salt & ion guide');
   });
 
   it('covers the Watermancer target-to-result workflow', () => {

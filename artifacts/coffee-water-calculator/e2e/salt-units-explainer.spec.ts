@@ -21,11 +21,17 @@ async function openRecipeMode(page: Page, mode: RecipeMode) {
 
 test('shows the explainer only in Brewer and Alchemist summaries', async ({ page }) => {
   await openRecipeMode(page, 'alchemist');
-  await expect(page.getByTestId('salt-units-explainer-trigger')).toBeVisible();
+  const alchemistGuide = page.getByTestId('salt-units-explainer-trigger');
+  await expect(alchemistGuide).toBeVisible();
+  await expect(alchemistGuide).toHaveText('Salt & ion guide');
+  await expect(alchemistGuide).toHaveAccessibleName('Salt & ion guide: GH, KH, and salt units');
 
   await page.getByTestId('mode-brewer').click();
   await expect(page.getByTestId('brewer-salt-summary')).toBeVisible();
-  await expect(page.getByTestId('salt-units-explainer-trigger')).toBeVisible();
+  const brewerGuide = page.getByTestId('salt-units-explainer-trigger');
+  await expect(brewerGuide).toBeVisible();
+  await expect(brewerGuide).toHaveText('Salt & ion guide');
+  await expect(brewerGuide).toHaveAccessibleName('Salt & ion guide: GH, KH, and salt units');
 
   await page.getByTestId('mode-watermancer').click();
   await expect(page.getByTestId('alchemist-salt-summary')).toBeHidden();

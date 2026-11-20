@@ -399,12 +399,12 @@ export function MassConcentrateWorkspace(props: Props) {
           ref={tourTriggerRef}
           type="button"
           data-testid="concentrate-tour-trigger"
-          aria-label="How it works"
+          aria-label="Open Concentrates tour"
           onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
           className={tourButtonClass}
         >
           <CircleHelp className="h-4 w-4" aria-hidden="true" />
-          <span>How it works</span>
+          <span>Concentrates tour</span>
         </button>
       </div>
     </section>
@@ -442,12 +442,12 @@ export function MassConcentrateWorkspace(props: Props) {
             ref={tourTriggerRef}
             type="button"
             data-testid="concentrate-tour-trigger"
-            aria-label="How it works"
+            aria-label="Open Concentrates tour"
             onClick={() => { tourReturnFocusRef.current = 'trigger'; setTourOpen(true); }}
             className={tourButtonClass}
           >
             <CircleHelp className="h-4 w-4" aria-hidden="true" />
-            <span>How it works</span>
+            <span>Concentrates tour</span>
           </button>
         </div>
         <div data-testid="concentrate-header-actions" className="flex w-full items-center justify-end gap-2 sm:w-auto">

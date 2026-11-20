@@ -17,6 +17,7 @@ test('opens each recipe-mode tour once independently and allows replay', async (
   await openFreshCalculator(page);
 
   await expect(tourDialog(page, 'Alchemist')).toBeVisible();
+  await expect(page.getByTestId('calculator-guided-tour-trigger')).toContainText('Alchemist tour');
   await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 7');
   await expect(page.getByTestId('calculator-guided-tour-spotlight')).toHaveAttribute(
     'data-target-testid',
@@ -28,6 +29,7 @@ test('opens each recipe-mode tour once independently and allows replay', async (
 
   await page.getByTestId('mode-brewer').click();
   await expect(tourDialog(page, 'Brewer')).toBeVisible();
+  await expect(page.getByTestId('calculator-guided-tour-trigger')).toContainText('Brewer tour');
   await expect(page.getByTestId('calculator-guided-tour-progress')).toHaveText('1 of 5');
   await expect(page.getByTestId('calculator-guided-tour-visual'))
     .toHaveAttribute('data-illustration-key', 'brewer-batch-volume');
@@ -164,7 +166,7 @@ test('follows the approved visible step order in both calculator modes', async (
     if (target === 'salt-units-explainer-trigger') {
       await expect(page.getByRole('heading', { name: 'See how salts break down' })).toBeVisible();
       await expect(page.locator('#calculator-guided-tour-description'))
-        .toHaveText('After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
+        .toHaveText('After the tour, open the Salt & ion guide to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
     }
     if (index < alchemistTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
@@ -188,7 +190,7 @@ test('follows the approved visible step order in both calculator modes', async (
     if (target === 'salt-units-explainer-trigger') {
       await expect(page.getByRole('heading', { name: 'See how salts break down' })).toBeVisible();
       await expect(page.locator('#calculator-guided-tour-description'))
-        .toHaveText('After the tour, open How it works to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
+        .toHaveText('After the tour, open the Salt & ion guide to see how each salt breaks down into ions and how those ions contribute to GH and KH.');
     }
     if (index < brewerTargets.length - 1) {
       await page.getByRole('button', { name: 'Next', exact: true }).click();
